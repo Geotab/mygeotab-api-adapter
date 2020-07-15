@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Configurations>Debug;Release</Configurations>
+    <UserSecretsId>dotnet-MyGeotabAPIAdapter-647298B6-D50F-498C-A6D9-8910D78DFF6D</UserSecretsId>
+    <RootNamespace>MyGeotabAPIAdapter</RootNamespace>
+    <Authors>Geotab Inc.</Authors>
+    <Product>MyGeotab API Adapter</Product>
+    <Description>A .NET Core (C#) Worker Service designed to use the MyGeotab .NET API and serve as a broker between a MyGeotab database and an associated "Virtual Geotab Database". Intended for use when direct utilization of the MyGeotab SDK is not an option. Modify as required to meet individual solution objectives.</Description>
+    <Copyright></Copyright>
+    <Version>1.0.0.6</Version>
+    <InformationalVersion>1.0.0.6</InformationalVersion>
+    <RuntimeIdentifiers>win-x64;ubuntu.18.04-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="LOG-MyGeotabAPIAdapter-internal.log" />
+    <None Remove="Program - Copy.cs.bak" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="5.7.2002" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0-preview.6.20305.6" />
+    <PackageReference Include="Microsoft.NETCore.Platforms" Version="5.0.0-preview.6.20305.6" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="1.6.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Database\MyGeotabAPIAdapter.Database.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="appsettings.Publish.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>    
+  </ItemGroup>
+
+  <Target Name="RenameAppsettings" AfterTargets="Publish" Condition=" '$(Configuration)'=='Release' ">
+      <Move SourceFiles="$(PublishDir)\appsettings.Publish.json" DestinationFiles="$(PublishDir)\appsettings.json" />
+  </Target>
+</Project>

@@ -1,0 +1,21 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/MyGeotab API Adapter/bin/Debug/netcoreapp3.1
+/MyGeotab API Adapter/obj
+/.vs
+/MyGeotabAPIAdapter.Tests/bin/Debug/netcoreapp3.1
+/MyGeotabAPIAdapter.Tests/obj
+/MyGeotabAPIAdapter.Database/bin/Debug/netcoreapp3.1
+/MyGeotabAPIAdapter.Database/obj
+*.log
+/MyGeotabAPIAdapter/bin/Debug/netcoreapp3.1
+/MyGeotabAPIAdapter/obj
+/MyGeotabAPIAdapter/Properties/PublishProfiles/MyGeotabAPIAdapter_Release_SCD_Target_win-x64.pubxml.user
+/MyGeotabAPIAdapter/Properties/PublishProfiles/MyGeotabAPIAdapter_Release_SCD_Target_ubuntu.19.10-x64.pubxml.user
+/MyGeotabAPIAdapter/Properties/PublishProfiles/MyGeotabAPIAdapter_Release_SCD_Target_linux-x64.pubxml.user
+/MyGeotabAPIAdapter/bin/Release/netcoreapp3.1
+/MyGeotabAPIAdapter/MyGeotabAPIAdapter.csproj.user
+/MyGeotabAPIAdapter.Database/bin/Release/netcoreapp3.1
+/MyGeotabAPIAdapter/PostgreSQL/BrettBackupScript.sql
