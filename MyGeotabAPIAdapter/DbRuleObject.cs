@@ -91,7 +91,14 @@ namespace MyGeotabAPIAdapter
                 RecordLastChangedUtc = recordLastChanged,
                 DatabaseWriteOperationType = operationType
             };
-            ProcessConditionHierarchy(rule.Condition, entityStatus, recordLastChanged, operationType);
+            if (rule.Condition == null)
+            {
+                logger.Debug($"Rule '{rule.Id.ToString()}' has no conditions.");
+            }
+            else 
+            {
+                ProcessConditionHierarchy(rule.Condition, entityStatus, recordLastChanged, operationType);
+            }
             this.DbRule = dbRule;
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
