@@ -456,12 +456,15 @@ namespace MyGeotabAPIAdapter
             {
                 DVIRDefectId = defectRemark.DVIRDefect.Id.ToString(),
                 Id = defectRemark.Id.ToString(),
-                Remark = defectRemark.Remark,
-                RemarkUserId = defectRemark.User.Id.ToString()
+                Remark = defectRemark.Remark
             };
             if (defectRemark.DateTime != null)
             {
                 dbDVIRDefectRemark.DateTime = defectRemark.DateTime;
+            }
+            if (defectRemark.User != null)
+            {
+                dbDVIRDefectRemark.RemarkUserId = defectRemark.User.Id.ToString();
             }
 
             return dbDVIRDefectRemark;
