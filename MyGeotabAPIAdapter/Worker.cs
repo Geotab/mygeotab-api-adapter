@@ -39,6 +39,7 @@ namespace MyGeotabAPIAdapter
         IDictionary<Id, DbDVIRDefectRemark> dbDVIRDefectRemarksDictionary;
         IDictionary<Id, DbRuleObject> dbRuleObjectDictionary;
         IDictionary<Id, DbUser> dbUsersDictionary;
+        IDictionary<Id, DbZone> dbZonesDictionary;
         IDictionary<Id, DefectListPartDefect> defectListPartDefectsDictionary;
         DateTime defectListPartDefectCacheExpiryTime = DateTime.MinValue;
         bool initializationCompleted;
@@ -475,8 +476,9 @@ namespace MyGeotabAPIAdapter
                     var getAllDbDVIRDefectsTask = DbDVIRDefectService.GetAllAsync(connectionInfo, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     var getAllDbDVIRDefectRemarksTask = DbDVIRDefectRemarkService.GetAllAsync(connectionInfo, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     var getAllDbRuleObjectsTask = RuleHelper.GetDatabaseRuleObjectsAsync(cancellationTokenSource);
+                    var getAllDbZonesTask = DbZoneService.GetAllAsync(connectionInfo, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
 
-                    Task[] tasks = { getAllDbDevicesTask, getAllDbDiagnosticsTask, getAllDbUsersTask, getAllDbDVIRDefectsTask, getAllDbDVIRDefectRemarksTask, getAllDbRuleObjectsTask };
+                    Task[] tasks = { getAllDbDevicesTask, getAllDbDiagnosticsTask, getAllDbUsersTask, getAllDbDVIRDefectsTask, getAllDbDVIRDefectRemarksTask, getAllDbRuleObjectsTask, getAllDbZonesTask };
 
                     Task.WaitAll(tasks);
 
@@ -487,6 +489,7 @@ namespace MyGeotabAPIAdapter
                     dbDVIRDefectsDictionary = getAllDbDVIRDefectsTask.Result.ToDictionary(dvirDefect => Id.Create(dvirDefect.Id));
                     dbDVIRDefectRemarksDictionary = getAllDbDVIRDefectRemarksTask.Result.ToDictionary(dvirDefectRemark => Id.Create(dvirDefectRemark.Id));
                     dbRuleObjectDictionary = getAllDbRuleObjectsTask.Result.ToDictionary(dbRuleObject => Id.Create(dbRuleObject.Id));
+                    dbZonesDictionary = getAllDbZonesTask.Result.ToDictionary(dbZone => Id.Create(dbZone.Id));
                 }
                 catch (AggregateException aggregateException)
                 {
@@ -1015,8 +1018,9 @@ namespace MyGeotabAPIAdapter
                     var propagateDiagnosticCacheUpdatesToDatabaseTask = PropagateDiagnosticCacheUpdatesToDatabaseAsync(cancellationTokenSource);
                     var propagateUserCacheUpdatesToDatabaseTask = PropagateUserCacheUpdatesToDatabaseAsync(cancellationTokenSource);
                     var propagateRuleCacheUpdatesToDatabaseTask = PropagateRuleCacheUpdatesToDatabaseAsync(cancellationTokenSource);
+                    var propagateZoneCacheUpdatesToDatabaseTask = PropagateZoneCacheUpdatesToDatabaseAsync(cancellationTokenSource);
 
-                    Task[] tasks = { propagateDeviceCacheUpdatesToDatabaseTask, propagateDiagnosticCacheUpdatesToDatabaseTask, propagateUserCacheUpdatesToDatabaseTask, propagateRuleCacheUpdatesToDatabaseTask };
+                    Task[] tasks = { propagateDeviceCacheUpdatesToDatabaseTask, propagateDiagnosticCacheUpdatesToDatabaseTask, propagateUserCacheUpdatesToDatabaseTask, propagateRuleCacheUpdatesToDatabaseTask, propagateZoneCacheUpdatesToDatabaseTask };
 
                     Task.WaitAll(tasks);
                 }
@@ -1504,6 +1508,127 @@ namespace MyGeotabAPIAdapter
             else
             {
                 logger.Debug($"User cache in database is up-to-date.");
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Propagates <see cref="Zone"/> information received from MyGeotab to the database - inserting new records, updating existing records (if the values of any of the utilized fields have changed), and marking as deleted any database zone records that no longer exist in MyGeotab (based on matching on ID). 
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task PropagateZoneCacheUpdatesToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
+            if (cacheManager.ZoneCacheContainer.LastUpdatedTimeUtc > cacheManager.ZoneCacheContainer.LastPropagatedToDatabaseTimeUtc)
+            {
+                DateTime recordChangedTimestampUtc = DateTime.UtcNow;
+                var dbZonesToInsert = new List<DbZone>();
+                var dbZonesToUpdate = new List<DbZone>();
+
+                // Get cached zones.
+                var zoneCache = (Dictionary<Id, Zone>)cacheManager.ZoneCacheContainer.Cache;
+
+                // Find any zones that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
+                if (dbZonesDictionary.Any())
+                {
+                    foreach (DbZone dbZone in dbZonesDictionary.Values.ToList())
+                    {
+                        if (dbZone.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
+                        {
+                            bool zoneExistsInCache = zoneCache.ContainsKey(Id.Create(dbZone.Id));
+                            if (!zoneExistsInCache)
+                            {
+                                logger.Debug($"Zone '{dbZone.Id}' no longer exists in MyGeotab and is being marked as deleted.");
+                                dbZone.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
+                                dbZone.RecordLastChangedUtc = recordChangedTimestampUtc;
+                                dbZone.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                                dbZonesDictionary[Id.Create(dbZone.Id)] = dbZone;
+                                dbZonesToUpdate.Add(dbZone);
+                            }
+                        }
+                    }
+                }
+
+                // Iterate through cached zones.
+                foreach (Zone cachedZone in zoneCache.Values.ToList())
+                {
+                    // Try to find the existing database record for the cached zone.
+                    if (dbZonesDictionary.TryGetValue(cachedZone.Id, out var existingDbZone))
+                    {
+                        // The zone has already been added to the database.
+                        bool dbZoneRequiresUpdate = ObjectMapper.DbZoneRequiresUpdate(existingDbZone, cachedZone);
+                        if (dbZoneRequiresUpdate)
+                        {
+                            DbZone updatedDbZone = ObjectMapper.GetDbZone(cachedZone);
+                            updatedDbZone.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
+                            updatedDbZone.RecordLastChangedUtc = recordChangedTimestampUtc;
+                            updatedDbZone.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                            dbZonesDictionary[Id.Create(updatedDbZone.Id)] = updatedDbZone;
+                            dbZonesToUpdate.Add(updatedDbZone);
+                        }
+                    }
+                    else
+                    {
+                        // The zone has not yet been added to the database. Create a DbZone, set its properties and add it to the cache.
+                        DbZone newDbZone = ObjectMapper.GetDbZone(cachedZone);
+                        newDbZone.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
+                        newDbZone.RecordLastChangedUtc = recordChangedTimestampUtc;
+                        newDbZone.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
+                        dbZonesDictionary.Add(Id.Create(newDbZone.Id), newDbZone);
+                        dbZonesToInsert.Add(newDbZone);
+
+                    }
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Send any inserts to the database.
+                if (dbZonesToInsert.Any())
+                {
+                    try
+                    {
+                        DateTime startTimeUTC = DateTime.UtcNow;
+                        long zoneEntitiesInserted = await DbZoneService.InsertAsync(connectionInfo, dbZonesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        double recordsProcessedPerSecond = (double)zoneEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed insertion of {zoneEntitiesInserted.ToString()} records into {Globals.ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                    }
+                    catch (Exception)
+                    {
+                        cancellationTokenSource.Cancel();
+                        throw;
+                    }
+                }
+
+                // Send any updates/deletes to the database.
+                if (dbZonesToUpdate.Any())
+                {
+                    try
+                    {
+                        DateTime startTimeUTC = DateTime.UtcNow;
+                        long zoneEntitiesUpdated = await DbZoneService.UpdateAsync(connectionInfo, dbZonesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        double recordsProcessedPerSecond = (double)zoneEntitiesUpdated / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed updating of {zoneEntitiesUpdated.ToString()} records in {Globals.ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                    }
+                    catch (Exception)
+                    {
+                        cancellationTokenSource.Cancel();
+                        throw;
+                    }
+                }
+                cacheManager.ZoneCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
+            }
+            else
+            {
+                logger.Debug($"Zone cache in database is up-to-date.");
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");

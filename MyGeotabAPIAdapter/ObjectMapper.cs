@@ -167,6 +167,77 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Indicates whether the <see cref="DbZone"/> differs from the <see cref="Zone"/>, thereby requiring the <see cref="DbZone"/> to be updated in the database. 
+        /// </summary>
+        /// <param name="dbZone">The <see cref="DbZone"/> to be evaluated.</param>
+        /// <param name="zone">The <see cref="Zone"/> to compare against.</param>
+        /// <returns></returns>
+        public static bool DbZoneRequiresUpdate(DbZone dbZone, Zone zone)
+        {
+            if (dbZone.Id != zone.Id.ToString())
+            {
+                throw new ArgumentException($"Cannot compare Zone '{zone.Id.ToString()}' with DbZone '{dbZone.Id}' because the IDs do not match.");
+            }
+
+            DateTime dbZoneActiveFromUtc = dbZone.ActiveFrom.GetValueOrDefault().ToUniversalTime();
+            DateTime dbZoneActiveToUtc = dbZone.ActiveTo.GetValueOrDefault().ToUniversalTime();
+            if (dbZone.ActiveFrom != zone.ActiveFrom && dbZoneActiveFromUtc != zone.ActiveFrom)
+            {
+                return true;
+            }
+            if (dbZone.ActiveTo != zone.ActiveTo && dbZoneActiveToUtc != zone.ActiveTo)
+            {
+                return true;
+            }
+            if (zone.Displayed == null)
+            {
+                zone.Displayed = false;
+            }
+            if (zone.MustIdentifyStops == null)
+            {
+                zone.MustIdentifyStops = false;
+            }
+            if (dbZone.CentroidLatitude != zone.CentroidLatitude || dbZone.CentroidLongitude != zone.CentroidLongitude || dbZone.Displayed != zone.Displayed || dbZone.MustIdentifyStops != zone.MustIdentifyStops || dbZone.Version != zone.Version)
+            {
+                return true;
+            }
+            if (dbZone.Comment != zone.Comment)
+            {
+                if (dbZone.Comment == null && zone.Comment == "")
+                {
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            if (dbZone.ExternalReference != zone.ExternalReference)
+            {
+                if (dbZone.ExternalReference == null && zone.ExternalReference == "")
+                {
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            if (dbZone.Name != zone.Name)
+            {
+                if (dbZone.Name == null && zone.Name == "")
+                {
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Converts the supplied <see cref="Condition"/> into a <see cref="DbCondition"/>.
         /// </summary>
         /// <param name="condition">The <see cref="Condition"/> to be converted.</param>
@@ -908,6 +979,64 @@ namespace MyGeotabAPIAdapter
                 dbUsers.Add(dbUser);
             }
             return dbUsers;
+        }
+
+        /// <summary>
+        /// Converts the supplied <see cref="Zone"/> into a <see cref="DbZone"/>.
+        /// </summary>
+        /// <param name="zone">The <see cref="Zone"/> to be converted.</param>
+        /// <returns></returns>
+        public static DbZone GetDbZone(Zone zone)
+        {
+            DbZone dbZone = new DbZone
+            {
+                Id = zone.Id.ToString(),
+                Displayed = zone.Displayed ?? false,
+                MustIdentifyStops = zone.MustIdentifyStops ?? false,
+                Name = zone.Name,
+                Version = zone.Version ?? null
+            };
+            if (zone.ActiveFrom != null)
+            {
+                dbZone.ActiveFrom = zone.ActiveFrom;
+            }
+            if (zone.ActiveTo != null)
+            {
+                dbZone.ActiveTo = zone.ActiveTo;
+            }
+            if (zone.CentroidLatitude != null)
+            {
+                dbZone.CentroidLatitude = zone.CentroidLatitude;
+            }
+            if (zone.CentroidLongitude != null)
+            {
+                dbZone.CentroidLongitude = zone.CentroidLongitude;
+            }
+            if (zone.Comment != null && zone.Comment.Length > 0)
+            {
+                dbZone.Comment = zone.Comment;
+            }
+            if (zone.ExternalReference != null && zone.ExternalReference.Length > 0)
+            {
+                dbZone.ExternalReference = zone.ExternalReference;
+            }
+            return dbZone;
+        }
+
+        /// <summary>
+        /// Converts the supplied list of <see cref="Zone"/> objects into a list of <see cref="DbZone"/> objects.
+        /// </summary>
+        /// <param name="zones">The list of <see cref="Zone"/> objects to be converted.</param>
+        /// <returns></returns>
+        public static List<DbZone> GetDbZones(List<Zone> zones)
+        {
+            var dbZones = new List<DbZone>();
+            foreach (var zone in zones)
+            {
+                DbZone dbZone = GetDbZone(zone);
+                dbZones.Add(dbZone);
+            }
+            return dbZones;
         }
     }
 }

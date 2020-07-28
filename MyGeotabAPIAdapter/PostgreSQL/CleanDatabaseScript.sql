@@ -14,6 +14,7 @@
 -- delete from public."StatusData";
 -- delete from public."Trips";
 -- delete from public."Users";
+-- delete from public."Zones";
 
 /* Check counts */
 select 'Conditions' as "TableName", count(0) as "RecordCount" from public."Conditions"
@@ -45,4 +46,6 @@ union all
 select 'Trips', count(0) from public."Trips"
 union all
 select 'Users', count(0) from public."Users"
+union all
+select 'Zones', count(0) from public."Zones"
 order by "TableName";

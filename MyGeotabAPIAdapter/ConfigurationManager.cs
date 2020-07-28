@@ -125,6 +125,7 @@ namespace MyGeotabAPIAdapter
         const string TableNameDbStatusData = "StatusData";
         const string TableNameDbTrip = "Trips";
         const string TableNameDbUser = "Users";
+        const string TableNameDbZone = "Zones";
 
         // Miscellaneous:
         const string AllString = "*";
@@ -363,6 +364,14 @@ namespace MyGeotabAPIAdapter
         public string DbUserTableName
         {
             get => TableNameDbUser;
+        }
+
+        /// <summary>
+        /// The name of the database table for <see cref="Zone"/> information.
+        /// </summary>
+        public string DbZoneTableName
+        {
+            get => TableNameDbZone;
         }
 
         /// <summary>

@@ -333,13 +333,6 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            // Do not cache Zones if ZoneStops are not being tracked.
-            if (typeParameterType == typeof(Zone) && Globals.ConfigurationManager.TrackZoneStops == false)
-            {
-                logger.Debug($"{typeParameterType.Name} cache not required because zone stops are not being tracked.");
-                return;
-            }
-
             // Process cache based on required cache operation type:
             CacheOperationType requiredCacheOperationType = GetRequiredCacheOperationType(typeParameterType.Name, cacheContainer, cacheIntervalDailyReferenceStartTimeUTC, cacheUpdateIntervalMinutes, cacheRefreshIntervalMinutes);
             if (requiredCacheOperationType == CacheOperationType.None)

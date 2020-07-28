@@ -14,6 +14,7 @@
 --delete from "StatusData";
 --delete from "Trips";
 --delete from "Users";
+--delete from "Zones";
 
 /* Check counts */
 select 'Conditions' as "TableName", count(0) as "RecordCount" from "Conditions"
@@ -45,4 +46,6 @@ union all
 select 'Trips', count(0) from "Trips"
 union all
 select 'Users', count(0) from "Users"
+union all
+select 'Zones', count(0) from "Zones"
 order by "TableName";

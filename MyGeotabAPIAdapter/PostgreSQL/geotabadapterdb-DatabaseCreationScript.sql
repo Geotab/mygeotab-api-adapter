@@ -25,6 +25,8 @@ CREATE DATABASE geotabadapterdb WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_C
 
 ALTER DATABASE geotabadapterdb OWNER TO geotabadapter_owner;
 
+\connect geotabadapterdb
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -351,6 +353,29 @@ CREATE TABLE public."Users" (
 ALTER TABLE public."Users" OWNER TO geotabadapter_owner;
 
 --
+-- Name: Zones; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."Zones" (
+    "Id" character varying(100) NOT NULL,
+    "ActiveFrom" timestamp without time zone,
+    "ActiveTo" timestamp without time zone,
+    "CentroidLatitude" double precision,
+    "CentroidLongitude" double precision,
+    "Comment" character varying(255),
+    "Displayed" boolean,
+    "ExternalReference" character varying(255),
+    "MustIdentifyStops" boolean,
+    "Name" character varying(255) NOT NULL,
+    "Version" bigint,
+    "EntityStatus" integer NOT NULL,
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE public."Zones" OWNER TO geotabadapter_owner;
+
+--
 -- Name: vwRuleObject; Type: VIEW; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -486,6 +511,13 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Trips" TO geotabadapter_clien
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Users" TO geotabadapter_client;
+
+
+--
+-- Name: TABLE "Zones"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Zones" TO geotabadapter_client;
 
 
 --
