@@ -14,7 +14,7 @@ namespace MyGeotabAPIAdapter.Database
         /// <summary>
         /// Supported <see cref="DbProviderFactory"/> types.
         /// </summary>
-        public enum DataAccessProviderType { SQLite, PostgreSQL }
+        public enum DataAccessProviderType { PostgreSQL, SQLite, SQLServer }
 
         /// <summary>
         /// The <see cref="System.Data.IDbConnection"/> provider type.
@@ -69,6 +69,10 @@ namespace MyGeotabAPIAdapter.Database
                 case DataAccessProviderType.SQLite:
                     connectionProviderType = "System.Data.SQLite";
                     DbProviderFactories.RegisterFactory(connectionProviderType, System.Data.SQLite.SQLiteFactory.Instance);
+                    break;
+                case DataAccessProviderType.SQLServer:
+                    connectionProviderType = "System.Data.SqlClient";
+                    DbProviderFactories.RegisterFactory(connectionProviderType, Microsoft.Data.SqlClient.SqlClientFactory.Instance);
                     break;
                 default:
                     break;

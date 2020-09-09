@@ -34,6 +34,12 @@ namespace MyGeotabAPIAdapter
         public const string NLogLogLevelNameTrace = "Trace";
         public const string NLogLogLevelNameWarn = "Warn";
 
+        // OBD-II DTC prefixes associated with Controller Ids.
+        public const string OBD2DTCPrefixBody = "B";
+        public const string OBD2DTCPrefixChassis = "C";
+        public const string OBD2DTCPrefixNetworking = "U";
+        public const string OBD2DTCPrefixPowertrain = "P";
+
         static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>

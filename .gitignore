@@ -19,3 +19,4 @@
 /MyGeotabAPIAdapter/MyGeotabAPIAdapter.csproj.user
 /MyGeotabAPIAdapter.Database/bin/Release/netcoreapp3.1
 /MyGeotabAPIAdapter/PostgreSQL/BrettBackupScript.sql
+*.user

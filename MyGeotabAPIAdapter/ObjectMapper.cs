@@ -446,6 +446,7 @@ namespace MyGeotabAPIAdapter
         {
             Source diagnosticSource = diagnostic.Source;
             UnitOfMeasure diagnosticUnitOfMeasure = diagnostic.UnitOfMeasure;
+            Controller diagnosticController = diagnostic.Controller;
 
             DbDiagnostic dbDiagnostic = new DbDiagnostic
             {
@@ -457,6 +458,55 @@ namespace MyGeotabAPIAdapter
                 DiagnosticUnitOfMeasureName = diagnosticUnitOfMeasure.Name,
                 Id = diagnostic.Id.ToString()
             };
+            if (diagnosticController != null)
+            {
+                dbDiagnostic.ControllerId = diagnosticController.Id.ToString();
+
+                // Derive the OBD-II Diagnostic Trouble Code (DTC), if applicable.
+                if (dbDiagnostic.DiagnosticSourceId == KnownId.SourceObdId.ToString() || dbDiagnostic.DiagnosticSourceId == KnownId.SourceObdSaId.ToString())
+                {
+                    int diagnosticCode;
+                    if (diagnostic.Code != null)
+                    {
+                        diagnosticCode = (int)diagnostic.Code;
+                        string dtcPrefix = "";
+                        switch (diagnosticController.Id.ToString())
+                        {
+                            case nameof(KnownId.ControllerObdPowertrainId):
+                                dtcPrefix = Globals.OBD2DTCPrefixPowertrain;
+                                break;
+                            case nameof(KnownId.ControllerObdWwhPowertrainId):
+                                dtcPrefix = Globals.OBD2DTCPrefixPowertrain;
+                                break;
+                            case nameof(KnownId.ControllerObdBodyId):
+                                dtcPrefix = Globals.OBD2DTCPrefixBody;
+                                break;
+                            case nameof(KnownId.ControllerObdWwhBodyId):
+                                dtcPrefix = Globals.OBD2DTCPrefixBody;
+                                break;
+                            case nameof(KnownId.ControllerObdChassisId):
+                                dtcPrefix = Globals.OBD2DTCPrefixChassis;
+                                break;
+                            case nameof(KnownId.ControllerObdWwhChassisId):
+                                dtcPrefix = Globals.OBD2DTCPrefixChassis;
+                                break;
+                            case nameof(KnownId.ControllerObdNetworkingId):
+                                dtcPrefix = Globals.OBD2DTCPrefixNetworking;
+                                break;
+                            case nameof(KnownId.ControllerObdWwhNetworkingId):
+                                dtcPrefix = Globals.OBD2DTCPrefixNetworking;
+                                break;
+                            default:
+                                break;
+                        }
+                        if (dtcPrefix.Length > 0)
+                        {
+                            string dtc = Convert.ToString(diagnosticCode, 16).PadLeft(4, '0');
+                            dbDiagnostic.OBD2DTC = $"{dtcPrefix}{dtc.ToUpper()}";
+                        }
+                    }
+                }
+            }
             return dbDiagnostic;
         }
 
@@ -707,6 +757,10 @@ namespace MyGeotabAPIAdapter
             if (faultData.ClassCode != null)
             {
                 dbFaultData.ClassCode = faultData.ClassCode.ToString();
+            }
+            if (faultDataFailureMode.Code != null)
+            {
+                dbFaultData.FailureModeCode = faultDataFailureMode.Code;
             }
             if (faultDataFaultState != null)
             {

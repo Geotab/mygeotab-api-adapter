@@ -8,12 +8,14 @@ namespace MyGeotabAPIAdapter.Database.Models
     {
         [ExplicitKey]
         public string Id { get; set; }
+        public string ControllerId { get; set; }
         public int? DiagnosticCode { get; set; }
         public string DiagnosticName { get; set; }
         public string DiagnosticSourceId { get; set; }
         public string DiagnosticSourceName { get; set; }
         public string DiagnosticUnitOfMeasureId { get; set; }
         public string DiagnosticUnitOfMeasureName { get; set; }
+        public string OBD2DTC { get; set; }
         public int EntityStatus { get; set; }
         public DateTime RecordLastChangedUtc { get; set; }
         [Write(false)]

@@ -261,6 +261,32 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Replaces the supplied <paramref name="failureModeToHydrate"/> with a fully-populated <see cref="FailureMode"/> from the <see cref="FailureModeCacheContainer"/> bearing the same <see cref="Id"/>. If no match is found, returns <see cref="NoFailureMode.Value"/>.
+        /// </summary>
+        /// <param name="failureModeToHydrate"></param>
+        /// <returns></returns>
+        public FailureMode HydrateFailureMode(FailureMode failureModeToHydrate)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            if (failureModeToHydrate == null || failureModeToHydrate is NoFailureMode)
+            {
+                return NoFailureMode.Value;
+            }
+
+            Dictionary<Id, FailureMode> failureModeCache = (Dictionary<Id, FailureMode>)failureModeCacheContainer.Cache;
+            if (failureModeCache.TryGetValue(failureModeToHydrate.Id, out FailureMode failureModeToReturn))
+            {
+                return failureModeToReturn;
+            }
+            else
+            {
+                return NoFailureMode.Value;
+            }
+        }
+
+        /// <summary>
         /// Triggers concurrent calls to update the various caches managed by this <see cref="CacheManager"/>. 
         /// </summary>
         /// <returns></returns>

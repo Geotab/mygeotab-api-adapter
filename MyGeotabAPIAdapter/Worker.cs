@@ -812,6 +812,8 @@ namespace MyGeotabAPIAdapter
                 {
                     Controller hydratedController = cacheManager.HydrateController(filteredFaultData.Controller);
                     filteredFaultData.Controller = hydratedController;
+                    FailureMode hydratedFailureMode = cacheManager.HydrateFailureMode(filteredFaultData.FailureMode);
+                    filteredFaultData.FailureMode = hydratedFailureMode;
                 }
 
                 // Map FaultData entities to DbFaultData entities.

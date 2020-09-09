@@ -18,6 +18,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string DiagnosticId { get; set; }
         public DateTime? DismissDateTime { get; set; }
         public string DismissUserId { get; set; }
+        public int? FailureModeCode { get; set; }
         public string FailureModeId { get; set; }
         public string FailureModeName { get; set; }
         public string FaultLampState { get; set; }

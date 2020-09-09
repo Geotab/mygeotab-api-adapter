@@ -133,8 +133,8 @@ CREATE TABLE public."DVIRLogs" (
     "DriverId" character varying(50),
     "DriverRemark" text,
     "IsSafeToOperate" boolean,
-    "LocationLatitude" real,
-    "LocationLongitude" real,
+    "LocationLatitude" double precision,
+    "LocationLongitude" double precision,
     "LogType" character varying(50),
     "RepairDate" timestamp without time zone,
     "RepairRemark" text,
@@ -176,12 +176,14 @@ ALTER TABLE public."Devices" OWNER TO geotabadapter_owner;
 
 CREATE TABLE public."Diagnostics" (
     "Id" character varying(100) NOT NULL,
+    "ControllerId" character varying(100),
     "DiagnosticCode" integer,
     "DiagnosticName" character varying(255) NOT NULL,
     "DiagnosticSourceId" character varying(50) NOT NULL,
     "DiagnosticSourceName" character varying(255) NOT NULL,
     "DiagnosticUnitOfMeasureId" character varying(50) NOT NULL,
     "DiagnosticUnitOfMeasureName" character varying(255) NOT NULL,
+    "OBD2DTC" character varying(50),
     "EntityStatus" integer NOT NULL,
     "RecordLastChangedUtc" timestamp without time zone NOT NULL
 );
@@ -200,7 +202,7 @@ CREATE TABLE public."ExceptionEvents" (
     "DeviceId" character varying(50),
     "Distance" real,
     "DriverId" character varying(50),
-    "Duration" interval,
+    "DurationTicks" bigint,
     "RuleId" character varying(50),
     "Version" bigint,
     "RecordCreationTimeUtc" timestamp without time zone NOT NULL
@@ -225,6 +227,7 @@ CREATE TABLE public."FaultData" (
     "DiagnosticId" character varying(100) NOT NULL,
     "DismissDateTime" timestamp without time zone,
     "DismissUserId" character varying(50),
+    "FailureModeCode" integer,
     "FailureModeId" character varying(50) NOT NULL,
     "FailureModeName" character varying(255),
     "FaultLampState" character varying(50),
@@ -319,11 +322,11 @@ CREATE TABLE public."Trips" (
     "DeviceId" character varying(50) NOT NULL,
     "DriverId" character varying(50) NOT NULL,
     "Distance" real NOT NULL,
-    "DrivingDuration" interval NOT NULL,
+    "DrivingDurationTicks" bigint NOT NULL,
     "NextTripStart" timestamp without time zone NOT NULL,
     "Start" timestamp without time zone NOT NULL,
     "Stop" timestamp without time zone NOT NULL,
-    "StopDuration" interval NOT NULL,
+    "StopDurationTicks" bigint NOT NULL,
     "StopPointX" double precision,
     "StopPointY" double precision,
     "RecordCreationTimeUtc" timestamp without time zone NOT NULL
