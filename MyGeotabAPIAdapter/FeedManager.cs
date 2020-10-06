@@ -55,7 +55,7 @@ namespace MyGeotabAPIAdapter
             var currentFeedStartOption = Globals.ConfigurationManager.FeedStartOption;
             if (currentFeedStartOption != Globals.FeedStartOption.FeedVersion && dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.LastProcessedFeedVersion > 0).Any())
             {
-                logger.Info($"Switching FeedStartOption from '{currentFeedStartOption.ToString()}' to '{Globals.FeedStartOption.FeedVersion.ToString()}' to prevent data duplication because the '{Globals.ConfigurationManager.DbConfigFeedVersionsTableName}' table contains data for one or more feeds.");
+                logger.Info($"Switching FeedStartOption from '{currentFeedStartOption}' to '{Globals.FeedStartOption.FeedVersion}' to prevent data duplication because the '{Globals.ConfigurationManager.DbConfigFeedVersionsTableName}' table contains data for one or more feeds.");
                 Globals.ConfigurationManager.FeedStartOption = Globals.FeedStartOption.FeedVersion;
             }
 
@@ -148,58 +148,13 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
-        /// Triggers concurrent calls to update the <see cref="FeedContainer"/> objects managed by this <see cref="FeedManager"/>.
-        /// </summary>
-        /// <returns></returns>
-        public async Task GetDataFromFeedsAsync()
-        {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            using (var cancellationTokenSource = new CancellationTokenSource())
-            {
-                try
-                {
-                    var pollLogRecordFeedTask = GetFeedDataAsync<LogRecord>(logRecordFeedContainer, cancellationTokenSource);
-                    var pollStatusDataFeedTask = GetFeedDataAsync<StatusData>(statusDataFeedContainer, cancellationTokenSource);
-                    var pollFaultDataFeedTask = GetFeedDataAsync<FaultData>(faultDataFeedContainer, cancellationTokenSource);
-                    var pollDVIRLogFeedTask = GetFeedDataAsync<DVIRLog>(dvirLogFeedContainer, cancellationTokenSource);
-                    var pollTripFeedTask = GetFeedDataAsync<Trip>(tripFeedContainer, cancellationTokenSource);
-                    var pollExceptionEventTask = GetFeedDataAsync<ExceptionEvent>(exceptionEventFeedContainer, cancellationTokenSource);
-
-                    Task[] tasks = { pollLogRecordFeedTask, pollStatusDataFeedTask, pollFaultDataFeedTask, pollDVIRLogFeedTask, pollTripFeedTask, pollExceptionEventTask };
-
-                    try
-                    {
-                        await Task.WhenAll(tasks);
-                    }
-                    catch (MyGeotabConnectionException myGeotabConnectionException)
-                    {
-                        throw new MyGeotabConnectionException($"One or more exceptions were encountered during cache update due to an apparent loss of connectivity with the MyGeotab server.", myGeotabConnectionException);
-                    }
-                    catch (AggregateException aggregateException)
-                    {
-                        Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.MyGeotab, "One or more exceptions were encountered during retrieval of data via feeds due to an apparent loss of connectivity with the MyGeotab server.");
-                    }
-                }
-                catch (TaskCanceledException taskCanceledException)
-                {
-                    string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
-                    logger.Warn(errorMessage);
-                }
-            }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
-        }
-
-        /// <summary>
         /// Updates the <see cref="FeedContainer.FeedResultData"/> of a <see cref="FeedContainer"/> using GetFeed() calls.
         /// </summary>
         /// <typeparam name="T">The <see cref="Type"/> of <see cref="Entity"/> for which data is to be retrieved.</typeparam>
         /// <param name="feedContainer">The <see cref="FeedContainer"/> representing the <see cref="Type"/> of <see cref="Entity"/> for which data is to be retrieved.</param>
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <returns></returns>
-        async Task GetFeedDataAsync<T>(FeedContainer feedContainer, CancellationTokenSource cancellationTokenSource) where T : Entity
+        public async Task GetFeedDataAsync<T>(FeedContainer feedContainer, CancellationTokenSource cancellationTokenSource) where T : Entity
         {
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
@@ -261,7 +216,7 @@ namespace MyGeotabAPIAdapter
 
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    logger.Debug($"GetFeedAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count.ToString()} records.");
+                    logger.Debug($"GetFeedAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count} records.");
                     feedContainer.LastFeedVersion = feedResult.ToVersion;
 
                     // Add FeedResult data to the FeedContainer.
@@ -281,11 +236,11 @@ namespace MyGeotabAPIAdapter
                     }
 
                     feedContainer.LastFeedRetrievalTimeUtc = DateTime.UtcNow;
-                    logger.Info($"{typeParameterType.Name} feed polled with {feedContainer.FeedResultData.Count.ToString()} records returned.");
+                    logger.Info($"{typeParameterType.Name} feed polled with {feedContainer.FeedResultData.Count} records returned.");
                 }
                 else
                 {
-                    logger.Debug($"{typeParameterType.Name} data feed not polled; {feedContainer.FeedPollingIntervalSeconds.ToString()} seconds have not passed since last poll.");
+                    logger.Debug($"{typeParameterType.Name} data feed not polled; {feedContainer.FeedPollingIntervalSeconds} seconds have not passed since last poll.");
                 }
             }
 

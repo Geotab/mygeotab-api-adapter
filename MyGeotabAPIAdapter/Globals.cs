@@ -45,12 +45,12 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Types of connectivity issues that may be encountered.
         /// </summary>
-        public enum ConnectivityIssueType { Database, MyGeotab }
+        public enum ConnectivityIssueType { Database, MyGeotab, MyGeotabOrDatabase }
 
         /// <summary>
         /// Interval types for use when working with DateTime functions.
         /// </summary>
-        public enum DateTimeIntervalType { Seconds, Minutes, Hours, Days }
+        public enum DateTimeIntervalType { Milliseconds, Seconds, Minutes, Hours, Days }
 
         /// <summary>
         /// Alternate ways that polling via data feeds may be initiated. <see cref="FeedStartOption.CurrentTime"/> = feed to be started at the current point in time; <see cref="FeedStartOption.SpecificTime"/> = feed to be started as a specific point in time (in the past); <see cref="FeedStartOption.FeedVersion"/> = feed to be started using a specific version (i.e. to continue from where it left-off).
@@ -153,6 +153,30 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Indicates whether one or more <see cref="Exception"/>s in the <paramref name="aggregateException"/>'s <see cref="Exception.InnerException"/>s is a <see cref="DatabaseConnectionException"/>.
+        /// </summary>
+        /// <param name="aggregateException"></param>
+        /// <returns></returns>
+        public static bool DatabaseConnectivityIssueDetected(AggregateException aggregateException)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            bool connectivityIssueDetected = false;
+            foreach (var exception in aggregateException.InnerExceptions)
+            {
+                if (exception is DatabaseConnectionException)
+                {
+                    connectivityIssueDetected = true;
+                    break;
+                }
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            return connectivityIssueDetected;
+        }
+
+        /// <summary>
         /// Indicates whether the <paramref name="exception"/> is indicative of an issue with connectivity to the MyGeotab server. Intended for use in raising <see cref="MyGeotabConnectionException"/> exceptions in this application when needed.
         /// </summary>
         /// <param name="exception">The <see cref="Exception"/> to be evaluated.</param>
@@ -183,9 +207,9 @@ namespace MyGeotabAPIAdapter
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             // Any exceptions that occurred when executing any of the tasks executed via Task.WaitAll will be included in this AggregateException. Log the exception(s) and, if any are connectivity-related, raise a new MyGeotabConnectionException or DatabaseConnectionException. Otherwise, simply pass the AggregateException along (unless all of its inner exceptions are TaskCanceledExceptions, in which case the AggregateException can be ignored).
-            Globals.LogExceptions(aggregateException, NLog.LogLevel.Warn);
-            bool connectivityIssueDetected = Globals.ConnectivityIssueDetected(aggregateException);
-            bool allInnerExceptionsAreTaskCanceledExceptions = Globals.AllInnerExceptionsAreTaskCanceledExceptions(aggregateException);
+            LogExceptions(aggregateException, NLog.LogLevel.Warn);
+            bool connectivityIssueDetected = ConnectivityIssueDetected(aggregateException);
+            bool allInnerExceptionsAreTaskCanceledExceptions = AllInnerExceptionsAreTaskCanceledExceptions(aggregateException);
 
             if (connectivityIssueDetected == true)
             {
@@ -195,6 +219,17 @@ namespace MyGeotabAPIAdapter
                         throw new DatabaseConnectionException($"{errorMessage}", aggregateException);
                     case ConnectivityIssueType.MyGeotab:
                         throw new MyGeotabConnectionException($"{errorMessage}", aggregateException);
+                    case ConnectivityIssueType.MyGeotabOrDatabase:
+                        // In cases where it is not explicitly known whether the connectivity issue is on the MyGeotab side or the database side (e.g. when running a series of tasks that include both MyGeotab and database operations), check if the AggregateException includes a MyGeotabConnectionException and, if so, handle it. If not, then it must be a database-related connectivity issue, since connectivityIssueDetected == true. In the event that the AggregateException contains both types of connectivity exceptions, the MyGeotab one will be handled (the database one will be dealt with if it still persists once MyGeotab connectivity has been restored).
+                        bool myGeotabConnectivityIssueDetected = MyGeotabConnectivityIssueDetected(aggregateException);
+                        if (myGeotabConnectivityIssueDetected)
+                        {
+                            throw new MyGeotabConnectionException($"{errorMessage}", aggregateException);
+                        }
+                        else
+                        {
+                            throw new DatabaseConnectionException($"{errorMessage}", aggregateException);
+                        }
                     default:
                         errorMessage = $"The ConnectivityIssueType type '{nameof(connectivityIssueType)}' is not supported by the '{methodBase.ReflectedType.Name}.{methodBase.Name}' method.";
                         logger.Error(errorMessage);
@@ -239,7 +274,7 @@ namespace MyGeotabAPIAdapter
                 }
             }
 
-            errorMessage = $"{errorMessagePrefix}: \nMESSAGE [{exception.Message}]; \nSOURCE [{exceptionSource}]; \nINNER EXCEPTION MESSAGE [{innerExceptionMessage}]; \nINNER EXCEPTION SOURCE [{innerExceptionSource}]; \nSTACK TRACE [{exception.StackTrace}]; \nINNER EXCEPTION STACT TRACE [{innerExceptionStackTrace}]";
+            errorMessage = $"{errorMessagePrefix}: \nMESSAGE [{exception.Message}]; \nSOURCE [{exceptionSource}]; \nINNER EXCEPTION MESSAGE [{innerExceptionMessage}]; \nINNER EXCEPTION SOURCE [{innerExceptionSource}]; \nSTACK TRACE [{exception.StackTrace}]; \nINNER EXCEPTION STACK TRACE [{innerExceptionStackTrace}]";
 
             string logLevelName = errorMessageLogLevel.Name;
             switch (logLevelName)
@@ -286,6 +321,30 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Indicates whether one or more <see cref="Exception"/>s in the <paramref name="aggregateException"/>'s <see cref="Exception.InnerException"/>s is a <see cref="MyGeotabConnectionException"/>.
+        /// </summary>
+        /// <param name="aggregateException"></param>
+        /// <returns></returns>
+        public static bool MyGeotabConnectivityIssueDetected(AggregateException aggregateException)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            bool connectivityIssueDetected = false;
+            foreach (var exception in aggregateException.InnerExceptions)
+            {
+                if (exception is MyGeotabConnectionException)
+                {
+                    connectivityIssueDetected = true;
+                    break;
+                }
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            return connectivityIssueDetected;
+        }
+
+        /// <summary>
         /// Returns a boolean indicating whether the time interval defined by adding <paramref name="interval"/> to <paramref name="startTimeUtc"/> has elapsed.
         /// </summary>
         /// <param name="startTimeUtc">The interval start time.</param>
@@ -297,6 +356,9 @@ namespace MyGeotabAPIAdapter
             DateTime endTime = DateTime.MinValue;
             switch (dateTimeIntervalType)
             {
+                case DateTimeIntervalType.Milliseconds:
+                    endTime = startTimeUtc.AddMilliseconds(interval);
+                    break;
                 case DateTimeIntervalType.Seconds:
                     endTime = startTimeUtc.AddSeconds(interval);
                     break;

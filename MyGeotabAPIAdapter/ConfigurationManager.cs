@@ -835,7 +835,7 @@ namespace MyGeotabAPIAdapter
                 }
                 else
                 {
-                    logger.Info($">{keyString}: {configItemValueBool.ToString()}");
+                    logger.Info($">{keyString}: {configItemValueBool}");
                 }
             }
             else
@@ -925,7 +925,7 @@ namespace MyGeotabAPIAdapter
                     // If the value of the subject ConfigItem falls outside the allowed range, use the default value for the ConfigItem instead and log a warning message.
                     if (output < minimumAllowedValue || output > maximumAllowedValue)
                     {
-                        string errorMessage = $"The value of '{output.ToString()}' provided for the '{keyString}' configuration item is is not between the minimum allowed value of '{minimumAllowedValue}' and the maximum allowed value of '{maximumAllowedValue}'. {keyString} will be set to '{defaultValueIfOutsideRange}'.";
+                        string errorMessage = $"The value of '{output}' provided for the '{keyString}' configuration item is is not between the minimum allowed value of '{minimumAllowedValue}' and the maximum allowed value of '{maximumAllowedValue}'. {keyString} will be set to '{defaultValueIfOutsideRange}'.";
                         output = defaultValueIfOutsideRange;
                         logger.Warn(errorMessage);
                     }
@@ -937,7 +937,7 @@ namespace MyGeotabAPIAdapter
                 }
                 else
                 {
-                    logger.Info($">{keyString}: {output.ToString()}");
+                    logger.Info($">{keyString}: {output}");
                 }
             }
             else

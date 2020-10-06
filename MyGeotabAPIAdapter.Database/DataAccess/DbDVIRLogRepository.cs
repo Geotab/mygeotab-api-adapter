@@ -65,57 +65,64 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             CancellationToken cancellationToken = cancellationTokenSource.Token;
             string rowCounts = "";
             long rowCount;
-            using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
+            try
             {
-                using (var transaction = await connection.BeginTransactionAsync())
+                using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
                 {
-                    // Insert DbDVIRLogs.
-                    rowCount = 0;
-                    foreach (var dbDVIRLog in dbDVIRLogsToInsert)
+                    using (var transaction = await connection.BeginTransactionAsync())
                     {
-                        await InsertAsync(connection, transaction, dbDVIRLog, commandTimeout);
-                        rowCount += 1;
+                        // Insert DbDVIRLogs.
+                        rowCount = 0;
+                        foreach (var dbDVIRLog in dbDVIRLogsToInsert)
+                        {
+                            await InsertAsync(connection, transaction, dbDVIRLog, commandTimeout);
+                            rowCount += 1;
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        rowCounts = rowCount.ToString();
+
+                        // Insert DbDVIRDefects.
+                        rowCount = 0;
+                        foreach (var dbDVIRDefect in dbDVIRDefectsToInsert)
+                        {
+                            await new DbDVIRDefectRepository().InsertAsync(connection, transaction, dbDVIRDefect, commandTimeout);
+                            rowCount += 1;
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        rowCounts = $"{rowCounts},{rowCount}";
+
+                        // Update DbDVIRDefects.
+                        rowCount = 0;
+                        foreach (var dbDVIRDefect in dbDVIRDefectsToUpdate)
+                        {
+                            await new DbDVIRDefectRepository().UpdateAsync(connection, transaction, dbDVIRDefect, commandTimeout);
+                            rowCount += 1;
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        rowCounts = $"{rowCounts},{rowCount}";
+
+                        // Insert DbDVIRDefectRemarks.
+                        rowCount = 0;
+                        foreach (var dbDVIRDefectRemark in dbDVIRDefectRemarksToInsert)
+                        {
+                            await new DbDVIRDefectRemarkRepository().InsertAsync(connection, transaction, dbDVIRDefectRemark, commandTimeout);
+                            rowCount += 1;
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        rowCounts = $"{rowCounts},{rowCount}";
+
+                        // Update DbConfigFeedVersion.
+                        await new DbConfigFeedVersionRepository().UpdateAsync(connection, transaction, dbConfigFeedVersion, commandTimeout);
+
                         cancellationToken.ThrowIfCancellationRequested();
+                        await transaction.CommitAsync();
                     }
-                    rowCounts = rowCount.ToString();
-
-                    // Insert DbDVIRDefects.
-                    rowCount = 0;
-                    foreach (var dbDVIRDefect in dbDVIRDefectsToInsert)
-                    {
-                        await new DbDVIRDefectRepository().InsertAsync(connection, transaction, dbDVIRDefect, commandTimeout);
-                        rowCount += 1;
-                        cancellationToken.ThrowIfCancellationRequested();
-                    }
-                    rowCounts = $"{rowCounts},{rowCount.ToString()}";
-
-                    // Update DbDVIRDefects.
-                    rowCount = 0;
-                    foreach (var dbDVIRDefect in dbDVIRDefectsToUpdate)
-                    {
-                        await new DbDVIRDefectRepository().UpdateAsync(connection, transaction, dbDVIRDefect, commandTimeout);
-                        rowCount += 1;
-                        cancellationToken.ThrowIfCancellationRequested();
-                    }
-                    rowCounts = $"{rowCounts},{rowCount.ToString()}";
-
-                    // Insert DbDVIRDefectRemarks.
-                    rowCount = 0;
-                    foreach (var dbDVIRDefectRemark in dbDVIRDefectRemarksToInsert)
-                    {
-                        await new DbDVIRDefectRemarkRepository().InsertAsync(connection, transaction, dbDVIRDefectRemark, commandTimeout);
-                        rowCount += 1;
-                        cancellationToken.ThrowIfCancellationRequested();
-                    }
-                    rowCounts = $"{rowCounts},{rowCount.ToString()}";
-
-                    // Update DbConfigFeedVersion.
-                    await new DbConfigFeedVersionRepository().UpdateAsync(connection, transaction, dbConfigFeedVersion, commandTimeout);
-
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await transaction.CommitAsync();
+                    return rowCounts;
                 }
-                return rowCounts;
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
             }
         }
     }

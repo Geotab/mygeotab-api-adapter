@@ -25,7 +25,7 @@ namespace MyGeotabAPIAdapter
         {
             if (dbDevice.Id != device.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare Device '{device.Id.ToString()}' with DbDevice '{dbDevice.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare Device '{device.Id}' with DbDevice '{dbDevice.Id}' because the IDs do not match.");
             }
 
             DateTime dbDeviceActiveFromUtc = dbDevice.ActiveFrom.GetValueOrDefault().ToUniversalTime();
@@ -57,7 +57,7 @@ namespace MyGeotabAPIAdapter
         {
             if (dbDiagnostic.Id != diagnostic.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare Diagnostic '{diagnostic.Id.ToString()}' with DbDiagnostic '{dbDiagnostic.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare Diagnostic '{diagnostic.Id}' with DbDiagnostic '{dbDiagnostic.Id}' because the IDs do not match.");
             }
 
             Source diagnosticSource = diagnostic.Source;
@@ -79,7 +79,7 @@ namespace MyGeotabAPIAdapter
         {
             if (dbDVIRDefect.Id != dvirDefect.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare DVIRDefect '{dvirDefect.Id.ToString()}' with DbDVIRDefect '{dbDVIRDefect.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare DVIRDefect '{dvirDefect.Id}' with DbDVIRDefect '{dbDVIRDefect.Id}' because the IDs do not match.");
             }
 
             DateTime dbDVIRDefectRepairDateTimeUtc = dbDVIRDefect.RepairDateTime.GetValueOrDefault().ToUniversalTime();
@@ -111,7 +111,7 @@ namespace MyGeotabAPIAdapter
         {
             if (dbRuleObject.DbRule.Id != rule.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare Rule '{rule.Id.ToString()}' with DbUser '{dbRuleObject.DbRule.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare Rule '{rule.Id}' with DbUser '{dbRuleObject.DbRule.Id}' because the IDs do not match.");
             }
 
             if (dbRuleObject.DbRule.Version != rule.Version)
@@ -131,7 +131,7 @@ namespace MyGeotabAPIAdapter
         {
             if (dbUser.Id != user.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare User '{user.Id.ToString()}' with DbUser '{dbUser.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare User '{user.Id}' with DbUser '{dbUser.Id}' because the IDs do not match.");
             }
 
             DateTime dbUserActiveFromUtc = dbUser.ActiveFrom.GetValueOrDefault().ToUniversalTime();
@@ -176,7 +176,7 @@ namespace MyGeotabAPIAdapter
         {
             if (dbZone.Id != zone.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare Zone '{zone.Id.ToString()}' with DbZone '{dbZone.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare Zone '{zone.Id}' with DbZone '{dbZone.Id}' because the IDs do not match.");
             }
 
             DateTime dbZoneActiveFromUtc = dbZone.ActiveFrom.GetValueOrDefault().ToUniversalTime();

@@ -16,6 +16,7 @@ namespace MyGeotabAPIAdapter
     /// </summary>
     class CacheManager
     {
+        const int MinFeedIntervalMilliseconds = 1100;
         static readonly Logger logger = LogManager.GetCurrentClassLogger();
         static readonly CacheContainer controllerCacheContainer = new CacheContainer();
         static readonly CacheContainer deviceCacheContainer = new CacheContainer();
@@ -66,6 +67,14 @@ namespace MyGeotabAPIAdapter
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return cacheManager;
+        }
+
+        /// <summary>
+        /// A container for an in-memory cache of <see cref="Controller"/> objects.
+        /// </summary>
+        public CacheContainer ControllerCacheContainer
+        {
+            get => controllerCacheContainer;
         }
 
         /// <summary>
@@ -177,12 +186,12 @@ namespace MyGeotabAPIAdapter
                 if (currentDateTimeUTC > nextRequiredCacheRefreshDateTimeUTC)
                 {
                     // If the current DateTime is greater than the calculated next DateTime that the subject cache should be refreshed, then a cache REFRESH is required.
-                    logger.Debug($"Required refresh time of '{nextRequiredCacheRefreshDateTimeUTC.ToString("yyyy-MM-dd HH:mm:ss 'GMT'")}' has passed for '{cacheObjectTypeName}' cache - refresh required.");
+                    logger.Debug($"Required refresh time of '{nextRequiredCacheRefreshDateTimeUTC:yyyy-MM-dd HH:mm:ss 'GMT'}' has passed for '{cacheObjectTypeName}' cache - refresh required.");
                     requiredCacheOperationType = CacheOperationType.Refresh;
                 }
                 else
                 {
-                    logger.Debug($"Required refresh time of '{nextRequiredCacheRefreshDateTimeUTC.ToString("yyyy-MM-dd HH:mm:ss 'GMT'")}' has not yet passed for '{cacheObjectTypeName}' cache - refresh not required.");
+                    logger.Debug($"Required refresh time of '{nextRequiredCacheRefreshDateTimeUTC:yyyy-MM-dd HH:mm:ss 'GMT'}' has not yet passed for '{cacheObjectTypeName}' cache - refresh not required.");
                     // Given that a cache refresh is not required, determine whether the cache needs to be UPDATED. Calculate the next DateTime that the subject cache should be UPDATED. Do so by starting with the cache interval reference DateTime and adding the configured update interval repeatedly until the calculated DateTime exceeds the DateTime at which the cache was last updated.
                     var nextRequiredCacheUpdateDateTimeUTC = cacheIntervalReferenceDateTimeUTC;
                     while (nextRequiredCacheUpdateDateTimeUTC < cacheContainer.LastUpdatedTimeUtc)
@@ -193,12 +202,12 @@ namespace MyGeotabAPIAdapter
                     // If the current DateTime is greater than the calculated next DateTime that the subject cache should be updated, then a cache UPDATE is required.
                     if (currentDateTimeUTC > nextRequiredCacheUpdateDateTimeUTC)
                     {
-                        logger.Debug($"Required update time of '{nextRequiredCacheUpdateDateTimeUTC.ToString("yyyy-MM-dd HH:mm:ss 'GMT'")}' has passed for '{cacheObjectTypeName}' cache - update required.");
+                        logger.Debug($"Required update time of '{nextRequiredCacheUpdateDateTimeUTC:yyyy-MM-dd HH:mm:ss 'GMT'}' has passed for '{cacheObjectTypeName}' cache - update required.");
                         requiredCacheOperationType = CacheOperationType.Update;
                     }
                     else
                     {
-                        logger.Debug($"Required update time of '{nextRequiredCacheUpdateDateTimeUTC.ToString("yyyy-MM-dd HH:mm:ss 'GMT'")}' has not yet passed for '{cacheObjectTypeName}' cache - update not required.");
+                        logger.Debug($"Required update time of '{nextRequiredCacheUpdateDateTimeUTC:yyyy-MM-dd HH:mm:ss 'GMT'}' has not yet passed for '{cacheObjectTypeName}' cache - update not required.");
                     }
                 }
             }
@@ -287,58 +296,6 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
-        /// Triggers concurrent calls to update the various caches managed by this <see cref="CacheManager"/>. 
-        /// </summary>
-        /// <returns></returns>
-        public async Task UpdateCachesAsync()
-        {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            using (var cancellationTokenSource = new CancellationTokenSource())
-            {
-                try
-                {
-                    var updateUserCacheTask = UpdateCacheAsync<User>(cancellationTokenSource, userCacheContainer, Globals.ConfigurationManager.UserCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.UserCacheUpdateIntervalMinutes, Globals.ConfigurationManager.UserCacheRefreshIntervalMinutes);
-                    var updateDeviceCacheTask = UpdateCacheAsync<Device>(cancellationTokenSource, deviceCacheContainer, Globals.ConfigurationManager.DeviceCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.DeviceCacheUpdateIntervalMinutes, Globals.ConfigurationManager.DeviceCacheRefreshIntervalMinutes);
-                    var updateZoneCacheTask = UpdateCacheAsync<Zone>(cancellationTokenSource, zoneCacheContainer, Globals.ConfigurationManager.ZoneCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ZoneCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ZoneCacheRefreshIntervalMinutes);
-                    var updateDiagnosticCacheTask = UpdateCacheAsync<Diagnostic>(cancellationTokenSource, diagnosticCacheContainer, Globals.ConfigurationManager.DiagnosticCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.DiagnosticCacheUpdateIntervalMinutes, Globals.ConfigurationManager.DiagnosticCacheRefreshIntervalMinutes);
-                    var updateControllerCacheTask = UpdateCacheAsync<Controller>(cancellationTokenSource, controllerCacheContainer, Globals.ConfigurationManager.ControllerCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ControllerCacheUpdateIntervalMinutes,
-                        Globals.ConfigurationManager.ControllerCacheRefreshIntervalMinutes, false);
-                    var updateFailureModeCacheTask = UpdateCacheAsync<FailureMode>(cancellationTokenSource, failureModeCacheContainer, Globals.ConfigurationManager.FailureModeCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.FailureModeCacheUpdateIntervalMinutes,
-                        Globals.ConfigurationManager.FailureModeCacheRefreshIntervalMinutes, false);
-                    var updateUnitOfMeasureCacheTask = UpdateCacheAsync<UnitOfMeasure>(cancellationTokenSource, unitOfMeasureCacheContainer, Globals.ConfigurationManager.UnitOfMeasureCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.UnitOfMeasureCacheUpdateIntervalMinutes,
-                        Globals.ConfigurationManager.UnitOfMeasureCacheRefreshIntervalMinutes, false);
-                    var updateRuleCacheTask = UpdateCacheAsync<Rule>(cancellationTokenSource, ruleCacheContainer, Globals.ConfigurationManager.RuleCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.RuleCacheUpdateIntervalMinutes,
-                        Globals.ConfigurationManager.RuleCacheRefreshIntervalMinutes);
-                    var updateGroupCacheTask = UpdateCacheAsync<Group>(cancellationTokenSource, groupCacheContainer, Globals.ConfigurationManager.GroupCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.GroupCacheUpdateIntervalMinutes, Globals.ConfigurationManager.GroupCacheRefreshIntervalMinutes, false);
-
-                    Task[] tasks = { updateUserCacheTask, updateDiagnosticCacheTask, updateDeviceCacheTask, updateZoneCacheTask, updateControllerCacheTask, updateFailureModeCacheTask, updateUnitOfMeasureCacheTask, updateRuleCacheTask, updateGroupCacheTask };
-
-                    try
-                    {
-                        await Task.WhenAll(tasks);
-                    }
-                    catch (MyGeotabConnectionException myGeotabConnectionException)
-                    {
-                        throw new MyGeotabConnectionException($"One or more exceptions were encountered during cache update due to an apparent loss of connectivity with the MyGeotab server.", myGeotabConnectionException);
-                    }
-                    catch (AggregateException aggregateException)
-                    {
-                        Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.MyGeotab, "One or more exceptions were encountered during cache update due to an apparent loss of connectivity with the MyGeotab server.");
-                    }
-                }
-                catch (TaskCanceledException taskCanceledException)
-                {
-                    string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
-                    logger.Warn(errorMessage);
-                }
-            }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
-        }
-
-        /// <summary>
         /// Updates the <see cref="CacheContainer.Cache"/> of a <see cref="CacheContainer"/>.
         /// </summary>
         /// <typeparam name="T">The <see cref="Type"/> of object being cached by the <see cref="CacheContainer"/>.</typeparam>
@@ -349,7 +306,7 @@ namespace MyGeotabAPIAdapter
         /// <param name="cacheRefreshIntervalMinutes">The interval, in minutes, used to determine whether the <see cref="CacheContainer.Cache"/> needs to be refreshed (i.e. purged and fully re-populated to remove items that have been deleted).</param>
         /// <param name="isGetFeed">If <c>true</c>, a GetFeed call will be used for data retrieval. If <c>false</c>, a Get call will be used instead. GetFeed should be used whenever an entity type is supported by a data feed.</param>
         /// <returns>Asynchronous task</returns>
-        async Task UpdateCacheAsync<T>(CancellationTokenSource cancellationTokenSource, CacheContainer cacheContainer, DateTime cacheIntervalDailyReferenceStartTimeUTC, int cacheUpdateIntervalMinutes, int cacheRefreshIntervalMinutes, bool isGetFeed = true) where T : Entity
+        public async Task UpdateCacheAsync<T>(CancellationTokenSource cancellationTokenSource, CacheContainer cacheContainer, DateTime cacheIntervalDailyReferenceStartTimeUTC, int cacheUpdateIntervalMinutes, int cacheRefreshIntervalMinutes, bool isGetFeed = true) where T : Entity
         {
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
@@ -382,57 +339,81 @@ namespace MyGeotabAPIAdapter
                 FeedResult<T> feedResult;
                 bool keepGoing = true;
                 int cacheRecordsAdded = 0;
+                
+                DateTime lastApiCallTimeUtc = DateTime.MinValue;
                 while (keepGoing == true)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (isGetFeed == true)
+                    if (Globals.TimeIntervalHasElapsed(lastApiCallTimeUtc, Globals.DateTimeIntervalType.Milliseconds, MinFeedIntervalMilliseconds))
                     {
-                        // Use the GetFeed method for data retrieval.
-                        try
+                        if (isGetFeed == true)
                         {
-                            logger.Debug($"Calling GetFeedAsync<{typeParameterType.Name}>.");
-                            feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, cacheContainer.LastFeedVersion, cacheContainer.FeedResultsLimit);
-                            cacheContainer.LastFeedVersion = feedResult.ToVersion;
-                            logger.Debug($"GetFeedAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count.ToString()} records.");
-                        }
-                        catch (Exception)
-                        {
-                            cancellationTokenSource.Cancel();
-                            throw;
-                        }
-                    }
-                    else
-                    {
-                        // Use the Get method for data retrieval.
-                        try
-                        {
-                            logger.Debug($"Calling GetAsync<{typeParameterType.Name}>.");
-                            feedResult = new FeedResult<T>
+                            // Use the GetFeed method for data retrieval.
+                            try
                             {
-                                Data = await MyGeotabApiUtility.GetAsync<T>(Globals.MyGeotabAPI)
-                            };
-                            logger.Debug($"GetAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count.ToString()} records.");
-                        }
-                        catch (Exception)
-                        {
-                            cancellationTokenSource.Cancel();
-                            throw;
-                        }
-                    }
-                    if (feedResult == null)
-                    {
-                        logger.Warn($"{methodBase.ReflectedType.Name}.{methodBase.Name} of type '{ typeParameterType.Name}' produced zero results indicating a serious problem with the subject type. Investigation required.");
-                        break;
-                    }
-                    foreach (Entity feedResultItem in feedResult.Data)
-                    {
-                        // If cache is being updated, add or update cache items. If cache is being refreshed, simply add cache items.
-                        if (requiredCacheOperationType == CacheOperationType.Update)
-                        {
-                            if (cacheContainer.Cache.Contains(feedResultItem.Id))
+                                logger.Debug($"Calling GetFeedAsync<{typeParameterType.Name}>.");
+                                feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, cacheContainer.LastFeedVersion, cacheContainer.FeedResultsLimit);
+                                cacheContainer.LastFeedVersion = feedResult.ToVersion;
+                                logger.Debug($"GetFeedAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count} records.");
+                            }
+                            catch (Exception)
                             {
-                                cacheContainer.Cache[feedResultItem.Id] = feedResultItem;
+                                cancellationTokenSource.Cancel();
+                                throw;
+                            }
+                        }
+                        else
+                        {
+                            // Use the Get method for data retrieval.
+                            try
+                            {
+                                logger.Debug($"Calling GetAsync<{typeParameterType.Name}>.");
+                                feedResult = new FeedResult<T>
+                                {
+                                    Data = await MyGeotabApiUtility.GetAsync<T>(Globals.MyGeotabAPI)
+                                };
+                                logger.Debug($"GetAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count} records.");
+                            }
+                            catch (Exception)
+                            {
+                                cancellationTokenSource.Cancel();
+                                throw;
+                            }
+                        }
+                        lastApiCallTimeUtc = DateTime.UtcNow;
+                        if (feedResult == null)
+                        {
+                            logger.Warn($"{methodBase.ReflectedType.Name}.{methodBase.Name} of type '{ typeParameterType.Name}' produced zero results indicating a serious problem with the subject type. Investigation required.");
+                            break;
+                        }
+                        foreach (Entity feedResultItem in feedResult.Data)
+                        {
+                            // If cache is being updated, add or update cache items. If cache is being refreshed, simply add cache items.
+                            if (requiredCacheOperationType == CacheOperationType.Update)
+                            {
+                                if (cacheContainer.Cache.Contains(feedResultItem.Id))
+                                {
+                                    cacheContainer.Cache[feedResultItem.Id] = feedResultItem;
+                                }
+                                else
+                                {
+                                    // Do not cache ZoneStop rules if ZoneStops are not being tracked.
+                                    if (typeParameterType == typeof(Rule) && Globals.ConfigurationManager.TrackZoneStops == false)
+                                    {
+                                        var rule = (Rule)feedResultItem;
+                                        if (rule.BaseType != ExceptionRuleBaseType.ZoneStop)
+                                        {
+                                            cacheContainer.Cache.Add(feedResultItem.Id, feedResultItem);
+                                            cacheRecordsAdded += 1;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        cacheContainer.Cache.Add(feedResultItem.Id, feedResultItem);
+                                        cacheRecordsAdded += 1;
+                                    }
+                                }
                             }
                             else
                             {
@@ -453,34 +434,16 @@ namespace MyGeotabAPIAdapter
                                 }
                             }
                         }
-                        else 
+                        if (feedResult.Data.Count < cacheContainer.FeedResultsLimit)
                         {
-                            // Do not cache ZoneStop rules if ZoneStops are not being tracked.
-                            if (typeParameterType == typeof(Rule) && Globals.ConfigurationManager.TrackZoneStops == false)
-                            {
-                                var rule = (Rule)feedResultItem;
-                                if (rule.BaseType != ExceptionRuleBaseType.ZoneStop)
-                                {
-                                    cacheContainer.Cache.Add(feedResultItem.Id, feedResultItem);
-                                    cacheRecordsAdded += 1;
-                                }
-                            }
-                            else
-                            {
-                                cacheContainer.Cache.Add(feedResultItem.Id, feedResultItem);
-                                cacheRecordsAdded += 1;
-                            }
+                            keepGoing = false;
                         }
-                    }
-                    if (feedResult.Data.Count < cacheContainer.FeedResultsLimit)
-                    {
-                        keepGoing = false;
                     }
                 }
                 DateTime currentDateTime = DateTime.UtcNow;
                 // The LastUpdatedTimeUtc is always updated because a refresh encompasses everyting that is done during an update.
                 cacheContainer.LastUpdatedTimeUtc = currentDateTime;
-                logger.Info($"{typeParameterType.Name} cache updated with {cacheRecordsAdded.ToString()} records added.");
+                logger.Info($"{typeParameterType.Name} cache updated with {cacheRecordsAdded} records added.");
                 if (requiredCacheOperationType == CacheOperationType.Refresh)
                 {
                     cacheContainer.LastRefreshedTimeUtc = currentDateTime;

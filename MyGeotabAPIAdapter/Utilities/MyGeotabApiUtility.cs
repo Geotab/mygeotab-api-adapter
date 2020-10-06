@@ -45,7 +45,7 @@ namespace MyGeotabAPIAdapter.Utilities
             }
             catch (OperationCanceledException exception)
             {
-                throw new MyGeotabConnectionException($"MyGeotab API GetFeedAsync call for type '{typeParameterType.Name}' did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks.ToString()} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
+                throw new MyGeotabConnectionException($"MyGeotab API GetFeedAsync call for type '{typeParameterType.Name}' did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
             }
             catch (Exception exception)
             {
@@ -89,7 +89,7 @@ namespace MyGeotabAPIAdapter.Utilities
             }
             catch (OperationCanceledException exception)
             {
-                throw new MyGeotabConnectionException($"MyGeotab API GetFeedAsync call for type '{typeParameterType.Name}' did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks.ToString()} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
+                throw new MyGeotabConnectionException($"MyGeotab API GetFeedAsync call for type '{typeParameterType.Name}' did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
             }
             catch (Exception exception)
             {
@@ -125,7 +125,7 @@ namespace MyGeotabAPIAdapter.Utilities
             }
             catch (OperationCanceledException exception)
             {
-                throw new MyGeotabConnectionException($"MyGeotab API GetAsync call for type '{typeParameterType.Name}' did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks.ToString()} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
+                throw new MyGeotabConnectionException($"MyGeotab API GetAsync call for type '{typeParameterType.Name}' did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
             }
             catch (Exception exception)
             {

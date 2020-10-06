@@ -341,12 +341,10 @@ namespace MyGeotabAPIAdapter
                 {
                     logger.Trace($"Started iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-                    await cacheManager.UpdateCachesAsync();
+                    await UpdateAllCachesAndPersistToDatabaseAsync();
                     BuildTrackedDevicesDictionary();
                     BuildTrackedDiagnosticsDictionary();
-                    await feedManager.GetDataFromFeedsAsync();
-                    PropagateAllCacheUpdatesToDatabase();
-                    ProcessAllFeedResults();
+                    await GetAllFeedDataAndPersistToDatabaseAsync();
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
                 }
@@ -371,6 +369,169 @@ namespace MyGeotabAPIAdapter
                     System.Diagnostics.Process.GetCurrentProcess().Kill();
                 }
             }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from all feeds and persists the data to the database.
+        /// </summary>
+        /// <returns></returns>
+        async Task GetAllFeedDataAndPersistToDatabaseAsync()
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            using (var cancellationTokenSource = new CancellationTokenSource())
+            {
+                try
+                {
+                    var getLogRecordFeedDataAndPersistToDatabaseAsyncTask = GetLogRecordFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var getStatusDataFeedDataAndPersistToDatabaseAsyncTask = GetStatusDataFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var getFaultDataFeedDataAndPersistToDatabaseAsyncTask = GetFaultDataFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var getDVIRLogFeedDataAndPersistToDatabaseAsyncTask = GetDVIRLogFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var getTripFeedDataAndPersistToDatabaseAsyncTask = GetTripFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var getExceptionEventFeedDataAndPersistToDatabaseAsyncTask = GetExceptionEventFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
+
+                    Task[] tasks = { getLogRecordFeedDataAndPersistToDatabaseAsyncTask, getStatusDataFeedDataAndPersistToDatabaseAsyncTask, getFaultDataFeedDataAndPersistToDatabaseAsyncTask, getDVIRLogFeedDataAndPersistToDatabaseAsyncTask, getTripFeedDataAndPersistToDatabaseAsyncTask, getExceptionEventFeedDataAndPersistToDatabaseAsyncTask };
+
+                    try
+                    {
+                        await Task.WhenAll(tasks);
+                    }
+                    catch (MyGeotabConnectionException myGeotabConnectionException)
+                    {
+                        throw new MyGeotabConnectionException($"One or more exceptions were encountered during data feed processing due to an apparent loss of connectivity with the MyGeotab server.", myGeotabConnectionException);
+                    }
+                    catch (DatabaseConnectionException databaseConnectionException)
+                    {
+                        throw new DatabaseConnectionException($"One or more exceptions were encountered during data feed processing due to an apparent loss of connectivity with the adapter database.", databaseConnectionException);
+                    }
+                    catch (AggregateException aggregateException)
+                    {
+                        Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.MyGeotabOrDatabase, "One or more exceptions were encountered during retrieval of data via feeds and persistance of data to database due to an apparent loss of connectivity with the MyGeotab server or the database.");
+                    }
+                }
+                catch (TaskCanceledException taskCanceledException)
+                {
+                    string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
+                    logger.Warn(errorMessage);
+                }
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from the <see cref="DVIRLog"/> feed and persists the data to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task GetDVIRLogFeedDataAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await feedManager.GetFeedDataAsync<DVIRLog>(feedManager.DVIRLogFeedContainer, cancellationTokenSource);
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProcessDVIRLogFeedResultsAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from the <see cref="ExceptionEvent"/> feed and persists the data to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task GetExceptionEventFeedDataAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await feedManager.GetFeedDataAsync<ExceptionEvent>(feedManager.ExceptionEventFeedContainer, cancellationTokenSource);
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProcessExceptionEventFeedResultsAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from the <see cref="FaultData"/> feed and persists the data to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task GetFaultDataFeedDataAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await feedManager.GetFeedDataAsync<FaultData>(feedManager.FaultDataFeedContainer, cancellationTokenSource);
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProcessFaultDataFeedResultsAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from the <see cref="LogRecord"/> feed and persists the data to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task GetLogRecordFeedDataAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await feedManager.GetFeedDataAsync<LogRecord>(feedManager.LogRecordFeedContainer, cancellationTokenSource);
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProcessLogRecordFeedResultsAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from the <see cref="StatusData"/> feed and persists the data to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task GetStatusDataFeedDataAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await feedManager.GetFeedDataAsync<StatusData>(feedManager.StatusDataFeedContainer, cancellationTokenSource);
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProcessStatusDataFeedResultsAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from the <see cref="Trip"/> feed and persists the data to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task GetTripFeedDataAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await feedManager.GetFeedDataAsync<Trip>(feedManager.TripFeedContainer, cancellationTokenSource);
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProcessTripFeedResultsAsync(cancellationTokenSource);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -555,44 +716,6 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
-        /// Concurrently processes the results returned by all of the supported feeds.
-        /// </summary>
-        /// <returns></returns>
-        void ProcessAllFeedResults()
-        {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            using (var cancellationTokenSource = new CancellationTokenSource())
-            {
-                try
-                {
-                    var processDVIRLogFeedResultsAsyncTask = ProcessDVIRLogFeedResultsAsync(cancellationTokenSource);
-                    var processLogRecordFeedResultsAsyncTask = ProcessLogRecordFeedResultsAsync(cancellationTokenSource);
-                    var processStatusDataFeedResultsAsync = ProcessStatusDataFeedResultsAsync(cancellationTokenSource);
-                    var processFaultDataFeedResultsAsync = ProcessFaultDataFeedResultsAsync(cancellationTokenSource);
-                    var processTripFeedResultsAsync = ProcessTripFeedResultsAsync(cancellationTokenSource);
-                    var processExceptionEventFeedResultsAsync = ProcessExceptionEventFeedResultsAsync(cancellationTokenSource);
-
-                    Task[] tasks = { processDVIRLogFeedResultsAsyncTask, processLogRecordFeedResultsAsyncTask, processStatusDataFeedResultsAsync, processFaultDataFeedResultsAsync, processTripFeedResultsAsync, processExceptionEventFeedResultsAsync };
-
-                    Task.WaitAll(tasks);
-                }
-                catch (AggregateException aggregateException)
-                {
-                    Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.Database, "One or more exceptions were encountered during processing of data feed results due to an apparent loss of connectivity with the database.");
-                }
-                catch (TaskCanceledException taskCanceledException)
-                {
-                    string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
-                    logger.Warn(errorMessage);
-                }
-            }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
-        }
-
-        /// <summary>
         /// Processes <see cref="DVIRLog"/> entities returned by the data feed.
         /// </summary>
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
@@ -675,7 +798,7 @@ namespace MyGeotabAPIAdapter
                             }
                             else
                             {
-                                logger.Debug($"No DefectListPartDefect could be found for the Defect '{defect.Id.ToString()} ({defect.Name})' associated with the DVIRDefect '{dvirDefect.Id.ToString()}' of DVIRLog '{filteredDVIRLog.Id.ToString()}'. This DVIRDefect will not be processed.");
+                                logger.Debug($"No DefectListPartDefect could be found for the Defect '{defect.Id} ({defect.Name})' associated with the DVIRDefect '{dvirDefect.Id}' of DVIRLog '{filteredDVIRLog.Id}'. This DVIRDefect will not be processed.");
                             }
 
                             // Process any DefectRemarks associated with the subject DVIRDefect.
@@ -718,7 +841,7 @@ namespace MyGeotabAPIAdapter
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
 
                         string[] individualResultCounts = resultCounts.Split(",");
-                        logger.Info($"Completed insertion of {individualResultCounts[0]} records into {Globals.ConfigurationManager.DbDVIRLogTableName} table, insertion of {individualResultCounts[1]} records into {Globals.ConfigurationManager.DbDVIRDefectTableName} table, update of {individualResultCounts[2]} records in {Globals.ConfigurationManager.DbDVIRDefectTableName} table and insertion of {individualResultCounts[3]} records into {Globals.ConfigurationManager.DbDVIRDefectRemarkTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds.");
+                        logger.Info($"Completed insertion of {individualResultCounts[0]} records into {Globals.ConfigurationManager.DbDVIRLogTableName} table, insertion of {individualResultCounts[1]} records into {Globals.ConfigurationManager.DbDVIRDefectTableName} table, update of {individualResultCounts[2]} records in {Globals.ConfigurationManager.DbDVIRDefectTableName} table and insertion of {individualResultCounts[3]} records into {Globals.ConfigurationManager.DbDVIRDefectRemarkTableName} table in {elapsedTime.TotalSeconds} seconds.");
                     }
                     catch (Exception)
                     {
@@ -771,9 +894,9 @@ namespace MyGeotabAPIAdapter
                     long noOfInserts = await DbExceptionEventService.InsertAsync(connectionInfo, dbExpectionEvents, exceptionEventDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)feedManager.ExceptionEventFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {feedManager.ExceptionEventFeedContainer.FeedResultData.Count.ToString()} records into " +
-                        $"{Globals.ConfigurationManager.DbExceptionEventTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds " +
-                        $"({recordsProcessedPerSecond.ToString()} per second throughput).");
+                    logger.Info($"Completed insertion of {feedManager.ExceptionEventFeedContainer.FeedResultData.Count} records into " +
+                        $"{Globals.ConfigurationManager.DbExceptionEventTableName} table in {elapsedTime.TotalSeconds} seconds " +
+                        $"({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
                 {
@@ -834,7 +957,7 @@ namespace MyGeotabAPIAdapter
                     long faultDataEntitiesInserted = await DbFaultDataService.InsertAsync(connectionInfo, dbFaultDatas, faultDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)faultDataEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {faultDataEntitiesInserted.ToString()} records into {Globals.ConfigurationManager.DbFaultDataTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                    logger.Info($"Completed insertion of {faultDataEntitiesInserted} records into {Globals.ConfigurationManager.DbFaultDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
                 {
@@ -885,7 +1008,7 @@ namespace MyGeotabAPIAdapter
                     long logRecordsInserted = await DbLogRecordService.InsertAsync(connectionInfo, dbLogRecords, logRecordDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)feedManager.LogRecordFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {feedManager.LogRecordFeedContainer.FeedResultData.Count.ToString()} records into {Globals.ConfigurationManager.DbLogRecordTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                    logger.Info($"Completed insertion of {feedManager.LogRecordFeedContainer.FeedResultData.Count} records into {Globals.ConfigurationManager.DbLogRecordTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
                 {
@@ -937,7 +1060,7 @@ namespace MyGeotabAPIAdapter
                     long statusDataEntitiesInserted = await DbStatusDataService.InsertAsync(connectionInfo, dbStatusDatas, statusDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)statusDataEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {statusDataEntitiesInserted.ToString()} records into {Globals.ConfigurationManager.DbStatusDataTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                    logger.Info($"Completed insertion of {statusDataEntitiesInserted} records into {Globals.ConfigurationManager.DbStatusDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
                 {
@@ -988,7 +1111,7 @@ namespace MyGeotabAPIAdapter
                     long tripsNoInserted = await DbTripService.InsertAsync(connectionInfo, dbTripList, tripDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)tripsNoInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {tripsNoInserted.ToString()} records into {Globals.ConfigurationManager.DbTripTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                    logger.Info($"Completed insertion of {tripsNoInserted} records into {Globals.ConfigurationManager.DbTripTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
                 {
@@ -998,43 +1121,6 @@ namespace MyGeotabAPIAdapter
 
                 // Clear FeedResultData.
                 feedManager.TripFeedContainer.FeedResultData.Clear();
-            }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
-        }
-
-        /// <summary>
-        /// Concurrently propagates all relevant cache updates to the database.
-        /// </summary>
-        /// <returns></returns>
-        void PropagateAllCacheUpdatesToDatabase()
-        {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            using (var cancellationTokenSource = new CancellationTokenSource())
-            {
-                try
-                {
-                    var propagateDeviceCacheUpdatesToDatabaseTask = PropagateDeviceCacheUpdatesToDatabaseAsync(cancellationTokenSource);
-                    var propagateDiagnosticCacheUpdatesToDatabaseTask = PropagateDiagnosticCacheUpdatesToDatabaseAsync(cancellationTokenSource);
-                    var propagateUserCacheUpdatesToDatabaseTask = PropagateUserCacheUpdatesToDatabaseAsync(cancellationTokenSource);
-                    var propagateRuleCacheUpdatesToDatabaseTask = PropagateRuleCacheUpdatesToDatabaseAsync(cancellationTokenSource);
-                    var propagateZoneCacheUpdatesToDatabaseTask = PropagateZoneCacheUpdatesToDatabaseAsync(cancellationTokenSource);
-
-                    Task[] tasks = { propagateDeviceCacheUpdatesToDatabaseTask, propagateDiagnosticCacheUpdatesToDatabaseTask, propagateUserCacheUpdatesToDatabaseTask, propagateRuleCacheUpdatesToDatabaseTask, propagateZoneCacheUpdatesToDatabaseTask };
-
-                    Task.WaitAll(tasks);
-                }
-                catch (AggregateException aggregateException)
-                {
-                    Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.Database, "One or more exceptions were encountered during propagation of cache updates to database due to an apparent loss of connectivity with the database.");
-                }
-                catch (TaskCanceledException taskCanceledException)
-                {
-                    string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
-                    logger.Warn(errorMessage);
-                }
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -1126,7 +1212,7 @@ namespace MyGeotabAPIAdapter
                         long deviceEntitiesInserted = await DbDeviceService.InsertAsync(connectionInfo, dbDevicesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)deviceEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {deviceEntitiesInserted.ToString()} records into {Globals.ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                        logger.Info($"Completed insertion of {deviceEntitiesInserted} records into {Globals.ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1144,7 +1230,7 @@ namespace MyGeotabAPIAdapter
                         long deviceEntitiesUpdated = await DbDeviceService.UpdateAsync(connectionInfo, dbDevicesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)deviceEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {deviceEntitiesUpdated.ToString()} records in {Globals.ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                        logger.Info($"Completed updating of {deviceEntitiesUpdated} records in {Globals.ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1247,7 +1333,7 @@ namespace MyGeotabAPIAdapter
                         long diagnosticEntitiesInserted = await DbDiagnosticService.InsertAsync(connectionInfo, dbDiagnosticsToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)diagnosticEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {diagnosticEntitiesInserted.ToString()} records into {Globals.ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                        logger.Info($"Completed insertion of {diagnosticEntitiesInserted} records into {Globals.ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1265,7 +1351,7 @@ namespace MyGeotabAPIAdapter
                         long diagnosticEntitiesUpdated = await DbDiagnosticService.UpdateAsync(connectionInfo, dbDiagnosticsToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)diagnosticEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {diagnosticEntitiesUpdated.ToString()} records in {Globals.ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                        logger.Info($"Completed updating of {diagnosticEntitiesUpdated} records in {Globals.ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1335,7 +1421,7 @@ namespace MyGeotabAPIAdapter
                     // Log progress.
                     cachedRulesProcessed++;
                     double cachedRulesProcessedPercentage = (cachedRulesProcessed / cachedRuleCount);
-                    logger.Debug($"Processing cached Rule objects in preparation for database update: {cachedRulesProcessed.ToString()} of {cachedRuleCount.ToString()} ({cachedRulesProcessedPercentage.ToString("P")})");
+                    logger.Debug($"Processing cached Rule objects in preparation for database update: {cachedRulesProcessed} of {cachedRuleCount} ({cachedRulesProcessedPercentage:P})");
 
                     // Try to find the existing database record for the cached rule.
                     if (dbRuleObjectDictionary.TryGetValue(cachedRule.Id, out var existingDbRuleObject))
@@ -1372,7 +1458,7 @@ namespace MyGeotabAPIAdapter
                     int ruleObjectEntitiesInserted = await RuleHelper.InsertDbRuleObjectListAsync(dbRuleObjectsToInsert, cancellationTokenSource);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)ruleObjectEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {ruleObjectEntitiesInserted.ToString()} records into the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                    logger.Info($"Completed insertion of {ruleObjectEntitiesInserted} records into the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
                 // Send any updates / deletes to the database.
@@ -1382,7 +1468,7 @@ namespace MyGeotabAPIAdapter
                     int ruleObjectEntitiesUpdated = RuleHelper.UpdateDbRuleObjectsToDatabase(dbRuleObjectsToUpdate, cancellationTokenSource);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)ruleObjectEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed updating of {ruleObjectEntitiesUpdated.ToString()} records in the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                    logger.Info($"Completed updating of {ruleObjectEntitiesUpdated} records in the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 cacheManager.RuleCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
@@ -1479,7 +1565,7 @@ namespace MyGeotabAPIAdapter
                         long userEntitiesInserted = await DbUserService.InsertAsync(connectionInfo, dbUsersToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)userEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {userEntitiesInserted.ToString()} records into {Globals.ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                        logger.Info($"Completed insertion of {userEntitiesInserted} records into {Globals.ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1497,7 +1583,7 @@ namespace MyGeotabAPIAdapter
                         long userEntitiesUpdated = await DbUserService.UpdateAsync(connectionInfo, dbUsersToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)userEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {userEntitiesUpdated.ToString()} records in {Globals.ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                        logger.Info($"Completed updating of {userEntitiesUpdated} records in {Globals.ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1600,7 +1686,7 @@ namespace MyGeotabAPIAdapter
                         long zoneEntitiesInserted = await DbZoneService.InsertAsync(connectionInfo, dbZonesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)zoneEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {zoneEntitiesInserted.ToString()} records into {Globals.ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                        logger.Info($"Completed insertion of {zoneEntitiesInserted} records into {Globals.ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1618,7 +1704,7 @@ namespace MyGeotabAPIAdapter
                         long zoneEntitiesUpdated = await DbZoneService.UpdateAsync(connectionInfo, dbZonesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)zoneEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {zoneEntitiesUpdated.ToString()} records in {Globals.ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds.ToString()} seconds ({recordsProcessedPerSecond.ToString()} per second throughput).");
+                        logger.Info($"Completed updating of {zoneEntitiesUpdated} records in {Globals.ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1725,7 +1811,7 @@ namespace MyGeotabAPIAdapter
             catch (OperationCanceledException exception)
             {
                 cancellationTokenSource.Cancel();
-                throw new MyGeotabConnectionException($"MyGeotab API GetAsync call for type '{typeof(Defect).Name}' did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks.ToString()} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
+                throw new MyGeotabConnectionException($"MyGeotab API GetAsync call for type '{typeof(Defect).Name}' did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -1751,11 +1837,218 @@ namespace MyGeotabAPIAdapter
                         }
                         else
                         {
-                            logger.Debug($"partDefect '{partDefect.Id.ToString()} ({partDefect.Name})' is not a Defect.");
+                            logger.Debug($"partDefect '{partDefect.Id} ({partDefect.Name})' is not a Defect.");
                         }
                     }
                 }
             }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates all caches and persists cache updates to the database.
+        /// </summary>
+        /// <returns></returns>
+        async Task UpdateAllCachesAndPersistToDatabaseAsync()
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            using (var cancellationTokenSource = new CancellationTokenSource())
+            {
+                try
+                {
+                    var updateUserCacheAndPersistToDatabaseAsyncTask = UpdateUserCacheAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var updateDeviceCacheAndPersistToDatabaseAsyncTask = UpdateDeviceCacheAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var updateZoneCacheAndPersistToDatabaseAsyncTask = UpdateZoneCacheAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var updateDiagnosticCacheAndPersistToDatabaseAsyncTask = UpdateDiagnosticCacheAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var updateControllerCacheAsyncTask = UpdateControllerCacheAsync(cancellationTokenSource);
+                    var updateFailureModeCacheAsyncTask = UpdateFailureModeCacheAsync(cancellationTokenSource);
+                    var updateUnitOfMeasureCacheAsyncTask = UpdateUnitOfMeasureCacheAsync(cancellationTokenSource);
+                    var updateRuleCacheAndPersistToDatabaseAsyncTask = UpdateRuleCacheAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var updateGroupCacheAsyncTask = UpdateGroupCacheAsync(cancellationTokenSource);
+
+                    Task[] tasks = { updateUserCacheAndPersistToDatabaseAsyncTask, updateDeviceCacheAndPersistToDatabaseAsyncTask, updateZoneCacheAndPersistToDatabaseAsyncTask, updateDiagnosticCacheAndPersistToDatabaseAsyncTask, updateControllerCacheAsyncTask, updateFailureModeCacheAsyncTask, updateUnitOfMeasureCacheAsyncTask, updateRuleCacheAndPersistToDatabaseAsyncTask, updateGroupCacheAsyncTask };
+
+                    try
+                    {
+                        await Task.WhenAll(tasks);
+                    }
+                    catch (MyGeotabConnectionException myGeotabConnectionException)
+                    {
+                        throw new MyGeotabConnectionException($"One or more exceptions were encountered during cache processing due to an apparent loss of connectivity with the MyGeotab server.", myGeotabConnectionException);
+                    }
+                    catch (DatabaseConnectionException databaseConnectionException)
+                    {
+                        throw new DatabaseConnectionException($"One or more exceptions were encountered during cache processing due to an apparent loss of connectivity with the adapter database.", databaseConnectionException);
+                    }
+                    catch (AggregateException aggregateException)
+                    {
+                        Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.MyGeotabOrDatabase, "One or more exceptions were encountered during retrieval of cache data and persistance of data to database due to an apparent loss of connectivity with the MyGeotab server or the database.");
+                    }
+                }
+                catch (TaskCanceledException taskCanceledException)
+                {
+                    string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
+                    logger.Warn(errorMessage);
+                }
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="Controller"/> cache.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateControllerCacheAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            await cacheManager.UpdateCacheAsync<Controller>(cancellationTokenSource, cacheManager.ControllerCacheContainer, Globals.ConfigurationManager.ControllerCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ControllerCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ControllerCacheRefreshIntervalMinutes, false);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="Device"/> cache and persists cache updates to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateDeviceCacheAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await cacheManager.UpdateCacheAsync<Device>(cancellationTokenSource, cacheManager.DeviceCacheContainer, Globals.ConfigurationManager.DeviceCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.DeviceCacheUpdateIntervalMinutes, Globals.ConfigurationManager.DeviceCacheRefreshIntervalMinutes);
+            cancellationToken.ThrowIfCancellationRequested();
+            await PropagateDeviceCacheUpdatesToDatabaseAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="Diagnostic"/> cache and persists cache updates to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateDiagnosticCacheAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await cacheManager.UpdateCacheAsync<Diagnostic>(cancellationTokenSource, cacheManager.DiagnosticCacheContainer, Globals.ConfigurationManager.DiagnosticCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.DiagnosticCacheUpdateIntervalMinutes, Globals.ConfigurationManager.DiagnosticCacheRefreshIntervalMinutes);
+            cancellationToken.ThrowIfCancellationRequested();
+            await PropagateDiagnosticCacheUpdatesToDatabaseAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="FailureMode"/> cache.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateFailureModeCacheAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            await cacheManager.UpdateCacheAsync<FailureMode>(cancellationTokenSource, cacheManager.FailureModeCacheContainer, Globals.ConfigurationManager.FailureModeCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.FailureModeCacheUpdateIntervalMinutes, Globals.ConfigurationManager.FailureModeCacheRefreshIntervalMinutes, false);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="Group"/> cache.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateGroupCacheAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            await cacheManager.UpdateCacheAsync<Group>(cancellationTokenSource, cacheManager.GroupCacheContainer, Globals.ConfigurationManager.GroupCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.GroupCacheUpdateIntervalMinutes, Globals.ConfigurationManager.GroupCacheRefreshIntervalMinutes, false);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="Geotab.Checkmate.ObjectModel.Exceptions.Rule"/> cache and persists cache updates to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateRuleCacheAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await cacheManager.UpdateCacheAsync<Geotab.Checkmate.ObjectModel.Exceptions.Rule>(cancellationTokenSource, cacheManager.RuleCacheContainer, Globals.ConfigurationManager.RuleCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.RuleCacheUpdateIntervalMinutes, Globals.ConfigurationManager.RuleCacheRefreshIntervalMinutes);
+            cancellationToken.ThrowIfCancellationRequested();
+            await PropagateRuleCacheUpdatesToDatabaseAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="UnitOfMeasure"/> cache.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateUnitOfMeasureCacheAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            await cacheManager.UpdateCacheAsync<UnitOfMeasure>(cancellationTokenSource, cacheManager.UnitOfMeasureCacheContainer, Globals.ConfigurationManager.UnitOfMeasureCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.UnitOfMeasureCacheUpdateIntervalMinutes, Globals.ConfigurationManager.UnitOfMeasureCacheRefreshIntervalMinutes, false);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="User"/> cache and persists cache updates to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateUserCacheAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await cacheManager.UpdateCacheAsync<User>(cancellationTokenSource, cacheManager.UserCacheContainer, Globals.ConfigurationManager.UserCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.UserCacheUpdateIntervalMinutes, Globals.ConfigurationManager.UserCacheRefreshIntervalMinutes);
+            cancellationToken.ThrowIfCancellationRequested();
+            await PropagateUserCacheUpdatesToDatabaseAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="Zone"/> cache and persists cache updates to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateZoneCacheAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await cacheManager.UpdateCacheAsync<Zone>(cancellationTokenSource, cacheManager.ZoneCacheContainer, Globals.ConfigurationManager.ZoneCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ZoneCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ZoneCacheRefreshIntervalMinutes);
+            cancellationToken.ThrowIfCancellationRequested();
+            await PropagateZoneCacheUpdatesToDatabaseAsync(cancellationTokenSource);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -1781,7 +2074,7 @@ namespace MyGeotabAPIAdapter
             }
             catch (OperationCanceledException exception)
             {
-                throw new MyGeotabConnectionException($"MyGeotab API GetVersionInformationAsync call did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks.ToString()} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
+                throw new MyGeotabConnectionException($"MyGeotab API GetVersionInformationAsync call did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
             }
             catch (Exception exception)
             {
@@ -1875,7 +2168,7 @@ namespace MyGeotabAPIAdapter
                     {
                         if (!Task.WaitAll(tasks, Globals.ConfigurationManager.TimeoutMillisecondsForDatabaseTasks))
                         {
-                            throw new DatabaseConnectionException($"The MyGeotab database version information was not propagated to the database within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks.ToString()} seconds. This may be due to a database connectivity issue.");
+                            throw new DatabaseConnectionException($"The MyGeotab database version information was not propagated to the database within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks} seconds. This may be due to a database connectivity issue.");
                         }
                     }
                     catch (AggregateException aggregateException)
@@ -1906,13 +2199,13 @@ namespace MyGeotabAPIAdapter
 
             StateMachine.CurrentState = State.Waiting;
             StateMachine.Reason = reasonForConnectivityLoss;
-            logger.Warn($"******** CONNECTIVITY LOST. REASON: '{StateMachine.Reason.ToString()}'. WAITING FOR RESTORATION OF CONNECTIVITY...");
+            logger.Warn($"******** CONNECTIVITY LOST. REASON: '{StateMachine.Reason}'. WAITING FOR RESTORATION OF CONNECTIVITY...");
             while (StateMachine.CurrentState == State.Waiting)
             {
                 // Wait for the prescribed interval between connectivity checks.
                 await Task.Delay(ConnectivityRestorationCheckIntervalMilliseconds);
 
-                logger.Warn($"{StateMachine.Reason.ToString()}; continuing to wait for restoration of connectivity...");
+                logger.Warn($"{StateMachine.Reason}; continuing to wait for restoration of connectivity...");
                 switch (StateMachine.Reason)
                 {
                     case StateReason.DatabaseNotAvailable:

@@ -93,7 +93,7 @@ namespace MyGeotabAPIAdapter
             };
             if (rule.Condition == null)
             {
-                logger.Debug($"Rule '{rule.Id.ToString()}' has no conditions.");
+                logger.Debug($"Rule '{rule.Id}' has no conditions.");
             }
             else 
             {
@@ -141,7 +141,7 @@ namespace MyGeotabAPIAdapter
             if (condition.Children == null)
             {
                 // No children to process; exit.
-                logger.Debug($"Condition Id: {condition.Id.ToString()} has no children to process.");
+                logger.Debug($"Condition Id: {condition.Id} has no children to process.");
                 return;
             }
             Condition currentCondition;

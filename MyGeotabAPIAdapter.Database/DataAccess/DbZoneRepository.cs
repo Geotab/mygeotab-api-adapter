@@ -44,19 +44,26 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
             long insertedRowsCount = 0;
-            using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
+            try
             {
-                using (var transaction = await connection.BeginTransactionAsync())
+                using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
                 {
-                    foreach (var dbZone in dbZones)
+                    using (var transaction = await connection.BeginTransactionAsync())
                     {
-                        await InsertAsync(connection, transaction, dbZone, commandTimeout);
-                        insertedRowsCount += 1;
-                        cancellationToken.ThrowIfCancellationRequested();
+                        foreach (var dbZone in dbZones)
+                        {
+                            await InsertAsync(connection, transaction, dbZone, commandTimeout);
+                            insertedRowsCount += 1;
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        await transaction.CommitAsync();
                     }
-                    await transaction.CommitAsync();
+                    return insertedRowsCount;
                 }
-                return insertedRowsCount;
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
             }
         }
 
@@ -72,19 +79,26 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
             long updatedRowsCount = 0;
-            using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
+            try
             {
-                using (var transaction = await connection.BeginTransactionAsync())
+                using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
                 {
-                    foreach (var dbZone in dbZones)
+                    using (var transaction = await connection.BeginTransactionAsync())
                     {
-                        await UpdateAsync(connection, transaction, dbZone, commandTimeout);
-                        updatedRowsCount += 1;
-                        cancellationToken.ThrowIfCancellationRequested();
+                        foreach (var dbZone in dbZones)
+                        {
+                            await UpdateAsync(connection, transaction, dbZone, commandTimeout);
+                            updatedRowsCount += 1;
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        await transaction.CommitAsync();
                     }
-                    await transaction.CommitAsync();
+                    return updatedRowsCount;
                 }
-                return updatedRowsCount;
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
             }
         }
     }

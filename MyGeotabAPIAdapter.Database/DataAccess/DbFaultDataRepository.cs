@@ -1,4 +1,5 @@
 ﻿using MyGeotabAPIAdapter.Database.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,24 +24,31 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
             long insertedRowsCount = 0;
-            using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
+            try
             {
-                using (var transaction = await connection.BeginTransactionAsync())
+                using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
                 {
-                    foreach (var dbFaultData in dbFaultDatas)
+                    using (var transaction = await connection.BeginTransactionAsync())
                     {
-                        await InsertAsync(connection, transaction, dbFaultData, commandTimeout);
-                        insertedRowsCount += 1;
+                        foreach (var dbFaultData in dbFaultDatas)
+                        {
+                            await InsertAsync(connection, transaction, dbFaultData, commandTimeout);
+                            insertedRowsCount += 1;
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+
+                        // Update DbConfigFeedVersion.
+                        await new DbConfigFeedVersionRepository().UpdateAsync(connection, transaction, dbConfigFeedVersion, commandTimeout);
+
                         cancellationToken.ThrowIfCancellationRequested();
+                        await transaction.CommitAsync();
                     }
-
-                    // Update DbConfigFeedVersion.
-                    await new DbConfigFeedVersionRepository().UpdateAsync(connection, transaction, dbConfigFeedVersion, commandTimeout);
-
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await transaction.CommitAsync();
+                    return insertedRowsCount;
                 }
-                return insertedRowsCount;
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
             }
         }
     }
