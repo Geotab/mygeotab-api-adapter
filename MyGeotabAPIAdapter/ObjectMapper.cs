@@ -4,6 +4,7 @@ using Geotab.Checkmate.ObjectModel.Exceptions;
 using static MyGeotabAPIAdapter.Database.Common;
 using Microsoft.CSharp.RuntimeBinder;
 using MyGeotabAPIAdapter.Database.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -23,9 +24,9 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static bool DbDeviceRequiresUpdate(DbDevice dbDevice, Device device)
         {
-            if (dbDevice.Id != device.Id.ToString())
+            if (dbDevice.GeotabId != device.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare Device '{device.Id}' with DbDevice '{dbDevice.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare Device '{device.Id}' with DbDevice '{dbDevice.GeotabId}' because the IDs do not match.");
             }
 
             DateTime dbDeviceActiveFromUtc = dbDevice.ActiveFrom.GetValueOrDefault().ToUniversalTime();
@@ -55,9 +56,9 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static bool DbDiagnosticRequiresUpdate(DbDiagnostic dbDiagnostic, Diagnostic diagnostic)
         {
-            if (dbDiagnostic.Id != diagnostic.Id.ToString())
+            if (dbDiagnostic.GeotabId != diagnostic.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare Diagnostic '{diagnostic.Id}' with DbDiagnostic '{dbDiagnostic.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare Diagnostic '{diagnostic.Id}' with DbDiagnostic '{dbDiagnostic.GeotabId}' because the IDs do not match.");
             }
 
             Source diagnosticSource = diagnostic.Source;
@@ -77,9 +78,9 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static bool DbDVIRDefectRequiresUpdate(DbDVIRDefect dbDVIRDefect, DVIRDefect dvirDefect)
         {
-            if (dbDVIRDefect.Id != dvirDefect.Id.ToString())
+            if (dbDVIRDefect.GeotabId != dvirDefect.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare DVIRDefect '{dvirDefect.Id}' with DbDVIRDefect '{dbDVIRDefect.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare DVIRDefect '{dvirDefect.Id}' with DbDVIRDefect '{dbDVIRDefect.GeotabId}' because the IDs do not match.");
             }
 
             DateTime dbDVIRDefectRepairDateTimeUtc = dbDVIRDefect.RepairDateTime.GetValueOrDefault().ToUniversalTime();
@@ -109,9 +110,9 @@ namespace MyGeotabAPIAdapter
         /// <returns>True if update is required otherwise false</returns>
         public static bool DbRuleObjectRequiresUpdate(DbRuleObject dbRuleObject, Rule rule)
         {
-            if (dbRuleObject.DbRule.Id != rule.Id.ToString())
+            if (dbRuleObject.DbRule.GeotabId != rule.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare Rule '{rule.Id}' with DbUser '{dbRuleObject.DbRule.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare Rule '{rule.Id}' with DbUser '{dbRuleObject.DbRule.GeotabId}' because the IDs do not match.");
             }
 
             if (dbRuleObject.DbRule.Version != rule.Version)
@@ -129,9 +130,9 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static bool DbUserRequiresUpdate(DbUser dbUser, User user)
         {
-            if (dbUser.Id != user.Id.ToString())
+            if (dbUser.GeotabId != user.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare User '{user.Id}' with DbUser '{dbUser.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare User '{user.Id}' with DbUser '{dbUser.GeotabId}' because the IDs do not match.");
             }
 
             DateTime dbUserActiveFromUtc = dbUser.ActiveFrom.GetValueOrDefault().ToUniversalTime();
@@ -174,9 +175,9 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static bool DbZoneRequiresUpdate(DbZone dbZone, Zone zone)
         {
-            if (dbZone.Id != zone.Id.ToString())
+            if (dbZone.GeotabId != zone.Id.ToString())
             {
-                throw new ArgumentException($"Cannot compare Zone '{zone.Id}' with DbZone '{dbZone.Id}' because the IDs do not match.");
+                throw new ArgumentException($"Cannot compare Zone '{zone.Id}' with DbZone '{dbZone.GeotabId}' because the IDs do not match.");
             }
 
             DateTime dbZoneActiveFromUtc = dbZone.ActiveFrom.GetValueOrDefault().ToUniversalTime();
@@ -234,6 +235,11 @@ namespace MyGeotabAPIAdapter
                     return true;
                 }
             }
+            string zonePoints = JsonConvert.SerializeObject(zone.Points);
+            if (dbZone.Points != zonePoints)
+            {
+                return true;
+            }
             return false;
         }
 
@@ -247,7 +253,7 @@ namespace MyGeotabAPIAdapter
         {
             DbCondition dbCondition = new DbCondition
             {
-                Id = condition.Id.ToString(),
+                GeotabId = condition.Id.ToString(),
                 ParentId = parentId
             };
             if (condition.Rule != null)
@@ -295,7 +301,7 @@ namespace MyGeotabAPIAdapter
         {
             DbCondition dbCondition = new DbCondition
             {
-                Id = condition.Id.ToString(),
+                GeotabId = condition.Id.ToString(),
                 ParentId = parentId
             };
             if (condition.Rule != null)
@@ -426,7 +432,7 @@ namespace MyGeotabAPIAdapter
                 ActiveFrom = device.ActiveFrom,
                 ActiveTo = device.ActiveTo,
                 DeviceType = device.DeviceType.ToString(),
-                Id = device.Id.ToString(),
+                GeotabId = device.Id.ToString(),
                 LicensePlate = deviceLicensePlate,
                 LicenseState = deviceLicenseState,
                 Name = device.Name,
@@ -456,7 +462,7 @@ namespace MyGeotabAPIAdapter
                 DiagnosticSourceName = diagnosticSource.Name,
                 DiagnosticUnitOfMeasureId = diagnosticUnitOfMeasure.Id.ToString(),
                 DiagnosticUnitOfMeasureName = diagnosticUnitOfMeasure.Name,
-                Id = diagnostic.Id.ToString()
+                GeotabId = diagnostic.Id.ToString()
             };
             if (diagnosticController != null)
             {
@@ -538,7 +544,7 @@ namespace MyGeotabAPIAdapter
         {
             DbDVIRDefect dbDVIRDefect = new DbDVIRDefect
             {
-                Id = dvirDefect.Id.ToString(),
+                GeotabId = dvirDefect.Id.ToString(),
                 DVIRLogId = dvirLog.Id.ToString(),
                 DefectId = defect.Id.ToString(),
                 DefectListAssetType = defectListPartDefect.DefectListAssetType,
@@ -576,7 +582,7 @@ namespace MyGeotabAPIAdapter
             DbDVIRDefectRemark dbDVIRDefectRemark = new DbDVIRDefectRemark
             {
                 DVIRDefectId = defectRemark.DVIRDefect.Id.ToString(),
-                Id = defectRemark.Id.ToString(),
+                GeotabId = defectRemark.Id.ToString(),
                 Remark = defectRemark.Remark
             };
             if (defectRemark.DateTime != null)
@@ -600,7 +606,7 @@ namespace MyGeotabAPIAdapter
         {
             DbDVIRLog dbDVIRLog = new DbDVIRLog
             {
-                Id = dvirLog.Id.ToString()
+                GeotabId = dvirLog.Id.ToString()
             };
 
             if (dvirLog.CertifiedBy != null)
@@ -679,7 +685,7 @@ namespace MyGeotabAPIAdapter
 
             DbExceptionEvent dbExceptionEvent = new DbExceptionEvent
             {
-                Id = exceptionEvent.Id.ToString(),
+                GeotabId = exceptionEvent.Id.ToString(),
                 ActiveFrom = exceptionEvent.ActiveFrom,
                 ActiveTo = exceptionEvent.ActiveTo,
                 DeviceId = device.Id.ToString(),
@@ -730,7 +736,7 @@ namespace MyGeotabAPIAdapter
 
             DbFaultData dbFaultData = new DbFaultData
             {
-                Id = faultData.Id.ToString(),
+                GeotabId = faultData.Id.ToString(),
                 AmberWarningLamp = faultData.AmberWarningLamp,
                 ControllerId = faultDataController.Id.ToString(),
                 ControllerName = faultDataController.Name,
@@ -797,7 +803,7 @@ namespace MyGeotabAPIAdapter
         {
             DbLogRecord dbLogRecord = new DbLogRecord
             {
-                Id = logRecord.Id.ToString(),
+                GeotabId = logRecord.Id.ToString(),
                 DateTime = logRecord.DateTime.GetValueOrDefault(),
                 DeviceId = logRecord.Device.Id.ToString(),
                 Latitude = logRecord.Latitude,
@@ -834,7 +840,7 @@ namespace MyGeotabAPIAdapter
         {
             DbRule dbRule = new DbRule
             {
-                Id = rule.Id.ToString(),
+                GeotabId = rule.Id.ToString(),
                 Name = rule.Name.ToString(),
                 BaseType = rule.BaseType.ToString(),
                 ActiveFrom = rule.ActiveFrom,
@@ -858,7 +864,7 @@ namespace MyGeotabAPIAdapter
         {
             DbRule dbRule = new DbRule
             {
-                Id = rule.Id.ToString(),
+                GeotabId = rule.Id.ToString(),
                 Name = rule.Name.ToString(),
                 BaseType = rule.BaseType.ToString(),
                 ActiveFrom = rule.ActiveFrom,
@@ -920,7 +926,7 @@ namespace MyGeotabAPIAdapter
 
             DbStatusData dbStatusData = new DbStatusData
             {
-                Id = statusData.Id.ToString(),
+                GeotabId = statusData.Id.ToString(),
                 Data = statusData.Data,
                 DateTime = statusData.DateTime,
                 DeviceId = statusDataDevice.Id.ToString(),
@@ -957,7 +963,7 @@ namespace MyGeotabAPIAdapter
             DbTrip dbTrip = new DbTrip
             {
                 DeviceId = trip.Device.Id.ToString(),
-                Id = trip.Id.ToString(),
+                GeotabId = trip.Id.ToString(),
                 DriverId = trip.Driver.Id.ToString(),
                 Distance = trip.Distance,
                 DrivingDuration = trip.DrivingDuration,
@@ -1011,7 +1017,7 @@ namespace MyGeotabAPIAdapter
                 ActiveTo = user.ActiveTo,
                 EmployeeNo = employeeNo,
                 FirstName = user.FirstName,
-                Id = user.Id.ToString(),
+                GeotabId = user.Id.ToString(),
                 IsDriver = user.IsDriver ?? false,
                 LastName = user.LastName,
                 Name = user.Name
@@ -1044,7 +1050,7 @@ namespace MyGeotabAPIAdapter
         {
             DbZone dbZone = new DbZone
             {
-                Id = zone.Id.ToString(),
+                GeotabId = zone.Id.ToString(),
                 Displayed = zone.Displayed ?? false,
                 MustIdentifyStops = zone.MustIdentifyStops ?? false,
                 Name = zone.Name,
@@ -1074,6 +1080,8 @@ namespace MyGeotabAPIAdapter
             {
                 dbZone.ExternalReference = zone.ExternalReference;
             }
+            string zonePoints = JsonConvert.SerializeObject(zone.Points);
+            dbZone.Points = zonePoints;
             return dbZone;
         }
 

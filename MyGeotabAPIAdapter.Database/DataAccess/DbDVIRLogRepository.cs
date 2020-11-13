@@ -13,7 +13,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     public class DbDVIRLogRepository : BaseRepository<DbDVIRLog>
     {
         /// <summary>
-        /// Retrieves a <see cref="DbDVIRLog"/> with the specified <see cref="DbDVIRLog.Id"/>. Throws an <see cref="Exception"/> if an entity with the specified ID cannot be found.
+        /// Retrieves a <see cref="DbDVIRLog"/> with the specified <see cref="DbDVIRLog.GeotabId"/>. Throws an <see cref="Exception"/> if an entity with the specified ID cannot be found.
         /// </summary>
         /// <param name="connectionInfo">The database connection information.</param>
         /// <param name="id">The ID of the database record to be returned.</param>
@@ -33,7 +33,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <summary>
-        /// Retrieves a <see cref="DbDVIRLog"/> with the specified <see cref="DbDVIRLog.Id"/>. Returns <c>null</c> if an entity with the specified ID cannot be found.
+        /// Retrieves a <see cref="DbDVIRLog"/> with the specified <see cref="DbDVIRLog.GeotabId"/>. Returns <c>null</c> if an entity with the specified ID cannot be found.
         /// </summary>
         /// <param name="connectionInfo">The database connection information.</param>
         /// <param name="id">The ID of the database record to be returned.</param>

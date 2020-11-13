@@ -12,9 +12,10 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("Rules")]
     public class DbRule
     {
-        [ExplicitKey]
+        [Key]
+        public long id { get; set; }
         // The unique identifier for this entity.
-        public string Id { get; set; }
+        public string GeotabId { get; set; }
         // The name of the rule entity that uniquely identifies it and is used when displaying this entity.
         public string Name { get; set; }
         // The ExceptionRuleBaseType of the rule; either Custom, Stock or ZoneStop.

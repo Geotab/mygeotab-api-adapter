@@ -47,7 +47,8 @@ SET default_with_oids = false;
 --
 
 CREATE TABLE public."Conditions" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "ParentId" character varying(50),
     "RuleId" character varying(50),
     "ConditionType" character varying(50) NOT NULL,
@@ -65,10 +66,32 @@ CREATE TABLE public."Conditions" (
 ALTER TABLE public."Conditions" OWNER TO geotabadapter_owner;
 
 --
+-- Name: Conditions_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."Conditions_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."Conditions_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: Conditions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."Conditions_id_seq" OWNED BY public."Conditions".id;
+
+
+--
 -- Name: ConfigFeedVersions; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."ConfigFeedVersions" (
+    id bigint NOT NULL,
     "FeedTypeId" character varying(50) NOT NULL,
     "LastProcessedFeedVersion" bigint NOT NULL,
     "RecordLastChangedUtc" timestamp without time zone NOT NULL
@@ -78,11 +101,33 @@ CREATE TABLE public."ConfigFeedVersions" (
 ALTER TABLE public."ConfigFeedVersions" OWNER TO geotabadapter_owner;
 
 --
+-- Name: ConfigFeedVersions_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."ConfigFeedVersions_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."ConfigFeedVersions_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: ConfigFeedVersions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."ConfigFeedVersions_id_seq" OWNED BY public."ConfigFeedVersions".id;
+
+
+--
 -- Name: DVIRDefectRemarks; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."DVIRDefectRemarks" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "DVIRDefectId" character varying(50) NOT NULL,
     "DateTime" timestamp without time zone NOT NULL,
     "Remark" text NOT NULL,
@@ -95,11 +140,33 @@ CREATE TABLE public."DVIRDefectRemarks" (
 ALTER TABLE public."DVIRDefectRemarks" OWNER TO geotabadapter_owner;
 
 --
+-- Name: DVIRDefectRemarks_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."DVIRDefectRemarks_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."DVIRDefectRemarks_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: DVIRDefectRemarks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."DVIRDefectRemarks_id_seq" OWNED BY public."DVIRDefectRemarks".id;
+
+
+--
 -- Name: DVIRDefects; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."DVIRDefects" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "DVIRLogId" character varying(50) NOT NULL,
     "DefectListAssetType" character varying(50),
     "DefectListId" character varying(50),
@@ -120,11 +187,33 @@ CREATE TABLE public."DVIRDefects" (
 ALTER TABLE public."DVIRDefects" OWNER TO geotabadapter_owner;
 
 --
+-- Name: DVIRDefects_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."DVIRDefects_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."DVIRDefects_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: DVIRDefects_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."DVIRDefects_id_seq" OWNED BY public."DVIRDefects".id;
+
+
+--
 -- Name: DVIRLogs; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."DVIRLogs" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "CertifiedByUserId" character varying(50),
     "CertifiedDate" timestamp without time zone,
     "CertifyRemark" text,
@@ -149,11 +238,33 @@ CREATE TABLE public."DVIRLogs" (
 ALTER TABLE public."DVIRLogs" OWNER TO geotabadapter_owner;
 
 --
+-- Name: DVIRLogs_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."DVIRLogs_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."DVIRLogs_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: DVIRLogs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."DVIRLogs_id_seq" OWNED BY public."DVIRLogs".id;
+
+
+--
 -- Name: Devices; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."Devices" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "ActiveFrom" timestamp(4) without time zone,
     "ActiveTo" timestamp(4) without time zone,
     "DeviceType" character varying(50) NOT NULL,
@@ -171,11 +282,33 @@ CREATE TABLE public."Devices" (
 ALTER TABLE public."Devices" OWNER TO geotabadapter_owner;
 
 --
+-- Name: Devices_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."Devices_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."Devices_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: Devices_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."Devices_id_seq" OWNED BY public."Devices".id;
+
+
+--
 -- Name: Diagnostics; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."Diagnostics" (
-    "Id" character varying(100) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(100) NOT NULL,
     "ControllerId" character varying(100),
     "DiagnosticCode" integer,
     "DiagnosticName" character varying(255) NOT NULL,
@@ -192,11 +325,33 @@ CREATE TABLE public."Diagnostics" (
 ALTER TABLE public."Diagnostics" OWNER TO geotabadapter_owner;
 
 --
+-- Name: Diagnostics_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."Diagnostics_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."Diagnostics_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: Diagnostics_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."Diagnostics_id_seq" OWNED BY public."Diagnostics".id;
+
+
+--
 -- Name: ExceptionEvents; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."ExceptionEvents" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "ActiveFrom" timestamp without time zone,
     "ActiveTo" timestamp without time zone,
     "DeviceId" character varying(50),
@@ -212,11 +367,33 @@ CREATE TABLE public."ExceptionEvents" (
 ALTER TABLE public."ExceptionEvents" OWNER TO geotabadapter_owner;
 
 --
+-- Name: ExceptionEvents_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."ExceptionEvents_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."ExceptionEvents_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: ExceptionEvents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."ExceptionEvents_id_seq" OWNED BY public."ExceptionEvents".id;
+
+
+--
 -- Name: FaultData; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."FaultData" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "AmberWarningLamp" boolean,
     "ClassCode" character varying(50),
     "ControllerId" character varying(100) NOT NULL,
@@ -244,11 +421,33 @@ CREATE TABLE public."FaultData" (
 ALTER TABLE public."FaultData" OWNER TO geotabadapter_owner;
 
 --
+-- Name: FaultData_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."FaultData_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."FaultData_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: FaultData_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."FaultData_id_seq" OWNED BY public."FaultData".id;
+
+
+--
 -- Name: LogRecords; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."LogRecords" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "DateTime" timestamp without time zone NOT NULL,
     "DeviceId" character varying(50) NOT NULL,
     "Latitude" double precision DEFAULT 0 NOT NULL,
@@ -259,6 +458,27 @@ CREATE TABLE public."LogRecords" (
 
 
 ALTER TABLE public."LogRecords" OWNER TO geotabadapter_owner;
+
+--
+-- Name: LogRecords_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."LogRecords_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."LogRecords_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: LogRecords_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."LogRecords_id_seq" OWNED BY public."LogRecords".id;
+
 
 --
 -- Name: MyGeotabVersionInfo; Type: TABLE; Schema: public; Owner: geotabadapter_owner
@@ -278,12 +498,14 @@ CREATE TABLE public."MyGeotabVersionInfo" (
 
 ALTER TABLE public."MyGeotabVersionInfo" OWNER TO geotabadapter_owner;
 
+
 --
 -- Name: Rules; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."Rules" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "ActiveFrom" timestamp without time zone,
     "ActiveTo" timestamp without time zone,
     "BaseType" character varying(50),
@@ -298,11 +520,33 @@ CREATE TABLE public."Rules" (
 ALTER TABLE public."Rules" OWNER TO geotabadapter_owner;
 
 --
+-- Name: Rules_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."Rules_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."Rules_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: Rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."Rules_id_seq" OWNED BY public."Rules".id;
+
+
+--
 -- Name: StatusData; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."StatusData" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "Data" double precision,
     "DateTime" timestamp without time zone,
     "DeviceId" character varying(50) NOT NULL,
@@ -314,11 +558,33 @@ CREATE TABLE public."StatusData" (
 ALTER TABLE public."StatusData" OWNER TO geotabadapter_owner;
 
 --
+-- Name: StatusData_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."StatusData_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."StatusData_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: StatusData_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."StatusData_id_seq" OWNED BY public."StatusData".id;
+
+
+--
 -- Name: Trips; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."Trips" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "DeviceId" character varying(50) NOT NULL,
     "DriverId" character varying(50) NOT NULL,
     "Distance" real NOT NULL,
@@ -336,11 +602,33 @@ CREATE TABLE public."Trips" (
 ALTER TABLE public."Trips" OWNER TO geotabadapter_owner;
 
 --
+-- Name: Trips_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."Trips_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."Trips_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: Trips_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."Trips_id_seq" OWNED BY public."Trips".id;
+
+
+--
 -- Name: Users; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."Users" (
-    "Id" character varying(50) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
     "ActiveFrom" timestamp without time zone NOT NULL,
     "ActiveTo" timestamp without time zone NOT NULL,
     "EmployeeNo" character varying(50),
@@ -356,11 +644,33 @@ CREATE TABLE public."Users" (
 ALTER TABLE public."Users" OWNER TO geotabadapter_owner;
 
 --
+-- Name: Users_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."Users_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."Users_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: Users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."Users_id_seq" OWNED BY public."Users".id;
+
+
+--
 -- Name: Zones; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."Zones" (
-    "Id" character varying(100) NOT NULL,
+    id bigint NOT NULL,
+    "GeotabId" character varying(100) NOT NULL,
     "ActiveFrom" timestamp without time zone,
     "ActiveTo" timestamp without time zone,
     "CentroidLatitude" double precision,
@@ -370,6 +680,7 @@ CREATE TABLE public."Zones" (
     "ExternalReference" character varying(255),
     "MustIdentifyStops" boolean,
     "Name" character varying(255) NOT NULL,
+    "Points" text,
     "Version" bigint,
     "EntityStatus" integer NOT NULL,
     "RecordLastChangedUtc" timestamp without time zone NOT NULL
@@ -379,11 +690,32 @@ CREATE TABLE public."Zones" (
 ALTER TABLE public."Zones" OWNER TO geotabadapter_owner;
 
 --
+-- Name: Zones_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."Zones_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."Zones_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: Zones_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."Zones_id_seq" OWNED BY public."Zones".id;
+
+
+--
 -- Name: vwRuleObject; Type: VIEW; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE VIEW public."vwRuleObject" AS
- SELECT r."Id",
+ SELECT r."GeotabId",
     r."ActiveFrom",
     r."ActiveTo",
     r."BaseType",
@@ -392,7 +724,7 @@ CREATE VIEW public."vwRuleObject" AS
     r."Version",
     r."EntityStatus",
     r."RecordLastChangedUtc",
-    c."Id" AS "Cond_Id",
+    c."GeotabId" AS "Cond_Id",
     c."ParentId" AS "Cond_ParentId",
     c."RuleId" AS "Cond_RuleId",
     c."ConditionType" AS "Cond_ConditionType",
@@ -405,17 +737,250 @@ CREATE VIEW public."vwRuleObject" AS
     c."EntityStatus" AS "Cond_EntityStatus",
     c."RecordLastChangedUtc" AS "Cond_RecordLastChangedUtc"
    FROM (public."Rules" r
-     JOIN public."Conditions" c ON (((r."Id")::text = (c."RuleId")::text)))
-  ORDER BY r."Id", c."Id";
+     JOIN public."Conditions" c ON (((r."GeotabId")::text = (c."RuleId")::text)))
+  ORDER BY r."GeotabId", c."RuleId";
 
 
 ALTER TABLE public."vwRuleObject" OWNER TO geotabadapter_owner;
+
+--
+-- Name: Conditions id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Conditions" ALTER COLUMN id SET DEFAULT nextval('public."Conditions_id_seq"'::regclass);
+
+
+--
+-- Name: ConfigFeedVersions id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."ConfigFeedVersions" ALTER COLUMN id SET DEFAULT nextval('public."ConfigFeedVersions_id_seq"'::regclass);
+
+
+--
+-- Name: DVIRDefectRemarks id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DVIRDefectRemarks" ALTER COLUMN id SET DEFAULT nextval('public."DVIRDefectRemarks_id_seq"'::regclass);
+
+
+--
+-- Name: DVIRDefects id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DVIRDefects" ALTER COLUMN id SET DEFAULT nextval('public."DVIRDefects_id_seq"'::regclass);
+
+
+--
+-- Name: DVIRLogs id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DVIRLogs" ALTER COLUMN id SET DEFAULT nextval('public."DVIRLogs_id_seq"'::regclass);
+
+
+--
+-- Name: Devices id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Devices" ALTER COLUMN id SET DEFAULT nextval('public."Devices_id_seq"'::regclass);
+
+
+--
+-- Name: Diagnostics id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Diagnostics" ALTER COLUMN id SET DEFAULT nextval('public."Diagnostics_id_seq"'::regclass);
+
+
+--
+-- Name: ExceptionEvents id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."ExceptionEvents" ALTER COLUMN id SET DEFAULT nextval('public."ExceptionEvents_id_seq"'::regclass);
+
+
+--
+-- Name: FaultData id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."FaultData" ALTER COLUMN id SET DEFAULT nextval('public."FaultData_id_seq"'::regclass);
+
+
+--
+-- Name: LogRecords id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."LogRecords" ALTER COLUMN id SET DEFAULT nextval('public."LogRecords_id_seq"'::regclass);
+
+
+--
+-- Name: Rules id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Rules" ALTER COLUMN id SET DEFAULT nextval('public."Rules_id_seq"'::regclass);
+
+
+--
+-- Name: StatusData id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."StatusData" ALTER COLUMN id SET DEFAULT nextval('public."StatusData_id_seq"'::regclass);
+
+
+--
+-- Name: Trips id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Trips" ALTER COLUMN id SET DEFAULT nextval('public."Trips_id_seq"'::regclass);
+
+
+--
+-- Name: Users id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Users" ALTER COLUMN id SET DEFAULT nextval('public."Users_id_seq"'::regclass);
+
+
+--
+-- Name: Zones id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Zones" ALTER COLUMN id SET DEFAULT nextval('public."Zones_id_seq"'::regclass);
+
+
+--
+-- Name: Conditions Conditions_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Conditions"
+    ADD CONSTRAINT "Conditions_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: ConfigFeedVersions ConfigFeedVersions_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."ConfigFeedVersions"
+    ADD CONSTRAINT "ConfigFeedVersions_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: DVIRDefectRemarks DVIRDefectRemarks_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DVIRDefectRemarks"
+    ADD CONSTRAINT "DVIRDefectRemarks_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: DVIRDefects DVIRDefects_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DVIRDefects"
+    ADD CONSTRAINT "DVIRDefects_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: DVIRLogs DVIRLogs_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DVIRLogs"
+    ADD CONSTRAINT "DVIRLogs_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Devices Devices_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Devices"
+    ADD CONSTRAINT "Devices_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Diagnostics Diagnostics_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Diagnostics"
+    ADD CONSTRAINT "Diagnostics_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: ExceptionEvents ExceptionEvents_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."ExceptionEvents"
+    ADD CONSTRAINT "ExceptionEvents_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: FaultData FaultData_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."FaultData"
+    ADD CONSTRAINT "FaultData_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: LogRecords LogRecords_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."LogRecords"
+    ADD CONSTRAINT "LogRecords_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Rules Rules_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Rules"
+    ADD CONSTRAINT "Rules_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: StatusData StatusData_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."StatusData"
+    ADD CONSTRAINT "StatusData_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Trips Trips_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Trips"
+    ADD CONSTRAINT "Trips_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Users Users_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Users"
+    ADD CONSTRAINT "Users_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Zones Zones_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Zones"
+    ADD CONSTRAINT "Zones_pkey" PRIMARY KEY (id);
+
 
 --
 -- Name: TABLE "Conditions"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Conditions" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "Conditions_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+REVOKE ALL ON SEQUENCE public."Conditions_id_seq" FROM geotabadapter_owner;
+GRANT ALL ON SEQUENCE public."Conditions_id_seq" TO geotabadapter_client;
 
 
 --
@@ -426,10 +991,24 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."ConfigFeedVersions" TO geotab
 
 
 --
+-- Name: SEQUENCE "ConfigFeedVersions_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."ConfigFeedVersions_id_seq" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "DVIRDefectRemarks"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DVIRDefectRemarks" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "DVIRDefectRemarks_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."DVIRDefectRemarks_id_seq" TO geotabadapter_client;
 
 
 --
@@ -440,10 +1019,24 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DVIRDefects" TO geotabadapter
 
 
 --
+-- Name: SEQUENCE "DVIRDefects_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."DVIRDefects_id_seq" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "DVIRLogs"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DVIRLogs" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "DVIRLogs_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."DVIRLogs_id_seq" TO geotabadapter_client;
 
 
 --
@@ -454,10 +1047,24 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Devices" TO geotabadapter_cli
 
 
 --
+-- Name: SEQUENCE "Devices_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."Devices_id_seq" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "Diagnostics"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Diagnostics" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "Diagnostics_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."Diagnostics_id_seq" TO geotabadapter_client;
 
 
 --
@@ -468,6 +1075,13 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."ExceptionEvents" TO geotabada
 
 
 --
+-- Name: SEQUENCE "ExceptionEvents_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."ExceptionEvents_id_seq" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "FaultData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -475,10 +1089,24 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."FaultData" TO geotabadapter_c
 
 
 --
+-- Name: SEQUENCE "FaultData_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."FaultData_id_seq" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "LogRecords"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."LogRecords" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "LogRecords_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."LogRecords_id_seq" TO geotabadapter_client;
 
 
 --
@@ -496,10 +1124,24 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Rules" TO geotabadapter_clien
 
 
 --
+-- Name: SEQUENCE "Rules_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."Rules_id_seq" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "StatusData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
 GRANT SELECT,INSERT,UPDATE ON TABLE public."StatusData" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "StatusData_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."StatusData_id_seq" TO geotabadapter_client;
 
 
 --
@@ -510,6 +1152,13 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Trips" TO geotabadapter_clien
 
 
 --
+-- Name: SEQUENCE "Trips_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."Trips_id_seq" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "Users"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -517,10 +1166,24 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Users" TO geotabadapter_clien
 
 
 --
+-- Name: SEQUENCE "Users_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."Users_id_seq" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "Zones"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Zones" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "Zones_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."Zones_id_seq" TO geotabadapter_client;
 
 
 --

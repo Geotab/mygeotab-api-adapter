@@ -11,8 +11,9 @@ namespace MyGeotabAPIAdapter.Database.Models
         /// Conditions are structured in hierarchical tree. 
         /// A condition's type defines the meaning of each condition in the tree and can be an operator, special operator, data or an asset.
         /// </summary>
-        [ExplicitKey]
-        public string Id { get; set; }
+        [Key]
+        public long id { get; set; }
+        public string GeotabId { get; set; }
         // Conditions may have embedded/sub conditions and they are reflected in this field
         public string ParentId { get; set; }
         // Conditions can be linked to a Rule directly, RuleId displays this link

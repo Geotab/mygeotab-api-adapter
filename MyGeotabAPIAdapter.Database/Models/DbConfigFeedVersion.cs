@@ -6,7 +6,8 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("ConfigFeedVersions")]
     public class DbConfigFeedVersion
     {
-        [ExplicitKey]
+        [Key]
+        public long id { get; set; }
         public string FeedTypeId { get; set; }
         public long LastProcessedFeedVersion { get; set; }
         public DateTime RecordLastChangedUtc { get; set; }

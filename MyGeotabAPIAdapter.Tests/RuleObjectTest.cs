@@ -1,6 +1,5 @@
 ﻿using Geotab.Checkmate.ObjectModel;
 using Geotab.Checkmate.ObjectModel.Exceptions;
-using MyGeotabAPIAdapter;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
 using System;

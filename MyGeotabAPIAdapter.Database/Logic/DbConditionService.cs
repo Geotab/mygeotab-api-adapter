@@ -13,7 +13,7 @@ namespace MyGeotabAPIAdapter.Database.Logic
     public static class DbConditionService
     {
         /// <summary>
-        /// Retrieves a <see cref="DbCondition"/> with the specified <see cref="DbCondition.Id"/>. Throws an <see cref="Exception"/> if an entity with the specified ID cannot be found.
+        /// Retrieves a <see cref="DbCondition"/> with the specified <see cref="DbCondition.GeotabId"/>. Throws an <see cref="Exception"/> if an entity with the specified ID cannot be found.
         /// </summary>
         /// <param name="connectionInfo">The database connection information.</param>
         /// <param name="id">The ID of the database record to be returned.</param>
@@ -31,7 +31,7 @@ namespace MyGeotabAPIAdapter.Database.Logic
         /// <param name="connectionInfo">The database connection information.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public static async Task<IEnumerable<DbCondition>> GetAllAsync(ConnectionInfo connectionInfo, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public static async Task<IEnumerable<DbCondition>> GetAllAsync(ConnectionInfo connectionInfo, int commandTimeout)
         {
             return await new DbConditionRepository().GetAllAsync(connectionInfo, commandTimeout);
         }

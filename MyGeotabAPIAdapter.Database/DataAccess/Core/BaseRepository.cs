@@ -87,6 +87,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             }
         }
 
+
         /// <summary>
         /// Returns a collection of objects representing records in a database table that match the specified search criteria.
         /// </summary>
@@ -94,6 +95,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="dynamicParams">The dynamic parameters to be used comprise the WHERE clause of the subject operation.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "<Pending>")]
         public async Task<IEnumerable<T>> GetAsync(ConnectionInfo connectionInfo, dynamic dynamicParams, int commandTimeout)
         {
             try

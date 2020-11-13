@@ -8,13 +8,13 @@
     <Authors>Geotab Inc.</Authors>
 
     <Product>MyGeotab API Adapter</Product>
-    <Version>1.1.0.1</Version>
-    <InformationalVersion>1.1.0.1</InformationalVersion>
+    <Version>1.2.0.0</Version>
+    <InformationalVersion>1.2.0.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.0-preview-20200921-01" />
-    <PackageReference Include="Moq" Version="4.14.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.0-preview-20201020-06" />
+    <PackageReference Include="Moq" Version="4.14.7" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.console" Version="2.4.1">
       <PrivateAssets>all</PrivateAssets>

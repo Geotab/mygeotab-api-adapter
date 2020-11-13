@@ -6,8 +6,9 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("DVIRDefects")]
     public class DbDVIRDefect
     {
-        [ExplicitKey]
-        public string Id { get; set; }
+        [Key]
+        public long id { get; set; }
+        public string GeotabId { get; set; }
         public string DVIRLogId { get; set; }
         public string DefectListAssetType { get; set; }
         public string DefectListId { get; set; }

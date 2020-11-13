@@ -1,6 +1,4 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Moq;
-using MyGeotabAPIAdapter;
 using System;
 using Xunit;
 
@@ -8,8 +6,8 @@ namespace MyGeotabAPIAdapter.Tests
 {
     public class ConfigurationManagerTests
     {
-        IConfiguration configuration;
-        ConfigurationManager configurationManager = new ConfigurationManager();
+        readonly IConfiguration configuration;
+        readonly ConfigurationManager configurationManager = new ConfigurationManager();
 
         public ConfigurationManagerTests()
         {

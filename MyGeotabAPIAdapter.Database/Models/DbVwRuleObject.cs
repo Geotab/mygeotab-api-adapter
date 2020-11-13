@@ -6,7 +6,7 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("vwRuleObject")]
     public class DbVwRuleObject
     {
-        public string Id { get; set; }
+        public string GeotabId { get; set; }
         public string Name { get; set; }
         public string BaseType { get; set; }
         public DateTime? ActiveFrom { get; set; }

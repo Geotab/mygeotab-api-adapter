@@ -6,8 +6,9 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("Users")]
     public class DbUser
     {
-        [ExplicitKey]
-        public string Id { get; set; }
+        [Key]
+        public long id { get; set; }
+        public string GeotabId { get; set; }
         public DateTime? ActiveFrom { get; set; }
         public DateTime? ActiveTo { get; set; }
         public string EmployeeNo { get; set; }

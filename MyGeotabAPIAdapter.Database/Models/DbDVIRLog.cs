@@ -6,8 +6,9 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("DVIRLogs")]
     public class DbDVIRLog
     {
-        [ExplicitKey]
-        public string Id { get; set; }
+        [Key]
+        public long id { get; set; }
+        public string GeotabId { get; set; }
         public string CertifiedByUserId { get; set; }
         public DateTime? CertifiedDate { get; set; }
         public string CertifyRemark { get; set; }

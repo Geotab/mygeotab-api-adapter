@@ -19,6 +19,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "<Pending>")]
         public async Task<IEnumerable<dynamic>> ExecDynamicQueryAsync(ConnectionInfo connectionInfo, string sql, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             CancellationToken cancellationToken = cancellationTokenSource.Token;

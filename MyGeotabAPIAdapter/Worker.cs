@@ -644,13 +644,13 @@ namespace MyGeotabAPIAdapter
                     Task.WaitAll(tasks);
 
                     // Sort lists on Id.
-                    dbDevicesDictionary = getAllDbDevicesTask.Result.ToDictionary(device => Id.Create(device.Id));
-                    dbDiagnosticsDictionary = getAllDbDiagnosticsTask.Result.ToDictionary(diagnostic => Id.Create(diagnostic.Id));
-                    dbUsersDictionary = getAllDbUsersTask.Result.ToDictionary(user => Id.Create(user.Id));
-                    dbDVIRDefectsDictionary = getAllDbDVIRDefectsTask.Result.ToDictionary(dvirDefect => Id.Create(dvirDefect.Id));
-                    dbDVIRDefectRemarksDictionary = getAllDbDVIRDefectRemarksTask.Result.ToDictionary(dvirDefectRemark => Id.Create(dvirDefectRemark.Id));
+                    dbDevicesDictionary = getAllDbDevicesTask.Result.ToDictionary(device => Id.Create(device.GeotabId));
+                    dbDiagnosticsDictionary = getAllDbDiagnosticsTask.Result.ToDictionary(diagnostic => Id.Create(diagnostic.GeotabId));
+                    dbUsersDictionary = getAllDbUsersTask.Result.ToDictionary(user => Id.Create(user.GeotabId));
+                    dbDVIRDefectsDictionary = getAllDbDVIRDefectsTask.Result.ToDictionary(dvirDefect => Id.Create(dvirDefect.GeotabId));
+                    dbDVIRDefectRemarksDictionary = getAllDbDVIRDefectRemarksTask.Result.ToDictionary(dvirDefectRemark => Id.Create(dvirDefectRemark.GeotabId));
                     dbRuleObjectDictionary = getAllDbRuleObjectsTask.Result.ToDictionary(dbRuleObject => Id.Create(dbRuleObject.Id));
-                    dbZonesDictionary = getAllDbZonesTask.Result.ToDictionary(dbZone => Id.Create(dbZone.Id));
+                    dbZonesDictionary = getAllDbZonesTask.Result.ToDictionary(dbZone => Id.Create(dbZone.GeotabId));
                 }
                 catch (AggregateException aggregateException)
                 {
@@ -780,7 +780,7 @@ namespace MyGeotabAPIAdapter
                                         updatedDbDVIRDefect.RecordLastChangedUtc = recordChangedTimestampUtc;
                                         updatedDbDVIRDefect.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
 
-                                        dbDVIRDefectsDictionary[Id.Create(updatedDbDVIRDefect.Id)] = updatedDbDVIRDefect;
+                                        dbDVIRDefectsDictionary[Id.Create(updatedDbDVIRDefect.GeotabId)] = updatedDbDVIRDefect;
                                         dbDVIRDefectsToUpdate.Add(updatedDbDVIRDefect);
                                     }
                                 }
@@ -792,7 +792,7 @@ namespace MyGeotabAPIAdapter
                                     newDbDVIRDefect.RecordLastChangedUtc = recordChangedTimestampUtc;
                                     newDbDVIRDefect.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
 
-                                    dbDVIRDefectsDictionary[Id.Create(newDbDVIRDefect.Id)] = newDbDVIRDefect;
+                                    dbDVIRDefectsDictionary[Id.Create(newDbDVIRDefect.GeotabId)] = newDbDVIRDefect;
                                     dbDVIRDefectsToInsert.Add(newDbDVIRDefect);
                                 }
                             }
@@ -814,7 +814,7 @@ namespace MyGeotabAPIAdapter
                                         newDbDVIRDefectRemark.RecordLastChangedUtc = recordChangedTimestampUtc;
                                         newDbDVIRDefectRemark.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
 
-                                        dbDVIRDefectRemarksDictionary.Add(Id.Create(newDbDVIRDefectRemark.Id), newDbDVIRDefectRemark);
+                                        dbDVIRDefectRemarksDictionary.Add(Id.Create(newDbDVIRDefectRemark.GeotabId), newDbDVIRDefectRemark);
                                         dbDVIRDefectRemarksToInsert.Add(newDbDVIRDefectRemark);
                                     }
                                 }
@@ -1155,14 +1155,14 @@ namespace MyGeotabAPIAdapter
                     {
                         if (dbDevice.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
                         {
-                            bool deviceExistsInCache = deviceCache.ContainsKey(Id.Create(dbDevice.Id));
+                            bool deviceExistsInCache = deviceCache.ContainsKey(Id.Create(dbDevice.GeotabId));
                             if (!deviceExistsInCache)
                             {
-                                logger.Debug($"Device '{dbDevice.Id}' no longer exists in MyGeotab and is being marked as deleted.");
+                                logger.Debug($"Device '{dbDevice.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
                                 dbDevice.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
                                 dbDevice.RecordLastChangedUtc = recordChangedTimestampUtc;
                                 dbDevice.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                dbDevicesDictionary[Id.Create(dbDevice.Id)] = dbDevice;
+                                dbDevicesDictionary[Id.Create(dbDevice.GeotabId)] = dbDevice;
                                 dbDevicesToUpdate.Add(dbDevice);
                             }
                         }
@@ -1184,7 +1184,7 @@ namespace MyGeotabAPIAdapter
                             updatedDbDevice.RecordLastChangedUtc = recordChangedTimestampUtc;
                             updatedDbDevice.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
 
-                            dbDevicesDictionary[Id.Create(updatedDbDevice.Id)] = updatedDbDevice;
+                            dbDevicesDictionary[Id.Create(updatedDbDevice.GeotabId)] = updatedDbDevice;
                             dbDevicesToUpdate.Add(updatedDbDevice);
                         }
                     }
@@ -1195,7 +1195,7 @@ namespace MyGeotabAPIAdapter
                         newDbDevice.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                         newDbDevice.RecordLastChangedUtc = recordChangedTimestampUtc;
                         newDbDevice.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
-                        dbDevicesDictionary.Add(Id.Create(newDbDevice.Id), newDbDevice);
+                        dbDevicesDictionary.Add(Id.Create(newDbDevice.GeotabId), newDbDevice);
                         dbDevicesToInsert.Add(newDbDevice);
 
                     }
@@ -1277,14 +1277,14 @@ namespace MyGeotabAPIAdapter
                     {
                         if (dbDiagnostic.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
                         {
-                            bool diagnosticExistsInCache = diagnosticCache.ContainsKey(Id.Create(dbDiagnostic.Id));
+                            bool diagnosticExistsInCache = diagnosticCache.ContainsKey(Id.Create(dbDiagnostic.GeotabId));
                             if (!diagnosticExistsInCache)
                             {
-                                logger.Debug($"Diagnostic '{dbDiagnostic.Id}' no longer exists in MyGeotab and is being marked as deleted.");
+                                logger.Debug($"Diagnostic '{dbDiagnostic.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
                                 dbDiagnostic.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
                                 dbDiagnostic.RecordLastChangedUtc = recordChangedTimestampUtc;
                                 dbDiagnostic.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                dbDiagnosticsDictionary[Id.Create(dbDiagnostic.Id)] = dbDiagnostic;
+                                dbDiagnosticsDictionary[Id.Create(dbDiagnostic.GeotabId)] = dbDiagnostic;
                                 dbDiagnosticsToUpdate.Add(dbDiagnostic);
                             }
                         }
@@ -1306,7 +1306,7 @@ namespace MyGeotabAPIAdapter
                             updatedDbDiagnostic.RecordLastChangedUtc = recordChangedTimestampUtc;
                             updatedDbDiagnostic.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
 
-                            dbDiagnosticsDictionary[Id.Create(updatedDbDiagnostic.Id)] = updatedDbDiagnostic;
+                            dbDiagnosticsDictionary[Id.Create(updatedDbDiagnostic.GeotabId)] = updatedDbDiagnostic;
                             dbDiagnosticsToUpdate.Add(updatedDbDiagnostic);
                         }
                     }
@@ -1317,7 +1317,7 @@ namespace MyGeotabAPIAdapter
                         newDbDiagnostic.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                         newDbDiagnostic.RecordLastChangedUtc = recordChangedTimestampUtc;
                         newDbDiagnostic.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
-                        dbDiagnosticsDictionary.Add(Id.Create(newDbDiagnostic.Id), newDbDiagnostic);
+                        dbDiagnosticsDictionary.Add(Id.Create(newDbDiagnostic.GeotabId), newDbDiagnostic);
                         dbDiagnosticsToInsert.Add(newDbDiagnostic);
                     }
                 }
@@ -1399,10 +1399,10 @@ namespace MyGeotabAPIAdapter
                     {
                         if (dbRuleObject.DbRule.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
                         {
-                            bool ruleExistsInCache = ruleCache.ContainsKey(Id.Create(dbRuleObject.DbRule.Id));
+                            bool ruleExistsInCache = ruleCache.ContainsKey(Id.Create(dbRuleObject.DbRule.GeotabId));
                             if (!ruleExistsInCache)
                             {
-                                logger.Debug($"Rule '{dbRuleObject.DbRule.Id}' no longer exists in MyGeotab and is being marked as deleted.");
+                                logger.Debug($"Rule '{dbRuleObject.DbRule.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
                                 dbRuleObject.DbRule.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
                                 dbRuleObject.DbRule.RecordLastChangedUtc = recordChangedTimestampUtc;
                                 dbRuleObject.DbRule.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
@@ -1509,14 +1509,14 @@ namespace MyGeotabAPIAdapter
                     {
                         if (dbUser.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
                         {
-                            bool userExistsInCache = userCache.ContainsKey(Id.Create(dbUser.Id));
+                            bool userExistsInCache = userCache.ContainsKey(Id.Create(dbUser.GeotabId));
                             if (!userExistsInCache)
                             {
-                                logger.Debug($"User '{dbUser.Id}' no longer exists in MyGeotab and is being marked as deleted.");
+                                logger.Debug($"User '{dbUser.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
                                 dbUser.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
                                 dbUser.RecordLastChangedUtc = recordChangedTimestampUtc;
                                 dbUser.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                dbUsersDictionary[Id.Create(dbUser.Id)] = dbUser;
+                                dbUsersDictionary[Id.Create(dbUser.GeotabId)] = dbUser;
                                 dbUsersToUpdate.Add(dbUser);
                             }
                         }
@@ -1537,7 +1537,7 @@ namespace MyGeotabAPIAdapter
                             updatedDbUser.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                             updatedDbUser.RecordLastChangedUtc = recordChangedTimestampUtc;
                             updatedDbUser.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                            dbUsersDictionary[Id.Create(updatedDbUser.Id)] = updatedDbUser;
+                            dbUsersDictionary[Id.Create(updatedDbUser.GeotabId)] = updatedDbUser;
                             dbUsersToUpdate.Add(updatedDbUser);
                         }
                     }
@@ -1548,7 +1548,7 @@ namespace MyGeotabAPIAdapter
                         newDbUser.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                         newDbUser.RecordLastChangedUtc = recordChangedTimestampUtc;
                         newDbUser.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
-                        dbUsersDictionary.Add(Id.Create(newDbUser.Id), newDbUser);
+                        dbUsersDictionary.Add(Id.Create(newDbUser.GeotabId), newDbUser);
                         dbUsersToInsert.Add(newDbUser);
 
                     }
@@ -1630,14 +1630,14 @@ namespace MyGeotabAPIAdapter
                     {
                         if (dbZone.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
                         {
-                            bool zoneExistsInCache = zoneCache.ContainsKey(Id.Create(dbZone.Id));
+                            bool zoneExistsInCache = zoneCache.ContainsKey(Id.Create(dbZone.GeotabId));
                             if (!zoneExistsInCache)
                             {
-                                logger.Debug($"Zone '{dbZone.Id}' no longer exists in MyGeotab and is being marked as deleted.");
+                                logger.Debug($"Zone '{dbZone.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
                                 dbZone.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
                                 dbZone.RecordLastChangedUtc = recordChangedTimestampUtc;
                                 dbZone.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                dbZonesDictionary[Id.Create(dbZone.Id)] = dbZone;
+                                dbZonesDictionary[Id.Create(dbZone.GeotabId)] = dbZone;
                                 dbZonesToUpdate.Add(dbZone);
                             }
                         }
@@ -1658,7 +1658,7 @@ namespace MyGeotabAPIAdapter
                             updatedDbZone.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                             updatedDbZone.RecordLastChangedUtc = recordChangedTimestampUtc;
                             updatedDbZone.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                            dbZonesDictionary[Id.Create(updatedDbZone.Id)] = updatedDbZone;
+                            dbZonesDictionary[Id.Create(updatedDbZone.GeotabId)] = updatedDbZone;
                             dbZonesToUpdate.Add(updatedDbZone);
                         }
                     }
@@ -1669,7 +1669,7 @@ namespace MyGeotabAPIAdapter
                         newDbZone.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                         newDbZone.RecordLastChangedUtc = recordChangedTimestampUtc;
                         newDbZone.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
-                        dbZonesDictionary.Add(Id.Create(newDbZone.Id), newDbZone);
+                        dbZonesDictionary.Add(Id.Create(newDbZone.GeotabId), newDbZone);
                         dbZonesToInsert.Add(newDbZone);
 
                     }

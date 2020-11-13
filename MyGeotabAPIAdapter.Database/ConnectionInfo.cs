@@ -9,7 +9,7 @@ namespace MyGeotabAPIAdapter.Database
     public class ConnectionInfo
     {
         String connectionProviderType;
-        String connectionString;
+        readonly String connectionString;
         
         /// <summary>
         /// Supported <see cref="DbProviderFactory"/> types.
@@ -54,8 +54,7 @@ namespace MyGeotabAPIAdapter.Database
         /// </summary>
         void RegisterDbProviderFactory(string dataAccessProviderType)
         {
-            DataAccessProviderType connectionProviderTypeValue;
-            if (!Enum.TryParse(dataAccessProviderType, out connectionProviderTypeValue))
+            if (!Enum.TryParse(dataAccessProviderType, out DataAccessProviderType connectionProviderTypeValue))
             {
                 throw new ArgumentException($"Unsupported DataAccessProviderType ('{connectionProviderType}').");
             }

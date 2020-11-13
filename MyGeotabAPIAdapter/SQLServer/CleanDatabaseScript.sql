@@ -15,6 +15,22 @@
 -- delete from [dbo].[Trips];
 -- delete from [dbo].[Users];
 -- delete from [dbo].[Zones];
+--DBCC CHECKIDENT ('dbo.Conditions', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.ConfigFeedVersions', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.DVIRDefectRemarks', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.DVIRDefects', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.DVIRLogs', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.Devices', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.Diagnostics', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.ExceptionEvents', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.FaultData', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.LogRecords', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.Rules', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.StatusData', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.Trips', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.Users', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.Zones', RESEED, 0);
+
 
 /* Check counts */
 select 'Conditions' as "TableName", count(0) as "RecordCount" from [dbo].[Conditions]

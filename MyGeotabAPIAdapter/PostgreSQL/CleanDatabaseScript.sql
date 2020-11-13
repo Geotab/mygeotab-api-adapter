@@ -15,6 +15,21 @@
 -- delete from public."Trips";
 -- delete from public."Users";
 -- delete from public."Zones";
+-- ALTER SEQUENCE public."Conditions_id_seq" RESTART;
+-- ALTER SEQUENCE public."ConfigFeedVersions_id_seq" RESTART;
+-- ALTER SEQUENCE public."DVIRDefectRemarks_id_seq" RESTART;
+-- ALTER SEQUENCE public."DVIRDefects_id_seq" RESTART;
+-- ALTER SEQUENCE public."DVIRLogs_id_seq" RESTART;
+-- ALTER SEQUENCE public."Devices_id_seq" RESTART;
+-- ALTER SEQUENCE public."Diagnostics_id_seq" RESTART;
+-- ALTER SEQUENCE public."ExceptionEvents_id_seq" RESTART;
+-- ALTER SEQUENCE public."FaultData_id_seq" RESTART;
+-- ALTER SEQUENCE public."LogRecords_id_seq" RESTART;
+-- ALTER SEQUENCE public."Rules_id_seq" RESTART;
+-- ALTER SEQUENCE public."StatusData_id_seq" RESTART;
+-- ALTER SEQUENCE public."Trips_id_seq" RESTART;
+-- ALTER SEQUENCE public."Users_id_seq" RESTART;
+-- ALTER SEQUENCE public."Zones_id_seq" RESTART;
 
 /* Check counts */
 select 'Conditions' as "TableName", count(0) as "RecordCount" from public."Conditions"

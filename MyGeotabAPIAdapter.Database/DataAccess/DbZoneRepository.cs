@@ -13,7 +13,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     public class DbZoneRepository : BaseRepository<DbZone>
     {
         /// <summary>
-        /// Retrieves a <see cref="DbZone"/> with the specified <see cref="DbZone.Id"/>. Throws an <see cref="Exception"/> if an entity with the specified ID cannot be found.
+        /// Retrieves a <see cref="DbZone"/> with the specified <see cref="DbZone.GeotabId"/>. Throws an <see cref="Exception"/> if an entity with the specified ID cannot be found.
         /// </summary>
         /// <param name="connectionInfo">The database connection information.</param>
         /// <param name="id">The ID of the database record to be returned.</param>

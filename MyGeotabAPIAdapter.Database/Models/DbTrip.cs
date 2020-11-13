@@ -6,8 +6,9 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("Trips")]
     public class DbTrip
     {
-        [ExplicitKey]
-        public string Id { get; set; }
+        [Key]
+        public long id { get; set; }
+        public string GeotabId { get; set; }
         public string DeviceId { get; set; }
         public string DriverId { get; set; }
         public float? Distance { get; set; }

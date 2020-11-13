@@ -1,8 +1,6 @@
 ﻿using Geotab.Checkmate.ObjectModel;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace MyGeotabAPIAdapter
 {

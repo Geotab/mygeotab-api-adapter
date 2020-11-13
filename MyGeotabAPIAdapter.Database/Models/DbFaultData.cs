@@ -6,8 +6,9 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("FaultData")]
     public class DbFaultData
     {
-        [ExplicitKey]
-        public string Id { get; set; }
+        [Key]
+        public long id { get; set; }
+        public string GeotabId { get; set; }
         public bool? AmberWarningLamp { get; set; }
         public string ClassCode { get; set; }
         public string ControllerId { get; set; }

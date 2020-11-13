@@ -46,14 +46,15 @@ namespace MyGeotabAPIAdapter
             }
             IList<DbRuleObject> dbRuleObjectList = new List<DbRuleObject>();
             string ruleId = "";
-            int count = 0;
+            int countOfDbVwRuleObjects = dbVwRuleObjects.Count();
+            int countOfProcessedDbVwRuleObjects = 0;
             DbRule dbRule = new DbRule();
             DbCondition dbCondition;
             IList<DbCondition> dbConditionList = new List<DbCondition>();
             // Loop through all database rows of vwRuleObject
             foreach (DbVwRuleObject dbVwRuleObject in dbVwRuleObjects)
             {
-                string currentRuleId = dbVwRuleObject.Id;
+                string currentRuleId = dbVwRuleObject.GeotabId;
                 logger.Debug($"Current RuleId: {currentRuleId}");
                 // If rule Id changes go in here
                 if (currentRuleId != ruleId)
@@ -71,7 +72,7 @@ namespace MyGeotabAPIAdapter
                     logger.Debug($"Add rule with Id: {ruleId}");
                     dbRule = new DbRule
                     {
-                        Id = dbVwRuleObject.Id,
+                        GeotabId = dbVwRuleObject.GeotabId,
                         Name = dbVwRuleObject.Name,
                         BaseType = dbVwRuleObject.BaseType,
                         ActiveFrom = dbVwRuleObject.ActiveFrom,
@@ -81,7 +82,7 @@ namespace MyGeotabAPIAdapter
                         RecordLastChangedUtc = dbVwRuleObject.RecordLastChangedUtc
                     };
 
-                    // instantiate the next condition list to add the conditions
+                    // Instantiate the next condition list to add the conditions.
                     dbConditionList = new List<DbCondition>();
                 }
 
@@ -90,7 +91,7 @@ namespace MyGeotabAPIAdapter
                 logger.Debug($"Add condition with Id: {conditionId}");
                 dbCondition = new DbCondition
                 {
-                    Id = conditionId,
+                    GeotabId = conditionId,
                     ParentId = dbVwRuleObject.Cond_ParentId,
                     RuleId = dbVwRuleObject.Cond_RuleId,
                     ConditionType = dbVwRuleObject.Cond_ConditionType,
@@ -104,13 +105,20 @@ namespace MyGeotabAPIAdapter
                     RecordLastChangedUtc = dbVwRuleObject.Cond_RecordLastChangedUtc
                 };
 
-                // add the current DbCondition object to the condition list
+                // Add the current DbCondition object to the condition list.
                 dbConditionList.Add(dbCondition);
-                // Update count for interest
-                count++;
+                // Update count for interest.
+                countOfProcessedDbVwRuleObjects++;
+
+                // If this is the last DbVwRuleObject being pocessed, a corresponding DbRuleObject must be built and added to the list.
+                if (countOfProcessedDbVwRuleObjects == countOfDbVwRuleObjects)
+                {
+                    DbRuleObject dbRuleObject = new DbRuleObject();
+                    dbRuleObject.BuildFromDatabaseObjects(dbRule, dbConditionList);
+                    dbRuleObjectList.Add(dbRuleObject);
+                }
             }
-            // Print count for interest
-            logger.Info($"Row count: {count}");
+            logger.Info($"Row count: {countOfProcessedDbVwRuleObjects}");
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return dbRuleObjectList;
         }

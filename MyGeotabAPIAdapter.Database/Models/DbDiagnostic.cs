@@ -6,8 +6,9 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("Diagnostics")]
     public class DbDiagnostic
     {
-        [ExplicitKey]
-        public string Id { get; set; }
+        [Key]
+        public long id { get; set; }
+        public string GeotabId { get; set; }
         public string ControllerId { get; set; }
         public int? DiagnosticCode { get; set; }
         public string DiagnosticName { get; set; }

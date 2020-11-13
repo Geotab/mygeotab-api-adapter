@@ -234,6 +234,7 @@ namespace Dapper.Contrib.Extensions
         /// <param name="transaction">The transaction to run under, null (the default) if none</param>
         /// <param name="commandTimeout">Number of seconds before command execution timeout</param>
         /// <returns>Entity of T</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0019:Use pattern matching", Justification = "<Pending>")]
         public static async Task<T> GetAsync<T>(this IDbConnection connection, dynamic id, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
         {
             var type = typeof(T);
@@ -360,8 +361,9 @@ namespace Dapper.Contrib.Extensions
         /// <param name="connection">Open SqlConnection</param>
         /// <param name="transaction">The transaction to run under, null (the default) if none</param>
         /// <param name="commandTimeout">Number of seconds before command execution timeout</param>
+        /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
         /// <returns>Entity of T</returns>
-        public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
+        public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, int? commandTimeout = null, int? resultsLimit = null) where T : class
         {
             var type = typeof(T);
             var cacheType = typeof(List<T>);
@@ -371,7 +373,28 @@ namespace Dapper.Contrib.Extensions
                 GetSingleKey<T>(nameof(GetAllAsync));
                 var name = GetTableName(type);
 
-                sql = $"select * from \"{name}\"";
+                // If a resultsLimit is specified, apply the limit to the SQL statement based on the database provider type.
+                if (resultsLimit == null || resultsLimit < 1)
+                {
+                    sql = $"select * from \"{name}\"";
+                }
+                else
+                {
+                    string connectionProviderType = connection.GetType().Namespace;
+                    switch (connectionProviderType)
+                    {
+                        case "Npgsql":
+                        case "System.Data.SQLite":
+                            sql = $"select * from \"{name}\" limit {resultsLimit}";
+                            break;
+                        case "Microsoft.Data.SqlClient":
+                        case "System.Data.SqlClient":
+                            sql = $"select top ({resultsLimit}) * from \"{name}\"";
+                            break;
+                        default:
+                            throw new NotImplementedException($"Support for the '{connectionProviderType}' connection provider type has not been implemented in this method.");
+                    }
+                }
                 GetQueries[cacheType.TypeHandle] = sql;
             }
 
@@ -851,7 +874,7 @@ namespace Dapper.Contrib.Extensions
             keyProperties.AddRange(explicitKeyProperties);
 
             var sb = new StringBuilder();
-            sb.AppendFormat("delete from {0} where ", name);
+            sb.AppendFormat("delete from \"{0}\" where ", name);
 
             var adapter = GetFormatter(connection);
 
@@ -897,7 +920,7 @@ namespace Dapper.Contrib.Extensions
         {
             var type = typeof(T);
             var name = GetTableName(type);
-            var statement = $"delete from {name}";
+            var statement = $"delete from \"{name}\"";
             var deleted = await connection.ExecuteAsync(statement, null, transaction, commandTimeout);
             return deleted > 0;
         }
@@ -1087,7 +1110,7 @@ namespace Dapper.Contrib.Extensions
             string sqlStmt;
 
             var name = GetTableName(type);
-            ISqlAdapter adapter = GetFormatter(connection);
+            //ISqlAdapter adapter = GetFormatter(connection);
             #region Customizations
             //char sqlParameterChar = adapter.SqlParameterChar();
             string sqlParameterChar = "@";
@@ -1131,7 +1154,7 @@ namespace Dapper.Contrib.Extensions
             string sqlStmt;
 
             var name = GetTableName(type);
-            ISqlAdapter adapter = GetFormatter(connection);
+            //ISqlAdapter adapter = GetFormatter(connection);
             #region Customizations
             //char sqlParameterChar = adapter.SqlParameterChar();
             string sqlParameterChar = "@";

@@ -6,8 +6,9 @@ namespace MyGeotabAPIAdapter.Database.Models
     [Table("DVIRDefectRemarks")]
     public class DbDVIRDefectRemark
     {
-        [ExplicitKey]
-        public string Id { get; set; }
+        [Key]
+        public long id { get; set; }
+        public string GeotabId { get; set; }
         public string DVIRDefectId { get; set; }
         public DateTime? DateTime { get; set; }
         public string Remark { get; set; }

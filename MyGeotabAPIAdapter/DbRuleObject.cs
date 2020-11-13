@@ -5,8 +5,6 @@ using NLog;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Threading.Tasks;
-
 
 namespace MyGeotabAPIAdapter
 {
@@ -39,7 +37,7 @@ namespace MyGeotabAPIAdapter
             {
                 if (this.DbRule != null)
                 {
-                    return this.DbRule.Id;
+                    return this.DbRule.GeotabId;
                 }
                 else
                 {
@@ -80,7 +78,7 @@ namespace MyGeotabAPIAdapter
 
             DbRule dbRule = new DbRule
             {
-                Id = rule.Id.ToString(),
+                GeotabId = rule.Id.ToString(),
                 Name = rule.Name.ToString(),
                 BaseType = rule.BaseType.ToString(),
                 ActiveFrom = rule.ActiveFrom,
