@@ -72,6 +72,7 @@ namespace MyGeotabAPIAdapter
                     logger.Debug($"Add rule with Id: {ruleId}");
                     dbRule = new DbRule
                     {
+                        id = dbVwRuleObject.RuleAdapterId,
                         GeotabId = dbVwRuleObject.GeotabId,
                         Name = dbVwRuleObject.Name,
                         BaseType = dbVwRuleObject.BaseType,
@@ -91,6 +92,7 @@ namespace MyGeotabAPIAdapter
                 logger.Debug($"Add condition with Id: {conditionId}");
                 dbCondition = new DbCondition
                 {
+                    id = dbVwRuleObject.ConditionAdapterId,
                     GeotabId = conditionId,
                     ParentId = dbVwRuleObject.Cond_ParentId,
                     RuleId = dbVwRuleObject.Cond_RuleId,
@@ -234,20 +236,31 @@ namespace MyGeotabAPIAdapter
             try
             {
                 // Update all the DbRules
-                Task updateRules = DbRuleService.UpdateAsync(connectionInfo, dbRuleList, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                Task updateRulesTask = DbRuleService.UpdateAsync(connectionInfo, dbRuleList, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                 count += dbRuleList.Count;
 
-                List<DbCondition> dbConditionList = new List<DbCondition>();
+                // Get list of existing conditions to be deleted.
+                List<DbCondition> dbConditionsToDelete = new List<DbCondition>();
                 foreach (DbRuleObject dbRuleObject in dbRuleObjectList)
                 {
-                    dbConditionList.AddRange(dbRuleObject.DbConditions);
+                    dbConditionsToDelete.AddRange(dbRuleObject.DbConditionsToBeDeleted);
                 }
 
-                //Update all the DbConditions
-                Task updateConditions = DbConditionService.UpdateAsync(connectionInfo, dbConditionList, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                count += dbConditionList.Count;
+                // Get list of conditions to be inserted.
+                List<DbCondition> dbConditionsToInsert = new List<DbCondition>();
+                foreach (DbRuleObject dbRuleObject in dbRuleObjectList)
+                {
+                    dbConditionsToInsert.AddRange(dbRuleObject.DbConditions);
+                }
 
-                Task.WaitAll(updateRules, updateConditions);
+                // Delete all the DbConditions.
+                Task deleteConditionsTask = DbConditionService.DeleteAsync(connectionInfo, dbConditionsToDelete, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+
+                //Insert (re-create) all the DbConditions.
+                Task insertConditionsTask = DbConditionService.InsertAsync(connectionInfo, dbConditionsToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                count += dbConditionsToInsert.Count;
+
+                Task.WaitAll(updateRulesTask, deleteConditionsTask, insertConditionsTask);
             }
             catch (Exception)
             {

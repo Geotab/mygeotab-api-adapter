@@ -13,6 +13,41 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     public class DbConditionRepository : BaseRepository<DbCondition>
     {
         /// <summary>
+        /// Deletes a number of <see cref="DbCondition"/> entities into the database within a single transaction.
+        /// </summary>
+        /// <param name="connectionInfo">The database connection information.</param>
+        /// <param name="dbConditions">A list of <see cref="DbCondition"/> entities to be deleted.</param>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
+        /// <returns></returns>
+        public async Task<long> DeleteAsync(ConnectionInfo connectionInfo, IList<DbCondition> dbConditions, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        {
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+            long deletedRowsCount = 0;
+            try
+            {
+                using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
+                {
+                    using (var transaction = await connection.BeginTransactionAsync())
+                    {
+                        foreach (var dbCondition in dbConditions)
+                        {
+                            await DeleteAsync(connection, transaction, dbCondition, commandTimeout);
+                            deletedRowsCount += 1;
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        await transaction.CommitAsync();
+                    }
+                    return deletedRowsCount;
+                }
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+        }
+
+        /// <summary>
         /// Retrieves a <see cref="DbCondition"/> with the specified <see cref="DbCondition.GeotabId"/>. Throws an <see cref="Exception"/> if an entity with the specified ID cannot be found.
         /// </summary>
         /// <param name="connectionInfo">The database connection information.</param>
@@ -60,41 +95,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                         await transaction.CommitAsync();
                     }
                     return insertedRowsCount;
-                }
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Updates a number of <see cref="DbCondition"/> entities into the database within a single transaction.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        /// <param name="dbConditions">A list of <see cref="DbCondition"/> entities to be updated.</param>
-        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<long> UpdateAsync(ConnectionInfo connectionInfo, List<DbCondition> dbConditions, CancellationTokenSource cancellationTokenSource, int commandTimeout)
-        {
-            CancellationToken cancellationToken = cancellationTokenSource.Token;
-            long updatedRowsCount = 0;
-            try
-            {
-                using (var connection = await new ConnectionProvider(connectionInfo).GetOpenConnectionAsync())
-                {
-                    using (var transaction = await connection.BeginTransactionAsync())
-                    {
-                        foreach (var dbCondition in dbConditions)
-                        {
-                            await UpdateAsync(connection, transaction, dbCondition, commandTimeout);
-                            updatedRowsCount += 1;
-                            cancellationToken.ThrowIfCancellationRequested();
-                        }
-                        await transaction.CommitAsync();
-                    }
-                    return updatedRowsCount;
                 }
             }
             catch (Exception exception)

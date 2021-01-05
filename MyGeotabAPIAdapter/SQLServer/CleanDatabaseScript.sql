@@ -15,6 +15,7 @@
 -- delete from [dbo].[Trips];
 -- delete from [dbo].[Users];
 -- delete from [dbo].[Zones];
+-- delete from [dbo].[ZoneTypes];
 --DBCC CHECKIDENT ('dbo.Conditions', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.ConfigFeedVersions', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DVIRDefectRemarks', RESEED, 0);
@@ -30,38 +31,41 @@
 --DBCC CHECKIDENT ('dbo.Trips', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Users', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Zones', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.ZoneTypes', RESEED, 0);
 
 
 /* Check counts */
-select 'Conditions' as "TableName", count(0) as "RecordCount" from [dbo].[Conditions]
+select 'Conditions' as "TableName", SUM(st.row_count) as "RecordCount" FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Conditions'
 union all
-select 'ConfigFeedVersions', count(0) from [dbo].[ConfigFeedVersions]
+select 'ConfigFeedVersions', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'ConfigFeedVersions'
 union all
-select 'DVIRDefectRemarks', count(0) from [dbo].[DVIRDefectRemarks]
+select 'DVIRDefectRemarks', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DVIRDefectRemarks'
 union all
-select 'DVIRDefects', count(0) from [dbo].[DVIRDefects]
+select 'DVIRDefects', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DVIRDefects'
 union all
-select 'DVIRLogs', count(0) from [dbo].[DVIRLogs]
+select 'DVIRLogs', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DVIRLogs'
 union all
-select 'Devices', count(0) from [dbo].[Devices]
+select 'Devices', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Devices'
 union all
-select 'Diagnostics', count(0) from [dbo].[Diagnostics]
+select 'Diagnostics', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Diagnostics'
 union all
-select 'ExceptionEvents', count(0) from [dbo].[ExceptionEvents]
+select 'ExceptionEvents', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'ExceptionEvents'
 union all
-select 'FaultData', count(0) from [dbo].[FaultData]
+select 'FaultData', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'FaultData'
 union all
-select 'LogRecords', count(0) from [dbo].[LogRecords]
+select 'LogRecords', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'LogRecords'
 union all
-select 'MyGeotabVersionInfo', count(0) from [dbo].[MyGeotabVersionInfo]
+select 'MyGeotabVersionInfo', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'MyGeotabVersionInfo'
 union all
-select 'Rules', count(0) from [dbo].[Rules]
+select 'Rules', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Rules'
 union all
-select 'StatusData', count(0) from [dbo].[StatusData]
+select 'StatusData', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'StatusData'
 union all
-select 'Trips', count(0) from [dbo].[Trips]
+select 'Trips', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Trips'
 union all
-select 'Users', count(0) from [dbo].[Users]
+select 'Users', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Users'
 union all
-select 'Zones', count(0) from [dbo].[Zones]
+select 'Zones', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Zones'
+union all
+select 'ZoneTypes', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'ZoneTypes'
 order by "TableName";

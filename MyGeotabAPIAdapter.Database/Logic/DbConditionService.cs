@@ -13,6 +13,19 @@ namespace MyGeotabAPIAdapter.Database.Logic
     public static class DbConditionService
     {
         /// <summary>
+        /// Deletes a number of <see cref="DbCondition"/> entities from the database within a single transaction.
+        /// </summary>
+        /// <param name="connectionInfo">The database connection information.</param>
+        /// <param name="dbConditions">A list of <see cref="DbCondition"/> entities to be deleted.</param>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
+        /// <returns></returns>
+        public static async Task<long> DeleteAsync(ConnectionInfo connectionInfo, IList<DbCondition> dbConditions, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        {
+            return await new DbConditionRepository().DeleteAsync(connectionInfo, dbConditions, cancellationTokenSource, commandTimeout);
+        }
+
+        /// <summary>
         /// Retrieves a <see cref="DbCondition"/> with the specified <see cref="DbCondition.GeotabId"/>. Throws an <see cref="Exception"/> if an entity with the specified ID cannot be found.
         /// </summary>
         /// <param name="connectionInfo">The database connection information.</param>
@@ -47,19 +60,6 @@ namespace MyGeotabAPIAdapter.Database.Logic
         public static async Task<long> InsertAsync(ConnectionInfo connectionInfo, IList<DbCondition> dbConditions, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             return await new DbConditionRepository().InsertAsync(connectionInfo, dbConditions, cancellationTokenSource, commandTimeout);
-        }
-
-        /// <summary>
-        /// Updates a number of <see cref="DbCondition"/> entities into the database within a single transaction.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        /// <param name="dbConditions">A list of <see cref="DbCondition"/> entities to be updated.</param>
-        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public static async Task<long> UpdateAsync(ConnectionInfo connectionInfo, List<DbCondition> dbConditions, CancellationTokenSource cancellationTokenSource, int commandTimeout)
-        {
-            return await new DbConditionRepository().UpdateAsync(connectionInfo, dbConditions, cancellationTokenSource, commandTimeout);
         }
     }
 }

@@ -19,6 +19,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public bool? MustIdentifyStops { get; set; }
         public string Name { get; set; }
         public string Points { get; set; }
+        public string ZoneTypeIds { get; set; }
         public long? Version { get; set; }
         public int EntityStatus { get; set; }
         public DateTime RecordLastChangedUtc { get; set; }

@@ -66,6 +66,10 @@ namespace MyGeotabAPIAdapter
         const string ArgNameZoneCacheIntervalDailyReferenceStartTimeUTC = "AppSettings:Caches:Zone:ZoneCacheIntervalDailyReferenceStartTimeUTC";
         const string ArgNameZoneCacheRefreshIntervalMinutes = "AppSettings:Caches:Zone:ZoneCacheRefreshIntervalMinutes";
         const string ArgNameZoneCacheUpdateIntervalMinutes = "AppSettings:Caches:Zone:ZoneCacheUpdateIntervalMinutes";
+        // > AppSettings:Caches:ZoneType
+        const string ArgNameZoneTypeCacheIntervalDailyReferenceStartTimeUTC = "AppSettings:Caches:ZoneType:ZoneTypeCacheIntervalDailyReferenceStartTimeUTC";
+        const string ArgNameZoneTypeCacheRefreshIntervalMinutes = "AppSettings:Caches:ZoneType:ZoneTypeCacheRefreshIntervalMinutes";
+        const string ArgNameZoneTypeCacheUpdateIntervalMinutes = "AppSettings:Caches:ZoneType:ZoneTypeCacheUpdateIntervalMinutes";
         // > AppSettings:GeneralFeedSettings
         const string ArgNameFeedStartOption = "AppSettings:GeneralFeedSettings:FeedStartOption";
         const string ArgNameFeedStartSpecificTimeUTC = "AppSettings:GeneralFeedSettings:FeedStartSpecificTimeUTC";
@@ -126,6 +130,7 @@ namespace MyGeotabAPIAdapter
         const string TableNameDbTrip = "Trips";
         const string TableNameDbUser = "Users";
         const string TableNameDbZone = "Zones";
+        const string TableNameDbZoneType = "ZoneTypes";
 
         // Miscellaneous:
         const string AllString = "*";
@@ -187,6 +192,9 @@ namespace MyGeotabAPIAdapter
         DateTime zoneCacheIntervalDailyReferenceStartTimeUTC;
         int zoneCacheRefreshIntervalMinutes;
         int zoneCacheUpdateIntervalMinutes;
+        DateTime zoneTypeCacheIntervalDailyReferenceStartTimeUTC;
+        int zoneTypeCacheRefreshIntervalMinutes;
+        int zoneTypeCacheUpdateIntervalMinutes;
 
         /// <summary>
         /// Creates a new <see cref="ConfigurationManager"/> instance.
@@ -372,6 +380,14 @@ namespace MyGeotabAPIAdapter
         public string DbZoneTableName
         {
             get => TableNameDbZone;
+        }
+
+        /// <summary>
+        /// The name of the database table for <see cref="ZoneType"/> information.
+        /// </summary>
+        public string DbZoneTypeTableName
+        {
+            get => TableNameDbZoneType;
         }
 
         /// <summary>
@@ -814,6 +830,30 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="ZoneType"/> cache.
+        /// </summary>
+        public DateTime ZoneTypeCacheIntervalDailyReferenceStartTimeUTC
+        {
+            get => zoneTypeCacheIntervalDailyReferenceStartTimeUTC;
+        }
+
+        /// <summary>
+        /// The number of minutes to wait, after refreshing the <see cref="ZoneType"/> cache, before initiating the next refresh of the subject cache.
+        /// </summary>
+        public int ZoneTypeCacheRefreshIntervalMinutes
+        {
+            get => zoneTypeCacheRefreshIntervalMinutes;
+        }
+
+        /// <summary>
+        /// The number of seconds to wait, after updating the <see cref="ZoneType"/> cache, before initiating the next update of the subject cache.
+        /// </summary>
+        public int ZoneTypeCacheUpdateIntervalMinutes
+        {
+            get => zoneTypeCacheUpdateIntervalMinutes;
+        }
+
+        /// <summary>
         /// Parses the appsettings.json configuration file for the boolean value associated with the key and section provided. 
         /// If no section is provided then the key is searched at the root level.
         /// </summary>
@@ -1088,6 +1128,10 @@ namespace MyGeotabAPIAdapter
             zoneCacheIntervalDailyReferenceStartTimeUTC = GetConfigKeyValueDateTime(ArgNameZoneCacheIntervalDailyReferenceStartTimeUTC);
             zoneCacheRefreshIntervalMinutes = GetConfigKeyValueInt(ArgNameZoneCacheRefreshIntervalMinutes, null, false, MinCacheRefreshIntervalMinutes, MaxCacheRefreshIntervalMinutes, DefaultCacheRefreshIntervalMinutes);
             zoneCacheUpdateIntervalMinutes = GetConfigKeyValueInt(ArgNameZoneCacheUpdateIntervalMinutes, null, false, MinCacheUpdateIntervalMinutes, MaxCacheUpdateIntervalMinutes, DefaultCacheUpdateIntervalMinutes);
+
+            zoneTypeCacheIntervalDailyReferenceStartTimeUTC = GetConfigKeyValueDateTime(ArgNameZoneTypeCacheIntervalDailyReferenceStartTimeUTC);
+            zoneTypeCacheRefreshIntervalMinutes = GetConfigKeyValueInt(ArgNameZoneTypeCacheRefreshIntervalMinutes, null, false, MinCacheRefreshIntervalMinutes, MaxCacheRefreshIntervalMinutes, DefaultCacheRefreshIntervalMinutes);
+            zoneTypeCacheUpdateIntervalMinutes = GetConfigKeyValueInt(ArgNameZoneTypeCacheUpdateIntervalMinutes, null, false, MinCacheUpdateIntervalMinutes, MaxCacheUpdateIntervalMinutes, DefaultCacheUpdateIntervalMinutes);
 
             // Feed:
             enableDVIRLogDataFeed = GetConfigKeyValueBoolean(ArgNameEnableDVIRLogFeed);

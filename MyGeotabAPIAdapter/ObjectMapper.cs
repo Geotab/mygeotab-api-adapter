@@ -7,7 +7,7 @@ using MyGeotabAPIAdapter.Database.Models;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Text;
 
 namespace MyGeotabAPIAdapter
 {
@@ -153,16 +153,9 @@ namespace MyGeotabAPIAdapter
             {
                 return true;
             }
-            if (dbUser.EmployeeNo != user.EmployeeNo)
+            if ((dbUser.EmployeeNo != user.EmployeeNo) && (dbUser.EmployeeNo != null && user.EmployeeNo != ""))
             {
-                if (dbUser.EmployeeNo == null && user.EmployeeNo == "")
-                {
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
+                return true;
             }
             return false;
         }
@@ -202,41 +195,49 @@ namespace MyGeotabAPIAdapter
             {
                 return true;
             }
-            if (dbZone.Comment != zone.Comment)
+            if ((dbZone.Comment != zone.Comment) && (dbZone.Comment != null && zone.Comment != ""))
             {
-                if (dbZone.Comment == null && zone.Comment == "")
-                {
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
+                return true;
             }
-            if (dbZone.ExternalReference != zone.ExternalReference)
+            if ((dbZone.ExternalReference != zone.ExternalReference) && (dbZone.ExternalReference != null && zone.ExternalReference != ""))
             {
-                if (dbZone.ExternalReference == null && zone.ExternalReference == "")
-                {
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
+                return true;
             }
-            if (dbZone.Name != zone.Name)
+            if ((dbZone.Name != zone.Name) && (dbZone.Name != null && zone.Name != ""))
             {
-                if (dbZone.Name == null && zone.Name == "")
-                {
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
+                return true;
             }
             string zonePoints = JsonConvert.SerializeObject(zone.Points);
             if (dbZone.Points != zonePoints)
+            {
+                return true;
+            }
+            string zoneZoneTypeIds = GetZoneTypeIdsJSON(zone.ZoneTypes);
+            if (dbZone.ZoneTypeIds != zoneZoneTypeIds)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Indicates whether the <see cref="DbZoneType"/> differs from the <see cref="ZoneType"/>, thereby requiring the <see cref="DbZoneType"/> to be updated in the database. 
+        /// </summary>
+        /// <param name="dbZoneType">The <see cref="DbZoneType"/> to be evaluated.</param>
+        /// <param name="zoneType">The <see cref="ZoneType"/> to compare against.</param>
+        /// <returns></returns>
+        public static bool DbZoneTypeRequiresUpdate(DbZoneType dbZoneType, ZoneType zoneType)
+        {
+            if (dbZoneType.GeotabId != zoneType.Id.ToString())
+            {
+                throw new ArgumentException($"Cannot compare ZoneType '{zoneType.Id}' with DbZoneType '{dbZoneType.GeotabId}' because the IDs do not match.");
+            }
+
+            if ((dbZoneType.Comment != zoneType.Comment) && (dbZoneType.Comment != null && zoneType.Comment != ""))
+            {
+                return true;
+            }
+            if ((dbZoneType.Name != zoneType.Name) && (dbZoneType.Name != null && zoneType.Name != ""))
             {
                 return true;
             }
@@ -962,16 +963,39 @@ namespace MyGeotabAPIAdapter
         {
             DbTrip dbTrip = new DbTrip
             {
+                AfterHoursDistance = trip.AfterHoursDistance,
+                AfterHoursDrivingDuration = trip.AfterHoursDrivingDuration,
+                AfterHoursStopDuration = trip.AfterHoursStopDuration,
+                AverageSpeed = trip.AverageSpeed,
                 DeviceId = trip.Device.Id.ToString(),
-                GeotabId = trip.Id.ToString(),
-                DriverId = trip.Driver.Id.ToString(),
                 Distance = trip.Distance,
+                DriverId = trip.Driver.Id.ToString(),
                 DrivingDuration = trip.DrivingDuration,
+                GeotabId = trip.Id.ToString(),
+                IdlingDuration = trip.IdlingDuration,
+                MaximumSpeed = trip.MaximumSpeed,
                 NextTripStart = trip.NextTripStart,
+                SpeedRange1 = trip.SpeedRange1,
+                SpeedRange1Duration = trip.SpeedRange1Duration,
+                SpeedRange2 = trip.SpeedRange2,
+                SpeedRange2Duration = trip.SpeedRange2Duration,
+                SpeedRange3 = trip.SpeedRange3,
+                SpeedRange3Duration = trip.SpeedRange3Duration,
                 Start = trip.Start,
                 Stop = trip.Stop,
-                StopDuration = trip.StopDuration
+                StopDuration = trip.StopDuration,
+                WorkDistance = trip.WorkDistance,
+                WorkDrivingDuration = trip.WorkDrivingDuration,
+                WorkStopDuration = trip.WorkStopDuration
             };
+            if (trip.AfterHoursEnd != null)
+            {
+                dbTrip.AfterHoursEnd = trip.AfterHoursEnd;
+            }
+            if (trip.AfterHoursStart != null)
+            {
+                dbTrip.AfterHoursStart = trip.AfterHoursStart;
+            }
             if (trip.StopPoint != null)
             {
                 dbTrip.StopPointX = trip.StopPoint.X;
@@ -1082,7 +1106,27 @@ namespace MyGeotabAPIAdapter
             }
             string zonePoints = JsonConvert.SerializeObject(zone.Points);
             dbZone.Points = zonePoints;
+            dbZone.ZoneTypeIds = GetZoneTypeIdsJSON(zone.ZoneTypes);
             return dbZone;
+        }
+
+        /// <summary>
+        /// Converts the supplied <see cref="ZoneType"/> into a <see cref="DbZoneType"/>.
+        /// </summary>
+        /// <param name="zoneType">The <see cref="ZoneType"/> to be converted.</param>
+        /// <returns></returns>
+        public static DbZoneType GetDbZoneType(ZoneType zoneType)
+        {
+            DbZoneType dbZoneType = new DbZoneType
+            {
+                GeotabId = zoneType.Id.ToString(),
+                Name = zoneType.Name,
+            };
+            if (zoneType.Comment != null && zoneType.Comment.Length > 0)
+            {
+                dbZoneType.Comment = zoneType.Comment;
+            }
+            return dbZoneType;
         }
 
         /// <summary>
@@ -1099,6 +1143,29 @@ namespace MyGeotabAPIAdapter
                 dbZones.Add(dbZone);
             }
             return dbZones;
+        }
+
+        /// <summary>
+        /// Builds a JSON array containing the Ids of the <paramref name="zoneTypes"/>.
+        /// </summary>
+        /// <param name="zoneTypes">The list of <see cref="ZoneType"/> objects whose Ids are to be included in the output JSON array.</param>
+        /// <returns></returns>
+        public static string GetZoneTypeIdsJSON(IList<ZoneType> zoneTypes)
+        {
+            bool zoneTypeIdsArrayHasItems = false;
+            var zoneTypeIds = new StringBuilder();
+            zoneTypeIds.Append("[");
+            foreach (var zoneType in zoneTypes)
+            {
+                if (zoneTypeIdsArrayHasItems == true)
+                {
+                    zoneTypeIds.Append(",");
+                }
+                zoneTypeIds.Append($"{{\"Id\":\"{zoneType.Id}\"}}");
+                zoneTypeIdsArrayHasItems = true;
+            }
+            zoneTypeIds.Append("]");
+            return zoneTypeIds.ToString();
         }
     }
 }

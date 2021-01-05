@@ -15,6 +15,7 @@
 -- delete from public."Trips";
 -- delete from public."Users";
 -- delete from public."Zones";
+-- delete from public."ZoneTypes";
 -- ALTER SEQUENCE public."Conditions_id_seq" RESTART;
 -- ALTER SEQUENCE public."ConfigFeedVersions_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRDefectRemarks_id_seq" RESTART;
@@ -30,6 +31,7 @@
 -- ALTER SEQUENCE public."Trips_id_seq" RESTART;
 -- ALTER SEQUENCE public."Users_id_seq" RESTART;
 -- ALTER SEQUENCE public."Zones_id_seq" RESTART;
+-- ALTER SEQUENCE public."ZoneTypes_id_seq" RESTART;
 
 /* Check counts */
 select 'Conditions' as "TableName", count(0) as "RecordCount" from public."Conditions"
@@ -63,4 +65,6 @@ union all
 select 'Users', count(0) from public."Users"
 union all
 select 'Zones', count(0) from public."Zones"
+union all
+select 'ZoneTypes', count(0) from public."ZoneTypes"
 order by "TableName";

@@ -27,6 +27,7 @@ namespace MyGeotabAPIAdapter
         static readonly CacheContainer unitOfMeasureCacheContainer = new CacheContainer();
         static readonly CacheContainer userCacheContainer = new CacheContainer();
         static readonly CacheContainer zoneCacheContainer = new CacheContainer();
+        static readonly CacheContainer zoneTypeCacheContainer = new CacheContainer();
 
         /// <summary>
         /// Types of operations related to cache processing.
@@ -64,6 +65,7 @@ namespace MyGeotabAPIAdapter
             userCacheContainer.Cache = new Dictionary<Id, User>();
             userCacheContainer.FeedResultsLimit = Globals.GetFeedResultLimitUser;
             zoneCacheContainer.Cache = new Dictionary<Id, Zone>();
+            zoneTypeCacheContainer.Cache = new Dictionary<Id, ZoneType>();
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return cacheManager;
@@ -139,6 +141,14 @@ namespace MyGeotabAPIAdapter
         public CacheContainer ZoneCacheContainer
         {
             get => zoneCacheContainer;
+        }
+
+        /// <summary>
+        /// A container for an in-memory cache of <see cref="ZoneType"/> objects.
+        /// </summary>
+        public CacheContainer ZoneTypeCacheContainer
+        {
+            get => zoneTypeCacheContainer;
         }
 
         /// <summary>

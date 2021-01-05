@@ -40,6 +40,7 @@ namespace MyGeotabAPIAdapter
         IDictionary<Id, DbRuleObject> dbRuleObjectDictionary;
         IDictionary<Id, DbUser> dbUsersDictionary;
         IDictionary<Id, DbZone> dbZonesDictionary;
+        IDictionary<Id, DbZoneType> dbZoneTypesDictionary;
         IDictionary<Id, DefectListPartDefect> defectListPartDefectsDictionary;
         DateTime defectListPartDefectCacheExpiryTime = DateTime.MinValue;
         bool initializationCompleted;
@@ -347,7 +348,7 @@ namespace MyGeotabAPIAdapter
                     await GetAllFeedDataAndPersistToDatabaseAsync();
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
-                }
+              }
                 catch (OperationCanceledException)
                 {
                     string errorMessage = $"Worker process cancelled.";
@@ -638,8 +639,9 @@ namespace MyGeotabAPIAdapter
                     var getAllDbDVIRDefectRemarksTask = DbDVIRDefectRemarkService.GetAllAsync(connectionInfo, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     var getAllDbRuleObjectsTask = RuleHelper.GetDatabaseRuleObjectsAsync(cancellationTokenSource);
                     var getAllDbZonesTask = DbZoneService.GetAllAsync(connectionInfo, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    var getAllDbZoneTypesTask = DbZoneTypeService.GetAllAsync(connectionInfo, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
 
-                    Task[] tasks = { getAllDbDevicesTask, getAllDbDiagnosticsTask, getAllDbUsersTask, getAllDbDVIRDefectsTask, getAllDbDVIRDefectRemarksTask, getAllDbRuleObjectsTask, getAllDbZonesTask };
+                    Task[] tasks = { getAllDbDevicesTask, getAllDbDiagnosticsTask, getAllDbUsersTask, getAllDbDVIRDefectsTask, getAllDbDVIRDefectRemarksTask, getAllDbRuleObjectsTask, getAllDbZonesTask, getAllDbZoneTypesTask };
 
                     Task.WaitAll(tasks);
 
@@ -649,8 +651,9 @@ namespace MyGeotabAPIAdapter
                     dbUsersDictionary = getAllDbUsersTask.Result.ToDictionary(user => Id.Create(user.GeotabId));
                     dbDVIRDefectsDictionary = getAllDbDVIRDefectsTask.Result.ToDictionary(dvirDefect => Id.Create(dvirDefect.GeotabId));
                     dbDVIRDefectRemarksDictionary = getAllDbDVIRDefectRemarksTask.Result.ToDictionary(dvirDefectRemark => Id.Create(dvirDefectRemark.GeotabId));
-                    dbRuleObjectDictionary = getAllDbRuleObjectsTask.Result.ToDictionary(dbRuleObject => Id.Create(dbRuleObject.Id));
+                    dbRuleObjectDictionary = getAllDbRuleObjectsTask.Result.ToDictionary(dbRuleObject => Id.Create(dbRuleObject.GeotabId));
                     dbZonesDictionary = getAllDbZonesTask.Result.ToDictionary(dbZone => Id.Create(dbZone.GeotabId));
+                    dbZoneTypesDictionary = getAllDbZoneTypesTask.Result.ToDictionary(dbZoneType => Id.Create(dbZoneType.GeotabId));
                 }
                 catch (AggregateException aggregateException)
                 {
@@ -776,6 +779,7 @@ namespace MyGeotabAPIAdapter
                                     if (dbDVIRDefectRequiresUpdate)
                                     {
                                         DbDVIRDefect updatedDbDVIRDefect = ObjectMapper.GetDbDVIRDefect(filteredDVIRLog, dvirDefect, defect, defectListPartDefect);
+                                        updatedDbDVIRDefect.id = existingDbDVIRDefect.id;
                                         updatedDbDVIRDefect.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                                         updatedDbDVIRDefect.RecordLastChangedUtc = recordChangedTimestampUtc;
                                         updatedDbDVIRDefect.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
@@ -1180,6 +1184,7 @@ namespace MyGeotabAPIAdapter
                         if (dbDeviceRequiresUpdate)
                         {
                             DbDevice updatedDbDevice = ObjectMapper.GetDbDevice(cachedDevice);
+                            updatedDbDevice.id = existingDbDevice.id;
                             updatedDbDevice.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                             updatedDbDevice.RecordLastChangedUtc = recordChangedTimestampUtc;
                             updatedDbDevice.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
@@ -1302,6 +1307,7 @@ namespace MyGeotabAPIAdapter
                         if (dbDiagnosticRequiresUpdate)
                         {
                             DbDiagnostic updatedDbDiagnostic = ObjectMapper.GetDbDiagnostic(cachedDiagnostic);
+                            updatedDbDiagnostic.id = existingDbDiagnostic.id;
                             updatedDbDiagnostic.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                             updatedDbDiagnostic.RecordLastChangedUtc = recordChangedTimestampUtc;
                             updatedDbDiagnostic.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
@@ -1387,7 +1393,7 @@ namespace MyGeotabAPIAdapter
                 DateTime recordChangedTimestampUtc = DateTime.UtcNow;
                 var dbRuleObjectsToInsert = new List<DbRuleObject>();
                 var dbRuleObjectsToUpdate = new List<DbRuleObject>();
-
+                var dbRuleObjectsToDelete = new List<DbRuleObject>();
 
                 // Get cached rules (Geotab object).
                 var ruleCache = (Dictionary<Id, Geotab.Checkmate.ObjectModel.Exceptions.Rule>)cacheManager.RuleCacheContainer.Cache;
@@ -1406,8 +1412,8 @@ namespace MyGeotabAPIAdapter
                                 dbRuleObject.DbRule.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
                                 dbRuleObject.DbRule.RecordLastChangedUtc = recordChangedTimestampUtc;
                                 dbRuleObject.DbRule.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                dbRuleObjectDictionary[Id.Create(dbRuleObject.Id)] = dbRuleObject;
-                                dbRuleObjectsToUpdate.Add(dbRuleObject);
+                                dbRuleObjectDictionary[Id.Create(dbRuleObject.GeotabId)] = dbRuleObject;
+                                dbRuleObjectsToDelete.Add(dbRuleObject);
                             }
                         }
                     }
@@ -1433,8 +1439,12 @@ namespace MyGeotabAPIAdapter
                             DbRuleObject updatedDbRuleObject = new DbRuleObject();
                             updatedDbRuleObject.BuildRuleObject(cachedRule, (int)Common.DatabaseRecordStatus.Active, recordChangedTimestampUtc,
                                 Common.DatabaseWriteOperationType.Update);
+                            updatedDbRuleObject.DbRule.id = existingDbRuleObject.DbRule.id;
 
-                            dbRuleObjectDictionary[Id.Create(updatedDbRuleObject.Id)] = updatedDbRuleObject;
+                            // Get existing conditions associated with the rule from the adapter database and flag these for deletion/replacement (since conditon Ids coming through the API may differ from those in the adapter database if a Rule's conditions have changed).
+                            updatedDbRuleObject.DbConditionsToBeDeleted = existingDbRuleObject.DbConditions;
+
+                            dbRuleObjectDictionary[Id.Create(updatedDbRuleObject.GeotabId)] = updatedDbRuleObject;
                             dbRuleObjectsToUpdate.Add(updatedDbRuleObject);
                         }
                     }
@@ -1444,7 +1454,7 @@ namespace MyGeotabAPIAdapter
                         DbRuleObject newDbRuleObject = new DbRuleObject();
                         newDbRuleObject.BuildRuleObject(cachedRule, (int)Common.DatabaseRecordStatus.Active, recordChangedTimestampUtc,
                             Common.DatabaseWriteOperationType.Insert);
-                        dbRuleObjectDictionary[Id.Create(newDbRuleObject.Id)] = newDbRuleObject;
+                        dbRuleObjectDictionary[Id.Create(newDbRuleObject.GeotabId)] = newDbRuleObject;
                         dbRuleObjectsToInsert.Add(newDbRuleObject);
                     }
                 }
@@ -1461,7 +1471,7 @@ namespace MyGeotabAPIAdapter
                     logger.Info($"Completed insertion of {ruleObjectEntitiesInserted} records into the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
-                // Send any updates / deletes to the database.
+                // Send any updates to the database. When a rule is updated, delete all of the associated conditions and then re-create them rather than evaluating individual conditions for differences/additions/deletions (as this would be very time-consuming).
                 if (dbRuleObjectsToUpdate.Any())
                 {
                     DateTime startTimeUTC = DateTime.UtcNow;
@@ -1470,6 +1480,17 @@ namespace MyGeotabAPIAdapter
                     double recordsProcessedPerSecond = (double)ruleObjectEntitiesUpdated / (double)elapsedTime.TotalSeconds;
                     logger.Info($"Completed updating of {ruleObjectEntitiesUpdated} records in the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
+
+                // Send any deletes to the database. Rules that have been deleted in MyGeotab will have their EntityStatus changed, but the associated conditions will remain in the adapter database.
+                if (dbRuleObjectsToDelete.Any())
+                {
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    int ruleObjectEntitiesDeleted = RuleHelper.UpdateDbRuleObjectsToDatabase(dbRuleObjectsToDelete, cancellationTokenSource);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)ruleObjectEntitiesDeleted / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed flagging as deleted {ruleObjectEntitiesDeleted} records in the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                }
+
                 cacheManager.RuleCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
             else
@@ -1534,6 +1555,7 @@ namespace MyGeotabAPIAdapter
                         if (dbUserRequiresUpdate)
                         {
                             DbUser updatedDbUser = ObjectMapper.GetDbUser(cachedUser);
+                            updatedDbUser.id = existingDbUser.id;
                             updatedDbUser.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                             updatedDbUser.RecordLastChangedUtc = recordChangedTimestampUtc;
                             updatedDbUser.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
@@ -1655,6 +1677,7 @@ namespace MyGeotabAPIAdapter
                         if (dbZoneRequiresUpdate)
                         {
                             DbZone updatedDbZone = ObjectMapper.GetDbZone(cachedZone);
+                            updatedDbZone.id = existingDbZone.id;
                             updatedDbZone.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                             updatedDbZone.RecordLastChangedUtc = recordChangedTimestampUtc;
                             updatedDbZone.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
@@ -1717,6 +1740,128 @@ namespace MyGeotabAPIAdapter
             else
             {
                 logger.Debug($"Zone cache in database is up-to-date.");
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Propagates <see cref="ZoneType"/> information received from MyGeotab to the database - inserting new records, updating existing records (if the values of any of the utilized fields have changed), and marking as deleted any database zoneType records that no longer exist in MyGeotab (based on matching on ID). 
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task PropagateZoneTypeCacheUpdatesToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
+            if (cacheManager.ZoneTypeCacheContainer.LastUpdatedTimeUtc > cacheManager.ZoneTypeCacheContainer.LastPropagatedToDatabaseTimeUtc)
+            {
+                DateTime recordChangedTimestampUtc = DateTime.UtcNow;
+                var dbZoneTypesToInsert = new List<DbZoneType>();
+                var dbZoneTypesToUpdate = new List<DbZoneType>();
+
+                // Get cached zoneTypes.
+                var zoneTypeCache = (Dictionary<Id, ZoneType>)cacheManager.ZoneTypeCacheContainer.Cache;
+
+                // Find any zoneTypes that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
+                if (dbZoneTypesDictionary.Any())
+                {
+                    foreach (DbZoneType dbZoneType in dbZoneTypesDictionary.Values.ToList())
+                    {
+                        if (dbZoneType.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
+                        {
+                            bool zoneTypeExistsInCache = zoneTypeCache.ContainsKey(Id.Create(dbZoneType.GeotabId));
+                            if (!zoneTypeExistsInCache)
+                            {
+                                logger.Debug($"ZoneType '{dbZoneType.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
+                                dbZoneType.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
+                                dbZoneType.RecordLastChangedUtc = recordChangedTimestampUtc;
+                                dbZoneType.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                                dbZoneTypesDictionary[Id.Create(dbZoneType.GeotabId)] = dbZoneType;
+                                dbZoneTypesToUpdate.Add(dbZoneType);
+                            }
+                        }
+                    }
+                }
+
+                // Iterate through cached zoneTypes.
+                foreach (ZoneType cachedZoneType in zoneTypeCache.Values.ToList())
+                {
+                    // Try to find the existing database record for the cached zoneType.
+                    if (dbZoneTypesDictionary.TryGetValue(cachedZoneType.Id, out var existingDbZoneType))
+                    {
+                        // The zoneType has already been added to the database.
+                        bool dbZoneTypeRequiresUpdate = ObjectMapper.DbZoneTypeRequiresUpdate(existingDbZoneType, cachedZoneType);
+                        if (dbZoneTypeRequiresUpdate)
+                        {
+                            DbZoneType updatedDbZoneType = ObjectMapper.GetDbZoneType(cachedZoneType);
+                            updatedDbZoneType.id = existingDbZoneType.id;
+                            updatedDbZoneType.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
+                            updatedDbZoneType.RecordLastChangedUtc = recordChangedTimestampUtc;
+                            updatedDbZoneType.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                            dbZoneTypesDictionary[Id.Create(updatedDbZoneType.GeotabId)] = updatedDbZoneType;
+                            dbZoneTypesToUpdate.Add(updatedDbZoneType);
+                        }
+                    }
+                    else
+                    {
+                        // The zoneType has not yet been added to the database. Create a DbZoneType, set its properties and add it to the cache.
+                        DbZoneType newDbZoneType = ObjectMapper.GetDbZoneType(cachedZoneType);
+                        newDbZoneType.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
+                        newDbZoneType.RecordLastChangedUtc = recordChangedTimestampUtc;
+                        newDbZoneType.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
+                        dbZoneTypesDictionary.Add(Id.Create(newDbZoneType.GeotabId), newDbZoneType);
+                        dbZoneTypesToInsert.Add(newDbZoneType);
+
+                    }
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Send any inserts to the database.
+                if (dbZoneTypesToInsert.Any())
+                {
+                    try
+                    {
+                        DateTime startTimeUTC = DateTime.UtcNow;
+                        long zoneTypeEntitiesInserted = await DbZoneTypeService.InsertAsync(connectionInfo, dbZoneTypesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        double recordsProcessedPerSecond = (double)zoneTypeEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed insertion of {zoneTypeEntitiesInserted} records into {Globals.ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    }
+                    catch (Exception)
+                    {
+                        cancellationTokenSource.Cancel();
+                        throw;
+                    }
+                }
+
+                // Send any updates/deletes to the database.
+                if (dbZoneTypesToUpdate.Any())
+                {
+                    try
+                    {
+                        DateTime startTimeUTC = DateTime.UtcNow;
+                        long zoneTypeEntitiesUpdated = await DbZoneTypeService.UpdateAsync(connectionInfo, dbZoneTypesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        double recordsProcessedPerSecond = (double)zoneTypeEntitiesUpdated / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed updating of {zoneTypeEntitiesUpdated} records in {Globals.ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    }
+                    catch (Exception)
+                    {
+                        cancellationTokenSource.Cancel();
+                        throw;
+                    }
+                }
+                cacheManager.ZoneTypeCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
+            }
+            else
+            {
+                logger.Debug($"ZoneType cache in database is up-to-date.");
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -1861,6 +2006,7 @@ namespace MyGeotabAPIAdapter
                 {
                     var updateUserCacheAndPersistToDatabaseAsyncTask = UpdateUserCacheAndPersistToDatabaseAsync(cancellationTokenSource);
                     var updateDeviceCacheAndPersistToDatabaseAsyncTask = UpdateDeviceCacheAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var updateZoneTypeCacheAndPersistToDatabaseAsyncTask = UpdateZoneTypeCacheAndPersistToDatabaseAsync(cancellationTokenSource);
                     var updateZoneCacheAndPersistToDatabaseAsyncTask = UpdateZoneCacheAndPersistToDatabaseAsync(cancellationTokenSource);
                     var updateDiagnosticCacheAndPersistToDatabaseAsyncTask = UpdateDiagnosticCacheAndPersistToDatabaseAsync(cancellationTokenSource);
                     var updateControllerCacheAsyncTask = UpdateControllerCacheAsync(cancellationTokenSource);
@@ -1869,7 +2015,7 @@ namespace MyGeotabAPIAdapter
                     var updateRuleCacheAndPersistToDatabaseAsyncTask = UpdateRuleCacheAndPersistToDatabaseAsync(cancellationTokenSource);
                     var updateGroupCacheAsyncTask = UpdateGroupCacheAsync(cancellationTokenSource);
 
-                    Task[] tasks = { updateUserCacheAndPersistToDatabaseAsyncTask, updateDeviceCacheAndPersistToDatabaseAsyncTask, updateZoneCacheAndPersistToDatabaseAsyncTask, updateDiagnosticCacheAndPersistToDatabaseAsyncTask, updateControllerCacheAsyncTask, updateFailureModeCacheAsyncTask, updateUnitOfMeasureCacheAsyncTask, updateRuleCacheAndPersistToDatabaseAsyncTask, updateGroupCacheAsyncTask };
+                    Task[] tasks = { updateUserCacheAndPersistToDatabaseAsyncTask, updateDeviceCacheAndPersistToDatabaseAsyncTask, updateZoneTypeCacheAndPersistToDatabaseAsyncTask, updateZoneCacheAndPersistToDatabaseAsyncTask, updateDiagnosticCacheAndPersistToDatabaseAsyncTask, updateControllerCacheAsyncTask, updateFailureModeCacheAsyncTask, updateUnitOfMeasureCacheAsyncTask, updateRuleCacheAndPersistToDatabaseAsyncTask, updateGroupCacheAsyncTask };
 
                     try
                     {
@@ -2049,6 +2195,25 @@ namespace MyGeotabAPIAdapter
             await cacheManager.UpdateCacheAsync<Zone>(cancellationTokenSource, cacheManager.ZoneCacheContainer, Globals.ConfigurationManager.ZoneCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ZoneCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ZoneCacheRefreshIntervalMinutes);
             cancellationToken.ThrowIfCancellationRequested();
             await PropagateZoneCacheUpdatesToDatabaseAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Updates the <see cref="ZoneType"/> cache and persists cache updates to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task UpdateZoneTypeCacheAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await cacheManager.UpdateCacheAsync<ZoneType>(cancellationTokenSource, cacheManager.ZoneTypeCacheContainer, Globals.ConfigurationManager.ZoneTypeCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ZoneTypeCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ZoneTypeCacheRefreshIntervalMinutes, false);
+            cancellationToken.ThrowIfCancellationRequested();
+            await PropagateZoneTypeCacheUpdatesToDatabaseAsync(cancellationTokenSource);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }

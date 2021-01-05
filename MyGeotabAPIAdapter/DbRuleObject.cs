@@ -29,9 +29,15 @@ namespace MyGeotabAPIAdapter
         public IList<DbCondition> DbConditions { get; private set; } = new List<DbCondition>();
 
         /// <summary>
+        /// Represents a list of <see cref="MyGeotabAPIAdapter.Database.Models.DbCondition"/> objects already existing in the adapter database for this <see cref="DbRuleObject"/> and which are to be deleted and replaced by <see cref="DbConditions"/> as part of an update.
+        /// </summary>
+        /// <returns></returns>
+        public IList<DbCondition> DbConditionsToBeDeleted { get; set; } = new List<DbCondition>();
+
+        /// <summary>
         /// Returns the Id of the <see cref="DbRule"/> that is represented by this <see cref="DbRuleObject"/> or an empty string if not yet assigned.
         /// </summary>
-        public string Id
+        public string GeotabId
         {
             get 
             {

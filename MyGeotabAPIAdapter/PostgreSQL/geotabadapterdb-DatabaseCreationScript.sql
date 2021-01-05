@@ -498,7 +498,6 @@ CREATE TABLE public."MyGeotabVersionInfo" (
 
 ALTER TABLE public."MyGeotabVersionInfo" OWNER TO geotabadapter_owner;
 
-
 --
 -- Name: Rules; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
@@ -585,16 +584,33 @@ ALTER SEQUENCE public."StatusData_id_seq" OWNED BY public."StatusData".id;
 CREATE TABLE public."Trips" (
     id bigint NOT NULL,
     "GeotabId" character varying(50) NOT NULL,
+    "AfterHoursDistance" real,
+    "AfterHoursDrivingDurationTicks" bigint,
+    "AfterHoursEnd" boolean,
+    "AfterHoursStart" boolean,
+    "AfterHoursStopDurationTicks" bigint,
+    "AverageSpeed" real,
     "DeviceId" character varying(50) NOT NULL,
-    "DriverId" character varying(50) NOT NULL,
     "Distance" real NOT NULL,
+    "DriverId" character varying(50) NOT NULL,
     "DrivingDurationTicks" bigint NOT NULL,
+    "IdlingDurationTicks" bigint,
+    "MaximumSpeed" real,
     "NextTripStart" timestamp without time zone NOT NULL,
+    "SpeedRange1" integer,
+    "SpeedRange1DurationTicks" bigint,
+    "SpeedRange2" integer,
+    "SpeedRange2DurationTicks" bigint,
+    "SpeedRange3" integer,
+    "SpeedRange3DurationTicks" bigint,
     "Start" timestamp without time zone NOT NULL,
     "Stop" timestamp without time zone NOT NULL,
     "StopDurationTicks" bigint NOT NULL,
     "StopPointX" double precision,
     "StopPointY" double precision,
+    "WorkDistance" real,
+    "WorkDrivingDurationTicks" bigint,
+    "WorkStopDurationTicks" bigint,
     "RecordCreationTimeUtc" timestamp without time zone NOT NULL
 );
 
@@ -665,29 +681,34 @@ ALTER SEQUENCE public."Users_id_seq" OWNED BY public."Users".id;
 
 
 --
--- Name: Zones; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+-- Name: ZoneTypes_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
 --
 
-CREATE TABLE public."Zones" (
-    id bigint NOT NULL,
+CREATE SEQUENCE public."ZoneTypes_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."ZoneTypes_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: ZoneTypes; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."ZoneTypes" (
+    id bigint DEFAULT nextval('public."ZoneTypes_id_seq"'::regclass) NOT NULL,
     "GeotabId" character varying(100) NOT NULL,
-    "ActiveFrom" timestamp without time zone,
-    "ActiveTo" timestamp without time zone,
-    "CentroidLatitude" double precision,
-    "CentroidLongitude" double precision,
     "Comment" character varying(255),
-    "Displayed" boolean,
-    "ExternalReference" character varying(255),
-    "MustIdentifyStops" boolean,
     "Name" character varying(255) NOT NULL,
-    "Points" text,
-    "Version" bigint,
     "EntityStatus" integer NOT NULL,
     "RecordLastChangedUtc" timestamp without time zone NOT NULL
 );
 
 
-ALTER TABLE public."Zones" OWNER TO geotabadapter_owner;
+ALTER TABLE public."ZoneTypes" OWNER TO geotabadapter_owner;
 
 --
 -- Name: Zones_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
@@ -704,18 +725,38 @@ CREATE SEQUENCE public."Zones_id_seq"
 ALTER TABLE public."Zones_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- Name: Zones_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+-- Name: Zones; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
-ALTER SEQUENCE public."Zones_id_seq" OWNED BY public."Zones".id;
+CREATE TABLE public."Zones" (
+    id bigint DEFAULT nextval('public."Zones_id_seq"'::regclass) NOT NULL,
+    "GeotabId" character varying(100) NOT NULL,
+    "ActiveFrom" timestamp without time zone,
+    "ActiveTo" timestamp without time zone,
+    "CentroidLatitude" double precision,
+    "CentroidLongitude" double precision,
+    "Comment" character varying(255),
+    "Displayed" boolean,
+    "ExternalReference" character varying(255),
+    "MustIdentifyStops" boolean,
+    "Name" character varying(255) NOT NULL,
+    "Points" text,
+    "ZoneTypeIds" text,
+    "Version" bigint,
+    "EntityStatus" integer NOT NULL,
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL
+);
 
+
+ALTER TABLE public."Zones" OWNER TO geotabadapter_owner;
 
 --
 -- Name: vwRuleObject; Type: VIEW; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE VIEW public."vwRuleObject" AS
- SELECT r."GeotabId",
+ SELECT r.id AS "RuleAdapterId",
+    r."GeotabId",
     r."ActiveFrom",
     r."ActiveTo",
     r."BaseType",
@@ -724,6 +765,7 @@ CREATE VIEW public."vwRuleObject" AS
     r."Version",
     r."EntityStatus",
     r."RecordLastChangedUtc",
+    c.id AS "ConditionAdapterId",
     c."GeotabId" AS "Cond_Id",
     c."ParentId" AS "Cond_ParentId",
     c."RuleId" AS "Cond_RuleId",
@@ -738,7 +780,7 @@ CREATE VIEW public."vwRuleObject" AS
     c."RecordLastChangedUtc" AS "Cond_RecordLastChangedUtc"
    FROM (public."Rules" r
      JOIN public."Conditions" c ON (((r."GeotabId")::text = (c."RuleId")::text)))
-  ORDER BY r."GeotabId", c."RuleId";
+  ORDER BY r."GeotabId", c."GeotabId";
 
 
 ALTER TABLE public."vwRuleObject" OWNER TO geotabadapter_owner;
@@ -839,13 +881,6 @@ ALTER TABLE ONLY public."Trips" ALTER COLUMN id SET DEFAULT nextval('public."Tri
 --
 
 ALTER TABLE ONLY public."Users" ALTER COLUMN id SET DEFAULT nextval('public."Users_id_seq"'::regclass);
-
-
---
--- Name: Zones id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
---
-
-ALTER TABLE ONLY public."Zones" ALTER COLUMN id SET DEFAULT nextval('public."Zones_id_seq"'::regclass);
 
 
 --
@@ -958,6 +993,14 @@ ALTER TABLE ONLY public."Trips"
 
 ALTER TABLE ONLY public."Users"
     ADD CONSTRAINT "Users_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: ZoneTypes ZoneTypes_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."ZoneTypes"
+    ADD CONSTRAINT "ZoneTypes_pkey" PRIMARY KEY (id);
 
 
 --
@@ -1134,7 +1177,7 @@ GRANT ALL ON SEQUENCE public."Rules_id_seq" TO geotabadapter_client;
 -- Name: TABLE "StatusData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
-GRANT SELECT,INSERT,UPDATE ON TABLE public."StatusData" TO geotabadapter_client;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."StatusData" TO geotabadapter_client;
 
 
 --
@@ -1173,10 +1216,17 @@ GRANT ALL ON SEQUENCE public."Users_id_seq" TO geotabadapter_client;
 
 
 --
--- Name: TABLE "Zones"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+-- Name: SEQUENCE "ZoneTypes_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Zones" TO geotabadapter_client;
+GRANT ALL ON SEQUENCE public."ZoneTypes_id_seq" TO geotabadapter_client;
+
+
+--
+-- Name: TABLE "ZoneTypes"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."ZoneTypes" TO geotabadapter_client;
 
 
 --
@@ -1184,6 +1234,13 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Zones" TO geotabadapter_clien
 --
 
 GRANT ALL ON SEQUENCE public."Zones_id_seq" TO geotabadapter_client;
+
+
+--
+-- Name: TABLE "Zones"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Zones" TO geotabadapter_client;
 
 
 --
