@@ -6,6 +6,7 @@
 --delete from "DVIRLogs";
 --delete from "Devices";
 --delete from "Diagnostics";
+--delete from "DutyStatusAvailabilities";
 --delete from "ExceptionEvents";
 --delete from "FaultData";
 --delete from "LogRecords";
@@ -31,6 +32,8 @@ union all
 select 'Devices', count(0) from "Devices"
 union all
 select 'Diagnostics', count(0) from "Diagnostics"
+union all
+select 'DutyStatusAvailabilities', count(0) from "DutyStatusAvailabilities"
 union all
 select 'ExceptionEvents', count(0) from "ExceptionEvents"
 union all

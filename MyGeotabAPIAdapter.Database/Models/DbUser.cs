@@ -13,7 +13,9 @@ namespace MyGeotabAPIAdapter.Database.Models
         public DateTime? ActiveTo { get; set; }
         public string EmployeeNo { get; set; }
         public string FirstName { get; set; }
+        public string HosRuleSet { get; set; }
         public bool IsDriver { get; set; }
+        public DateTime? LastAccessDate { get; set; }
         public string LastName { get; set; }
         public string Name { get; set; }
         public int EntityStatus { get; set; }

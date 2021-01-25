@@ -50,6 +50,7 @@ namespace MyGeotabAPIAdapter
                 {
                     IConfiguration configuration = hostContext.Configuration;
                     services.AddHostedService<Worker>();
+                    services.AddHostedService<DutyStatusAvailabilityWorker>();
                 });
     }
 }

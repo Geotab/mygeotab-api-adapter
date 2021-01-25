@@ -75,6 +75,10 @@ namespace MyGeotabAPIAdapter
         const string ArgNameFeedStartSpecificTimeUTC = "AppSettings:GeneralFeedSettings:FeedStartSpecificTimeUTC";
         const string ArgNameDevicesToTrack = "AppSettings:GeneralFeedSettings:DevicesToTrack";
         const string ArgNameDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:DiagnosticsToTrack";
+        // > AppSettings:Feeds:DutyStatusAvailability
+        const string ArgNameEnableDutyStatusAvailabilityFeed = "AppSettings:Feeds:DutyStatusAvailability:EnableDutyStatusAvailabilityFeed";
+        const string ArgNameDutyStatusAvailabilityFeedIntervalSeconds = "AppSettings:Feeds:DutyStatusAvailability:DutyStatusAvailabilityFeedIntervalSeconds";
+        const string ArgNameDutyStatusAvailabilityFeedLastAccessDateCutoffDays = "AppSettings:Feeds:DutyStatusAvailability:DutyStatusAvailabilityFeedLastAccessDateCutoffDays";
         // > AppSettings:Feeds:DVIRLog
         const string ArgNameEnableDVIRLogFeed = "AppSettings:Feeds:DVIRLog:EnableDVIRLogFeed";
         const string ArgNameDVIRLogFeedIntervalSeconds = "AppSettings:Feeds:DVIRLog:DVIRLogFeedIntervalSeconds";
@@ -109,6 +113,9 @@ namespace MyGeotabAPIAdapter
         const int MinFeedIntervalSeconds = 2;
         const int MaxFeedIntervalSeconds = 604800; // 604800 sec = 1 wk
         const int DefaultFeedIntervalSeconds = 30;
+        const int MinDutyStatusAvailabilityFeedLastAccessDateCutoffDays = 14;
+        const int MaxDutyStatusAvailabilityFeedLastAccessDateCutoffDays = 60;
+        const int DefaultDutyStatusAvailabilityFeedLastAccessDateCutoffDays = 30;
 
         // Arbitrary timeout limits:
         const int DefaultTimeoutSeconds = 30;
@@ -119,6 +126,7 @@ namespace MyGeotabAPIAdapter
         const string TableNameDbConfigFeedVersions = "ConfigFeedVersions";
         const string TableNameDbDevice = "Devices";
         const string TableNameDbDiagnostic = "Diagnostics";
+        const string TableNameDbDutyStatusAvailability = "DutyStatusAvailability";
         const string TableNameDbDVIRDefectRemark = "DVIRDefectRemarks";
         const string TableNameDbDVIRDefect = "DVIRDefects";
         const string TableNameDbDVIRLog = "DVIRLogs";
@@ -151,9 +159,12 @@ namespace MyGeotabAPIAdapter
         int diagnosticCacheRefreshIntervalMinutes;
         int diagnosticCacheUpdateIntervalMinutes;
         string diagnosticsToTrackList;
+        int dutyStatusAvailabilityFeedIntervalSeconds;
+        int dutyStatusAvailabilityFeedLastAccessDateCutoffDays;
         DateTime dvirDefectCacheIntervalDailyReferenceStartTimeUTC;
         int dvirDefectListCacheRefreshIntervalMinutes;
         int dvirLogDataFeedIntervalSeconds;
+        bool enableDutyStatusAvailabilityDataFeed;
         bool enableDVIRLogDataFeed;
         bool enableExceptionEventFeed;
         bool enableFaultDataFeed;
@@ -293,6 +304,13 @@ namespace MyGeotabAPIAdapter
             get => TableNameDbDiagnostic;
         }
 
+        /// <summary>
+        /// The name of the database table for <see cref="DutyStatusAvailability"/> information.
+        /// </summary>
+        public string DbDutyStatusAvailabilityTableName
+        {
+            get => TableNameDbDutyStatusAvailability;
+        }
 
         /// <summary>
         /// The name of the database table for <see cref="DVIRDefect"/> information.
@@ -455,6 +473,22 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// The minimum number of seconds to wait after retrieving <see cref="DutyStatusAvailability"/> information for all <see cref="Driver"/>s before starting the retrieval process again.
+        /// </summary>
+        public int DutyStatusAvailabilityFeedIntervalSeconds
+        {
+            get => dutyStatusAvailabilityFeedIntervalSeconds;
+        }
+
+        /// <summary>
+        /// Used to reduce the number of unnecessary Get calls when retrieving <see cref="DutyStatusAvailability"/> information for all <see cref="Driver"/>s. Data is not queried for Drivers with a <see cref="User.LastAccessDate"/> greater than this many days in the past. This value should be set to approximately twice the longest possible cycle for a HOS ruleset.
+        /// </summary>
+        public int DutyStatusAvailabilityFeedLastAccessDateCutoffDays
+        {
+            get => dutyStatusAvailabilityFeedLastAccessDateCutoffDays; 
+        }
+
+        /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="DVIRDefect"/> cache.
         /// </summary>
         public DateTime DVIRDefectCacheIntervalDailyReferenceStartTimeUTC
@@ -476,6 +510,14 @@ namespace MyGeotabAPIAdapter
         public int DVIRLogDataFeedIntervalSeconds
         {
             get => dvirLogDataFeedIntervalSeconds;
+        }
+
+        /// <summary>
+        /// Indicates whether a <see cref="DutyStatusAvailability"/> data feed should be enabled. 
+        /// </summary>
+        public bool EnableDutyStatusAvailabilityDataFeed
+        {
+            get => enableDutyStatusAvailabilityDataFeed;
         }
 
         /// <summary>
@@ -1134,6 +1176,10 @@ namespace MyGeotabAPIAdapter
             zoneTypeCacheUpdateIntervalMinutes = GetConfigKeyValueInt(ArgNameZoneTypeCacheUpdateIntervalMinutes, null, false, MinCacheUpdateIntervalMinutes, MaxCacheUpdateIntervalMinutes, DefaultCacheUpdateIntervalMinutes);
 
             // Feed:
+            enableDutyStatusAvailabilityDataFeed = GetConfigKeyValueBoolean(ArgNameEnableDutyStatusAvailabilityFeed);
+            dutyStatusAvailabilityFeedIntervalSeconds = GetConfigKeyValueInt(ArgNameDutyStatusAvailabilityFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+            dutyStatusAvailabilityFeedLastAccessDateCutoffDays = GetConfigKeyValueInt(ArgNameDutyStatusAvailabilityFeedLastAccessDateCutoffDays, null, false, MinDutyStatusAvailabilityFeedLastAccessDateCutoffDays, MaxDutyStatusAvailabilityFeedLastAccessDateCutoffDays, DefaultDutyStatusAvailabilityFeedLastAccessDateCutoffDays);
+
             enableDVIRLogDataFeed = GetConfigKeyValueBoolean(ArgNameEnableDVIRLogFeed);
             dvirLogDataFeedIntervalSeconds = GetConfigKeyValueInt(ArgNameDVIRLogFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 

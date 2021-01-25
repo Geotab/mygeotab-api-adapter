@@ -137,6 +137,7 @@ namespace MyGeotabAPIAdapter
 
             DateTime dbUserActiveFromUtc = dbUser.ActiveFrom.GetValueOrDefault().ToUniversalTime();
             DateTime dbUserActiveToUtc = dbUser.ActiveTo.GetValueOrDefault().ToUniversalTime();
+            DateTime dbUserLastAccessDateUtc = dbUser.LastAccessDate.GetValueOrDefault().ToUniversalTime();
             if (dbUser.ActiveFrom != user.ActiveFrom && dbUserActiveFromUtc != user.ActiveFrom)
             {
                 return true;
@@ -149,11 +150,15 @@ namespace MyGeotabAPIAdapter
             {
                 user.IsDriver = false;
             }
-            if (dbUser.FirstName != user.FirstName || dbUser.IsDriver != user.IsDriver || dbUser.LastName != user.LastName || dbUser.Name != user.Name)
+            if (dbUser.FirstName != user.FirstName || dbUser.HosRuleSet != user.HosRuleSet.Value.ToString() || dbUser.IsDriver != user.IsDriver || dbUser.LastName != user.LastName || dbUser.Name != user.Name)
             {
                 return true;
             }
             if ((dbUser.EmployeeNo != user.EmployeeNo) && (dbUser.EmployeeNo != null && user.EmployeeNo != ""))
+            {
+                return true;
+            }
+            if ((dbUser.LastAccessDate != user.LastAccessDate) && dbUserLastAccessDateUtc != user.LastAccessDate)
             {
                 return true;
             }
@@ -531,6 +536,37 @@ namespace MyGeotabAPIAdapter
                 dbDevices.Add(dbDevice);
             }
             return dbDevices;
+        }
+
+        /// <summary>
+        /// Converts the supplied <see cref="DutyStatusAvailability"/> object into a <see cref="DbDutyStatusAvailability"/> object.
+        /// </summary>
+        /// <param name="dutyStatusAvailability">The <see cref="DutyStatusAvailability"/> object to be converted.</param>
+        /// <returns></returns>
+        public static DbDutyStatusAvailability GetDbDutyStatusAvailability(DutyStatusAvailability dutyStatusAvailability)
+        {
+            DbDutyStatusAvailability dbDutyStatusAvailability = new DbDutyStatusAvailability
+            {
+                Cycle = dutyStatusAvailability.Cycle,
+                CycleRest = dutyStatusAvailability.CycleRest,
+                DriverId = dutyStatusAvailability.Driver.Id.ToString(),
+                Driving = dutyStatusAvailability.Driving,
+                Duty = dutyStatusAvailability.Duty,
+                DutySinceCycleRest = dutyStatusAvailability.DutySinceCycleRest,
+                Is16HourExemptionAvailable = dutyStatusAvailability.Is16HourExemptionAvailable,
+                IsAdverseDrivingExemptionAvailable = dutyStatusAvailability.IsAdverseDrivingExemptionAvailable,
+                IsOffDutyDeferralExemptionAvailable = dutyStatusAvailability.IsOffDutyDeferralExemptionAvailable,
+                Rest = dutyStatusAvailability.Rest,
+                Workday = dutyStatusAvailability.Workday
+            };
+
+            string cycleAvailabilities = JsonConvert.SerializeObject(dutyStatusAvailability.CycleAvailabilities);
+            dbDutyStatusAvailability.CycleAvailabilities = cycleAvailabilities;
+
+            string recap = JsonConvert.SerializeObject(dutyStatusAvailability.Recap);
+            dbDutyStatusAvailability.Recap = recap;
+
+            return dbDutyStatusAvailability;
         }
 
         /// <summary>
@@ -1042,7 +1078,9 @@ namespace MyGeotabAPIAdapter
                 EmployeeNo = employeeNo,
                 FirstName = user.FirstName,
                 GeotabId = user.Id.ToString(),
+                HosRuleSet = user.HosRuleSet.Value.ToString(),
                 IsDriver = user.IsDriver ?? false,
+                LastAccessDate = user.LastAccessDate,
                 LastName = user.LastName,
                 Name = user.Name
             };

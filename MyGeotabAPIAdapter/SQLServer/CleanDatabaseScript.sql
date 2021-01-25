@@ -6,6 +6,7 @@
 -- delete from [dbo].[DVIRLogs];
 -- delete from [dbo].[Devices];
 -- delete from [dbo].[Diagnostics];
+-- delete from [dbo].[DutyStatusAvailabilities];
 -- delete from [dbo].[ExceptionEvents];
 -- delete from [dbo].[FaultData];
 -- delete from [dbo].[LogRecords];
@@ -23,6 +24,7 @@
 --DBCC CHECKIDENT ('dbo.DVIRLogs', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Devices', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Diagnostics', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.DutyStatusAvailabilities', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.ExceptionEvents', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.FaultData', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.LogRecords', RESEED, 0);
@@ -48,6 +50,8 @@ union all
 select 'Devices', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Devices'
 union all
 select 'Diagnostics', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Diagnostics'
+union all
+select 'DutyStatusAvailabilities', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DutyStatusAvailabilities'
 union all
 select 'ExceptionEvents', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'ExceptionEvents'
 union all

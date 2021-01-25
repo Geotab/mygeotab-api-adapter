@@ -6,6 +6,7 @@
 -- delete from public."DVIRLogs";
 -- delete from public."Devices";
 -- delete from public."Diagnostics";
+-- delete from public."DutyStatusAvailabilities";
 -- delete from public."ExceptionEvents";
 -- delete from public."FaultData";
 -- delete from public."LogRecords";
@@ -23,6 +24,7 @@
 -- ALTER SEQUENCE public."DVIRLogs_id_seq" RESTART;
 -- ALTER SEQUENCE public."Devices_id_seq" RESTART;
 -- ALTER SEQUENCE public."Diagnostics_id_seq" RESTART;
+-- ALTER SEQUENCE public."DutyStatusAvailabilities_id_seq" RESTART;
 -- ALTER SEQUENCE public."ExceptionEvents_id_seq" RESTART;
 -- ALTER SEQUENCE public."FaultData_id_seq" RESTART;
 -- ALTER SEQUENCE public."LogRecords_id_seq" RESTART;
@@ -47,6 +49,8 @@ union all
 select 'Devices', count(0) from public."Devices"
 union all
 select 'Diagnostics', count(0) from public."Diagnostics"
+union all
+select 'DutyStatusAvailabilities', count(0) from public."DutyStatusAvailabilities"
 union all
 select 'ExceptionEvents', count(0) from public."ExceptionEvents"
 union all
