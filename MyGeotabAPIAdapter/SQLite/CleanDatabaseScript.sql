@@ -3,11 +3,13 @@
 --delete from "ConfigFeedVersions";
 --delete from "DVIRDefectRemarks";
 --delete from "DVIRDefects";
+--delete from "DVIRDefectUpdates";
 --delete from "DVIRLogs";
 --delete from "Devices";
 --delete from "Diagnostics";
 --delete from "DutyStatusAvailabilities";
 --delete from "ExceptionEvents";
+--delete from "FailedDVIRDefectUpdates";
 --delete from "FaultData";
 --delete from "LogRecords";
 --delete from "MyGeotabVersionInfo";
@@ -27,6 +29,8 @@ select 'DVIRDefectRemarks', count(0) from "DVIRDefectRemarks"
 union all
 select 'DVIRDefects', count(0) from "DVIRDefects"
 union all
+select 'DVIRDefectUpdates', count(0) from "DVIRDefectUpdates"
+union all
 select 'DVIRLogs', count(0) from "DVIRLogs"
 union all
 select 'Devices', count(0) from "Devices"
@@ -36,6 +40,8 @@ union all
 select 'DutyStatusAvailabilities', count(0) from "DutyStatusAvailabilities"
 union all
 select 'ExceptionEvents', count(0) from "ExceptionEvents"
+union all
+select 'FailedDVIRDefectUpdates', count(0) from "FailedDVIRDefectUpdates"
 union all
 select 'FaultData', count(0) from "FaultData"
 union all

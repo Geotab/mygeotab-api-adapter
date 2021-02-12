@@ -3,11 +3,13 @@
 -- delete from [dbo].[ConfigFeedVersions];
 -- delete from [dbo].[DVIRDefectRemarks];
 -- delete from [dbo].[DVIRDefects];
+-- delete from [dbo].[DVIRDefectUpdates];
 -- delete from [dbo].[DVIRLogs];
 -- delete from [dbo].[Devices];
 -- delete from [dbo].[Diagnostics];
 -- delete from [dbo].[DutyStatusAvailabilities];
 -- delete from [dbo].[ExceptionEvents];
+-- delete from [dbo].[FailedDVIRDefectUpdates];
 -- delete from [dbo].[FaultData];
 -- delete from [dbo].[LogRecords];
 -- delete from [dbo].[MyGeotabVersionInfo];
@@ -21,11 +23,13 @@
 --DBCC CHECKIDENT ('dbo.ConfigFeedVersions', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DVIRDefectRemarks', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DVIRDefects', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.DVIRDefectUpdates', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DVIRLogs', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Devices', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Diagnostics', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DutyStatusAvailabilities', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.ExceptionEvents', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.FailedDVIRDefectUpdates', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.FaultData', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.LogRecords', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Rules', RESEED, 0);
@@ -45,6 +49,8 @@ select 'DVIRDefectRemarks', SUM(st.row_count) FROM sys.dm_db_partition_stats st 
 union all
 select 'DVIRDefects', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DVIRDefects'
 union all
+select 'DVIRDefectUpdates', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DVIRDefectUpdates'
+union all
 select 'DVIRLogs', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DVIRLogs'
 union all
 select 'Devices', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Devices'
@@ -54,6 +60,8 @@ union all
 select 'DutyStatusAvailabilities', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DutyStatusAvailabilities'
 union all
 select 'ExceptionEvents', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'ExceptionEvents'
+union all
+select 'FailedDVIRDefectUpdates', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'FailedDVIRDefectUpdates'
 union all
 select 'FaultData', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'FaultData'
 union all

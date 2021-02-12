@@ -12,3 +12,4 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Style", "IDE0044:Add readonly modifier", Justification = "<Pending>", Scope = "member", Target = "~F:MyGeotabAPIAdapter.ConfigurationManager.zoneTypeCacheRefreshIntervalMinutes")]
 [assembly: SuppressMessage("Style", "IDE0044:Add readonly modifier", Justification = "<Pending>", Scope = "member", Target = "~F:MyGeotabAPIAdapter.ConfigurationManager.zoneTypeCacheUpdateIntervalMinutes")]
 [assembly: SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "<Pending>", Scope = "member", Target = "~M:MyGeotabAPIAdapter.DutyStatusAvailabilityWorker.ExecuteAsync(System.Threading.CancellationToken)~System.Threading.Tasks.Task")]
+[assembly: SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "<Pending>", Scope = "member", Target = "~M:MyGeotabAPIAdapter.DVIRLogManipulator.ExecuteAsync(System.Threading.CancellationToken)~System.Threading.Tasks.Task")]

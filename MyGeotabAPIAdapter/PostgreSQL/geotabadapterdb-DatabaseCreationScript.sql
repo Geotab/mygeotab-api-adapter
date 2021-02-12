@@ -161,6 +161,47 @@ ALTER SEQUENCE public."DVIRDefectRemarks_id_seq" OWNED BY public."DVIRDefectRema
 
 
 --
+-- Name: DVIRDefectUpdates; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."DVIRDefectUpdates" (
+    id bigint NOT NULL,
+    "DVIRLogId" character varying(50) NOT NULL,
+    "DVIRDefectId" character varying(50) NOT NULL,
+    "RepairDateTime" timestamp without time zone,
+    "RepairStatus" character varying(50),
+    "RepairUserId" character varying(50),
+    "Remark" text,
+    "RemarkDateTime" timestamp without time zone,
+    "RemarkUserId" character varying(50),
+    "RecordCreationTimeUtc" timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE public."DVIRDefectUpdates" OWNER TO geotabadapter_owner;
+
+--
+-- Name: DVIRDefectUpdates_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."DVIRDefectUpdates_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."DVIRDefectUpdates_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: DVIRDefectUpdates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."DVIRDefectUpdates_id_seq" OWNED BY public."DVIRDefectUpdates".id;
+
+
+--
 -- Name: DVIRDefects; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -226,7 +267,6 @@ CREATE TABLE public."DVIRLogs" (
     "LocationLongitude" double precision,
     "LogType" character varying(50),
     "RepairDate" timestamp without time zone,
-    "RepairRemark" text,
     "RepairedByUserId" character varying(50),
     "TrailerId" character varying(50),
     "TrailerName" character varying(255),
@@ -431,6 +471,49 @@ ALTER TABLE public."ExceptionEvents_id_seq" OWNER TO geotabadapter_owner;
 --
 
 ALTER SEQUENCE public."ExceptionEvents_id_seq" OWNED BY public."ExceptionEvents".id;
+
+
+--
+-- Name: FailedDVIRDefectUpdates; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."FailedDVIRDefectUpdates" (
+    id bigint NOT NULL,
+    "DVIRDefectUpdateId" bigint NOT NULL,
+    "DVIRLogId" character varying(50) NOT NULL,
+    "DVIRDefectId" character varying(50) NOT NULL,
+    "RepairDateTime" timestamp without time zone,
+    "RepairStatus" character varying(50),
+    "RepairUserId" character varying(50),
+    "Remark" text,
+    "RemarkDateTime" timestamp without time zone,
+    "RemarkUserId" character varying(50),
+    "FailureMessage" text,
+    "RecordCreationTimeUtc" timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE public."FailedDVIRDefectUpdates" OWNER TO geotabadapter_owner;
+
+--
+-- Name: FailedDVIRDefectUpdates_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."FailedDVIRDefectUpdates_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."FailedDVIRDefectUpdates_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: FailedDVIRDefectUpdates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."FailedDVIRDefectUpdates_id_seq" OWNED BY public."FailedDVIRDefectUpdates".id;
 
 
 --
@@ -903,6 +986,13 @@ ALTER TABLE ONLY public."DVIRDefectRemarks" ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: DVIRDefectUpdates id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DVIRDefectUpdates" ALTER COLUMN id SET DEFAULT nextval('public."DVIRDefectUpdates_id_seq"'::regclass);
+
+
+--
 -- Name: DVIRDefects id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -942,6 +1032,13 @@ ALTER TABLE ONLY public."DutyStatusAvailabilities" ALTER COLUMN id SET DEFAULT n
 --
 
 ALTER TABLE ONLY public."ExceptionEvents" ALTER COLUMN id SET DEFAULT nextval('public."ExceptionEvents_id_seq"'::regclass);
+
+
+--
+-- Name: FailedDVIRDefectUpdates id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."FailedDVIRDefectUpdates" ALTER COLUMN id SET DEFAULT nextval('public."FailedDVIRDefectUpdates_id_seq"'::regclass);
 
 
 --
@@ -1029,6 +1126,14 @@ ALTER TABLE ONLY public."ConfigFeedVersions"
 
 ALTER TABLE ONLY public."DVIRDefectRemarks"
     ADD CONSTRAINT "DVIRDefectRemarks_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: DVIRDefectUpdates DVIRDefectUpdates_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DVIRDefectUpdates"
+    ADD CONSTRAINT "DVIRDefectUpdates_pkey" PRIMARY KEY (id);
 
 
 --
@@ -1195,6 +1300,13 @@ GRANT ALL ON SEQUENCE public."DVIRDefectRemarks_id_seq" TO geotabadapter_client;
 
 
 --
+-- Name: TABLE "DVIRDefectUpdates"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DVIRDefectUpdates" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "DVIRDefects"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1276,6 +1388,20 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."ExceptionEvents" TO geotabada
 --
 
 GRANT ALL ON SEQUENCE public."ExceptionEvents_id_seq" TO geotabadapter_client;
+
+
+--
+-- Name: TABLE "FailedDVIRDefectUpdates"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."FailedDVIRDefectUpdates" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "FailedDVIRDefectUpdates_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."FailedDVIRDefectUpdates_id_seq" TO geotabadapter_client;
 
 
 --
@@ -1438,3 +1564,8 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT SELECT,INSERT,DELETE,UPDATE ON 
 -- PostgreSQL database dump complete
 --
 
+-- Manual additions not captured by backup procedure:
+GRANT ALL ON SEQUENCE public."DVIRDefectRemarks_id_seq" TO geotabadapter_client;
+GRANT ALL ON SEQUENCE public."DVIRDefectRemarks_id_seq" TO geotabadapter_owner;
+GRANT ALL ON SEQUENCE public."FailedDVIRDefectUpdates_id_seq" TO geotabadapter_client;
+GRANT ALL ON SEQUENCE public."FailedDVIRDefectUpdates_id_seq" TO geotabadapter_owner;

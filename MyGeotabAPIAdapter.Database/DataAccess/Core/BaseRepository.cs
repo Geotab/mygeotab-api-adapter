@@ -151,6 +151,36 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// </summary>
         /// <param name="connectionInfo">The database connection information.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
+        /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
+        /// <returns></returns>
+        public async Task<IEnumerable<T>> GetAllAsync(ConnectionInfo connectionInfo, int commandTimeout, int? resultsLimit = null)
+        {
+            try
+            {
+                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
+
+                SetConnection(connectionInfo);
+                using (var connection = await connectionProvider.GetOpenConnectionAsync())
+                {
+                    return await connection.GetAllAsync<T>(null, null, resultsLimit);
+                }
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+        }
+
+        /// <summary>
+        /// Returns a collection of objects representing all records in a database table.
+        /// </summary>
+        /// <param name="connectionInfo">The database connection information.</param>
+        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
         public async Task<IEnumerable<T>> GetAllAsync(ConnectionInfo connectionInfo, int commandTimeout)
         {

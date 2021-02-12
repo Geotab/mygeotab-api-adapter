@@ -3,11 +3,13 @@
 -- delete from public."ConfigFeedVersions";
 -- delete from public."DVIRDefectRemarks";
 -- delete from public."DVIRDefects";
+-- delete from public."DVIRDefectUpdates";
 -- delete from public."DVIRLogs";
 -- delete from public."Devices";
 -- delete from public."Diagnostics";
 -- delete from public."DutyStatusAvailabilities";
 -- delete from public."ExceptionEvents";
+-- delete from public."FailedDVIRDefectUpdates";
 -- delete from public."FaultData";
 -- delete from public."LogRecords";
 -- delete from public."MyGeotabVersionInfo";
@@ -21,11 +23,13 @@
 -- ALTER SEQUENCE public."ConfigFeedVersions_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRDefectRemarks_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRDefects_id_seq" RESTART;
+-- ALTER SEQUENCE public."DVIRDefectUpdates_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRLogs_id_seq" RESTART;
 -- ALTER SEQUENCE public."Devices_id_seq" RESTART;
 -- ALTER SEQUENCE public."Diagnostics_id_seq" RESTART;
 -- ALTER SEQUENCE public."DutyStatusAvailabilities_id_seq" RESTART;
 -- ALTER SEQUENCE public."ExceptionEvents_id_seq" RESTART;
+-- ALTER SEQUENCE public."FailedDVIRDefectUpdates_id_seq" RESTART;
 -- ALTER SEQUENCE public."FaultData_id_seq" RESTART;
 -- ALTER SEQUENCE public."LogRecords_id_seq" RESTART;
 -- ALTER SEQUENCE public."Rules_id_seq" RESTART;
@@ -44,6 +48,8 @@ select 'DVIRDefectRemarks', count(0) from public."DVIRDefectRemarks"
 union all
 select 'DVIRDefects', count(0) from public."DVIRDefects"
 union all
+select 'DVIRDefectUpdates', count(0) from public."DVIRDefectUpdates"
+union all
 select 'DVIRLogs', count(0) from public."DVIRLogs"
 union all
 select 'Devices', count(0) from public."Devices"
@@ -53,6 +59,8 @@ union all
 select 'DutyStatusAvailabilities', count(0) from public."DutyStatusAvailabilities"
 union all
 select 'ExceptionEvents', count(0) from public."ExceptionEvents"
+union all
+select 'FailedDVIRDefectUpdates', count(0) from public."FailedDVIRDefectUpdates"
 union all
 select 'FaultData', count(0) from public."FaultData"
 union all

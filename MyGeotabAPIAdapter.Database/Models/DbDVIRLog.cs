@@ -21,7 +21,6 @@ namespace MyGeotabAPIAdapter.Database.Models
         public float LocationLongitude { get; set; }
         public string LogType { get; set; }
         public DateTime? RepairDate { get; set; }
-        public string RepairRemark { get; set; }
         public string RepairedByUserId { get; set; }
         public string TrailerId { get; set; }
         public string TrailerName { get; set; }

@@ -1,4 +1,4 @@
-﻿using Geotab.Checkmate.ObjectModel;
+using Geotab.Checkmate.ObjectModel;
 using Geotab.Checkmate.ObjectModel.Engine;
 using Geotab.Checkmate.ObjectModel.Exceptions;
 using Microsoft.Extensions.Configuration;
@@ -98,6 +98,9 @@ namespace MyGeotabAPIAdapter
         // > AppSettings:Feeds:Trip
         const string ArgNameEnableTripFeed = "AppSettings:Feeds:Trip:EnableTripFeed";
         const string ArgNameTripFeedIntervalSeconds = "AppSettings:Feeds:Trip:TripFeedIntervalSeconds";
+        // > AppSettings:Manipulators:DVIRLog
+        const string ArgNameEnableDVIRLogManipulator = "AppSettings:Manipulators:DVIRLog:EnableDVIRLogManipulator";
+        const string ArgNameDVIRLogManipulatorIntervalSeconds = "AppSettings:Manipulators:DVIRLog:DVIRLogManipulatorIntervalSeconds";
 
 
         // Arbitrary limits to prevent API abuse:
@@ -128,9 +131,11 @@ namespace MyGeotabAPIAdapter
         const string TableNameDbDiagnostic = "Diagnostics";
         const string TableNameDbDutyStatusAvailability = "DutyStatusAvailability";
         const string TableNameDbDVIRDefectRemark = "DVIRDefectRemarks";
+        const string TableNameDbDVIRDefectUpdates = "DVIRDefectUpdates";
         const string TableNameDbDVIRDefect = "DVIRDefects";
         const string TableNameDbDVIRLog = "DVIRLogs";
         const string TableNameDbExceptionEvent = "ExceptionEvents";
+        const string TableNameDbFailedDVIRDefectUpdates = "FailedDVIRDefectUpdates";
         const string TableNameDbFaultData = "FaultData";
         const string TableNameDbLogRecord = "LogRecords";
         const string TableNameDbRule = "Rules";
@@ -164,8 +169,10 @@ namespace MyGeotabAPIAdapter
         DateTime dvirDefectCacheIntervalDailyReferenceStartTimeUTC;
         int dvirDefectListCacheRefreshIntervalMinutes;
         int dvirLogDataFeedIntervalSeconds;
+        int dvirLogManipulatorIntervalSeconds;
         bool enableDutyStatusAvailabilityDataFeed;
         bool enableDVIRLogDataFeed;
+        bool enableDVIRLogManipulator;
         bool enableExceptionEventFeed;
         bool enableFaultDataFeed;
         bool enableLogRecordFeed;
@@ -329,6 +336,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// The name of the database table for <see cref="DVIRDefect"/> updates information.
+        /// </summary>
+        public string DbDVIRDefectUpdatesTableName
+        {
+            get => TableNameDbDVIRDefectUpdates;
+        }
+
+        /// <summary>
         /// The name of the database table for <see cref="DVIRLog"/> information.
         /// </summary>
         public string DbDVIRLogTableName
@@ -342,6 +357,14 @@ namespace MyGeotabAPIAdapter
         public string DbExceptionEventTableName
         {
             get => TableNameDbExceptionEvent;
+        }
+
+        /// <summary>
+        /// The name of the database table for failed <see cref="DVIRDefect"/> updates information.
+        /// </summary>
+        public string DbFailedDVIRDefectUpdatesTableName
+        {
+            get => TableNameDbFailedDVIRDefectUpdates;
         }
 
         /// <summary>
@@ -489,6 +512,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// The minimum number of seconds to wait between iterations of the process that propagates <see cref="DVIRLog"/> changes from tables in the adapter database to the associated MyGeotab database.
+        /// </summary>
+        public int DVIRLogManipulatorIntervalSeconds
+        {
+            get => dvirLogManipulatorIntervalSeconds;
+        }
+
+        /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="DVIRDefect"/> cache.
         /// </summary>
         public DateTime DVIRDefectCacheIntervalDailyReferenceStartTimeUTC
@@ -526,6 +557,14 @@ namespace MyGeotabAPIAdapter
         public bool EnableDVIRLogDataFeed
         {
             get => enableDVIRLogDataFeed;
+        }
+
+        /// <summary>
+        /// Indicates whether the <see cref="DVIRLogManipulator"/> worker service should be enabled. 
+        /// </summary>
+        public bool EnableDVIRLogManipulator
+        {
+            get => enableDVIRLogManipulator;
         }
 
         /// <summary>
@@ -1200,6 +1239,10 @@ namespace MyGeotabAPIAdapter
 
             // ZoneStop tracking:
             trackZoneStops = GetConfigKeyValueBoolean(ArgNameTrackZoneStops);
+
+            // Manipulators:
+            enableDVIRLogManipulator = GetConfigKeyValueBoolean(ArgNameEnableDVIRLogManipulator);
+            dvirLogManipulatorIntervalSeconds = GetConfigKeyValueInt(ArgNameDVIRLogManipulatorIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
             // Timeouts:
             timeoutSecondsForDatabaseTasks = GetConfigKeyValueInt(ArgNameTimeoutSecondsForDatabaseTasks, null, false, MinTimeoutSeconds, MaxTimeoutSeconds, DefaultTimeoutSeconds);

@@ -811,7 +811,10 @@ namespace MyGeotabAPIAdapter
                                 foreach (var defectRemark in dvirDefect.DefectRemarks)
                                 {
                                     // If the DefectRemark has not yet been added to the database, create a DbDVIRDefectRemark, set its properties and add it to the list for later write to the database.
-                                    if (!dbDVIRDefectRemarksDictionary.TryGetValue(defectRemark.Id, out var existingDbDVIRDefectRemark))
+                                    #region Temporary - Use DefectRemark DateTime as the Id
+                                    // Pre-5.7.2004, the DefectRemark Ids change whenever a new DefectRemark is added to a DVIRLog, resulting in all existing DefectRemarks being duplicated in the adapter database each time a new one is added. Once all databases are at 5.7.2004+, the code can revert to the original commented-out version below which uses DefectRemark.Id.
+                                    var dbDVIRDefectRemarksList = dbDVIRDefectRemarksDictionary.Values.ToList();
+                                    if (!dbDVIRDefectRemarksList.Where(dbDVIRDefectRemark => dbDVIRDefectRemark.DateTime == defectRemark.DateTime && dbDVIRDefectRemark.Remark == defectRemark.Remark).Any())
                                     {
                                         DbDVIRDefectRemark newDbDVIRDefectRemark = ObjectMapper.GetDbDVIRDefectRemark(defectRemark);
                                         newDbDVIRDefectRemark.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
@@ -821,6 +824,17 @@ namespace MyGeotabAPIAdapter
                                         dbDVIRDefectRemarksDictionary.Add(Id.Create(newDbDVIRDefectRemark.GeotabId), newDbDVIRDefectRemark);
                                         dbDVIRDefectRemarksToInsert.Add(newDbDVIRDefectRemark);
                                     }
+                                    #endregion
+                                    //if (!dbDVIRDefectRemarksDictionary.TryGetValue(defectRemark.Id, out var existingDbDVIRDefectRemark))
+                                    //{
+                                    //    DbDVIRDefectRemark newDbDVIRDefectRemark = ObjectMapper.GetDbDVIRDefectRemark(defectRemark);
+                                    //    newDbDVIRDefectRemark.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
+                                    //    newDbDVIRDefectRemark.RecordLastChangedUtc = recordChangedTimestampUtc;
+                                    //    newDbDVIRDefectRemark.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
+
+                                    //    dbDVIRDefectRemarksDictionary.Add(Id.Create(newDbDVIRDefectRemark.GeotabId), newDbDVIRDefectRemark);
+                                    //    dbDVIRDefectRemarksToInsert.Add(newDbDVIRDefectRemark);
+                                    //}
                                 }
                             }
                         }

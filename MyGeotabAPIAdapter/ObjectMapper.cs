@@ -688,10 +688,6 @@ namespace MyGeotabAPIAdapter
             {
                 dbDVIRLog.RepairDate = dvirLog.RepairDate;
             }
-            if (dvirLog.RepairRemark != null && dvirLog.RepairRemark.Length > 0)
-            {
-                dbDVIRLog.RepairRemark = dvirLog.RepairRemark;
-            }
             if (dvirLog.RepairedBy != null)
             {
                 dbDVIRLog.RepairedByUserId = dvirLog.RepairedBy.Id.ToString();
@@ -751,6 +747,30 @@ namespace MyGeotabAPIAdapter
                 dbExceptionEvents.Add(dbExceptionEvent);
             }
             return dbExceptionEvents;
+        }
+
+        /// <summary>
+        /// Converts the supplied <see cref="DbDVIRDefectUpdate"/> into a <see cref="DbFailedDVIRDefectUpdate"/>.
+        /// </summary>
+        /// <param name="dbDVIRDefectUpdate">The <see cref="DbDVIRDefectUpdate"/> to be converted.</param>
+        /// <param name="failureMessage">A message indicating the reason why the DVIRDefect update failed.</param>
+        /// <returns></returns>
+        public static DbFailedDVIRDefectUpdate GetDbFailedDVIRDefectUpdate(DbDVIRDefectUpdate dbDVIRDefectUpdate, string failureMessage)
+        {
+            DbFailedDVIRDefectUpdate dbFailedDVIRDefectUpdate = new DbFailedDVIRDefectUpdate
+            {
+                DVIRDefectId = dbDVIRDefectUpdate.DVIRDefectId,
+                DVIRDefectUpdateId = dbDVIRDefectUpdate.id,
+                DVIRLogId = dbDVIRDefectUpdate.DVIRLogId,
+                FailureMessage = failureMessage,
+                RemarkDateTime = dbDVIRDefectUpdate.RemarkDateTime,
+                Remark = dbDVIRDefectUpdate.Remark,
+                RemarkUserId = dbDVIRDefectUpdate.RemarkUserId,
+                RepairDateTime = dbDVIRDefectUpdate.RepairDateTime,
+                RepairStatus = dbDVIRDefectUpdate.RepairStatus,
+                RepairUserId = dbDVIRDefectUpdate.RepairUserId
+            };
+            return dbFailedDVIRDefectUpdate;
         }
 
         /// <summary>
