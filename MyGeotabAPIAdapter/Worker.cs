@@ -104,8 +104,8 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            var ruleCache = cacheManager.RuleCacheContainer.Cache;
-            List<ExceptionEvent> filteredList = new List<ExceptionEvent>();
+            var ruleCache = CacheManager.RuleCacheContainer.Cache;
+            List<ExceptionEvent> filteredList = new();
             foreach (var exceptionEventToBeEvaluated in exceptionEventsToBeFiltered)
             {
                 var exceptionEventRule = exceptionEventToBeEvaluated.Rule;
@@ -130,7 +130,7 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            List<T> filteredList = new List<T>();
+            List<T> filteredList = new();
             if (trackedDevicesDictionary.Any())
             {
                 // Certain Devices are being tracked. Iterate through the list of entities to be filtered and keep only those that represent Devices that are being tracked.
@@ -141,6 +141,14 @@ namespace MyGeotabAPIAdapter
                     string errorMessage = "";
                     switch (entityTypeName)
                     {
+                        case nameof(DVIRLog):
+                            var dvirLogToBeEvaluated = itemToBeEvaluated as DVIRLog;
+                            itemToBeEvaluatedDevice = dvirLogToBeEvaluated.Device;
+                            break;
+                        case nameof(ExceptionEvent):
+                            var exceptionEventToBeEvaluated = itemToBeEvaluated as ExceptionEvent;
+                            itemToBeEvaluatedDevice = exceptionEventToBeEvaluated.Device;
+                            break;
                         case nameof(FaultData):
                             var faultDataToBeEvaluated = itemToBeEvaluated as FaultData;
                             itemToBeEvaluatedDevice = faultDataToBeEvaluated.Device;
@@ -190,7 +198,7 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            List<T> filteredList = new List<T>();
+            List<T> filteredList = new();
             if (trackedDiagnosticsDictionary.Any())
             {
                 // Certain Diagnostics are being tracked. Iterate through the list of entities to be filtered and keep only those that represent Diagnostics that are being tracked.
@@ -244,15 +252,22 @@ namespace MyGeotabAPIAdapter
             {
                 if (!Globals.ConfigurationManager.TrackAllDevices)
                 {
-                    var deviceCache = cacheManager.DeviceCacheContainer.Cache;
+                    Dictionary<Id, Device> deviceCache = (Dictionary<Id, Device>)CacheManager.DeviceCacheContainer.Cache;
                     string[] deviceList = Globals.ConfigurationManager.DevicesToTrackList.Split(",");
                     for (int deviceListIndex = 0; deviceListIndex < deviceList.Length; deviceListIndex++)
                     {
-                        string deviceId = deviceList[deviceListIndex];
-                        if (deviceCache.Contains(deviceId))
+                        var deviceId = Id.Create(deviceList[deviceListIndex]);
+                        if (deviceCache.ContainsKey(deviceId))
                         {
-                            var checkedDevice = (Device)deviceCache[deviceId];
-                            trackedDevicesDictionary.Add(checkedDevice.Id, checkedDevice);
+                            var checkedDevice = deviceCache[deviceId];
+                            if (!trackedDevicesDictionary.ContainsKey(checkedDevice.Id))
+                            {
+                                trackedDevicesDictionary.Add(checkedDevice.Id, checkedDevice);
+                            }
+                            else
+                            {
+                                logger.Warn($"The value '{deviceId}' is contained multiple times in the '{Globals.ConfigurationManager.ArgNameDevicesToTrack}' setting in the appsettngs.json file. This instance will be ignored.");
+                            }
                         }
                         else
                         {
@@ -279,20 +294,26 @@ namespace MyGeotabAPIAdapter
             {
                 if (!Globals.ConfigurationManager.TrackAllDiagnostics)
                 {
-                    var diagnosticCache = cacheManager.DiagnosticCacheContainer.Cache;
+                    Dictionary<Id, Diagnostic> diagnosticCache = (Dictionary<Id, Diagnostic>)CacheManager.DiagnosticCacheContainer.Cache;
                     string[] diagnosticList = Globals.ConfigurationManager.DiagnosticsToTrackList.Split(",");
                     for (int diagnosticListIndex = 0; diagnosticListIndex < diagnosticList.Length; diagnosticListIndex++)
                     {
-                        string diagnosticId = diagnosticList[diagnosticListIndex];
-                        if (diagnosticCache.Contains(diagnosticId))
+                        var diagnosticId = Id.Create(diagnosticList[diagnosticListIndex]);
+                        if (diagnosticCache.ContainsKey(diagnosticId))
                         {
-                            var checkedDiagnostic = (Diagnostic)diagnosticCache[diagnosticId];
-                            trackedDiagnosticsDictionary.Add(checkedDiagnostic.Id, checkedDiagnostic);
+                            var checkedDiagnostic = diagnosticCache[diagnosticId];
+                            if (!trackedDiagnosticsDictionary.ContainsKey(checkedDiagnostic.Id))
+                            {
+                                trackedDiagnosticsDictionary.Add(checkedDiagnostic.Id, checkedDiagnostic);
+                            }
+                            else
+                            {
+                                logger.Warn($"The value '{diagnosticId}' is contained multiple times in the '{Globals.ConfigurationManager.ArgNameDiagnosticsToTrack}' setting in the appsettngs.json file. This instance will be ignored.");
+                            }
                         }
                         else
                         {
                             logger.Warn($"'{diagnosticId}' is not a valid diagnostic Id; as such the intended diagnostic will not be tracked.");
-                            continue;
                         }
                     }
                 }
@@ -435,7 +456,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await feedManager.GetFeedDataAsync<DVIRLog>(feedManager.DVIRLogFeedContainer, cancellationTokenSource);
+            await FeedManager.GetFeedDataAsync<DVIRLog>(FeedManager.DVIRLogFeedContainer, cancellationTokenSource);
             cancellationToken.ThrowIfCancellationRequested();
             await ProcessDVIRLogFeedResultsAsync(cancellationTokenSource);
 
@@ -454,7 +475,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await feedManager.GetFeedDataAsync<ExceptionEvent>(feedManager.ExceptionEventFeedContainer, cancellationTokenSource);
+            await FeedManager.GetFeedDataAsync<ExceptionEvent>(FeedManager.ExceptionEventFeedContainer, cancellationTokenSource);
             cancellationToken.ThrowIfCancellationRequested();
             await ProcessExceptionEventFeedResultsAsync(cancellationTokenSource);
 
@@ -473,7 +494,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await feedManager.GetFeedDataAsync<FaultData>(feedManager.FaultDataFeedContainer, cancellationTokenSource);
+            await FeedManager.GetFeedDataAsync<FaultData>(FeedManager.FaultDataFeedContainer, cancellationTokenSource);
             cancellationToken.ThrowIfCancellationRequested();
             await ProcessFaultDataFeedResultsAsync(cancellationTokenSource);
 
@@ -492,7 +513,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await feedManager.GetFeedDataAsync<LogRecord>(feedManager.LogRecordFeedContainer, cancellationTokenSource);
+            await FeedManager.GetFeedDataAsync<LogRecord>(FeedManager.LogRecordFeedContainer, cancellationTokenSource);
             cancellationToken.ThrowIfCancellationRequested();
             await ProcessLogRecordFeedResultsAsync(cancellationTokenSource);
 
@@ -511,7 +532,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await feedManager.GetFeedDataAsync<StatusData>(feedManager.StatusDataFeedContainer, cancellationTokenSource);
+            await FeedManager.GetFeedDataAsync<StatusData>(FeedManager.StatusDataFeedContainer, cancellationTokenSource);
             cancellationToken.ThrowIfCancellationRequested();
             await ProcessStatusDataFeedResultsAsync(cancellationTokenSource);
 
@@ -530,7 +551,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await feedManager.GetFeedDataAsync<Trip>(feedManager.TripFeedContainer, cancellationTokenSource);
+            await FeedManager.GetFeedDataAsync<Trip>(FeedManager.TripFeedContainer, cancellationTokenSource);
             cancellationToken.ThrowIfCancellationRequested();
             await ProcessTripFeedResultsAsync(cancellationTokenSource);
 
@@ -588,7 +609,7 @@ namespace MyGeotabAPIAdapter
             {
                 if (!dbConfigFeedVersionList.Where(dbConfigVersion => dbConfigVersion.FeedTypeId == supportedFeedType.ToString()).Any())
                 {
-                    DbConfigFeedVersion newDbConfigFeedVersion = new DbConfigFeedVersion
+                    DbConfigFeedVersion newDbConfigFeedVersion = new()
                     {
                         DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert,
                         FeedTypeId = supportedFeedType.ToString(),
@@ -681,11 +702,13 @@ namespace MyGeotabAPIAdapter
             try
             {
                 // Setup the ConfigurationManager Globals reference
-                using (ConfigurationManager configurationManager = new ConfigurationManager(configuration))
+                using (ConfigurationManager configurationManager = new(configuration))
                 {
                     Globals.ConfigurationManager = configurationManager;
                 }
-                logger.Info($"******** INITIALIZING APPLICATION ********");
+                var assemblyName = GetType().Assembly.GetName().Name;
+                var assemblyVersion = GetType().Assembly.GetName().Version.ToString();
+                logger.Info($"******** INITIALIZING APPLICATION - {assemblyName} (v{assemblyVersion}) ********");
                 connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
                 await Globals.AuthenticateMyGeotabApiAsync();
                 await ValidateMyGeotabVersionInformationAsync();
@@ -747,9 +770,9 @@ namespace MyGeotabAPIAdapter
             var dbDVIRDefectRemarksToInsert = new List<DbDVIRDefectRemark>();
 
             // Add any returned DVIRLog entities to the database, filtering-out those representing Devices that are not being tracked.
-            if (feedManager.DVIRLogFeedContainer.FeedResultData.Count > 0)
+            if (FeedManager.DVIRLogFeedContainer.FeedResultData.Count > 0)
             {
-                var feedResultDVIRLogs = feedManager.DVIRLogFeedContainer.GetFeedResultDataValuesList<DVIRLog>();
+                var feedResultDVIRLogs = FeedManager.DVIRLogFeedContainer.GetFeedResultDataValuesList<DVIRLog>();
                 var filteredDVIRLogs = ApplyTrackedDevicesFilterToList<DVIRLog>(feedResultDVIRLogs);
                 var dbDVIRLogsForDatabaseWrite = new List<DbDVIRLog>();
 
@@ -848,7 +871,7 @@ namespace MyGeotabAPIAdapter
                 {
                     // Get the feed version information.
                     var dvirLogDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.DVIRLog.ToString()).First();
-                    dvirLogDbConfigFeedVersion.LastProcessedFeedVersion = (long)feedManager.DVIRLogFeedContainer.LastFeedVersion;
+                    dvirLogDbConfigFeedVersion.LastProcessedFeedVersion = (long)FeedManager.DVIRLogFeedContainer.LastFeedVersion;
                     dvirLogDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                     dvirLogDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
@@ -859,7 +882,7 @@ namespace MyGeotabAPIAdapter
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
 
                         string[] individualResultCounts = resultCounts.Split(",");
-                        logger.Info($"Completed insertion of {individualResultCounts[0]} records into {Globals.ConfigurationManager.DbDVIRLogTableName} table, insertion of {individualResultCounts[1]} records into {Globals.ConfigurationManager.DbDVIRDefectTableName} table, update of {individualResultCounts[2]} records in {Globals.ConfigurationManager.DbDVIRDefectTableName} table and insertion of {individualResultCounts[3]} records into {Globals.ConfigurationManager.DbDVIRDefectRemarkTableName} table in {elapsedTime.TotalSeconds} seconds.");
+                        logger.Info($"Completed insertion of {individualResultCounts[0]} records into {ConfigurationManager.DbDVIRLogTableName} table, insertion of {individualResultCounts[1]} records into {ConfigurationManager.DbDVIRDefectTableName} table, update of {individualResultCounts[2]} records in {ConfigurationManager.DbDVIRDefectTableName} table and insertion of {individualResultCounts[3]} records into {ConfigurationManager.DbDVIRDefectRemarkTableName} table in {elapsedTime.TotalSeconds} seconds.");
                     }
                     catch (Exception)
                     {
@@ -869,7 +892,7 @@ namespace MyGeotabAPIAdapter
                 }
 
                 // Clear FeedResultData.
-                feedManager.DVIRLogFeedContainer.FeedResultData.Clear();
+                FeedManager.DVIRLogFeedContainer.FeedResultData.Clear();
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -888,9 +911,9 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Add any returned ExceptionEvents to the database, filtering-out those representing Devices that are not being tracked. Include persistence of the feed version within the same transaction to prevent issues in the event that an exception occurs between persistence of the data and persistence of the feed version.
-            if (feedManager.ExceptionEventFeedContainer.FeedResultData.Count > 0)
+            if (FeedManager.ExceptionEventFeedContainer.FeedResultData.Count > 0)
             {
-                var feedResultExceptionEvents = feedManager.ExceptionEventFeedContainer.GetFeedResultDataValuesList<ExceptionEvent>();
+                var feedResultExceptionEvents = FeedManager.ExceptionEventFeedContainer.GetFeedResultDataValuesList<ExceptionEvent>();
                 var filteredExceptionEvents = ApplyRuleFilterToExceptionEventList(feedResultExceptionEvents);
                 filteredExceptionEvents = ApplyTrackedDevicesFilterToList<ExceptionEvent>(filteredExceptionEvents);
 
@@ -901,7 +924,7 @@ namespace MyGeotabAPIAdapter
 
                 // Get the feed version information.
                 var exceptionEventDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.ExceptionEvent.ToString()).First();
-                exceptionEventDbConfigFeedVersion.LastProcessedFeedVersion = (long)feedManager.ExceptionEventFeedContainer.LastFeedVersion;
+                exceptionEventDbConfigFeedVersion.LastProcessedFeedVersion = (long)FeedManager.ExceptionEventFeedContainer.LastFeedVersion;
                 exceptionEventDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                 exceptionEventDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
@@ -911,9 +934,9 @@ namespace MyGeotabAPIAdapter
                     DateTime startTimeUTC = DateTime.UtcNow;
                     long noOfInserts = await DbExceptionEventService.InsertAsync(connectionInfo, dbExpectionEvents, exceptionEventDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                    double recordsProcessedPerSecond = (double)feedManager.ExceptionEventFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {feedManager.ExceptionEventFeedContainer.FeedResultData.Count} records into " +
-                        $"{Globals.ConfigurationManager.DbExceptionEventTableName} table in {elapsedTime.TotalSeconds} seconds " +
+                    double recordsProcessedPerSecond = (double)FeedManager.ExceptionEventFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed insertion of {FeedManager.ExceptionEventFeedContainer.FeedResultData.Count} records into " +
+                        $"{ConfigurationManager.DbExceptionEventTableName} table in {elapsedTime.TotalSeconds} seconds " +
                         $"({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
@@ -923,7 +946,7 @@ namespace MyGeotabAPIAdapter
                 }
 
                 // Clear FeedResultData.
-                feedManager.ExceptionEventFeedContainer.FeedResultData.Clear();
+                FeedManager.ExceptionEventFeedContainer.FeedResultData.Clear();
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -942,18 +965,18 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Add any returned FaultData entities to the database, filtering-out those representing Devices or Diagnostics that are not being tracked. Include persistence of the feed version within the same transaction to prevent issues in the event that an exception occurs between persistence of the data and persistence of the feed version.
-            if (feedManager.FaultDataFeedContainer.FeedResultData.Count > 0)
+            if (FeedManager.FaultDataFeedContainer.FeedResultData.Count > 0)
             {
-                var feedResultFaultDatas = feedManager.FaultDataFeedContainer.GetFeedResultDataValuesList<FaultData>();
+                var feedResultFaultDatas = FeedManager.FaultDataFeedContainer.GetFeedResultDataValuesList<FaultData>();
                 var filteredFaultDatas = ApplyTrackedDevicesFilterToList<FaultData>(feedResultFaultDatas);
                 filteredFaultDatas = ApplyTrackedDiagnosticsFilterToList<FaultData>(filteredFaultDatas);
 
                 // Hydrate child objects of filtered FaultData entities.
                 foreach (var filteredFaultData in filteredFaultDatas)
                 {
-                    Controller hydratedController = cacheManager.HydrateController(filteredFaultData.Controller);
+                    Controller hydratedController = CacheManager.HydrateController(filteredFaultData.Controller);
                     filteredFaultData.Controller = hydratedController;
-                    FailureMode hydratedFailureMode = cacheManager.HydrateFailureMode(filteredFaultData.FailureMode);
+                    FailureMode hydratedFailureMode = CacheManager.HydrateFailureMode(filteredFaultData.FailureMode);
                     filteredFaultData.FailureMode = hydratedFailureMode;
                 }
 
@@ -964,7 +987,7 @@ namespace MyGeotabAPIAdapter
 
                 // Get the feed version information.
                 var faultDataDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.FaultData.ToString()).First();
-                faultDataDbConfigFeedVersion.LastProcessedFeedVersion = (long)feedManager.FaultDataFeedContainer.LastFeedVersion;
+                faultDataDbConfigFeedVersion.LastProcessedFeedVersion = (long)FeedManager.FaultDataFeedContainer.LastFeedVersion;
                 faultDataDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                 faultDataDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
@@ -975,7 +998,7 @@ namespace MyGeotabAPIAdapter
                     long faultDataEntitiesInserted = await DbFaultDataService.InsertAsync(connectionInfo, dbFaultDatas, faultDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)faultDataEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {faultDataEntitiesInserted} records into {Globals.ConfigurationManager.DbFaultDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    logger.Info($"Completed insertion of {faultDataEntitiesInserted} records into {ConfigurationManager.DbFaultDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
                 {
@@ -984,7 +1007,7 @@ namespace MyGeotabAPIAdapter
                 }
 
                 // Clear FeedResultData.
-                feedManager.FaultDataFeedContainer.FeedResultData.Clear();
+                FeedManager.FaultDataFeedContainer.FeedResultData.Clear();
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -1003,9 +1026,9 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Add any returned LogRecords to the database, filtering-out those representing Devices that are not being tracked. Include persistence of the feed version within the same transaction to prevent issues in the event that an exception occurs between persistence of the data and persistence of the feed version.
-            if (feedManager.LogRecordFeedContainer.FeedResultData.Count > 0)
+            if (FeedManager.LogRecordFeedContainer.FeedResultData.Count > 0)
             {
-                var feedResultLogRecords = feedManager.LogRecordFeedContainer.GetFeedResultDataValuesList<LogRecord>();
+                var feedResultLogRecords = FeedManager.LogRecordFeedContainer.GetFeedResultDataValuesList<LogRecord>();
                 var filteredLogRecords = ApplyTrackedDevicesFilterToList<LogRecord>(feedResultLogRecords);
 
                 // Map LogRecords to DbLogRecords.
@@ -1015,7 +1038,7 @@ namespace MyGeotabAPIAdapter
 
                 // Get the feed version information.
                 var logRecordDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.LogRecord.ToString()).First();
-                logRecordDbConfigFeedVersion.LastProcessedFeedVersion = (long)feedManager.LogRecordFeedContainer.LastFeedVersion;
+                logRecordDbConfigFeedVersion.LastProcessedFeedVersion = (long)FeedManager.LogRecordFeedContainer.LastFeedVersion;
                 logRecordDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                 logRecordDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
@@ -1025,8 +1048,8 @@ namespace MyGeotabAPIAdapter
                     DateTime startTimeUTC = DateTime.UtcNow;
                     long logRecordsInserted = await DbLogRecordService.InsertAsync(connectionInfo, dbLogRecords, logRecordDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                    double recordsProcessedPerSecond = (double)feedManager.LogRecordFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {feedManager.LogRecordFeedContainer.FeedResultData.Count} records into {Globals.ConfigurationManager.DbLogRecordTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    double recordsProcessedPerSecond = (double)FeedManager.LogRecordFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed insertion of {FeedManager.LogRecordFeedContainer.FeedResultData.Count} records into {ConfigurationManager.DbLogRecordTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
                 {
@@ -1035,7 +1058,7 @@ namespace MyGeotabAPIAdapter
                 }
 
                 // Clear FeedResultData.
-                feedManager.LogRecordFeedContainer.FeedResultData.Clear();
+                FeedManager.LogRecordFeedContainer.FeedResultData.Clear();
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -1054,9 +1077,9 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Add any returned StatusData entities to the database, filtering-out those representing Devices or Diagnostics that are not being tracked. Include persistence of the feed version within the same transaction to prevent issues in the event that an exception occurs between persistence of the data and persistence of the feed version.
-            if (feedManager.StatusDataFeedContainer.FeedResultData.Count > 0)
+            if (FeedManager.StatusDataFeedContainer.FeedResultData.Count > 0)
             {
-                var feedResultStatusDatas = feedManager.StatusDataFeedContainer.GetFeedResultDataValuesList<StatusData>();
+                var feedResultStatusDatas = FeedManager.StatusDataFeedContainer.GetFeedResultDataValuesList<StatusData>();
                 var filteredStatusDatas = ApplyTrackedDevicesFilterToList<StatusData>(feedResultStatusDatas);
                 filteredStatusDatas = ApplyTrackedDiagnosticsFilterToList<StatusData>(filteredStatusDatas);
 
@@ -1067,7 +1090,7 @@ namespace MyGeotabAPIAdapter
 
                 // Get the feed version information.
                 var statusDataDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.StatusData.ToString()).First();
-                statusDataDbConfigFeedVersion.LastProcessedFeedVersion = (long)feedManager.StatusDataFeedContainer.LastFeedVersion;
+                statusDataDbConfigFeedVersion.LastProcessedFeedVersion = (long)FeedManager.StatusDataFeedContainer.LastFeedVersion;
                 statusDataDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                 statusDataDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
@@ -1078,7 +1101,7 @@ namespace MyGeotabAPIAdapter
                     long statusDataEntitiesInserted = await DbStatusDataService.InsertAsync(connectionInfo, dbStatusDatas, statusDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)statusDataEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {statusDataEntitiesInserted} records into {Globals.ConfigurationManager.DbStatusDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    logger.Info($"Completed insertion of {statusDataEntitiesInserted} records into {ConfigurationManager.DbStatusDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
                 {
@@ -1087,7 +1110,7 @@ namespace MyGeotabAPIAdapter
                 }
 
                 // Clear FeedResultData.
-                feedManager.StatusDataFeedContainer.FeedResultData.Clear();
+                FeedManager.StatusDataFeedContainer.FeedResultData.Clear();
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -1106,9 +1129,9 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Add any returned Trip entities to the database, filtering-out those representing Devices that are not being tracked. Include persistence of the feed version within the same transaction to prevent issues in the event that an exception occurs between persistence of the data and persistence of the feed version.
-            if (feedManager.TripFeedContainer.FeedResultData.Count > 0)
+            if (FeedManager.TripFeedContainer.FeedResultData.Count > 0)
             {
-                var feedResultTrips = feedManager.TripFeedContainer.GetFeedResultDataValuesList<Trip>();
+                var feedResultTrips = FeedManager.TripFeedContainer.GetFeedResultDataValuesList<Trip>();
                 var filteredTrips = ApplyTrackedDevicesFilterToList<Trip>(feedResultTrips);
 
                 // Map Trip entities to DbTrip entities.
@@ -1118,7 +1141,7 @@ namespace MyGeotabAPIAdapter
 
                 // Get the feed version information.
                 var tripDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.Trip.ToString()).First();
-                tripDbConfigFeedVersion.LastProcessedFeedVersion = (long)feedManager.TripFeedContainer.LastFeedVersion;
+                tripDbConfigFeedVersion.LastProcessedFeedVersion = (long)FeedManager.TripFeedContainer.LastFeedVersion;
                 tripDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                 tripDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
@@ -1129,7 +1152,7 @@ namespace MyGeotabAPIAdapter
                     long tripsNoInserted = await DbTripService.InsertAsync(connectionInfo, dbTripList, tripDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)tripsNoInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {tripsNoInserted} records into {Globals.ConfigurationManager.DbTripTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    logger.Info($"Completed insertion of {tripsNoInserted} records into {ConfigurationManager.DbTripTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 catch (Exception)
                 {
@@ -1138,7 +1161,49 @@ namespace MyGeotabAPIAdapter
                 }
 
                 // Clear FeedResultData.
-                feedManager.TripFeedContainer.FeedResultData.Clear();
+                FeedManager.TripFeedContainer.FeedResultData.Clear();
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Inserts the supplied <see cref="DbMyGeotabVersionInfo"/> entity into the database.
+        /// </summary>
+        /// <param name="dbMyGeotabVersionInfo">The <see cref="DbMyGeotabVersionInfo"/> to be inserted.</param>
+        /// <returns></returns>
+        void PropagateDbMyGeotabVersionInfoToDatabase(DbMyGeotabVersionInfo dbMyGeotabVersionInfo)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            var timeout = TimeSpan.FromSeconds(Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks);
+            using (var cancellationTokenSource = new CancellationTokenSource(timeout))
+            {
+                try
+                {
+                    var insertDbMyGeotabVersionInfoTask = DbMyGeotabVersionInfoService.InsertAsync(connectionInfo, dbMyGeotabVersionInfo, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks); ;
+
+                    Task[] tasks = { insertDbMyGeotabVersionInfoTask };
+
+                    try
+                    {
+                        if (!Task.WaitAll(tasks, Globals.ConfigurationManager.TimeoutMillisecondsForDatabaseTasks))
+                        {
+                            throw new DatabaseConnectionException($"The MyGeotab database version information was not propagated to the database within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks} seconds. This may be due to a database connectivity issue.");
+                        }
+                    }
+                    catch (AggregateException aggregateException)
+                    {
+                        cancellationTokenSource.Cancel();
+                        Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.Database, "One or more exceptions were encountered during propagation of MyGeotab database version information to database due to an apparent loss of connectivity with the database.");
+                    }
+                }
+                catch (TaskCanceledException taskCanceledException)
+                {
+                    string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
+                    logger.Warn(errorMessage);
+                }
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -1157,14 +1222,14 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
-            if (cacheManager.DeviceCacheContainer.LastUpdatedTimeUtc > cacheManager.DeviceCacheContainer.LastPropagatedToDatabaseTimeUtc)
+            if (CacheManager.DeviceCacheContainer.LastUpdatedTimeUtc > CacheManager.DeviceCacheContainer.LastPropagatedToDatabaseTimeUtc)
             {
                 DateTime recordChangedTimestampUtc = DateTime.UtcNow;
                 var dbDevicesToInsert = new List<DbDevice>();
                 var dbDevicesToUpdate = new List<DbDevice>();
 
                 // Get cached devices.
-                var deviceCache = (Dictionary<Id, Device>)cacheManager.DeviceCacheContainer.Cache;
+                var deviceCache = (Dictionary<Id, Device>)CacheManager.DeviceCacheContainer.Cache;
 
                 // Find any devices that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
                 if (dbDevicesDictionary.Any())
@@ -1231,7 +1296,7 @@ namespace MyGeotabAPIAdapter
                         long deviceEntitiesInserted = await DbDeviceService.InsertAsync(connectionInfo, dbDevicesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)deviceEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {deviceEntitiesInserted} records into {Globals.ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed insertion of {deviceEntitiesInserted} records into {ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1249,7 +1314,7 @@ namespace MyGeotabAPIAdapter
                         long deviceEntitiesUpdated = await DbDeviceService.UpdateAsync(connectionInfo, dbDevicesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)deviceEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {deviceEntitiesUpdated} records in {Globals.ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed updating of {deviceEntitiesUpdated} records in {ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1257,7 +1322,7 @@ namespace MyGeotabAPIAdapter
                         throw;
                     }
                 }
-                cacheManager.DeviceCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
+                CacheManager.DeviceCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
             else
             {
@@ -1280,14 +1345,14 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
-            if (cacheManager.DiagnosticCacheContainer.LastUpdatedTimeUtc > cacheManager.DiagnosticCacheContainer.LastPropagatedToDatabaseTimeUtc)
+            if (CacheManager.DiagnosticCacheContainer.LastUpdatedTimeUtc > CacheManager.DiagnosticCacheContainer.LastPropagatedToDatabaseTimeUtc)
             {
                 DateTime recordChangedTimestampUtc = DateTime.UtcNow;
                 var dbDiagnosticsToInsert = new List<DbDiagnostic>();
                 var dbDiagnosticsToUpdate = new List<DbDiagnostic>();
 
                 // Get cached diagnostics.
-                var diagnosticCache = (Dictionary<Id, Diagnostic>)cacheManager.DiagnosticCacheContainer.Cache;
+                var diagnosticCache = (Dictionary<Id, Diagnostic>)CacheManager.DiagnosticCacheContainer.Cache;
 
                 // Find any diagnostics that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
                 if (dbDiagnosticsDictionary.Any())
@@ -1353,7 +1418,7 @@ namespace MyGeotabAPIAdapter
                         long diagnosticEntitiesInserted = await DbDiagnosticService.InsertAsync(connectionInfo, dbDiagnosticsToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)diagnosticEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {diagnosticEntitiesInserted} records into {Globals.ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed insertion of {diagnosticEntitiesInserted} records into {ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1371,7 +1436,7 @@ namespace MyGeotabAPIAdapter
                         long diagnosticEntitiesUpdated = await DbDiagnosticService.UpdateAsync(connectionInfo, dbDiagnosticsToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)diagnosticEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {diagnosticEntitiesUpdated} records in {Globals.ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed updating of {diagnosticEntitiesUpdated} records in {ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1379,7 +1444,7 @@ namespace MyGeotabAPIAdapter
                         throw;
                     }
                 }
-                cacheManager.DiagnosticCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
+                CacheManager.DiagnosticCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
             else
             {
@@ -1402,7 +1467,7 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
-            if (cacheManager.RuleCacheContainer.LastUpdatedTimeUtc > cacheManager.RuleCacheContainer.LastPropagatedToDatabaseTimeUtc)
+            if (CacheManager.RuleCacheContainer.LastUpdatedTimeUtc > CacheManager.RuleCacheContainer.LastPropagatedToDatabaseTimeUtc)
             {
                 DateTime recordChangedTimestampUtc = DateTime.UtcNow;
                 var dbRuleObjectsToInsert = new List<DbRuleObject>();
@@ -1410,7 +1475,7 @@ namespace MyGeotabAPIAdapter
                 var dbRuleObjectsToDelete = new List<DbRuleObject>();
 
                 // Get cached rules (Geotab object).
-                var ruleCache = (Dictionary<Id, Geotab.Checkmate.ObjectModel.Exceptions.Rule>)cacheManager.RuleCacheContainer.Cache;
+                var ruleCache = (Dictionary<Id, Geotab.Checkmate.ObjectModel.Exceptions.Rule>)CacheManager.RuleCacheContainer.Cache;
 
                 // Find any rules that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
                 if (dbRuleObjectDictionary.Any())
@@ -1450,7 +1515,7 @@ namespace MyGeotabAPIAdapter
                         bool dbRuleRequiresUpdate = ObjectMapper.DbRuleObjectRequiresUpdate(existingDbRuleObject, cachedRule);
                         if (dbRuleRequiresUpdate)
                         {
-                            DbRuleObject updatedDbRuleObject = new DbRuleObject();
+                            DbRuleObject updatedDbRuleObject = new();
                             updatedDbRuleObject.BuildRuleObject(cachedRule, (int)Common.DatabaseRecordStatus.Active, recordChangedTimestampUtc,
                                 Common.DatabaseWriteOperationType.Update);
                             updatedDbRuleObject.DbRule.id = existingDbRuleObject.DbRule.id;
@@ -1465,7 +1530,7 @@ namespace MyGeotabAPIAdapter
                     else
                     {
                         // The rule has not yet been added to the database. Create a DbRule, set its properties and add it to the cache.
-                        DbRuleObject newDbRuleObject = new DbRuleObject();
+                        DbRuleObject newDbRuleObject = new();
                         newDbRuleObject.BuildRuleObject(cachedRule, (int)Common.DatabaseRecordStatus.Active, recordChangedTimestampUtc,
                             Common.DatabaseWriteOperationType.Insert);
                         dbRuleObjectDictionary[Id.Create(newDbRuleObject.GeotabId)] = newDbRuleObject;
@@ -1482,7 +1547,7 @@ namespace MyGeotabAPIAdapter
                     int ruleObjectEntitiesInserted = await RuleHelper.InsertDbRuleObjectListAsync(dbRuleObjectsToInsert, cancellationTokenSource);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)ruleObjectEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {ruleObjectEntitiesInserted} records into the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    logger.Info($"Completed insertion of {ruleObjectEntitiesInserted} records into the {ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
                 // Send any updates to the database. When a rule is updated, delete all of the associated conditions and then re-create them rather than evaluating individual conditions for differences/additions/deletions (as this would be very time-consuming).
@@ -1492,7 +1557,7 @@ namespace MyGeotabAPIAdapter
                     int ruleObjectEntitiesUpdated = RuleHelper.UpdateDbRuleObjectsToDatabase(dbRuleObjectsToUpdate, cancellationTokenSource);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)ruleObjectEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed updating of {ruleObjectEntitiesUpdated} records in the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    logger.Info($"Completed updating of {ruleObjectEntitiesUpdated} records in the {ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
                 // Send any deletes to the database. Rules that have been deleted in MyGeotab will have their EntityStatus changed, but the associated conditions will remain in the adapter database.
@@ -1502,10 +1567,10 @@ namespace MyGeotabAPIAdapter
                     int ruleObjectEntitiesDeleted = RuleHelper.UpdateDbRuleObjectsToDatabase(dbRuleObjectsToDelete, cancellationTokenSource);
                     TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                     double recordsProcessedPerSecond = (double)ruleObjectEntitiesDeleted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed flagging as deleted {ruleObjectEntitiesDeleted} records in the {Globals.ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    logger.Info($"Completed flagging as deleted {ruleObjectEntitiesDeleted} records in the {ConfigurationManager.DbRuleTableName} table, along with its related conditions in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
-                cacheManager.RuleCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
+                CacheManager.RuleCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
             else
             {
@@ -1528,14 +1593,14 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
-            if (cacheManager.UserCacheContainer.LastUpdatedTimeUtc > cacheManager.UserCacheContainer.LastPropagatedToDatabaseTimeUtc)
+            if (CacheManager.UserCacheContainer.LastUpdatedTimeUtc > CacheManager.UserCacheContainer.LastPropagatedToDatabaseTimeUtc)
             {
                 DateTime recordChangedTimestampUtc = DateTime.UtcNow;
                 var dbUsersToInsert = new List<DbUser>();
                 var dbUsersToUpdate = new List<DbUser>();
 
                 // Get cached users.
-                var userCache = (Dictionary<Id, User>)cacheManager.UserCacheContainer.Cache;
+                var userCache = (Dictionary<Id, User>)CacheManager.UserCacheContainer.Cache;
 
                 // Find any users that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
                 if (dbUsersDictionary.Any())
@@ -1601,7 +1666,7 @@ namespace MyGeotabAPIAdapter
                         long userEntitiesInserted = await DbUserService.InsertAsync(connectionInfo, dbUsersToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)userEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {userEntitiesInserted} records into {Globals.ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed insertion of {userEntitiesInserted} records into {ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1619,7 +1684,7 @@ namespace MyGeotabAPIAdapter
                         long userEntitiesUpdated = await DbUserService.UpdateAsync(connectionInfo, dbUsersToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)userEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {userEntitiesUpdated} records in {Globals.ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed updating of {userEntitiesUpdated} records in {ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1627,7 +1692,7 @@ namespace MyGeotabAPIAdapter
                         throw;
                     }
                 }
-                cacheManager.UserCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
+                CacheManager.UserCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
             else
             {
@@ -1650,14 +1715,14 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
-            if (cacheManager.ZoneCacheContainer.LastUpdatedTimeUtc > cacheManager.ZoneCacheContainer.LastPropagatedToDatabaseTimeUtc)
+            if (CacheManager.ZoneCacheContainer.LastUpdatedTimeUtc > CacheManager.ZoneCacheContainer.LastPropagatedToDatabaseTimeUtc)
             {
                 DateTime recordChangedTimestampUtc = DateTime.UtcNow;
                 var dbZonesToInsert = new List<DbZone>();
                 var dbZonesToUpdate = new List<DbZone>();
 
                 // Get cached zones.
-                var zoneCache = (Dictionary<Id, Zone>)cacheManager.ZoneCacheContainer.Cache;
+                var zoneCache = (Dictionary<Id, Zone>)CacheManager.ZoneCacheContainer.Cache;
 
                 // Find any zones that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
                 if (dbZonesDictionary.Any())
@@ -1723,7 +1788,7 @@ namespace MyGeotabAPIAdapter
                         long zoneEntitiesInserted = await DbZoneService.InsertAsync(connectionInfo, dbZonesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)zoneEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {zoneEntitiesInserted} records into {Globals.ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed insertion of {zoneEntitiesInserted} records into {ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1741,7 +1806,7 @@ namespace MyGeotabAPIAdapter
                         long zoneEntitiesUpdated = await DbZoneService.UpdateAsync(connectionInfo, dbZonesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)zoneEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {zoneEntitiesUpdated} records in {Globals.ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed updating of {zoneEntitiesUpdated} records in {ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1749,7 +1814,7 @@ namespace MyGeotabAPIAdapter
                         throw;
                     }
                 }
-                cacheManager.ZoneCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
+                CacheManager.ZoneCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
             else
             {
@@ -1772,14 +1837,14 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
-            if (cacheManager.ZoneTypeCacheContainer.LastUpdatedTimeUtc > cacheManager.ZoneTypeCacheContainer.LastPropagatedToDatabaseTimeUtc)
+            if (CacheManager.ZoneTypeCacheContainer.LastUpdatedTimeUtc > CacheManager.ZoneTypeCacheContainer.LastPropagatedToDatabaseTimeUtc)
             {
                 DateTime recordChangedTimestampUtc = DateTime.UtcNow;
                 var dbZoneTypesToInsert = new List<DbZoneType>();
                 var dbZoneTypesToUpdate = new List<DbZoneType>();
 
                 // Get cached zoneTypes.
-                var zoneTypeCache = (Dictionary<Id, ZoneType>)cacheManager.ZoneTypeCacheContainer.Cache;
+                var zoneTypeCache = (Dictionary<Id, ZoneType>)CacheManager.ZoneTypeCacheContainer.Cache;
 
                 // Find any zoneTypes that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
                 if (dbZoneTypesDictionary.Any())
@@ -1845,7 +1910,7 @@ namespace MyGeotabAPIAdapter
                         long zoneTypeEntitiesInserted = await DbZoneTypeService.InsertAsync(connectionInfo, dbZoneTypesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)zoneTypeEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {zoneTypeEntitiesInserted} records into {Globals.ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed insertion of {zoneTypeEntitiesInserted} records into {ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1863,7 +1928,7 @@ namespace MyGeotabAPIAdapter
                         long zoneTypeEntitiesUpdated = await DbZoneTypeService.UpdateAsync(connectionInfo, dbZoneTypesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                         TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                         double recordsProcessedPerSecond = (double)zoneTypeEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {zoneTypeEntitiesUpdated} records in {Globals.ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        logger.Info($"Completed updating of {zoneTypeEntitiesUpdated} records in {ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                     }
                     catch (Exception)
                     {
@@ -1871,7 +1936,7 @@ namespace MyGeotabAPIAdapter
                         throw;
                     }
                 }
-                cacheManager.ZoneTypeCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
+                CacheManager.ZoneTypeCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
             else
             {
@@ -1891,7 +1956,7 @@ namespace MyGeotabAPIAdapter
             {
                 // First, refresh the list of DbConfigFeedVersions to capture any updates that may have resulted from committed transactions.
                 dbConfigFeedVersions = await InitializeDbConfigFeedVersionListAsync();
-                feedManager.RollbackFeedContainerLastFeedVersions(dbConfigFeedVersions);
+                FeedManager.RollbackFeedContainerLastFeedVersions(dbConfigFeedVersions);
             }
             catch (Exception ex)
             {
@@ -1952,7 +2017,7 @@ namespace MyGeotabAPIAdapter
             defectListPartDefectCacheExpiryTime = currentTime.AddMinutes(Globals.ConfigurationManager.DVIRDefectListCacheRefreshIntervalMinutes);
 
             // Get all defect lists.
-            DefectSearch defectSearch = new DefectSearch
+            DefectSearch defectSearch = new()
             {
                 IncludeAllTrees = true
             };
@@ -1960,7 +2025,7 @@ namespace MyGeotabAPIAdapter
             List<Defect> defectLists;
             try
             {
-                CancellationTokenSource timeoutcancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource timeoutcancellationTokenSource = new();
                 timeoutcancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks));
 
                 Task<List<Defect>> defectListsTask = Task.Run(() => Globals.MyGeotabAPI.CallAsync<List<Defect>>("Get", typeof(Defect), new { search = defectSearch }));
@@ -2068,7 +2133,7 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            await cacheManager.UpdateCacheAsync<Controller>(cancellationTokenSource, cacheManager.ControllerCacheContainer, Globals.ConfigurationManager.ControllerCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ControllerCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ControllerCacheRefreshIntervalMinutes, false);
+            await CacheManager.UpdateCacheAsync<Controller>(cancellationTokenSource, CacheManager.ControllerCacheContainer, Globals.ConfigurationManager.ControllerCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ControllerCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ControllerCacheRefreshIntervalMinutes, false);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -2085,7 +2150,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await cacheManager.UpdateCacheAsync<Device>(cancellationTokenSource, cacheManager.DeviceCacheContainer, Globals.ConfigurationManager.DeviceCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.DeviceCacheUpdateIntervalMinutes, Globals.ConfigurationManager.DeviceCacheRefreshIntervalMinutes);
+            await CacheManager.UpdateCacheAsync<Device>(cancellationTokenSource, CacheManager.DeviceCacheContainer, Globals.ConfigurationManager.DeviceCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.DeviceCacheUpdateIntervalMinutes, Globals.ConfigurationManager.DeviceCacheRefreshIntervalMinutes);
             cancellationToken.ThrowIfCancellationRequested();
             await PropagateDeviceCacheUpdatesToDatabaseAsync(cancellationTokenSource);
 
@@ -2104,7 +2169,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await cacheManager.UpdateCacheAsync<Diagnostic>(cancellationTokenSource, cacheManager.DiagnosticCacheContainer, Globals.ConfigurationManager.DiagnosticCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.DiagnosticCacheUpdateIntervalMinutes, Globals.ConfigurationManager.DiagnosticCacheRefreshIntervalMinutes);
+            await CacheManager.UpdateCacheAsync<Diagnostic>(cancellationTokenSource, CacheManager.DiagnosticCacheContainer, Globals.ConfigurationManager.DiagnosticCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.DiagnosticCacheUpdateIntervalMinutes, Globals.ConfigurationManager.DiagnosticCacheRefreshIntervalMinutes);
             cancellationToken.ThrowIfCancellationRequested();
             await PropagateDiagnosticCacheUpdatesToDatabaseAsync(cancellationTokenSource);
 
@@ -2121,7 +2186,7 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            await cacheManager.UpdateCacheAsync<FailureMode>(cancellationTokenSource, cacheManager.FailureModeCacheContainer, Globals.ConfigurationManager.FailureModeCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.FailureModeCacheUpdateIntervalMinutes, Globals.ConfigurationManager.FailureModeCacheRefreshIntervalMinutes, false);
+            await CacheManager.UpdateCacheAsync<FailureMode>(cancellationTokenSource, CacheManager.FailureModeCacheContainer, Globals.ConfigurationManager.FailureModeCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.FailureModeCacheUpdateIntervalMinutes, Globals.ConfigurationManager.FailureModeCacheRefreshIntervalMinutes, false);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -2136,7 +2201,7 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            await cacheManager.UpdateCacheAsync<Group>(cancellationTokenSource, cacheManager.GroupCacheContainer, Globals.ConfigurationManager.GroupCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.GroupCacheUpdateIntervalMinutes, Globals.ConfigurationManager.GroupCacheRefreshIntervalMinutes, false);
+            await CacheManager.UpdateCacheAsync<Group>(cancellationTokenSource, CacheManager.GroupCacheContainer, Globals.ConfigurationManager.GroupCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.GroupCacheUpdateIntervalMinutes, Globals.ConfigurationManager.GroupCacheRefreshIntervalMinutes, false);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -2153,7 +2218,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await cacheManager.UpdateCacheAsync<Geotab.Checkmate.ObjectModel.Exceptions.Rule>(cancellationTokenSource, cacheManager.RuleCacheContainer, Globals.ConfigurationManager.RuleCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.RuleCacheUpdateIntervalMinutes, Globals.ConfigurationManager.RuleCacheRefreshIntervalMinutes);
+            await CacheManager.UpdateCacheAsync<Geotab.Checkmate.ObjectModel.Exceptions.Rule>(cancellationTokenSource, CacheManager.RuleCacheContainer, Globals.ConfigurationManager.RuleCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.RuleCacheUpdateIntervalMinutes, Globals.ConfigurationManager.RuleCacheRefreshIntervalMinutes);
             cancellationToken.ThrowIfCancellationRequested();
             await PropagateRuleCacheUpdatesToDatabaseAsync(cancellationTokenSource);
 
@@ -2170,7 +2235,7 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            await cacheManager.UpdateCacheAsync<UnitOfMeasure>(cancellationTokenSource, cacheManager.UnitOfMeasureCacheContainer, Globals.ConfigurationManager.UnitOfMeasureCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.UnitOfMeasureCacheUpdateIntervalMinutes, Globals.ConfigurationManager.UnitOfMeasureCacheRefreshIntervalMinutes, false);
+            await CacheManager.UpdateCacheAsync<UnitOfMeasure>(cancellationTokenSource, CacheManager.UnitOfMeasureCacheContainer, Globals.ConfigurationManager.UnitOfMeasureCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.UnitOfMeasureCacheUpdateIntervalMinutes, Globals.ConfigurationManager.UnitOfMeasureCacheRefreshIntervalMinutes, false);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -2187,7 +2252,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await cacheManager.UpdateCacheAsync<User>(cancellationTokenSource, cacheManager.UserCacheContainer, Globals.ConfigurationManager.UserCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.UserCacheUpdateIntervalMinutes, Globals.ConfigurationManager.UserCacheRefreshIntervalMinutes);
+            await CacheManager.UpdateCacheAsync<User>(cancellationTokenSource, CacheManager.UserCacheContainer, Globals.ConfigurationManager.UserCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.UserCacheUpdateIntervalMinutes, Globals.ConfigurationManager.UserCacheRefreshIntervalMinutes);
             cancellationToken.ThrowIfCancellationRequested();
             await PropagateUserCacheUpdatesToDatabaseAsync(cancellationTokenSource);
 
@@ -2206,7 +2271,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await cacheManager.UpdateCacheAsync<Zone>(cancellationTokenSource, cacheManager.ZoneCacheContainer, Globals.ConfigurationManager.ZoneCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ZoneCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ZoneCacheRefreshIntervalMinutes);
+            await CacheManager.UpdateCacheAsync<Zone>(cancellationTokenSource, CacheManager.ZoneCacheContainer, Globals.ConfigurationManager.ZoneCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ZoneCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ZoneCacheRefreshIntervalMinutes);
             cancellationToken.ThrowIfCancellationRequested();
             await PropagateZoneCacheUpdatesToDatabaseAsync(cancellationTokenSource);
 
@@ -2225,7 +2290,7 @@ namespace MyGeotabAPIAdapter
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-            await cacheManager.UpdateCacheAsync<ZoneType>(cancellationTokenSource, cacheManager.ZoneTypeCacheContainer, Globals.ConfigurationManager.ZoneTypeCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ZoneTypeCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ZoneTypeCacheRefreshIntervalMinutes, false);
+            await CacheManager.UpdateCacheAsync<ZoneType>(cancellationTokenSource, CacheManager.ZoneTypeCacheContainer, Globals.ConfigurationManager.ZoneTypeCacheIntervalDailyReferenceStartTimeUTC, Globals.ConfigurationManager.ZoneTypeCacheUpdateIntervalMinutes, Globals.ConfigurationManager.ZoneTypeCacheRefreshIntervalMinutes, false);
             cancellationToken.ThrowIfCancellationRequested();
             await PropagateZoneTypeCacheUpdatesToDatabaseAsync(cancellationTokenSource);
 
@@ -2244,7 +2309,7 @@ namespace MyGeotabAPIAdapter
             VersionInformation versionInformation;
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks));
 
                 Task<VersionInformation> versionInformationTask = Task.Run(() => Globals.MyGeotabAPI.CallAsync<VersionInformation>("GetVersionInformation"));
@@ -2319,48 +2384,6 @@ namespace MyGeotabAPIAdapter
             catch (Exception)
             {
                 throw;
-            }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
-        }
-
-        /// <summary>
-        /// Inserts the supplied <see cref="DbMyGeotabVersionInfo"/> entity into the database.
-        /// </summary>
-        /// <param name="dbMyGeotabVersionInfo">The <see cref="DbMyGeotabVersionInfo"/> to be inserted.</param>
-        /// <returns></returns>
-        void PropagateDbMyGeotabVersionInfoToDatabase(DbMyGeotabVersionInfo dbMyGeotabVersionInfo)
-        {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            var timeout = TimeSpan.FromSeconds(Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks);
-            using (var cancellationTokenSource = new CancellationTokenSource(timeout))
-            {
-                try
-                {
-                    var insertDbMyGeotabVersionInfoTask = DbMyGeotabVersionInfoService.InsertAsync(connectionInfo, dbMyGeotabVersionInfo, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks); ;
-
-                    Task[] tasks = { insertDbMyGeotabVersionInfoTask };
-
-                    try
-                    {
-                        if (!Task.WaitAll(tasks, Globals.ConfigurationManager.TimeoutMillisecondsForDatabaseTasks))
-                        {
-                            throw new DatabaseConnectionException($"The MyGeotab database version information was not propagated to the database within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks} seconds. This may be due to a database connectivity issue.");
-                        }
-                    }
-                    catch (AggregateException aggregateException)
-                    {
-                        cancellationTokenSource.Cancel();
-                        Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.Database, "One or more exceptions were encountered during propagation of MyGeotab database version information to database due to an apparent loss of connectivity with the database.");
-                    }
-                }
-                catch (TaskCanceledException taskCanceledException)
-                {
-                    string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
-                    logger.Warn(errorMessage);
-                }
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");

@@ -27,7 +27,16 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// </summary>
         public void Dispose()
         {
-            this.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // Add any clean-up code here.
+            }
         }
 
         /// <summary>
@@ -41,7 +50,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 SetConnection(connectionInfo);
@@ -72,7 +81,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 return await connection.DeleteAsync<T>(entity, transaction);
@@ -100,7 +109,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 SetConnection(connectionInfo);
@@ -131,7 +140,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 return await connection.GetByParamAsync<T>(dynamicParams as object, transaction);
@@ -157,7 +166,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 SetConnection(connectionInfo);
@@ -186,7 +195,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 SetConnection(connectionInfo);
@@ -216,7 +225,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 return await connection.GetAllAsync<T>(transaction);
@@ -242,7 +251,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 SetConnection(connectionInfo);
@@ -279,7 +288,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 var record = await connection.GetAsync<T>(Id, transaction);
@@ -311,7 +320,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 SetConnection(connectionInfo);
@@ -342,7 +351,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 return await connection.InsertAsync(entity, transaction);
@@ -377,7 +386,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 SetConnection(connectionInfo);
@@ -408,7 +417,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         {
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 return await connection.UpdateAsync<T>(entity, transaction);

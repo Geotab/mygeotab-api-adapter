@@ -21,12 +21,12 @@ namespace MyGeotabAPIAdapter
         // FeedCurrentThresholdRecordCount is used to set FeedContainer.FeedCurrent; if the FeedResult returned in a GetFeed call contains less than this number of entities, the feed will be considered up-to-date.
         const int FeedCurrentThresholdRecordCount = 1000;
         static readonly Logger logger = LogManager.GetCurrentClassLogger();
-        static readonly FeedContainer dvirLogFeedContainer = new FeedContainer();
-        static readonly FeedContainer exceptionEventFeedContainer = new FeedContainer();
-        static readonly FeedContainer faultDataFeedContainer = new FeedContainer();
-        static readonly FeedContainer logRecordFeedContainer = new FeedContainer();
-        static readonly FeedContainer statusDataFeedContainer = new FeedContainer();
-        static readonly FeedContainer tripFeedContainer = new FeedContainer();
+        static readonly FeedContainer dvirLogFeedContainer = new();
+        static readonly FeedContainer exceptionEventFeedContainer = new();
+        static readonly FeedContainer faultDataFeedContainer = new();
+        static readonly FeedContainer logRecordFeedContainer = new();
+        static readonly FeedContainer statusDataFeedContainer = new();
+        static readonly FeedContainer tripFeedContainer = new();
 
         /// <summary>
         /// Constructor is private. Use CreateAsync() method to instantiate. This is to facilitate use of MyGeotab async methods, since the 'await' operator can only be used within an async method.
@@ -51,48 +51,48 @@ namespace MyGeotabAPIAdapter
 
             var feedManager = new FeedManager();
 
-            // If the FeedStartOption is not set to FeedVersion and the ConfigFeedVersions table has data for any of the feeds, switch the FeedStartOption to FeedVersion to avoid sending duplicate records to the database.
+            // If the FeedStartOption is not set to FeedVersion and the ConfigFeedVersions table has data for any of the feeds, switch the FeedStartOption to FeedVersion to avoid sending duplicate records to the database. Note that the FeedStartOption may be adjusted on a per-feed basis to account for the scenario in which the adapter was started and stopped before data was obtained for specific feeds. This is to avoid collecting ALL data for a feed when the CurrentTime or SpecificTime option was specified.
             var currentFeedStartOption = Globals.ConfigurationManager.FeedStartOption;
             if (currentFeedStartOption != Globals.FeedStartOption.FeedVersion && dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.LastProcessedFeedVersion > 0).Any())
             {
-                logger.Info($"Switching FeedStartOption from '{currentFeedStartOption}' to '{Globals.FeedStartOption.FeedVersion}' to prevent data duplication because the '{Globals.ConfigurationManager.DbConfigFeedVersionsTableName}' table contains data for one or more feeds.");
+                logger.Info($"Switching FeedStartOption from '{currentFeedStartOption}' to '{Globals.FeedStartOption.FeedVersion}' to prevent data duplication because the '{ConfigurationManager.DbConfigFeedVersionsTableName}' table contains data for one or more feeds.");
                 Globals.ConfigurationManager.FeedStartOption = Globals.FeedStartOption.FeedVersion;
             }
 
             // Setup a data feed for LogRecords.
             DbConfigFeedVersion logRecordDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.LogRecord.ToString()).First();
             SetupFeedContainer<LogRecord>(logRecordFeedContainer, false, Globals.ConfigurationManager.EnableLogRecordFeed,
-                Globals.ConfigurationManager.LogRecordFeedIntervalSeconds, Globals.ConfigurationManager.FeedStartOption,
+                Globals.ConfigurationManager.LogRecordFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
                 Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, logRecordDbConfigFeedVersion.LastProcessedFeedVersion);
 
             // Setup a data feed for StatusData.
             DbConfigFeedVersion statusDataDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.StatusData.ToString()).First();
             SetupFeedContainer<StatusData>(statusDataFeedContainer, false, Globals.ConfigurationManager.EnableStatusDataFeed,
-                Globals.ConfigurationManager.StatusDataFeedIntervalSeconds, Globals.ConfigurationManager.FeedStartOption,
+                Globals.ConfigurationManager.StatusDataFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
                 Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, statusDataDbConfigFeedVersion.LastProcessedFeedVersion);
 
             // Setup a data feed for FaultData.
             DbConfigFeedVersion faultDataDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.FaultData.ToString()).First();
             SetupFeedContainer<FaultData>(faultDataFeedContainer, false, Globals.ConfigurationManager.EnableFaultDataFeed,
-                Globals.ConfigurationManager.FaultDataFeedIntervalSeconds, Globals.ConfigurationManager.FeedStartOption,
+                Globals.ConfigurationManager.FaultDataFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
                 Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, faultDataDbConfigFeedVersion.LastProcessedFeedVersion);
 
             // Setup a data feed for DVIRLogs.
             DbConfigFeedVersion dvirLogDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.DVIRLog.ToString()).First();
             SetupFeedContainer<DVIRLog>(dvirLogFeedContainer, false, Globals.ConfigurationManager.EnableDVIRLogDataFeed,
-                Globals.ConfigurationManager.DVIRLogDataFeedIntervalSeconds, Globals.ConfigurationManager.FeedStartOption,
+                Globals.ConfigurationManager.DVIRLogDataFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
                 Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, dvirLogDbConfigFeedVersion.LastProcessedFeedVersion);
 
             // Setup a data feed for Trips.
             DbConfigFeedVersion tripDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.Trip.ToString()).First();
             SetupFeedContainer<Trip>(tripFeedContainer, false, Globals.ConfigurationManager.EnableTripFeed,
-                Globals.ConfigurationManager.TripFeedIntervalSeconds, Globals.ConfigurationManager.FeedStartOption,
+                Globals.ConfigurationManager.TripFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
                 Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, tripDbConfigFeedVersion.LastProcessedFeedVersion);
 
             // Setup a data feed for ExceptionEvents.
             DbConfigFeedVersion exceptionEventDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.ExceptionEvent.ToString()).First();
             SetupFeedContainer<ExceptionEvent>(exceptionEventFeedContainer, false, Globals.ConfigurationManager.EnableExceptionEventFeed,
-                Globals.ConfigurationManager.ExceptionEventFeedIntervalSeconds, Globals.ConfigurationManager.FeedStartOption,
+                Globals.ConfigurationManager.ExceptionEventFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
                 Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, exceptionEventDbConfigFeedVersion.LastProcessedFeedVersion);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -102,7 +102,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Holds <see cref="DVIRLog"/> information obtained via data feed.
         /// </summary>
-        public FeedContainer DVIRLogFeedContainer
+        public static FeedContainer DVIRLogFeedContainer
         {
             get => dvirLogFeedContainer;
         }
@@ -110,7 +110,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Holds <see cref="ExceptionEvent"/> information obtained via data feed.
         /// </summary>
-        public FeedContainer ExceptionEventFeedContainer
+        public static FeedContainer ExceptionEventFeedContainer
         {
             get => exceptionEventFeedContainer;
         }
@@ -118,7 +118,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Holds <see cref="FaultData"/> information obtained via data feed.
         /// </summary>
-        public FeedContainer FaultDataFeedContainer
+        public static FeedContainer FaultDataFeedContainer
         {
             get => faultDataFeedContainer;
         }
@@ -126,7 +126,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Holds <see cref="LogRecord"/> information obtained via data feed.
         /// </summary>
-        public FeedContainer LogRecordFeedContainer
+        public static FeedContainer LogRecordFeedContainer
         {
             get => logRecordFeedContainer;
         }
@@ -134,7 +134,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Holds <see cref="StatusData"/> information obtained via data feed.
         /// </summary>
-        public FeedContainer StatusDataFeedContainer
+        public static FeedContainer StatusDataFeedContainer
         {
             get => statusDataFeedContainer;
         }
@@ -142,7 +142,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Holds <see cref="Trip"/> information obtained via data feed.
         /// </summary>
-        public FeedContainer TripFeedContainer
+        public static FeedContainer TripFeedContainer
         {
             get => tripFeedContainer;
         }
@@ -154,7 +154,7 @@ namespace MyGeotabAPIAdapter
         /// <param name="feedContainer">The <see cref="FeedContainer"/> representing the <see cref="Type"/> of <see cref="Entity"/> for which data is to be retrieved.</param>
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <returns></returns>
-        public async Task GetFeedDataAsync<T>(FeedContainer feedContainer, CancellationTokenSource cancellationTokenSource) where T : Entity
+        public static async Task GetFeedDataAsync<T>(FeedContainer feedContainer, CancellationTokenSource cancellationTokenSource) where T : Entity
         {
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
@@ -252,7 +252,7 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         /// <param name="dbConfigFeedVersions">The list of <see cref="DbConfigFeedVersion"/> objects conatining the latest ToVersion for each of the supported data feeds.</param>
         /// <returns></returns>
-        public void RollbackFeedContainerLastFeedVersions(List<DbConfigFeedVersion> dbConfigFeedVersions)
+        public static void RollbackFeedContainerLastFeedVersions(List<DbConfigFeedVersion> dbConfigFeedVersions)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -298,12 +298,13 @@ namespace MyGeotabAPIAdapter
         /// <param name="current">Indicates whether the data feed for the subject <see cref="Entity"/> is up-to-date.</param>
         /// <param name="enabled">Indicates whether data feed polling for the subject <see cref="Entity"/> type is enabled.</param>
         /// <param name="pollingIntervalSeonds">The minimum number of seconds to wait between GetFeed() calls for the subject <see cref="Entity"/> type.</param>
+        /// <param name="configuredFeedStartOption">The FeedStartOption configured in appsettings.json.</param>
         /// <param name="startOption">Determines whether the next GetFeed() call for the subject <see cref="Entity"/> type will use FromDate or FromVersion.</param>
         /// <param name="startTime">The <see cref="DateTime"/> to use as the FromDate when making the next GetFeed() call for the subject <see cref="Entity"/> type if <see cref="FeedStartOption"/> is set to <see cref="Common.FeedStartOption.CurrentTime"/> or <see cref="Common.FeedStartOption.SpecificTime"/>.</param>
         /// <param name="resultsLimit">The results limit to be supplied to the GetFeed() method for the subject <see cref="Entity"/> type.</param>
         /// <param name="lastFeedVersion">The <see cref="FeedResult{T}.ToVersion"/> returned by the latest GetFeed() call.</param>
         static void SetupFeedContainer<T>(FeedContainer feedContainer, bool current, bool enabled, int pollingIntervalSeonds,
-            Globals.FeedStartOption startOption, DateTime startTime, int resultsLimit, long lastFeedVersion)
+            Globals.FeedStartOption configuredFeedStartOption, Globals.FeedStartOption startOption, DateTime startTime, int resultsLimit, long lastFeedVersion)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -312,11 +313,20 @@ namespace MyGeotabAPIAdapter
             feedContainer.FeedCurrent = current;
             feedContainer.FeedEnabled = enabled;
             feedContainer.FeedPollingIntervalSeconds = pollingIntervalSeonds;
-            feedContainer.FeedStartOption = startOption;
             feedContainer.FeedStartTimeUtc = startTime;
             feedContainer.FeedResultData = new Dictionary<Id, T>();
             feedContainer.FeedResultsLimit = resultsLimit;
             feedContainer.LastFeedVersion = lastFeedVersion;
+
+            // When the adapter is run for the first time with an empty adapter database, a record will be added to the ConfigFeedVersions table for each feed type and the LastProcessedFeedVersion value will be set to zero for each of these records. If the adapter is then stopped and restarted for any reason before data has been obtained for all feeds, the automatic switch of FeedStartOption to "FeedVersion" would result in the configured option being ignored and ALL data being retrieved for any feeds for which data was not collected prior to the stop. To avoid this issue, honour the configured FeedStartOption for the subject feed if no data has yet been collected while using the potentially-overridden option otherwise to ensure the data duplication failsafe option works for any feeds where data WAS already collected.
+            if (lastFeedVersion == 0 && configuredFeedStartOption != Globals.FeedStartOption.FeedVersion && startOption == Globals.FeedStartOption.FeedVersion)
+            {
+                feedContainer.FeedStartOption = configuredFeedStartOption;
+            }
+            else
+            {
+                feedContainer.FeedStartOption = startOption;
+            }                
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }

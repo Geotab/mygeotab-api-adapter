@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <Configurations>Debug;Release</Configurations>
     <UserSecretsId>dotnet-MyGeotabAPIAdapter-647298B6-D50F-498C-A6D9-8910D78DFF6D</UserSecretsId>
     <RootNamespace>MyGeotabAPIAdapter</RootNamespace>
@@ -9,8 +9,8 @@
     <Product>MyGeotab API Adapter</Product>
     <Description>A .NET Core (C#) Worker Service designed to use the MyGeotab .NET API and serve as a broker between a MyGeotab database and an associated "Virtual Geotab Database". Intended for use when direct utilization of the MyGeotab SDK is not an option. Modify as required to meet individual solution objectives.</Description>
     <Copyright></Copyright>
-    <Version>1.4.0.0</Version>
-    <InformationalVersion>1.4.0.0</InformationalVersion>
+    <Version>1.4.0.5</Version>
+    <InformationalVersion>1.4.0.5</InformationalVersion>
     <RuntimeIdentifiers>win-x64;ubuntu.18.04-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
@@ -20,11 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="5.7.2004" />
+    <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="5.7.2101" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-    <PackageReference Include="Microsoft.NETCore.Platforms" Version="5.0.0" />
+    <PackageReference Include="Microsoft.NETCore.Platforms" Version="5.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="1.7.0" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="1.7.1" />
   </ItemGroup>
 
   <ItemGroup>

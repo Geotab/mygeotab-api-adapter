@@ -82,7 +82,7 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            DbRule dbRule = new DbRule
+            DbRule dbRule = new()
             {
                 GeotabId = rule.Id.ToString(),
                 Name = rule.Name.ToString(),

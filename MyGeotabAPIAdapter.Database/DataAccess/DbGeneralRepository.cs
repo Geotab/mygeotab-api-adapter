@@ -26,7 +26,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
             try
             {
-                CancellationTokenSource timeoutCancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource timeoutCancellationTokenSource = new();
                 timeoutCancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 SetConnection(connectionInfo);
@@ -63,7 +63,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
             try
             {
-                CancellationTokenSource timeoutCancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource timeoutCancellationTokenSource = new();
                 timeoutCancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
 
                 SetConnection(connectionInfo);

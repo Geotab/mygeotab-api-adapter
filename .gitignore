@@ -20,3 +20,7 @@
 /MyGeotabAPIAdapter.Database/bin/Release/netcoreapp3.1
 /MyGeotabAPIAdapter/PostgreSQL/BrettBackupScript.sql
 *.user
+/MyGeotabAPIAdapter.Tests/bin/Release/netcoreapp3.1/CoverletSourceRootsMapping
+/MyGeotabAPIAdapter/bin/Debug/net5.0
+/MyGeotabAPIAdapter.Database/bin/Debug/net5.0
+/MyGeotabAPIAdapter.Tests/bin/Debug/net5.0

@@ -18,16 +18,16 @@ namespace MyGeotabAPIAdapter
     {
         const int MinFeedIntervalMilliseconds = 1100;
         static readonly Logger logger = LogManager.GetCurrentClassLogger();
-        static readonly CacheContainer controllerCacheContainer = new CacheContainer();
-        static readonly CacheContainer deviceCacheContainer = new CacheContainer();
-        static readonly CacheContainer diagnosticCacheContainer = new CacheContainer();
-        static readonly CacheContainer failureModeCacheContainer = new CacheContainer();
-        static readonly CacheContainer groupCacheContainer = new CacheContainer();
-        static readonly CacheContainer ruleCacheContainer = new CacheContainer();
-        static readonly CacheContainer unitOfMeasureCacheContainer = new CacheContainer();
-        static readonly CacheContainer userCacheContainer = new CacheContainer();
-        static readonly CacheContainer zoneCacheContainer = new CacheContainer();
-        static readonly CacheContainer zoneTypeCacheContainer = new CacheContainer();
+        static readonly CacheContainer controllerCacheContainer = new();
+        static readonly CacheContainer deviceCacheContainer = new();
+        static readonly CacheContainer diagnosticCacheContainer = new();
+        static readonly CacheContainer failureModeCacheContainer = new();
+        static readonly CacheContainer groupCacheContainer = new();
+        static readonly CacheContainer ruleCacheContainer = new();
+        static readonly CacheContainer unitOfMeasureCacheContainer = new();
+        static readonly CacheContainer userCacheContainer = new();
+        static readonly CacheContainer zoneCacheContainer = new();
+        static readonly CacheContainer zoneTypeCacheContainer = new();
 
         /// <summary>
         /// Types of operations related to cache processing.
@@ -74,7 +74,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="Controller"/> objects.
         /// </summary>
-        public CacheContainer ControllerCacheContainer
+        public static CacheContainer ControllerCacheContainer
         {
             get => controllerCacheContainer;
         }
@@ -82,7 +82,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="Device"/> objects.
         /// </summary>
-        public CacheContainer DeviceCacheContainer
+        public static CacheContainer DeviceCacheContainer
         {
             get => deviceCacheContainer;
         }
@@ -90,7 +90,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="Diagnostic"/> objects.
         /// </summary>
-        public CacheContainer DiagnosticCacheContainer
+        public static CacheContainer DiagnosticCacheContainer
         {
             get => diagnosticCacheContainer;
         }
@@ -98,7 +98,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="FailureMode"/> objects.
         /// </summary>
-        public CacheContainer FailureModeCacheContainer
+        public static CacheContainer FailureModeCacheContainer
         {
             get => failureModeCacheContainer;
         }
@@ -106,7 +106,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="Group"/> objects.
         /// </summary>
-        public CacheContainer GroupCacheContainer
+        public static CacheContainer GroupCacheContainer
         {
             get => groupCacheContainer;
         }
@@ -114,7 +114,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="Rule"/> objects.
         /// </summary>
-        public CacheContainer RuleCacheContainer
+        public static CacheContainer RuleCacheContainer
         {
             get => ruleCacheContainer;
         }
@@ -122,7 +122,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="UnitOfMeasure"/> objects.
         /// </summary>
-        public CacheContainer UnitOfMeasureCacheContainer
+        public static CacheContainer UnitOfMeasureCacheContainer
         {
             get => unitOfMeasureCacheContainer;
         }
@@ -130,7 +130,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="User"/> objects.
         /// </summary>
-        public CacheContainer UserCacheContainer
+        public static CacheContainer UserCacheContainer
         {
             get => userCacheContainer;
         }
@@ -138,7 +138,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="Zone"/> objects.
         /// </summary>
-        public CacheContainer ZoneCacheContainer
+        public static CacheContainer ZoneCacheContainer
         {
             get => zoneCacheContainer;
         }
@@ -146,7 +146,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A container for an in-memory cache of <see cref="ZoneType"/> objects.
         /// </summary>
-        public CacheContainer ZoneTypeCacheContainer
+        public static CacheContainer ZoneTypeCacheContainer
         {
             get => zoneTypeCacheContainer;
         }
@@ -160,7 +160,7 @@ namespace MyGeotabAPIAdapter
         /// <param name="cacheUpdateIntervalMinutes">The frequency, in minutes, by which the subject cache should be "updated" (capturing add and update deltas).</param>
         /// <param name="cacheRefreshIntervalMinutes">The frequency, in minutes, by which the subject cache should be "refreshed" (dumped and repopulated to make identification of deleted entities possible, since deletes do not propagate from MyGeotab through the MyGeotab API data feeds).</param>
         /// <returns></returns>
-        CacheOperationType GetRequiredCacheOperationType(string cacheObjectTypeName, CacheContainer cacheContainer, DateTime cacheIntervalDailyReferenceStartTimeUTC, int cacheUpdateIntervalMinutes, int cacheRefreshIntervalMinutes)
+        static CacheOperationType GetRequiredCacheOperationType(string cacheObjectTypeName, CacheContainer cacheContainer, DateTime cacheIntervalDailyReferenceStartTimeUTC, int cacheUpdateIntervalMinutes, int cacheRefreshIntervalMinutes)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name} for type '{cacheObjectTypeName}'");
@@ -232,7 +232,7 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         /// <param name="controllerToHydrate"></param>
         /// <returns></returns>
-        public Controller HydrateController(Controller controllerToHydrate)
+        public static Controller HydrateController(Controller controllerToHydrate)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -258,7 +258,7 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         /// <param name="diagnosticToHydrate"></param>
         /// <returns></returns>
-        public Diagnostic HydrateDiagnostic(Diagnostic diagnosticToHydrate)
+        public static Diagnostic HydrateDiagnostic(Diagnostic diagnosticToHydrate)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -284,7 +284,7 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         /// <param name="failureModeToHydrate"></param>
         /// <returns></returns>
-        public FailureMode HydrateFailureMode(FailureMode failureModeToHydrate)
+        public static FailureMode HydrateFailureMode(FailureMode failureModeToHydrate)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -316,7 +316,7 @@ namespace MyGeotabAPIAdapter
         /// <param name="cacheRefreshIntervalMinutes">The interval, in minutes, used to determine whether the <see cref="CacheContainer.Cache"/> needs to be refreshed (i.e. purged and fully re-populated to remove items that have been deleted).</param>
         /// <param name="isGetFeed">If <c>true</c>, a GetFeed call will be used for data retrieval. If <c>false</c>, a Get call will be used instead. GetFeed should be used whenever an entity type is supported by a data feed.</param>
         /// <returns>Asynchronous task</returns>
-        public async Task UpdateCacheAsync<T>(CancellationTokenSource cancellationTokenSource, CacheContainer cacheContainer, DateTime cacheIntervalDailyReferenceStartTimeUTC, int cacheUpdateIntervalMinutes, int cacheRefreshIntervalMinutes, bool isGetFeed = true) where T : Entity
+        public static async Task UpdateCacheAsync<T>(CancellationTokenSource cancellationTokenSource, CacheContainer cacheContainer, DateTime cacheIntervalDailyReferenceStartTimeUTC, int cacheUpdateIntervalMinutes, int cacheRefreshIntervalMinutes, bool isGetFeed = true) where T : Entity
         {
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);

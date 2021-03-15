@@ -31,9 +31,9 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            ConnectionInfo connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+            ConnectionInfo connectionInfo = new(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
 
-            string sql = "Select * from \"vwRuleObject\"";
+            string sql = "SELECT * from \"vwRuleObject\" ORDER BY \"GeotabId\"";
             IEnumerable<DbVwRuleObject> dbVwRuleObjects;
             try
             {
@@ -48,14 +48,14 @@ namespace MyGeotabAPIAdapter
             string ruleId = "";
             int countOfDbVwRuleObjects = dbVwRuleObjects.Count();
             int countOfProcessedDbVwRuleObjects = 0;
-            DbRule dbRule = new DbRule();
+            DbRule dbRule = new();
             DbCondition dbCondition;
             IList<DbCondition> dbConditionList = new List<DbCondition>();
             // Loop through all database rows of vwRuleObject
             foreach (DbVwRuleObject dbVwRuleObject in dbVwRuleObjects)
             {
                 string currentRuleId = dbVwRuleObject.GeotabId;
-                logger.Debug($"Current RuleId: {currentRuleId}");
+                logger.Debug($"{methodBase.ReflectedType.Name}.{methodBase.Name} - Current RuleId: {currentRuleId}");
                 // If rule Id changes go in here
                 if (currentRuleId != ruleId)
                 {
@@ -63,13 +63,13 @@ namespace MyGeotabAPIAdapter
                     if (ruleId.Length > 0)
                     {
                         // Build the DbRuleObject
-                        DbRuleObject dbRuleObject = new DbRuleObject();
+                        DbRuleObject dbRuleObject = new();
                         dbRuleObject.BuildFromDatabaseObjects(dbRule, dbConditionList);
                         dbRuleObjectList.Add(dbRuleObject);
                     }
                     // Add the latest rule
                     ruleId = currentRuleId;
-                    logger.Debug($"Add rule with Id: {ruleId}");
+                    logger.Debug($"{methodBase.ReflectedType.Name}.{methodBase.Name} - Add rule with Id: {ruleId}");
                     dbRule = new DbRule
                     {
                         id = dbVwRuleObject.RuleAdapterId,
@@ -89,7 +89,7 @@ namespace MyGeotabAPIAdapter
 
                 // Create the current DbCondition object
                 string conditionId = dbVwRuleObject.Cond_Id;
-                logger.Debug($"Add condition with Id: {conditionId}");
+                logger.Debug($"{methodBase.ReflectedType.Name}.{methodBase.Name} - Add condition with Id: {conditionId}");
                 dbCondition = new DbCondition
                 {
                     id = dbVwRuleObject.ConditionAdapterId,
@@ -115,12 +115,12 @@ namespace MyGeotabAPIAdapter
                 // If this is the last DbVwRuleObject being pocessed, a corresponding DbRuleObject must be built and added to the list.
                 if (countOfProcessedDbVwRuleObjects == countOfDbVwRuleObjects)
                 {
-                    DbRuleObject dbRuleObject = new DbRuleObject();
+                    DbRuleObject dbRuleObject = new();
                     dbRuleObject.BuildFromDatabaseObjects(dbRule, dbConditionList);
                     dbRuleObjectList.Add(dbRuleObject);
                 }
             }
-            logger.Info($"Row count: {countOfProcessedDbVwRuleObjects}");
+            logger.Info($"{methodBase.ReflectedType.Name}.{methodBase.Name} - DbVwRuleObjects processed: {countOfProcessedDbVwRuleObjects}");
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return dbRuleObjectList;
         }
@@ -152,7 +152,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public async static Task<bool> InsertDbRuleObjectAsync(DbRuleObject dbRuleObject, CancellationTokenSource cancellationTokenSource)
         {
-            ConnectionInfo connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+            ConnectionInfo connectionInfo = new(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
 
             long ruleEntitiesInserted;
             try
@@ -205,7 +205,7 @@ namespace MyGeotabAPIAdapter
             int insertCount = 0;
             foreach (Rule rule in ruleList)
             {
-                using (DbRuleObject dbRuleObject = new DbRuleObject())
+                using (DbRuleObject dbRuleObject = new())
                 {
                     dbRuleObject.BuildRuleObject(rule, entityStatus, recordLastChanged, operationType);
                     if (await InsertDbRuleObjectAsync(dbRuleObject, cancellationTokenSource))
@@ -231,7 +231,7 @@ namespace MyGeotabAPIAdapter
             int count = 0;
             List<DbRule> dbRuleList = dbRuleObjectList.Select(o => o.DbRule).ToList();
 
-            ConnectionInfo connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+            ConnectionInfo connectionInfo = new(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
 
             try
             {
@@ -240,14 +240,14 @@ namespace MyGeotabAPIAdapter
                 count += dbRuleList.Count;
 
                 // Get list of existing conditions to be deleted.
-                List<DbCondition> dbConditionsToDelete = new List<DbCondition>();
+                List<DbCondition> dbConditionsToDelete = new();
                 foreach (DbRuleObject dbRuleObject in dbRuleObjectList)
                 {
                     dbConditionsToDelete.AddRange(dbRuleObject.DbConditionsToBeDeleted);
                 }
 
                 // Get list of conditions to be inserted.
-                List<DbCondition> dbConditionsToInsert = new List<DbCondition>();
+                List<DbCondition> dbConditionsToInsert = new();
                 foreach (DbRuleObject dbRuleObject in dbRuleObjectList)
                 {
                     dbConditionsToInsert.AddRange(dbRuleObject.DbConditions);

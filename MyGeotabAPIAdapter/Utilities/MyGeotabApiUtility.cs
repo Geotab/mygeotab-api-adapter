@@ -29,7 +29,7 @@ namespace MyGeotabAPIAdapter.Utilities
 
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks));
 
                 Task<IList<T>> dataListTask = Task.Run(() => myGeotabApi.CallAsync<IList<T>>("Get", typeof(T), new { search }), cancellationTokenSource.Token);
@@ -69,7 +69,7 @@ namespace MyGeotabAPIAdapter.Utilities
 
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks));
 
                 Task<FeedResult<T>> feedResultTask = Task.Run(() => myGeotabApi.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
@@ -116,7 +116,7 @@ namespace MyGeotabAPIAdapter.Utilities
 
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks));
 
                 Task<FeedResult<T>> feedResultTask = Task.Run(() => myGeotabApi.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
@@ -159,7 +159,7 @@ namespace MyGeotabAPIAdapter.Utilities
 
             try
             {
-                CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource cancellationTokenSource = new();
                 cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks));
 
                 Task<object> setTask = Task.Run(() => myGeotabApi.CallAsync<object>("Set", typeof(T), new { entity }), cancellationTokenSource.Token);

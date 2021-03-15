@@ -812,7 +812,7 @@ CREATE TABLE public."Users" (
     "ActiveTo" timestamp without time zone NOT NULL,
     "EmployeeNo" character varying(50),
     "FirstName" character varying(255) NOT NULL,
-    "HosRuleSet" character varying(255) NOT NULL,
+    "HosRuleSet" character varying(255),
     "IsDriver" boolean NOT NULL,
     "LastAccessDate" timestamp without time zone,
     "LastName" character varying(255) NOT NULL,

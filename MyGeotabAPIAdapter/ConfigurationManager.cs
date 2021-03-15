@@ -73,8 +73,8 @@ namespace MyGeotabAPIAdapter
         // > AppSettings:GeneralFeedSettings
         const string ArgNameFeedStartOption = "AppSettings:GeneralFeedSettings:FeedStartOption";
         const string ArgNameFeedStartSpecificTimeUTC = "AppSettings:GeneralFeedSettings:FeedStartSpecificTimeUTC";
-        const string ArgNameDevicesToTrack = "AppSettings:GeneralFeedSettings:DevicesToTrack";
-        const string ArgNameDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:DiagnosticsToTrack";
+        public readonly string ArgNameDevicesToTrack = "AppSettings:GeneralFeedSettings:DevicesToTrack";
+        public readonly string ArgNameDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:DiagnosticsToTrack";
         // > AppSettings:Feeds:DutyStatusAvailability
         const string ArgNameEnableDutyStatusAvailabilityFeed = "AppSettings:Feeds:DutyStatusAvailability:EnableDutyStatusAvailabilityFeed";
         const string ArgNameDutyStatusAvailabilityFeedIntervalSeconds = "AppSettings:Feeds:DutyStatusAvailability:DutyStatusAvailabilityFeedIntervalSeconds";
@@ -239,13 +239,22 @@ namespace MyGeotabAPIAdapter
 
         public void Dispose()
         {
-            // Currently nothing to be disposed.
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // Add any clean-up code here.
+            }
         }
 
         /// <summary>
         /// The <see cref="IConfiguration"/> used by this <see cref="ConfigurationManager"/> instance.
         /// </summary>
-        public IConfiguration Configuration { get => _configuration; set => _configuration = value; }
+        public static IConfiguration Configuration { get => _configuration; set => _configuration = value; }
 
         /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="Controller"/> cache.
@@ -290,7 +299,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for data feed ToVersion information.
         /// </summary>
-        public string DbConfigFeedVersionsTableName
+        public static string DbConfigFeedVersionsTableName
         {
             get => TableNameDbConfigFeedVersions;
         }
@@ -298,7 +307,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="Device"/> information.
         /// </summary>
-        public string DbDeviceTableName
+        public static string DbDeviceTableName
         {
             get => TableNameDbDevice;
         }
@@ -306,7 +315,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="Diagnostic"/> information.
         /// </summary>
-        public string DbDiagnosticTableName
+        public static string DbDiagnosticTableName
         {
             get => TableNameDbDiagnostic;
         }
@@ -314,7 +323,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="DutyStatusAvailability"/> information.
         /// </summary>
-        public string DbDutyStatusAvailabilityTableName
+        public static string DbDutyStatusAvailabilityTableName
         {
             get => TableNameDbDutyStatusAvailability;
         }
@@ -322,7 +331,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="DVIRDefect"/> information.
         /// </summary>
-        public string DbDVIRDefectTableName
+        public static string DbDVIRDefectTableName
         {
             get => TableNameDbDVIRDefect;
         }
@@ -330,7 +339,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="DefectRemark"/> information.
         /// </summary>
-        public string DbDVIRDefectRemarkTableName
+        public static string DbDVIRDefectRemarkTableName
         {
             get => TableNameDbDVIRDefectRemark;
         }
@@ -338,7 +347,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="DVIRDefect"/> updates information.
         /// </summary>
-        public string DbDVIRDefectUpdatesTableName
+        public static string DbDVIRDefectUpdatesTableName
         {
             get => TableNameDbDVIRDefectUpdates;
         }
@@ -346,7 +355,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="DVIRLog"/> information.
         /// </summary>
-        public string DbDVIRLogTableName
+        public static string DbDVIRLogTableName
         {
             get => TableNameDbDVIRLog;
         }
@@ -354,7 +363,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="ExceptionEvent"/> information.
         /// </summary>
-        public string DbExceptionEventTableName
+        public static string DbExceptionEventTableName
         {
             get => TableNameDbExceptionEvent;
         }
@@ -362,7 +371,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for failed <see cref="DVIRDefect"/> updates information.
         /// </summary>
-        public string DbFailedDVIRDefectUpdatesTableName
+        public static string DbFailedDVIRDefectUpdatesTableName
         {
             get => TableNameDbFailedDVIRDefectUpdates;
         }
@@ -370,7 +379,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="FaultData"/> information.
         /// </summary>
-        public string DbFaultDataTableName
+        public static string DbFaultDataTableName
         {
             get => TableNameDbFaultData;
         }
@@ -378,7 +387,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="LogRecord"/> information.
         /// </summary>
-        public string DbLogRecordTableName
+        public static string DbLogRecordTableName
         {
             get => TableNameDbLogRecord;
         }
@@ -386,7 +395,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="Rule"/> information.
         /// </summary>
-        public string DbRuleTableName
+        public static string DbRuleTableName
         {
             get => TableNameDbRule;
         }
@@ -394,7 +403,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="StatusData"/> information.
         /// </summary>
-        public string DbStatusDataTableName
+        public static string DbStatusDataTableName
         {
             get => TableNameDbStatusData;
         }
@@ -402,7 +411,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="User"/> information.
         /// </summary>
-        public string DbTripTableName
+        public static string DbTripTableName
         {
             get => TableNameDbTrip;
         }
@@ -410,7 +419,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="User"/> information.
         /// </summary>
-        public string DbUserTableName
+        public static string DbUserTableName
         {
             get => TableNameDbUser;
         }
@@ -418,7 +427,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="Zone"/> information.
         /// </summary>
-        public string DbZoneTableName
+        public static string DbZoneTableName
         {
             get => TableNameDbZone;
         }
@@ -426,7 +435,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// The name of the database table for <see cref="ZoneType"/> information.
         /// </summary>
-        public string DbZoneTypeTableName
+        public static string DbZoneTypeTableName
         {
             get => TableNameDbZoneType;
         }
@@ -942,7 +951,7 @@ namespace MyGeotabAPIAdapter
         /// <param name="sectionString">Configuration section value</param>
         /// <param name="isMasked">Whether the return value should be masked or not in the log file output</param>
         /// <returns>Boolean value associated with the key & section submitted.</returns>
-        public bool GetConfigKeyValueBoolean(string keyString, string sectionString = "", bool isMasked = false)
+        public static bool GetConfigKeyValueBoolean(string keyString, string sectionString = "", bool isMasked = false)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -978,7 +987,7 @@ namespace MyGeotabAPIAdapter
         /// <param name="sectionString">Configuration section value</param>
         /// <param name="isMasked">Whether the return value should be masked or not in the log file output</param>
         /// <returns>DateTime value associated with the key & section submitted.</returns>
-        public DateTime GetConfigKeyValueDateTime(string keyString, string sectionString = "", bool isMasked = false)
+        public static DateTime GetConfigKeyValueDateTime(string keyString, string sectionString = "", bool isMasked = false)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -1017,7 +1026,7 @@ namespace MyGeotabAPIAdapter
         /// <param name="maximumAllowedValue">Maximum value allowed</param>
         /// <param name="defaultValueIfOutsideRange">Value to return if the minimum and maximum boundaries are exceeded</param>
         /// <returns>Integer value associated with the key & section submitted.</returns>
-        public int GetConfigKeyValueInt(string keyString, string sectionString = "", bool isMasked = false, int minimumAllowedValue = int.MinValue, int maximumAllowedValue = int.MaxValue, int defaultValueIfOutsideRange = int.MinValue)
+        public static int GetConfigKeyValueInt(string keyString, string sectionString = "", bool isMasked = false, int minimumAllowedValue = int.MinValue, int maximumAllowedValue = int.MaxValue, int defaultValueIfOutsideRange = int.MinValue)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -1081,7 +1090,7 @@ namespace MyGeotabAPIAdapter
         /// <param name="isLogged">Enable/Disable logging</param>
         /// <param name="isMasked">Whether the return value should be masked or not in the log file output</param>
         /// <returns>String value associated with the key and section submitted.</returns>
-        public string GetConfigKeyValueString(string keyString, string sectionString = "", bool isLogged = true, bool isMasked = false)
+        public static string GetConfigKeyValueString(string keyString, string sectionString = "", bool isLogged = true, bool isMasked = false)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");

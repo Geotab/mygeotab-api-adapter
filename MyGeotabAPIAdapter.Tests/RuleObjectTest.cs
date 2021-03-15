@@ -15,7 +15,7 @@ namespace MyGeotabAPIAdapter.Tests
         {
             //arrange
             Rule rule = GetTestRule();
-            DbRuleObject ruleObject = new DbRuleObject();
+            DbRuleObject ruleObject = new();
 
             //act 
             ruleObject.BuildRuleObject(rule, (int)Common.DatabaseRecordStatus.Active, DateTime.UtcNow,
@@ -29,16 +29,16 @@ namespace MyGeotabAPIAdapter.Tests
             Assert.True(dbConditions.Count == 7);
         }
 
-        private Rule GetTestRule()
+        private static Rule GetTestRule()
         {
             //test device
-            Device device = new Device(Id.Create("dev1"))
+            Device device = new(Id.Create("dev1"))
             {
                 SerialNumber = "G9CXXXXXB65E",
                 Name = "Test Device"
             };
 
-            Rule rule = new Rule
+            Rule rule = new()
             {
                 Id = Id.Create("test"),
                 Name = "test",
@@ -49,7 +49,7 @@ namespace MyGeotabAPIAdapter.Tests
             };
 
             //create test conditions
-            Condition condition = new Condition(Id.Create("cond1"))
+            Condition condition = new(Id.Create("cond1"))
             {
                 Value = 60,
                 ConditionType = ConditionType.SpeedLimit
@@ -57,7 +57,7 @@ namespace MyGeotabAPIAdapter.Tests
 
             //Add children conditions to main condition
             IList<Condition> childConditions = new List<Condition>();
-            Condition conditionChild = new Condition(Id.Create("sub1"), ConditionType.IsValueMoreThan, null, 21, null, null, null, null, null, null);
+            Condition conditionChild = new(Id.Create("sub1"), ConditionType.IsValueMoreThan, null, 21, null, null, null, null, null, null);
             childConditions.Add(conditionChild);
             childConditions.Add(new Condition(Id.Create("sub2"), ConditionType.IsValueEqualTo, null, 50, device, null, null, null, null, null));
             childConditions.Add(new Condition(Id.Create("sub3"), ConditionType.IsDriving, null, 1, null, null, null, null, null, null));

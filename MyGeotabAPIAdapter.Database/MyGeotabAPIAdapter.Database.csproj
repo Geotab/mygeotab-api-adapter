@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <Authors>Geotab Inc.</Authors>
     <Product>MyGeotab API Adapter</Product>
-    <Version>1.4.0.0</Version>
-    <InformationalVersion>1.4.0.0</InformationalVersion>    
+    <Version>1.4.0.5</Version>
+    <InformationalVersion>1.4.0.5</InformationalVersion>    
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.0.78" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="2.1.1" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="1.7.0" />
-    <PackageReference Include="Npgsql" Version="5.0.1.1" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="1.7.1" />
+    <PackageReference Include="Npgsql" Version="5.0.3" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.7" />
   </ItemGroup>
 

@@ -14,7 +14,7 @@ This tool is not intended for use by U.S. Federal Government customers or otherw
 
 The solution requires:
 
-- [.Net Core 3.1 SDK](https://dot.net/core) or higher
+- [.NET 5.0 SDK](https://dotnet.microsoft.com/download) or higher
 - The following (included via NuGet packages):
 	- Geotab.Checkmate.ObjectModel
 	- Dapper

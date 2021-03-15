@@ -24,6 +24,7 @@ namespace MyGeotabAPIAdapter
     /// </summary>
     class DutyStatusAvailabilityWorker : BackgroundService
     {
+        const int ConnectivityRestorationCheckIntervalMilliseconds = 10000;
         const int MyGeotabAPIAuthenticationCheckIntervalMilliseconds = 1000;
         const string HosRuleSetNoneValue = "None";
         readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -102,7 +103,7 @@ namespace MyGeotabAPIAdapter
 
                                 const int maxBatchSize = 100;
                                 int currentBatchSize = 0;
-                                int driverDbUserCount = driverDbUsers.Count();
+                                int driverDbUserCount = driverDbUsers.Count;
                                 var calls = new List<object>();
                                 for (int driverDbUserListIndex = 0; driverDbUserListIndex < driverDbUserCount + 1; driverDbUserListIndex++)
                                 {
@@ -112,8 +113,24 @@ namespace MyGeotabAPIAdapter
                                         var dbDutyStatusAvailabilityEntitiesToInsert = new List<DbDutyStatusAvailability>();
                                         var dbDutyStatusAvailabilityEntitiesToUpdate = new List<DbDutyStatusAvailability>();
 
-                                        // Execute MultiCall.
-                                        var results = await Globals.MyGeotabAPI.MultiCallAsync(calls.ToArray());
+                                        List<object> results;
+                                        try
+                                        {
+                                            // Execute MultiCall.
+                                            results = await Globals.MyGeotabAPI.MultiCallAsync(calls.ToArray());
+                                        }
+                                        catch (Exception exception)
+                                        {
+                                            // If the exception is related to connectivity, wrap it in a MyGeotabConnectionException. Otherwise, just pass it along.
+                                            if (Globals.ExceptionIsRelatedToMyGeotabConnectivityLoss(exception))
+                                            {
+                                                throw new MyGeotabConnectionException("An exception occurred while attempting to get data from the Geotab API via MultiCallAsync.", exception);
+                                            }
+                                            else
+                                            {
+                                                throw;
+                                            }
+                                        }
 
                                         // Iterate through the returned DutyStatusAvailability entities.
                                         foreach (var result in results)
@@ -154,7 +171,7 @@ namespace MyGeotabAPIAdapter
                                                 long dbDutyStatusAvailabilityEntitiesInserted = await DbDutyStatusAvailabilityService.InsertAsync(connectionInfo, dbDutyStatusAvailabilityEntitiesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                                                 TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                                                 double recordsProcessedPerSecond = (double)dbDutyStatusAvailabilityEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                                                logger.Info($"Completed insertion of {dbDutyStatusAvailabilityEntitiesInserted} records into {Globals.ConfigurationManager.DbDutyStatusAvailabilityTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                                                logger.Info($"Completed insertion of {dbDutyStatusAvailabilityEntitiesInserted} records into {ConfigurationManager.DbDutyStatusAvailabilityTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                                             }
                                             catch (Exception)
                                             {
@@ -172,7 +189,7 @@ namespace MyGeotabAPIAdapter
                                                 long dbDutyStatusAvailabilityEntitiesUpdated = await DbDutyStatusAvailabilityService.UpdateAsync(connectionInfo, dbDutyStatusAvailabilityEntitiesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                                                 TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
                                                 double recordsProcessedPerSecond = (double)dbDutyStatusAvailabilityEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                                                logger.Info($"Completed updating of {dbDutyStatusAvailabilityEntitiesUpdated} records in {Globals.ConfigurationManager.DbDutyStatusAvailabilityTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                                                logger.Info($"Completed updating of {dbDutyStatusAvailabilityEntitiesUpdated} records in {ConfigurationManager.DbDutyStatusAvailabilityTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                                             }
                                             catch (Exception)
                                             {
@@ -226,6 +243,10 @@ namespace MyGeotabAPIAdapter
                 {
                     HandleException(databaseConnectionException, NLog.LogLevel.Error, $"{nameof(DutyStatusAvailabilityWorker)} process caught an exception");
                 }
+                catch (MyGeotabConnectionException myGeotabConnectionException)
+                {
+                    HandleException(myGeotabConnectionException, NLog.LogLevel.Error, $"{nameof(DutyStatusAvailabilityWorker)} process caught an exception");
+                }
                 catch (Exception ex)
                 {
                     // If an exception hasn't been handled to this point, log it and kill the process.
@@ -238,8 +259,8 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
-        /// Generates and logs an error message for the supplied <paramref name="exception"/>. Does NOT implement connectivity restoration logic like <see cref="Worker.WaitForConnectivityRestorationAsync(StateReason)"/> since the <see cref="Worker"/> will already be taking care of it.
-        /// /// </summary>
+        /// Generates and logs an error message for the supplied <paramref name="exception"/>. If the <paramref name="exception"/> is a <see cref="MyGeotabConnectionException"/> or a <see cref="DatabaseConnectionException"/>, the <see cref="WaitForConnectivityRestorationAsync(StateReason)"/> method will be executed after logging the error message.
+        /// </summary>
         /// <param name="exception">The <see cref="Exception"/>.</param>
         /// <param name="errorMessageLogLevel">The <see cref="NLog.LogLevel"/> to be used when logging the error message.</param>
         /// <param name="errorMessagePrefix">The start of the error message, which will be followed by the <see cref="Exception.Message"/>, <see cref="Exception.Source"/> and <see cref="Exception.StackTrace"/>.</param>
@@ -247,6 +268,15 @@ namespace MyGeotabAPIAdapter
         void HandleException(Exception exception, NLog.LogLevel errorMessageLogLevel, string errorMessagePrefix = "An exception was encountered")
         {
             Globals.LogException(exception, errorMessageLogLevel, errorMessagePrefix);
+
+            if (exception is MyGeotabConnectionException)
+            {
+                _ = WaitForConnectivityRestorationAsync(StateReason.MyGeotabNotAvailable);
+            }
+            if (exception is DatabaseConnectionException)
+            {
+                _ = WaitForConnectivityRestorationAsync(StateReason.DatabaseNotAvailable);
+            }
         }
 
         /// <summary>
@@ -363,6 +393,49 @@ namespace MyGeotabAPIAdapter
 
             logger.Info($"{nameof(DutyStatusAvailabilityWorker)} stopped.");
             return base.StopAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Iteratively tests MyGeotab or database connectivity, depending on which was lost, until connectivity is restored.
+        /// </summary>
+        /// <param name="reasonForConnectivityLoss">The reason for loss of connectivity.</param>
+        /// <returns></returns>        
+        async Task WaitForConnectivityRestorationAsync(StateReason reasonForConnectivityLoss)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            StateMachine.CurrentState = State.Waiting;
+            StateMachine.Reason = reasonForConnectivityLoss;
+            logger.Warn($"******** CONNECTIVITY LOST. REASON: '{StateMachine.Reason}'. WAITING FOR RESTORATION OF CONNECTIVITY...");
+            while (StateMachine.CurrentState == State.Waiting)
+            {
+                // Wait for the prescribed interval between connectivity checks.
+                await Task.Delay(ConnectivityRestorationCheckIntervalMilliseconds);
+
+                logger.Warn($"{StateMachine.Reason}; continuing to wait for restoration of connectivity...");
+                switch (StateMachine.Reason)
+                {
+                    case StateReason.DatabaseNotAvailable:
+                        if (await StateMachine.IsDatabaseAccessibleAsync(connectionInfo) == true)
+                        {
+                            logger.Warn("******** CONNECTIVITY RESTORED.");
+                            StateMachine.CurrentState = State.Normal;
+                            continue;
+                        }
+                        break;
+                    case StateReason.MyGeotabNotAvailable:
+                        if (await StateMachine.IsMyGeotabAccessibleAsync() == true)
+                        {
+                            logger.Warn("******** CONNECTIVITY RESTORED.");
+                            StateMachine.CurrentState = State.Normal;
+                            continue;
+                        }
+                        break;
+                }
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

@@ -16,7 +16,8 @@ namespace MyGeotabAPIAdapter
         // Exception-related constants.
         public const string MyGeotabConnectionExceptionMessageSource = "System.Net.Http";
         public const string MyGeotabConnectionExceptionMessage_DbUnavailableException = "DbUnavailableException";
-        
+        public const string MyGeotabConnectionExceptionStackTraceSource_Geotab_Checkmate_Web_WebServerInvoker = "Geotab.Checkmate.Web.WebServerInvoker";
+            
         // For GetFeed result limts see <see href="https://geotab.github.io/sdk/software/api/reference/#M:Geotab.Checkmate.Database.DataStore.GetFeed1">GetFeed(...)</see>.
         public const int GetFeedResultLimitDefault = 50000;
         public const int GetFeedResultLimitDevice = 5000;
@@ -188,6 +189,10 @@ namespace MyGeotabAPIAdapter
                 return true;
             }
             if (exception.Source == MyGeotabConnectionExceptionMessageSource)
+            {
+                return true;
+            }
+            if (exception.StackTrace != null && exception.StackTrace.Contains(MyGeotabConnectionExceptionStackTraceSource_Geotab_Checkmate_Web_WebServerInvoker))
             {
                 return true;
             }

@@ -7,7 +7,6 @@ namespace MyGeotabAPIAdapter.Tests
     public class ConfigurationManagerTests
     {
         readonly IConfiguration configuration;
-        readonly ConfigurationManager configurationManager = new ConfigurationManager();
 
         public ConfigurationManagerTests()
         {
@@ -17,7 +16,7 @@ namespace MyGeotabAPIAdapter.Tests
                .SetBasePath(projectPath)
                .AddJsonFile("appsettingsTest.json")
                .Build();
-            configurationManager.Configuration = configuration;
+            ConfigurationManager.Configuration = configuration;
         }
 
         [Fact]
@@ -29,11 +28,11 @@ namespace MyGeotabAPIAdapter.Tests
             //Act
             string keyString = "DatabaseSettings:DatabaseProviderType";
             string sectionString = "";
-            string actual = configurationManager.GetConfigKeyValueString(keyString, sectionString);
+            string actual = ConfigurationManager.GetConfigKeyValueString(keyString, sectionString);
 
             //Assert
             Assert.Equal(actual, expected);
-            Assert.Throws<Exception>(() => configurationManager.GetConfigKeyValueString("AppSettings:TestEmptyString"));
+            Assert.Throws<Exception>(() => ConfigurationManager.GetConfigKeyValueString("AppSettings:TestEmptyString"));
         }
 
         [Fact]
@@ -45,7 +44,7 @@ namespace MyGeotabAPIAdapter.Tests
             //Act
             string keyString = "DatabaseProviderType";
             string sectionString = "DatabaseSettings";
-            string actual = configurationManager.GetConfigKeyValueString(keyString, sectionString);
+            string actual = ConfigurationManager.GetConfigKeyValueString(keyString, sectionString);
 
             //Assert
             Assert.Equal(actual, expected);
@@ -60,11 +59,11 @@ namespace MyGeotabAPIAdapter.Tests
             //Act
             string keyString = "AppSettings:DeviceCacheUpdateIntervalMinutes";
             string sectionString = "";
-            int actual = configurationManager.GetConfigKeyValueInt(keyString, sectionString);
+            int actual = ConfigurationManager.GetConfigKeyValueInt(keyString, sectionString);
 
             //Assert
             Assert.Equal(actual, expected);
-            Assert.Throws<Exception>(() => configurationManager.GetConfigKeyValueInt("AppSettings:TestEmptyInt"));
+            Assert.Throws<Exception>(() => ConfigurationManager.GetConfigKeyValueInt("AppSettings:TestEmptyInt"));
         }
 
         [Fact]
@@ -76,11 +75,11 @@ namespace MyGeotabAPIAdapter.Tests
             //Act
             string keyString = "AppSettings:EnableLogRecordFeed";
             string sectionString = "";
-            bool actual = configurationManager.GetConfigKeyValueBoolean(keyString, sectionString);
+            bool actual = ConfigurationManager.GetConfigKeyValueBoolean(keyString, sectionString);
 
             //Assert
             Assert.Equal(actual, expected);
-            Assert.Throws<Exception>(() => configurationManager.GetConfigKeyValueBoolean("AppSettings:TestEmptyString"));
+            Assert.Throws<Exception>(() => ConfigurationManager.GetConfigKeyValueBoolean("AppSettings:TestEmptyString"));
         }
     }
 }

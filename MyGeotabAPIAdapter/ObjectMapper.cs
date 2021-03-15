@@ -150,11 +150,15 @@ namespace MyGeotabAPIAdapter
             {
                 user.IsDriver = false;
             }
-            if (dbUser.FirstName != user.FirstName || dbUser.HosRuleSet != user.HosRuleSet.Value.ToString() || dbUser.IsDriver != user.IsDriver || dbUser.LastName != user.LastName || dbUser.Name != user.Name)
+            if (dbUser.FirstName != user.FirstName|| dbUser.IsDriver != user.IsDriver || dbUser.LastName != user.LastName || dbUser.Name != user.Name)
             {
                 return true;
             }
             if ((dbUser.EmployeeNo != user.EmployeeNo) && (dbUser.EmployeeNo != null && user.EmployeeNo != ""))
+            {
+                return true;
+            }
+            if ((user.HosRuleSet == null && dbUser.HosRuleSet != null) || (user.HosRuleSet != null && dbUser.HosRuleSet != user.HosRuleSet.Value.ToString()))
             {
                 return true;
             }
@@ -257,7 +261,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbCondition GetDbCondition(Condition condition, string parentId)
         {
-            DbCondition dbCondition = new DbCondition
+            DbCondition dbCondition = new()
             {
                 GeotabId = condition.Id.ToString(),
                 ParentId = parentId
@@ -305,7 +309,7 @@ namespace MyGeotabAPIAdapter
         public static DbCondition GetDbCondition(Condition condition, string parentId, int entityStatus,
             DateTime recordLastChanged, DatabaseWriteOperationType operationType)
         {
-            DbCondition dbCondition = new DbCondition
+            DbCondition dbCondition = new()
             {
                 GeotabId = condition.Id.ToString(),
                 ParentId = parentId
@@ -433,7 +437,7 @@ namespace MyGeotabAPIAdapter
                 deviceVIN = null;
             }
 
-            DbDevice dbDevice = new DbDevice
+            DbDevice dbDevice = new()
             {
                 ActiveFrom = device.ActiveFrom,
                 ActiveTo = device.ActiveTo,
@@ -460,7 +464,7 @@ namespace MyGeotabAPIAdapter
             UnitOfMeasure diagnosticUnitOfMeasure = diagnostic.UnitOfMeasure;
             Controller diagnosticController = diagnostic.Controller;
 
-            DbDiagnostic dbDiagnostic = new DbDiagnostic
+            DbDiagnostic dbDiagnostic = new()
             {
                 DiagnosticCode = diagnostic.Code,
                 DiagnosticName = diagnostic.Name,
@@ -545,7 +549,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbDutyStatusAvailability GetDbDutyStatusAvailability(DutyStatusAvailability dutyStatusAvailability)
         {
-            DbDutyStatusAvailability dbDutyStatusAvailability = new DbDutyStatusAvailability
+            DbDutyStatusAvailability dbDutyStatusAvailability = new()
             {
                 Cycle = dutyStatusAvailability.Cycle,
                 CycleRest = dutyStatusAvailability.CycleRest,
@@ -579,7 +583,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbDVIRDefect GetDbDVIRDefect(DVIRLog dvirLog, DVIRDefect dvirDefect, Defect defect, DefectListPartDefect defectListPartDefect)
         {
-            DbDVIRDefect dbDVIRDefect = new DbDVIRDefect
+            DbDVIRDefect dbDVIRDefect = new()
             {
                 GeotabId = dvirDefect.Id.ToString(),
                 DVIRLogId = dvirLog.Id.ToString(),
@@ -616,7 +620,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbDVIRDefectRemark GetDbDVIRDefectRemark(DefectRemark defectRemark)
         {
-            DbDVIRDefectRemark dbDVIRDefectRemark = new DbDVIRDefectRemark
+            DbDVIRDefectRemark dbDVIRDefectRemark = new()
             {
                 DVIRDefectId = defectRemark.DVIRDefect.Id.ToString(),
                 GeotabId = defectRemark.Id.ToString(),
@@ -641,7 +645,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbDVIRLog GetDbDVIRLog(DVIRLog dvirLog)
         {
-            DbDVIRLog dbDVIRLog = new DbDVIRLog
+            DbDVIRLog dbDVIRLog = new()
             {
                 GeotabId = dvirLog.Id.ToString()
             };
@@ -716,7 +720,7 @@ namespace MyGeotabAPIAdapter
             Driver driver = exceptionEvent.Driver;
             Rule rule = exceptionEvent.Rule;
 
-            DbExceptionEvent dbExceptionEvent = new DbExceptionEvent
+            DbExceptionEvent dbExceptionEvent = new()
             {
                 GeotabId = exceptionEvent.Id.ToString(),
                 ActiveFrom = exceptionEvent.ActiveFrom,
@@ -757,7 +761,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbFailedDVIRDefectUpdate GetDbFailedDVIRDefectUpdate(DbDVIRDefectUpdate dbDVIRDefectUpdate, string failureMessage)
         {
-            DbFailedDVIRDefectUpdate dbFailedDVIRDefectUpdate = new DbFailedDVIRDefectUpdate
+            DbFailedDVIRDefectUpdate dbFailedDVIRDefectUpdate = new()
             {
                 DVIRDefectId = dbDVIRDefectUpdate.DVIRDefectId,
                 DVIRDefectUpdateId = dbDVIRDefectUpdate.id,
@@ -791,7 +795,7 @@ namespace MyGeotabAPIAdapter
             FailureMode faultDataFailureMode = faultData.FailureMode;
             var faultDataFaultState = faultData.FaultState;
 
-            DbFaultData dbFaultData = new DbFaultData
+            DbFaultData dbFaultData = new()
             {
                 GeotabId = faultData.Id.ToString(),
                 AmberWarningLamp = faultData.AmberWarningLamp,
@@ -858,7 +862,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbLogRecord GetDbLogRecord(LogRecord logRecord)
         {
-            DbLogRecord dbLogRecord = new DbLogRecord
+            DbLogRecord dbLogRecord = new()
             {
                 GeotabId = logRecord.Id.ToString(),
                 DateTime = logRecord.DateTime.GetValueOrDefault(),
@@ -895,7 +899,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbRule GetDbRule(Rule rule)
         {
-            DbRule dbRule = new DbRule
+            DbRule dbRule = new()
             {
                 GeotabId = rule.Id.ToString(),
                 Name = rule.Name.ToString(),
@@ -919,7 +923,7 @@ namespace MyGeotabAPIAdapter
         public static DbRule GetDbRule(Rule rule, int entityStatus,
             DateTime recordLastChanged, DatabaseWriteOperationType operationType)
         {
-            DbRule dbRule = new DbRule
+            DbRule dbRule = new()
             {
                 GeotabId = rule.Id.ToString(),
                 Name = rule.Name.ToString(),
@@ -981,7 +985,7 @@ namespace MyGeotabAPIAdapter
             Device statusDataDevice = statusData.Device;
             Diagnostic statusDataDiagnostic = statusData.Diagnostic;
 
-            DbStatusData dbStatusData = new DbStatusData
+            DbStatusData dbStatusData = new()
             {
                 GeotabId = statusData.Id.ToString(),
                 Data = statusData.Data,
@@ -1017,7 +1021,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbTrip GetDbTrip(Trip trip)
         {
-            DbTrip dbTrip = new DbTrip
+            DbTrip dbTrip = new()
             {
                 AfterHoursDistance = trip.AfterHoursDistance,
                 AfterHoursDrivingDuration = trip.AfterHoursDrivingDuration,
@@ -1091,19 +1095,22 @@ namespace MyGeotabAPIAdapter
                 employeeNo = null;
             }
 
-            DbUser dbUser = new DbUser
+            DbUser dbUser = new()
             {
                 ActiveFrom = user.ActiveFrom,
                 ActiveTo = user.ActiveTo,
                 EmployeeNo = employeeNo,
                 FirstName = user.FirstName,
                 GeotabId = user.Id.ToString(),
-                HosRuleSet = user.HosRuleSet.Value.ToString(),
                 IsDriver = user.IsDriver ?? false,
                 LastAccessDate = user.LastAccessDate,
                 LastName = user.LastName,
                 Name = user.Name
             };
+            if (user.HosRuleSet != null)
+            {
+                dbUser.HosRuleSet = user.HosRuleSet.Value.ToString();
+            }
             return dbUser;
         }
 
@@ -1130,7 +1137,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbZone GetDbZone(Zone zone)
         {
-            DbZone dbZone = new DbZone
+            DbZone dbZone = new()
             {
                 GeotabId = zone.Id.ToString(),
                 Displayed = zone.Displayed ?? false,
@@ -1175,7 +1182,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static DbZoneType GetDbZoneType(ZoneType zoneType)
         {
-            DbZoneType dbZoneType = new DbZoneType
+            DbZoneType dbZoneType = new()
             {
                 GeotabId = zoneType.Id.ToString(),
                 Name = zoneType.Name,
@@ -1212,17 +1219,17 @@ namespace MyGeotabAPIAdapter
         {
             bool zoneTypeIdsArrayHasItems = false;
             var zoneTypeIds = new StringBuilder();
-            zoneTypeIds.Append("[");
+            zoneTypeIds.Append('[');
             foreach (var zoneType in zoneTypes)
             {
                 if (zoneTypeIdsArrayHasItems == true)
                 {
-                    zoneTypeIds.Append(",");
+                    zoneTypeIds.Append(',');
                 }
                 zoneTypeIds.Append($"{{\"Id\":\"{zoneType.Id}\"}}");
                 zoneTypeIdsArrayHasItems = true;
             }
-            zoneTypeIds.Append("]");
+            zoneTypeIds.Append(']');
             return zoneTypeIds.ToString();
         }
     }
