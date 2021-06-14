@@ -543,6 +543,52 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Converts the supplied <see cref="DriverChange"/> into a <see cref="DbDriverChange"/>.
+        /// </summary>
+        /// <param name="">The <see cref="DriverChange"/> to be converted.</param>
+        /// <returns></returns>
+        public static DbDriverChange GetDbDriverChange(DriverChange driverChange)
+        {
+            Device driverChangeDevice = driverChange.Device;
+            Driver driverChangeDriver = driverChange.Driver;
+
+            DbDriverChange dbDriverChange = new()
+            {
+                GeotabId = driverChange.Id.ToString(),
+                DateTime = driverChange.DateTime,
+                DeviceId = driverChangeDevice.Id.ToString(),
+                DriverId = driverChangeDriver.Id.ToString()
+            };
+            if (driverChange.Type != null)
+            {
+                dbDriverChange.Type = Enum.GetName(typeof(DriverChangeType), driverChange.Type);
+            }
+            if (driverChange.Version != null)
+            {
+                dbDriverChange.Version = (long)driverChange.Version;
+            }
+            return dbDriverChange;
+        }
+
+        /// <summary>
+        /// Converts the supplied list of <see cref="DriverChange"/> objects into a list of <see cref="DbDriverChange"/> objects.
+        /// </summary>
+        /// <param name="driverChanges">The list of <see cref="DriverChange"/> objects to be converted.</param>
+        /// <returns></returns>
+        public static List<DbDriverChange> GetDbDriverChanges(List<DriverChange> driverChanges)
+        {
+            DateTime recordCreationTimeUtc = DateTime.UtcNow;
+            var dbDriverChanges = new List<DbDriverChange>();
+            foreach (var driverChange in driverChanges)
+            {
+                DbDriverChange dbDriverChange = GetDbDriverChange(driverChange);
+                dbDriverChange.RecordCreationTimeUtc = recordCreationTimeUtc;
+                dbDriverChanges.Add(dbDriverChange);
+            }
+            return dbDriverChanges;
+        }
+
+        /// <summary>
         /// Converts the supplied <see cref="DutyStatusAvailability"/> object into a <see cref="DbDutyStatusAvailability"/> object.
         /// </summary>
         /// <param name="dutyStatusAvailability">The <see cref="DutyStatusAvailability"/> object to be converted.</param>

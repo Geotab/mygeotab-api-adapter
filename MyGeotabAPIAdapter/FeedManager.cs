@@ -21,6 +21,7 @@ namespace MyGeotabAPIAdapter
         // FeedCurrentThresholdRecordCount is used to set FeedContainer.FeedCurrent; if the FeedResult returned in a GetFeed call contains less than this number of entities, the feed will be considered up-to-date.
         const int FeedCurrentThresholdRecordCount = 1000;
         static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        static readonly FeedContainer driverChangeFeedContainer = new();
         static readonly FeedContainer dvirLogFeedContainer = new();
         static readonly FeedContainer exceptionEventFeedContainer = new();
         static readonly FeedContainer faultDataFeedContainer = new();
@@ -95,8 +96,22 @@ namespace MyGeotabAPIAdapter
                 Globals.ConfigurationManager.ExceptionEventFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
                 Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, exceptionEventDbConfigFeedVersion.LastProcessedFeedVersion);
 
+            // Setup a data feed for DriverChange.
+            DbConfigFeedVersion driverChangeDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.DriverChange.ToString()).First();
+            SetupFeedContainer<DriverChange>(driverChangeFeedContainer, false, Globals.ConfigurationManager.EnableDriverChangeFeed,
+                Globals.ConfigurationManager.DriverChangeFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
+                Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, driverChangeDbConfigFeedVersion.LastProcessedFeedVersion);
+
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return feedManager;
+        }
+
+        /// <summary>
+        /// Holds <see cref="DriverChange"/> information obtained via data feed.
+        /// </summary>
+        public static FeedContainer DriverChangeFeedContainer
+        {
+            get => driverChangeFeedContainer;
         }
 
         /// <summary>
@@ -286,6 +301,11 @@ namespace MyGeotabAPIAdapter
             DbConfigFeedVersion exceptionEventDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.ExceptionEvent.ToString()).First();
             exceptionEventFeedContainer.LastFeedVersion = exceptionEventDbConfigFeedVersion.LastProcessedFeedVersion;
             exceptionEventFeedContainer.LastFeedRetrievalTimeUtc = DateTime.MinValue;
+
+            // DriverChange:
+            DbConfigFeedVersion driverChangeDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.DriverChange.ToString()).First();
+            driverChangeFeedContainer.LastFeedVersion = driverChangeDbConfigFeedVersion.LastProcessedFeedVersion;
+            driverChangeFeedContainer.LastFeedRetrievalTimeUtc = DateTime.MinValue;
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }

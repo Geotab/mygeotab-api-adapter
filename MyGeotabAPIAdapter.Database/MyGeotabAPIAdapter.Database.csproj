@@ -4,8 +4,8 @@
     <TargetFramework>net5.0</TargetFramework>
     <Authors>Geotab Inc.</Authors>
     <Product>MyGeotab API Adapter</Product>
-    <Version>1.4.0.6</Version>
-    <InformationalVersion>1.4.0.6</InformationalVersion>    
+    <Version>1.4.0.7</Version>
+    <InformationalVersion>1.4.0.7</InformationalVersion>    
   </PropertyGroup>
 
   <ItemGroup>

@@ -141,6 +141,10 @@ namespace MyGeotabAPIAdapter
                     string errorMessage = "";
                     switch (entityTypeName)
                     {
+                        case nameof(DriverChange):
+                            var driverChangeToBeEvaluated = itemToBeEvaluated as DriverChange;
+                            itemToBeEvaluatedDevice = driverChangeToBeEvaluated.Device;
+                            break;
                         case nameof(DVIRLog):
                             var dvirLogToBeEvaluated = itemToBeEvaluated as DVIRLog;
                             itemToBeEvaluatedDevice = dvirLogToBeEvaluated.Device;
@@ -414,8 +418,9 @@ namespace MyGeotabAPIAdapter
                     var getDVIRLogFeedDataAndPersistToDatabaseAsyncTask = GetDVIRLogFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
                     var getTripFeedDataAndPersistToDatabaseAsyncTask = GetTripFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
                     var getExceptionEventFeedDataAndPersistToDatabaseAsyncTask = GetExceptionEventFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var getDriverChangeFeedDataAndPersistToDatabaseAsyncTask = GetDriverChangeFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
 
-                    Task[] tasks = { getLogRecordFeedDataAndPersistToDatabaseAsyncTask, getStatusDataFeedDataAndPersistToDatabaseAsyncTask, getFaultDataFeedDataAndPersistToDatabaseAsyncTask, getDVIRLogFeedDataAndPersistToDatabaseAsyncTask, getTripFeedDataAndPersistToDatabaseAsyncTask, getExceptionEventFeedDataAndPersistToDatabaseAsyncTask };
+                    Task[] tasks = { getLogRecordFeedDataAndPersistToDatabaseAsyncTask, getStatusDataFeedDataAndPersistToDatabaseAsyncTask, getFaultDataFeedDataAndPersistToDatabaseAsyncTask, getDVIRLogFeedDataAndPersistToDatabaseAsyncTask, getTripFeedDataAndPersistToDatabaseAsyncTask, getExceptionEventFeedDataAndPersistToDatabaseAsyncTask, getDriverChangeFeedDataAndPersistToDatabaseAsyncTask };
 
                     try
                     {
@@ -440,6 +445,25 @@ namespace MyGeotabAPIAdapter
                     logger.Warn(errorMessage);
                 }
             }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from the <see cref="DriverChange"/> feed and persists the data to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task GetDriverChangeFeedDataAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await FeedManager.GetFeedDataAsync<DriverChange>(FeedManager.DriverChangeFeedContainer, cancellationTokenSource);
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProcessDriverChangeFeedResultsAsync(cancellationTokenSource);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -742,6 +766,57 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Processes <see cref="DriverChange"/> entities returned by the data feed.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task ProcessDriverChangeFeedResultsAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            // Add any returned DriverChange entities to the database, filtering-out those representing Devices that are not being tracked. Include persistence of the feed version within the same transaction to prevent issues in the event that an exception occurs between persistence of the data and persistence of the feed version.
+            if (FeedManager.DriverChangeFeedContainer.FeedResultData.Count > 0)
+            {
+                var feedResultDriverChanges = FeedManager.DriverChangeFeedContainer.GetFeedResultDataValuesList<DriverChange>();
+                var filteredDriverChanges = ApplyTrackedDevicesFilterToList<DriverChange>(feedResultDriverChanges);
+
+                // Map DriverChange entities to DbDriverChange entities.
+                var dbDriverChanges = ObjectMapper.GetDbDriverChanges(filteredDriverChanges);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Get the feed version information.
+                var driverChangeDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.DriverChange.ToString()).First();
+                driverChangeDbConfigFeedVersion.LastProcessedFeedVersion = (long)FeedManager.DriverChangeFeedContainer.LastFeedVersion;
+                driverChangeDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                driverChangeDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
+
+                // Insert DbDriverChange entities into database.
+                try
+                {
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long driverChangeEntitiesInserted = await DbDriverChangeService.InsertAsync(connectionInfo, dbDriverChanges, driverChangeDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)driverChangeEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed insertion of {driverChangeEntitiesInserted} records into {ConfigurationManager.DbDriverChangeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                }
+                catch (Exception)
+                {
+                    cancellationTokenSource.Cancel();
+                    throw;
+                }
+
+                // Clear FeedResultData.
+                FeedManager.DriverChangeFeedContainer.FeedResultData.Clear();
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
         /// Processes <see cref="DVIRLog"/> entities returned by the data feed.
         /// </summary>
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
@@ -844,8 +919,12 @@ namespace MyGeotabAPIAdapter
                                         newDbDVIRDefectRemark.RecordLastChangedUtc = recordChangedTimestampUtc;
                                         newDbDVIRDefectRemark.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
 
-                                        dbDVIRDefectRemarksDictionary.Add(Id.Create(newDbDVIRDefectRemark.GeotabId), newDbDVIRDefectRemark);
-                                        dbDVIRDefectRemarksToInsert.Add(newDbDVIRDefectRemark);
+                                        // Added check in case of duplicate Id, since Id is still the key and we're using this temporary fix to check for uniqueness.
+                                        if (!dbDVIRDefectRemarksDictionary.TryGetValue(Id.Create(newDbDVIRDefectRemark.GeotabId), out var existingDbDVIRDefectRemark))
+                                        {
+                                            dbDVIRDefectRemarksDictionary.Add(Id.Create(newDbDVIRDefectRemark.GeotabId), newDbDVIRDefectRemark);
+                                            dbDVIRDefectRemarksToInsert.Add(newDbDVIRDefectRemark);
+                                        }
                                     }
                                     #endregion
                                     //if (!dbDVIRDefectRemarksDictionary.TryGetValue(defectRemark.Id, out var existingDbDVIRDefectRemark))

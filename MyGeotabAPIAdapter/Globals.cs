@@ -1,7 +1,7 @@
 ﻿using Geotab.Checkmate;
 using System;
 using System.Reflection;
-using System.Threading;
+using System.Text;
 using System.Threading.Tasks;
 using NLog;
 using MyGeotabAPIAdapter.Database;
@@ -61,7 +61,7 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A list of MyGeotab object types for which data feeds are utilized in this application (i.e. those for which the <see cref="FeedManager"/> has a <see cref="FeedContainer"/>). Any time a new feed type is added, this enum will need to be updated. 
         /// </summary>
-        public enum SupportedFeedTypes { DVIRLog, ExceptionEvent, FaultData, LogRecord, StatusData, Trip }
+        public enum SupportedFeedTypes { DriverChange, DVIRLog, ExceptionEvent, FaultData, LogRecord, StatusData, Trip }
 
         /// <summary>
         /// The Global ConfigurationManager reference object
@@ -256,56 +256,52 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public static void LogException(Exception exception, LogLevel errorMessageLogLevel, string errorMessagePrefix = "An exception was encountered")
         {
-            string errorMessage;
-            string exceptionSource = "";
-            string innerExceptionMessage = "";
-            string innerExceptionSource = "";
-            string innerExceptionStackTrace = "";
-            if (exception.Source != null)
+            string exceptionTypeName = exception.GetType().Name;
+            string exceptionStackTrace = exception.StackTrace ?? "null";
+
+            StringBuilder messageBuilder = new();
+            messageBuilder.AppendLine($"{errorMessagePrefix}:");
+            messageBuilder.AppendLine($"TYPE: [{exceptionTypeName}];");
+            messageBuilder.AppendLine($"MESSAGE [{exception.Message}];");
+            messageBuilder.AppendLine($"STACK TRACE [{exceptionStackTrace}];");
+
+            while (exception.InnerException != null)
             {
-                exceptionSource = exception.Source;
-            }
-            if (exception.InnerException != null)
-            {
-                Exception innerException = exception.InnerException;
-                innerExceptionMessage = innerException.Message;
-                if (innerException.Source != null)
-                {
-                    innerExceptionSource = innerException.Source;
-                }
-                if (innerException.StackTrace != null)
-                {
-                    innerExceptionStackTrace = innerException.StackTrace;
-                }
+                exception = exception.InnerException;
+                exceptionTypeName = exception.GetType().Name;
+                exceptionStackTrace = exception.StackTrace ?? "null";
+
+                messageBuilder.AppendLine($"---------- INNER EXCEPTION ----------");
+                messageBuilder.AppendLine($"TYPE: [{exceptionTypeName}];");
+                messageBuilder.AppendLine($"MESSAGE [{exception.Message}];");
+                messageBuilder.AppendLine($"STACK TRACE [{exceptionStackTrace}];");
             }
 
-            errorMessage = $"{errorMessagePrefix}: \nMESSAGE [{exception.Message}]; \nSOURCE [{exceptionSource}]; \nINNER EXCEPTION MESSAGE [{innerExceptionMessage}]; \nINNER EXCEPTION SOURCE [{innerExceptionSource}]; \nSTACK TRACE [{exception.StackTrace}]; \nINNER EXCEPTION STACK TRACE [{innerExceptionStackTrace}]";
-
-            string logLevelName = errorMessageLogLevel.Name;
+            string logLevelName = errorMessageLogLevel.ToString();
             switch (logLevelName)
             {
                 case NLogLogLevelNameDebug:
-                    logger.Debug(errorMessage);
+                    logger.Debug(messageBuilder.ToString());
                     break;
                 case NLogLogLevelNameError:
-                    logger.Error(errorMessage);
+                    logger.Error(messageBuilder.ToString());
                     break;
                 case NLogLogLevelNameFatal:
-                    logger.Fatal(errorMessage);
+                    logger.Fatal(messageBuilder.ToString());
                     break;
                 case NLogLogLevelNameInfo:
-                    logger.Info(errorMessage);
+                    logger.Info(messageBuilder.ToString());
                     break;
                 case NLogLogLevelNameOff:
                     break;
                 case NLogLogLevelNameTrace:
-                    logger.Trace(errorMessage);
+                    logger.Trace(messageBuilder.ToString());
                     break;
                 case NLogLogLevelNameWarn:
-                    logger.Warn(errorMessage);
+                    logger.Warn(messageBuilder.ToString());
                     break;
                 default:
-                    logger.Debug(errorMessage);
+                    logger.Debug(messageBuilder.ToString());
                     break;
             }
         }

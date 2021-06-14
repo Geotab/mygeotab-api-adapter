@@ -75,6 +75,9 @@ namespace MyGeotabAPIAdapter
         const string ArgNameFeedStartSpecificTimeUTC = "AppSettings:GeneralFeedSettings:FeedStartSpecificTimeUTC";
         public readonly string ArgNameDevicesToTrack = "AppSettings:GeneralFeedSettings:DevicesToTrack";
         public readonly string ArgNameDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:DiagnosticsToTrack";
+        // > AppSettings:Feeds:DriverChange
+        const string ArgNameEnableDriverChangeFeed = "AppSettings:Feeds:DriverChange:EnableDriverChangeFeed";
+        const string ArgNameDriverChangeFeedIntervalSeconds = "AppSettings:Feeds:DriverChange:DriverChangeFeedIntervalSeconds";
         // > AppSettings:Feeds:DutyStatusAvailability
         const string ArgNameEnableDutyStatusAvailabilityFeed = "AppSettings:Feeds:DutyStatusAvailability:EnableDutyStatusAvailabilityFeed";
         const string ArgNameDutyStatusAvailabilityFeedIntervalSeconds = "AppSettings:Feeds:DutyStatusAvailability:DutyStatusAvailabilityFeedIntervalSeconds";
@@ -129,6 +132,7 @@ namespace MyGeotabAPIAdapter
         const string TableNameDbConfigFeedVersions = "ConfigFeedVersions";
         const string TableNameDbDevice = "Devices";
         const string TableNameDbDiagnostic = "Diagnostics";
+        const string TableNameDbDriverChange = "DriverChanges";
         const string TableNameDbDutyStatusAvailability = "DutyStatusAvailability";
         const string TableNameDbDVIRDefectRemark = "DVIRDefectRemarks";
         const string TableNameDbDVIRDefectUpdates = "DVIRDefectUpdates";
@@ -164,12 +168,14 @@ namespace MyGeotabAPIAdapter
         int diagnosticCacheRefreshIntervalMinutes;
         int diagnosticCacheUpdateIntervalMinutes;
         string diagnosticsToTrackList;
+        int driverChangeFeedIntervalSeconds;
         int dutyStatusAvailabilityFeedIntervalSeconds;
         int dutyStatusAvailabilityFeedLastAccessDateCutoffDays;
         DateTime dvirDefectCacheIntervalDailyReferenceStartTimeUTC;
         int dvirDefectListCacheRefreshIntervalMinutes;
         int dvirLogDataFeedIntervalSeconds;
         int dvirLogManipulatorIntervalSeconds;
+        bool enableDriverChangeFeed;
         bool enableDutyStatusAvailabilityDataFeed;
         bool enableDVIRLogDataFeed;
         bool enableDVIRLogManipulator;
@@ -318,6 +324,14 @@ namespace MyGeotabAPIAdapter
         public static string DbDiagnosticTableName
         {
             get => TableNameDbDiagnostic;
+        }
+
+        /// <summary>
+        /// The name of the database table for <see cref="DriverChange"/> information.
+        /// </summary>
+        public static string DbDriverChangeTableName
+        {
+            get => TableNameDbDriverChange;
         }
 
         /// <summary>
@@ -505,6 +519,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// The minimum number of seconds to wait between GetFeed() calls for <see cref="DriverChange"/> objects.
+        /// </summary>
+        public int DriverChangeFeedIntervalSeconds
+        {
+            get => driverChangeFeedIntervalSeconds;
+        }
+
+        /// <summary>
         /// The minimum number of seconds to wait after retrieving <see cref="DutyStatusAvailability"/> information for all <see cref="Driver"/>s before starting the retrieval process again.
         /// </summary>
         public int DutyStatusAvailabilityFeedIntervalSeconds
@@ -550,6 +572,14 @@ namespace MyGeotabAPIAdapter
         public int DVIRLogDataFeedIntervalSeconds
         {
             get => dvirLogDataFeedIntervalSeconds;
+        }
+
+        /// <summary>
+        /// Indicates whether a <see cref="DriverChange"/> data feed should be enabled. 
+        /// </summary>
+        public bool EnableDriverChangeFeed
+        {
+            get => enableDriverChangeFeed;
         }
 
         /// <summary>
@@ -1224,6 +1254,9 @@ namespace MyGeotabAPIAdapter
             zoneTypeCacheUpdateIntervalMinutes = GetConfigKeyValueInt(ArgNameZoneTypeCacheUpdateIntervalMinutes, null, false, MinCacheUpdateIntervalMinutes, MaxCacheUpdateIntervalMinutes, DefaultCacheUpdateIntervalMinutes);
 
             // Feed:
+            enableDriverChangeFeed = GetConfigKeyValueBoolean(ArgNameEnableDriverChangeFeed);
+            driverChangeFeedIntervalSeconds = GetConfigKeyValueInt(ArgNameDriverChangeFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+
             enableDutyStatusAvailabilityDataFeed = GetConfigKeyValueBoolean(ArgNameEnableDutyStatusAvailabilityFeed);
             dutyStatusAvailabilityFeedIntervalSeconds = GetConfigKeyValueInt(ArgNameDutyStatusAvailabilityFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
             dutyStatusAvailabilityFeedLastAccessDateCutoffDays = GetConfigKeyValueInt(ArgNameDutyStatusAvailabilityFeedLastAccessDateCutoffDays, null, false, MinDutyStatusAvailabilityFeedLastAccessDateCutoffDays, MaxDutyStatusAvailabilityFeedLastAccessDateCutoffDays, DefaultDutyStatusAvailabilityFeedLastAccessDateCutoffDays);

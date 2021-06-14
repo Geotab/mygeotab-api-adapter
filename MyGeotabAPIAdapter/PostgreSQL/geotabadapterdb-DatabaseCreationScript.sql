@@ -386,6 +386,38 @@ ALTER SEQUENCE public."Diagnostics_id_seq" OWNED BY public."Diagnostics".id;
 
 
 --
+-- Name: DriverChanges_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."DriverChanges_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."DriverChanges_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: DriverChanges; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."DriverChanges" (
+    id bigint DEFAULT nextval('public."DriverChanges_id_seq"'::regclass) NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "DateTime" timestamp without time zone,
+    "DeviceId" character varying(50) NOT NULL,
+    "DriverId" character varying(50) NOT NULL,
+    "Type" character varying(50) NOT NULL,
+    "Version" bigint NOT NULL,
+    "RecordCreationTimeUtc" timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE public."DriverChanges" OWNER TO geotabadapter_owner;
+
+--
 -- Name: DutyStatusAvailabilities; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1169,6 +1201,14 @@ ALTER TABLE ONLY public."Diagnostics"
 
 
 --
+-- Name: DriverChanges DriverChange_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DriverChanges"
+    ADD CONSTRAINT "DriverChange_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: DutyStatusAvailabilities DutyStatusAvailabilities_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1360,6 +1400,20 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Diagnostics" TO geotabadapter
 --
 
 GRANT ALL ON SEQUENCE public."Diagnostics_id_seq" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "DriverChanges_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."DriverChanges_id_seq" TO geotabadapter_client;
+
+
+--
+-- Name: TABLE "DriverChanges"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DriverChanges" TO geotabadapter_client;
 
 
 --

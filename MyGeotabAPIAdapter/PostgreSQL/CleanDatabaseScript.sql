@@ -1,13 +1,14 @@
 /* Clean Database */ 
 -- delete from public."Conditions";
 -- delete from public."ConfigFeedVersions";
+-- delete from public."Devices";
+-- delete from public."Diagnostics";
+-- delete from public."DriverChanges";
+-- delete from public."DutyStatusAvailabilities";
 -- delete from public."DVIRDefectRemarks";
 -- delete from public."DVIRDefects";
 -- delete from public."DVIRDefectUpdates";
 -- delete from public."DVIRLogs";
--- delete from public."Devices";
--- delete from public."Diagnostics";
--- delete from public."DutyStatusAvailabilities";
 -- delete from public."ExceptionEvents";
 -- delete from public."FailedDVIRDefectUpdates";
 -- delete from public."FaultData";
@@ -21,13 +22,14 @@
 -- delete from public."ZoneTypes";
 -- ALTER SEQUENCE public."Conditions_id_seq" RESTART;
 -- ALTER SEQUENCE public."ConfigFeedVersions_id_seq" RESTART;
+-- ALTER SEQUENCE public."Devices_id_seq" RESTART;
+-- ALTER SEQUENCE public."Diagnostics_id_seq" RESTART;
+-- ALTER SEQUENCE public."DriverChanges_id_seq" RESTART;
+-- ALTER SEQUENCE public."DutyStatusAvailabilities_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRDefectRemarks_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRDefects_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRDefectUpdates_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRLogs_id_seq" RESTART;
--- ALTER SEQUENCE public."Devices_id_seq" RESTART;
--- ALTER SEQUENCE public."Diagnostics_id_seq" RESTART;
--- ALTER SEQUENCE public."DutyStatusAvailabilities_id_seq" RESTART;
 -- ALTER SEQUENCE public."ExceptionEvents_id_seq" RESTART;
 -- ALTER SEQUENCE public."FailedDVIRDefectUpdates_id_seq" RESTART;
 -- ALTER SEQUENCE public."FaultData_id_seq" RESTART;
@@ -44,6 +46,12 @@ select 'Conditions' as "TableName", count(0) as "RecordCount" from public."Condi
 union all
 select 'ConfigFeedVersions', count(0) from public."ConfigFeedVersions"
 union all
+select 'Devices', count(0) from public."Devices"
+union all
+select 'Diagnostics', count(0) from public."Diagnostics"
+union all
+select 'DriverChanges', count(0) from public."DriverChanges"
+union all
 select 'DVIRDefectRemarks', count(0) from public."DVIRDefectRemarks"
 union all
 select 'DVIRDefects', count(0) from public."DVIRDefects"
@@ -51,10 +59,6 @@ union all
 select 'DVIRDefectUpdates', count(0) from public."DVIRDefectUpdates"
 union all
 select 'DVIRLogs', count(0) from public."DVIRLogs"
-union all
-select 'Devices', count(0) from public."Devices"
-union all
-select 'Diagnostics', count(0) from public."Diagnostics"
 union all
 select 'DutyStatusAvailabilities', count(0) from public."DutyStatusAvailabilities"
 union all

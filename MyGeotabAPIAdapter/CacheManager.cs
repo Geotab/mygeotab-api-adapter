@@ -17,6 +17,7 @@ namespace MyGeotabAPIAdapter
     class CacheManager
     {
         const int MinFeedIntervalMilliseconds = 1100;
+        const string DuplicateKeyExceptionMessagePrefix = "An item with the same key has already been added. Key:";
         static readonly Logger logger = LogManager.GetCurrentClassLogger();
         static readonly CacheContainer controllerCacheContainer = new();
         static readonly CacheContainer deviceCacheContainer = new();
@@ -433,14 +434,42 @@ namespace MyGeotabAPIAdapter
                                     var rule = (Rule)feedResultItem;
                                     if (rule.BaseType != ExceptionRuleBaseType.ZoneStop)
                                     {
-                                        cacheContainer.Cache.Add(feedResultItem.Id, feedResultItem);
-                                        cacheRecordsAdded += 1;
+                                        try
+                                        {
+                                            cacheContainer.Cache.Add(feedResultItem.Id, feedResultItem);
+                                            cacheRecordsAdded += 1;
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            if (ex.Message.Contains(DuplicateKeyExceptionMessagePrefix))
+                                            {
+                                                logger.Warn($"An item with the key '{feedResultItem.Id}' already exists in the {typeParameterType.Name} cache. This instance will be ignored.");
+                                            }
+                                            else
+                                            {
+                                                throw;
+                                            }
+                                        }
                                     }
                                 }
                                 else
                                 {
-                                    cacheContainer.Cache.Add(feedResultItem.Id, feedResultItem);
-                                    cacheRecordsAdded += 1;
+                                    try
+                                    {
+                                        cacheContainer.Cache.Add(feedResultItem.Id, feedResultItem);
+                                        cacheRecordsAdded += 1;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        if (ex.Message.Contains(DuplicateKeyExceptionMessagePrefix))
+                                        {
+                                            logger.Warn($"An item with the key '{feedResultItem.Id}' already exists in the {typeParameterType.Name} cache. This instance will be ignored.");
+                                        }
+                                        else
+                                        {
+                                            throw;
+                                        }
+                                    }
                                 }
                             }
                         }

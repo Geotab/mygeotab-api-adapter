@@ -9,8 +9,8 @@
     <Product>MyGeotab API Adapter</Product>
     <Description>A .NET Core (C#) Worker Service designed to use the MyGeotab .NET API and serve as a broker between a MyGeotab database and an associated "Virtual Geotab Database". Intended for use when direct utilization of the MyGeotab SDK is not an option. Modify as required to meet individual solution objectives.</Description>
     <Copyright></Copyright>
-    <Version>1.4.0.6</Version>
-    <InformationalVersion>1.4.0.6</InformationalVersion>
+    <Version>1.4.0.7</Version>
+    <InformationalVersion>1.4.0.7</InformationalVersion>
     <RuntimeIdentifiers>win-x64;ubuntu.18.04-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
