@@ -300,7 +300,7 @@ ALTER SEQUENCE public."DVIRLogs_id_seq" OWNED BY public."DVIRLogs".id;
 
 --
 -- Name: Devices; Type: TABLE; Schema: public; Owner: geotabadapter_owner
---
+-- 
 
 CREATE TABLE public."Devices" (
     id bigint NOT NULL,
@@ -310,9 +310,9 @@ CREATE TABLE public."Devices" (
     "DeviceType" character varying(50) NOT NULL,
     "LicensePlate" character varying(50),
     "LicenseState" character varying(50),
-    "Name" character varying(50) NOT NULL,
+    "Name" character varying(100) NOT NULL,
     "ProductId" integer,
-    "SerialNumber" character varying(12) NOT NULL,
+    "SerialNumber" character varying(12),
     "VIN" character varying(50),
     "EntityStatus" integer NOT NULL,
     "RecordLastChangedUtc" timestamp(4) without time zone NOT NULL
@@ -547,6 +547,35 @@ ALTER TABLE public."FailedDVIRDefectUpdates_id_seq" OWNER TO geotabadapter_owner
 
 ALTER SEQUENCE public."FailedDVIRDefectUpdates_id_seq" OWNED BY public."FailedDVIRDefectUpdates".id;
 
+
+--
+-- Name: FailedOVDSServerCommands_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."FailedOVDSServerCommands_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."FailedOVDSServerCommands_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: FailedOVDSServerCommands; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."FailedOVDSServerCommands" (
+    id bigint DEFAULT nextval('public."FailedOVDSServerCommands_id_seq"'::regclass) NOT NULL,
+    "OVDSServerCommandId" bigint NOT NULL,
+    "Command" character varying NOT NULL,
+    "FailureMessage" text,
+    "RecordCreationTimeUtc" timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE public."FailedOVDSServerCommands" OWNER TO geotabadapter_owner;
 
 --
 -- Name: FaultData; Type: TABLE; Schema: public; Owner: geotabadapter_owner
@@ -843,11 +872,11 @@ CREATE TABLE public."Users" (
     "ActiveFrom" timestamp without time zone NOT NULL,
     "ActiveTo" timestamp without time zone NOT NULL,
     "EmployeeNo" character varying(50),
-    "FirstName" character varying(255) NOT NULL,
+    "FirstName" character varying(255),
     "HosRuleSet" character varying(255),
     "IsDriver" boolean NOT NULL,
     "LastAccessDate" timestamp without time zone,
-    "LastName" character varying(255) NOT NULL,
+    "LastName" character varying(255),
     "Name" character varying(255) NOT NULL,
     "EntityStatus" integer NOT NULL,
     "RecordLastChangedUtc" timestamp without time zone NOT NULL
@@ -925,7 +954,7 @@ CREATE TABLE public."Zones" (
     "ActiveTo" timestamp without time zone,
     "CentroidLatitude" double precision,
     "CentroidLongitude" double precision,
-    "Comment" character varying(255),
+    "Comment" character varying(500),
     "Displayed" boolean,
     "ExternalReference" character varying(255),
     "MustIdentifyStops" boolean,
@@ -1225,6 +1254,14 @@ ALTER TABLE ONLY public."ExceptionEvents"
 
 
 --
+-- Name: FailedOVDSServerCommands FailedOVDSServerCommands_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."FailedOVDSServerCommands"
+    ADD CONSTRAINT "FailedOVDSServerCommands_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: FaultData FaultData_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1459,6 +1496,20 @@ GRANT ALL ON SEQUENCE public."FailedDVIRDefectUpdates_id_seq" TO geotabadapter_c
 
 
 --
+-- Name: SEQUENCE "FailedOVDSServerCommands_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."FailedOVDSServerCommands_id_seq" TO geotabadapter_client;
+
+
+--
+-- Name: TABLE "FailedOVDSServerCommands"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."FailedOVDSServerCommands" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "FaultData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1618,8 +1669,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT SELECT,INSERT,DELETE,UPDATE ON 
 -- PostgreSQL database dump complete
 --
 
--- Manual additions not captured by backup procedure:
-GRANT ALL ON SEQUENCE public."DVIRDefectRemarks_id_seq" TO geotabadapter_client;
-GRANT ALL ON SEQUENCE public."DVIRDefectRemarks_id_seq" TO geotabadapter_owner;
-GRANT ALL ON SEQUENCE public."FailedDVIRDefectUpdates_id_seq" TO geotabadapter_client;
-GRANT ALL ON SEQUENCE public."FailedDVIRDefectUpdates_id_seq" TO geotabadapter_owner;

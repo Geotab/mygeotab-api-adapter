@@ -238,6 +238,11 @@ namespace MyGeotabAPIAdapter
                                 string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
                                 logger.Warn(errorMessage);
                             }
+                            catch (Exception)
+                            {
+                                cancellationTokenSource.Cancel();
+                                throw;
+                            }
                         }
                     }
                     else

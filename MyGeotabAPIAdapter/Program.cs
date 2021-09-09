@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MyGeotabAPIAdapter.Add_Ons.VSS;
 using NLog;
 using NLog.Extensions.Logging;
 
@@ -52,6 +53,7 @@ namespace MyGeotabAPIAdapter
                     services.AddHostedService<Worker>();
                     services.AddHostedService<DutyStatusAvailabilityWorker>();
                     services.AddHostedService<DVIRLogManipulator>();
+                    services.AddHostedService<OVDSClientWorker>();
                 });
     }
 }

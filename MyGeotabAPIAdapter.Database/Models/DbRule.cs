@@ -29,6 +29,8 @@ namespace MyGeotabAPIAdapter.Database.Models
         public DateTime? ActiveTo { get; set; }
         // Free text field where any user information can be stored and referenced for this entity.
         public string Comment { get; set; }
+        [Write(false)]
+        public string CommentOracle { get => Comment; }
         // The version of the entity.
         public long? Version { get; set; }
         public int EntityStatus { get; set; }

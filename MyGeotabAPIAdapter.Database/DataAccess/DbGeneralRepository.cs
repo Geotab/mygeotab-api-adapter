@@ -39,7 +39,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             }
             catch (OperationCanceledException exception)
             {
-                cancellationTokenSource.Cancel();
                 throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
             }
             catch (Exception exception)
@@ -76,7 +75,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             }
             catch (OperationCanceledException exception)
             {
-                cancellationTokenSource.Cancel();
                 throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
             }
             catch (Exception exception)

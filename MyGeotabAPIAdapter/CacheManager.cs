@@ -255,6 +255,32 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Replaces the supplied <paramref name="deviceToHydrate"/> with a fully-populated <see cref="Device"/> from the <see cref="DeviceCacheContainer"/> bearing the same <see cref="Id"/>. If no match is found, returns <see cref="NoDevice.Value"/>.
+        /// </summary>
+        /// <param name="deviceToHydrate"></param>
+        /// <returns></returns>
+        public static Device HydrateDevice(Device deviceToHydrate)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            if (deviceToHydrate == null || deviceToHydrate is NoDevice)
+            {
+                return NoDevice.Value;
+            }
+
+            Dictionary<Id, Device> deviceCache = (Dictionary<Id, Device>)deviceCacheContainer.Cache;
+            if (deviceCache.TryGetValue(deviceToHydrate.Id, out Device deviceToReturn))
+            {
+                return deviceToReturn;
+            }
+            else
+            {
+                return NoDevice.Value;
+            }
+        }
+
+        /// <summary>
         /// Replaces the supplied <paramref name="diagnosticToHydrate"/> with a fully-populated <see cref="Diagnostic"/> from the <see cref="DiagnosticCacheContainer"/> bearing the same <see cref="Id"/>. If no match is found, returns <see cref="NoDiagnostic.Value"/>.
         /// </summary>
         /// <param name="diagnosticToHydrate"></param>
@@ -361,36 +387,20 @@ namespace MyGeotabAPIAdapter
                         if (isGetFeed == true)
                         {
                             // Use the GetFeed method for data retrieval.
-                            try
-                            {
-                                logger.Debug($"Calling GetFeedAsync<{typeParameterType.Name}>.");
-                                feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, cacheContainer.LastFeedVersion, cacheContainer.FeedResultsLimit);
-                                cacheContainer.LastFeedVersion = feedResult.ToVersion;
-                                logger.Debug($"GetFeedAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count} records.");
-                            }
-                            catch (Exception)
-                            {
-                                cancellationTokenSource.Cancel();
-                                throw;
-                            }
+                            logger.Debug($"Calling GetFeedAsync<{typeParameterType.Name}>.");
+                            feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, cacheContainer.LastFeedVersion, cacheContainer.FeedResultsLimit);
+                            cacheContainer.LastFeedVersion = feedResult.ToVersion;
+                            logger.Debug($"GetFeedAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count} records.");
                         }
                         else
                         {
                             // Use the Get method for data retrieval.
-                            try
+                            logger.Debug($"Calling GetAsync<{typeParameterType.Name}>.");
+                            feedResult = new FeedResult<T>
                             {
-                                logger.Debug($"Calling GetAsync<{typeParameterType.Name}>.");
-                                feedResult = new FeedResult<T>
-                                {
-                                    Data = await MyGeotabApiUtility.GetAsync<T>(Globals.MyGeotabAPI)
-                                };
-                                logger.Debug($"GetAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count} records.");
-                            }
-                            catch (Exception)
-                            {
-                                cancellationTokenSource.Cancel();
-                                throw;
-                            }
+                                Data = await MyGeotabApiUtility.GetAsync<T>(Globals.MyGeotabAPI)
+                            };
+                            logger.Debug($"GetAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count} records.");
                         }
                         lastApiCallTimeUtc = DateTime.UtcNow;
                         if (feedResult == null)

@@ -1,25 +1,27 @@
 ﻿/* Clean Database */ 
--- delete from [dbo].[Conditions];
--- delete from [dbo].[ConfigFeedVersions];
--- delete from [dbo].[Devices];
--- delete from [dbo].[Diagnostics];
--- delete from [dbo].[DriverChanges];
--- delete from [dbo].[DutyStatusAvailabilities];
--- delete from [dbo].[DVIRDefectRemarks];
--- delete from [dbo].[DVIRDefects];
--- delete from [dbo].[DVIRDefectUpdates];
--- delete from [dbo].[DVIRLogs];
--- delete from [dbo].[ExceptionEvents];
--- delete from [dbo].[FailedDVIRDefectUpdates];
--- delete from [dbo].[FaultData];
--- delete from [dbo].[LogRecords];
--- delete from [dbo].[MyGeotabVersionInfo];
--- delete from [dbo].[Rules];
--- delete from [dbo].[StatusData];
--- delete from [dbo].[Trips];
--- delete from [dbo].[Users];
--- delete from [dbo].[Zones];
--- delete from [dbo].[ZoneTypes];
+-- truncate table [dbo].[Conditions];
+-- truncate table [dbo].[ConfigFeedVersions];
+-- truncate table [dbo].[Devices];
+-- truncate table [dbo].[Diagnostics];
+-- truncate table [dbo].[DriverChanges];
+-- truncate table [dbo].[DutyStatusAvailabilities];
+-- truncate table [dbo].[DVIRDefectRemarks];
+-- truncate table [dbo].[DVIRDefects];
+-- truncate table [dbo].[DVIRDefectUpdates];
+-- truncate table [dbo].[DVIRLogs];
+-- truncate table [dbo].[ExceptionEvents];
+-- truncate table [dbo].[FailedDVIRDefectUpdates];
+-- truncate table [dbo].[FailedOVDSServerCommands];
+-- truncate table [dbo].[FaultData];
+-- truncate table [dbo].[LogRecords];
+-- truncate table [dbo].[MyGeotabVersionInfo];
+-- truncate table [dbo].[OVDSServerCommands];
+-- truncate table [dbo].[Rules];
+-- truncate table [dbo].[StatusData];
+-- truncate table [dbo].[Trips];
+-- truncate table [dbo].[Users];
+-- truncate table [dbo].[Zones];
+-- truncate table [dbo].[ZoneTypes];
 --DBCC CHECKIDENT ('dbo.Conditions', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.ConfigFeedVersions', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Devices', RESEED, 0);
@@ -32,8 +34,10 @@
 --DBCC CHECKIDENT ('dbo.DVIRLogs', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.ExceptionEvents', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.FailedDVIRDefectUpdates', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.FailedOVDSServerCommands', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.FaultData', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.LogRecords', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.OVDSServerCommands', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Rules', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.StatusData', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Trips', RESEED, 0);
@@ -41,7 +45,7 @@
 --DBCC CHECKIDENT ('dbo.Zones', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.ZoneTypes', RESEED, 0);
 
-
+set nocount on;
 /* Check counts */
 select 'Conditions' as "TableName", SUM(st.row_count) as "RecordCount" FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Conditions'
 union all
@@ -67,11 +71,15 @@ select 'ExceptionEvents', SUM(st.row_count) FROM sys.dm_db_partition_stats st WH
 union all
 select 'FailedDVIRDefectUpdates', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'FailedDVIRDefectUpdates'
 union all
+select 'FailedOVDSServerCommands', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'FailedOVDSServerCommands'
+union all
 select 'FaultData', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'FaultData'
 union all
 select 'LogRecords', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'LogRecords'
 union all
 select 'MyGeotabVersionInfo', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'MyGeotabVersionInfo'
+union all
+select 'OVDSServerCommands', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'OVDSServerCommands'
 union all
 select 'Rules', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Rules'
 union all

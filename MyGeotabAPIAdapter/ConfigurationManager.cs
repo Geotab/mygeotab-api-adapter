@@ -2,6 +2,7 @@ using Geotab.Checkmate.ObjectModel;
 using Geotab.Checkmate.ObjectModel.Engine;
 using Geotab.Checkmate.ObjectModel.Exceptions;
 using Microsoft.Extensions.Configuration;
+using MyGeotabAPIAdapter.Add_Ons.VSS;
 using NLog;
 using System;
 using System.Reflection;
@@ -13,6 +14,9 @@ namespace MyGeotabAPIAdapter
     /// </summary>
     public class ConfigurationManager : IDisposable
     {
+        private bool _disposed = false;
+        ~ConfigurationManager() => Dispose(false);
+
         static IConfiguration _configuration;
 
         // Argument Names for appsettings:
@@ -140,8 +144,10 @@ namespace MyGeotabAPIAdapter
         const string TableNameDbDVIRLog = "DVIRLogs";
         const string TableNameDbExceptionEvent = "ExceptionEvents";
         const string TableNameDbFailedDVIRDefectUpdates = "FailedDVIRDefectUpdates";
+        const string TableNameDbFailedDbOVDSServerCommands = "FailedOVDSServerCommands";
         const string TableNameDbFaultData = "FaultData";
         const string TableNameDbLogRecord = "LogRecords";
+        const string TableNameDbOVDSServerCommand = "OVDSServerCommands";
         const string TableNameDbRule = "Rules";
         const string TableNameDbStatusData = "StatusData";
         const string TableNameDbTrip = "Trips";
@@ -154,6 +160,9 @@ namespace MyGeotabAPIAdapter
         const string MaskString = "************";
 
         static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+        // Configuration settings related specifically to the VSS Add-On.
+        readonly VSSConfiguration vssConfiguration = null;
 
         DateTime controllerCacheIntervalDailyReferenceStartTimeUTC;
         int controllerCacheRefreshIntervalMinutes;
@@ -239,6 +248,7 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
             Configuration = configuration;
+            vssConfiguration = new VSSConfiguration();
             ProcessConfigItems();
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -249,12 +259,19 @@ namespace MyGeotabAPIAdapter
             GC.SuppressFinalize(this);
         }
 
+        // Protected implementation of Dispose pattern.
         protected virtual void Dispose(bool disposing)
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             if (disposing)
             {
-                // Add any clean-up code here.
+                vssConfiguration.Dispose();
             }
+            _disposed = true;
         }
 
         /// <summary>
@@ -391,6 +408,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// The name of the database table for failed OVDS server commands.
+        /// </summary>
+        public static string DbFailedDbOVDSServerCommandsTableName
+        {
+            get => TableNameDbFailedDbOVDSServerCommands;
+        }
+
+        /// <summary>
         /// The name of the database table for <see cref="FaultData"/> information.
         /// </summary>
         public static string DbFaultDataTableName
@@ -404,6 +429,14 @@ namespace MyGeotabAPIAdapter
         public static string DbLogRecordTableName
         {
             get => TableNameDbLogRecord;
+        }
+
+        /// <summary>
+        /// The name of the database table for <see cref="OVDSServerCommand"/> information.
+        /// </summary>
+        public static string DbOVDSServerCommandTableName
+        {
+            get => TableNameDbOVDSServerCommand;
         }
 
         /// <summary>
@@ -926,6 +959,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Configuration settings related specifically to the VSS Add-On.
+        /// </summary>
+        public VSSConfiguration VSSConfiguration
+        {
+            get => vssConfiguration;
+        }
+
+        /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="Zone"/> cache.
         /// </summary>
         public DateTime ZoneCacheIntervalDailyReferenceStartTimeUTC
@@ -942,7 +983,7 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
-        /// The number of seconds to wait, after updating the <see cref="Zone"/> cache, before initiating the next update of the subject cache.
+        /// The number of minutes to wait, after updating the <see cref="Zone"/> cache, before initiating the next update of the subject cache.
         /// </summary>
         public int ZoneCacheUpdateIntervalMinutes
         {
@@ -1289,6 +1330,36 @@ namespace MyGeotabAPIAdapter
             // Timeouts:
             timeoutSecondsForDatabaseTasks = GetConfigKeyValueInt(ArgNameTimeoutSecondsForDatabaseTasks, null, false, MinTimeoutSeconds, MaxTimeoutSeconds, DefaultTimeoutSeconds);
             timeoutSecondsForMyGeotabTasks = GetConfigKeyValueInt(ArgNameTimeoutSecondsForMyGeotabTasks, null, false, MinTimeoutSeconds, MaxTimeoutSeconds, DefaultTimeoutSeconds);
+
+            // Add-Ons:
+            VSSAddOnProcessConfigItems();
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Validates the configuration object values and uses those values to set properties of the <see cref="ConfigurationManager.vssConfiguration"/>.
+        /// </summary>
+        void VSSAddOnProcessConfigItems()
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            logger.Info($"Processing {nameof(OVDSClientWorker)} configuration items.");
+
+            vssConfiguration.DisableCorrespondingAdapterOutput = GetConfigKeyValueBoolean(VSSConfiguration.ArgNameDisableCorrespondingAdapterOutput);
+            vssConfiguration.EnableVSSAddOn = GetConfigKeyValueBoolean(VSSConfiguration.ArgNameEnableVSSAddOn);
+            vssConfiguration.LogUnmappedDiagnostics = GetConfigKeyValueBoolean(VSSConfiguration.ArgNameLogUnmappedDiagnostics);
+            vssConfiguration.OutputLogRecordsToOVDS = GetConfigKeyValueBoolean(VSSConfiguration.ArgNameOutputLogRecordsToOVDS);
+            vssConfiguration.OutputStatusDataToOVDS = GetConfigKeyValueBoolean(VSSConfiguration.ArgNameOutputStatusDataToOVDS);
+            VSSConfiguration.OVDSClientWorkerIntervalSeconds = GetConfigKeyValueInt(VSSConfiguration.ArgNameOVDSClientWorkerIntervalSeconds);
+            vssConfiguration.OVDSServerURL = GetConfigKeyValueString(VSSConfiguration.ArgNameOVDSServerURL);
+            vssConfiguration.OVDSSetCommandTemplate = GetConfigKeyValueString(VSSConfiguration.ArgNameOVDSSetCommandTemplate);
+            vssConfiguration.OVDSSetCommandTemplateForAttributeVSSPathMaps = GetConfigKeyValueString(VSSConfiguration.ArgNameOVDSSetCommandTemplateForAttributeVSSPathMaps);
+            vssConfiguration.SendAttributeTypeDataToOVDS = GetConfigKeyValueBoolean(VSSConfiguration.ArgNameSendAttributeTypeDataToOVDS);
+            vssConfiguration.UnmappedDiagnosticsLogIntervalMinutes = GetConfigKeyValueInt(VSSConfiguration.ArgNameUnmappedDiagnosticsLogIntervalMinutes);
+            vssConfiguration.VSSPathMapFileURL = GetConfigKeyValueString(VSSConfiguration.ArgNameVSSPathMapFileURL);
+            vssConfiguration.VSSPathMapUpdateIntervalMinutes = GetConfigKeyValueInt(VSSConfiguration.ArgNameVSSPathMapUpdateIntervalMinutes);
+            vssConfiguration.VSSVersion = GetConfigKeyValueString(VSSConfiguration.ArgNameVSSVersion);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }

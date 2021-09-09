@@ -10,7 +10,8 @@ using System.Threading.Tasks;
 #endregion
 using System.Collections.Concurrent;
 using System.Reflection.Emit;
-
+using Oracle.ManagedDataAccess.Client;
+using Oracle.ManagedDataAccess.Types;
 using Dapper;
 
 namespace Dapper.Contrib.Extensions
@@ -67,6 +68,7 @@ namespace Dapper.Contrib.Extensions
             = new Dictionary<string, ISqlAdapter>
             {
                 ["sqlconnection"] = new SqlServerAdapter(),
+                ["oracleconnection"] = new OracleAdapter(),
                 ["sqlceconnection"] = new SqlCeServerAdapter(),
                 ["npgsqlconnection"] = new PostgresAdapter(),
                 ["sqliteconnection"] = new SQLiteAdapter(),
@@ -112,7 +114,8 @@ namespace Dapper.Contrib.Extensions
 
             if (keyProperties.Count == 0)
             {
-                var idProp = allProperties.Find(p => string.Equals(p.Name, "id", StringComparison.CurrentCultureIgnoreCase));
+                //var idProp = allProperties.Find(p => string.Equals(p.Name, "id", StringComparison.CurrentCultureIgnoreCase));
+                var idProp = allProperties.Find(p => string.Equals(p.Name, "\"id\"", StringComparison.CurrentCultureIgnoreCase));
                 if (idProp != null && !idProp.GetCustomAttributes(true).Any(a => a is ExplicitKeyAttribute))
                 {
                     keyProperties.Add(idProp);
@@ -143,6 +146,42 @@ namespace Dapper.Contrib.Extensions
             var writeAttribute = (WriteAttribute)attributes[0];
             return writeAttribute.Write;
         }
+
+        #region Customizations
+        /// <summary>
+        /// Using Dapper ORM, it is not possible to map strings longer than 4000 characters to Oracle NCLOBs without heavy customization (<see href="https://dapper-tutorial.net/knowledge-base/17832123/dapper---oracle-clob-type">Dapper & Oracle Clob type</see> for more info). Alternatively, <see href="https://github.com/DIPSAS/Dapper.Oracle">Dapper.Oracle</see> could be used to effectively work with all Oracle-specific data types. However, that would require an Oracle-specific version of this project, which is not in-scope. This method is intended for use when working with an Oracle database. It checks all string properties of the <paramref name="entity"/> and replaces any property values greater than 4,000 characters in length with a substitute message. This is an alternative to arbitrarily truncating and corrupting the data. Extraneous processes can be developed to retrieve the afftected values and update them in the database.
+        /// </summary>
+        /// <typeparam name="T">The type of the <paramref name="entity"/>.</typeparam>
+        /// <param name="entity">The entity to be processed.</param>
+        public static void CheckForAndMitigateTruncationOfOracleNCLOB<T>(T entity)
+        {
+            const int CharacterLimit = 4000;
+            const string TruncatedValueSubstituteString = "Entity value exceeds 4000 character limit and would be truncated. Please use other means to obtain and update this placeholder with the actual value.";
+
+            var type = typeof(T);
+            var allProperties = TypePropertiesCache(type);
+            var keyProperties = KeyPropertiesCache(type);
+            var computedProperties = ComputedPropertiesCache(type);
+            var allPropertiesExceptKeyAndComputed = allProperties.Except(keyProperties.Union(computedProperties)).ToList();
+
+            for (var i = 0; i < allPropertiesExceptKeyAndComputed.Count; i++)
+            {
+                var property = allPropertiesExceptKeyAndComputed[i];
+                if (property.PropertyType == typeof(string))
+                {
+                    var propertyValue = property.GetValue(entity);
+                    if (propertyValue is not null)
+                    {
+                        var propertyValueString = propertyValue.ToString();
+                        if (propertyValueString.Length > CharacterLimit)
+                        {
+                            property.SetValue(entity, TruncatedValueSubstituteString);
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
 
         private static PropertyInfo GetSingleKey<T>(string method)
         {
@@ -377,6 +416,7 @@ namespace Dapper.Contrib.Extensions
                 if (resultsLimit == null || resultsLimit < 1)
                 {
                     sql = $"select * from \"{name}\"";
+                    //sql = $"select * from {name}";
                 }
                 else
                 {
@@ -390,6 +430,10 @@ namespace Dapper.Contrib.Extensions
                         case "Microsoft.Data.SqlClient":
                         case "System.Data.SqlClient":
                             sql = $"select top ({resultsLimit}) * from \"{name}\"";
+                            break;
+                        case "Oracle.ManagedDataAccess.Client":
+                            sql = $"select * from \"{name}\" where rownum <= {resultsLimit}";
+                            //sql = $"select * from {name} where rownum <= {resultsLimit}";
                             break;
                         default:
                             throw new NotImplementedException($"Support for the '{connectionProviderType}' connection provider type has not been implemented in this method.");
@@ -561,6 +605,13 @@ namespace Dapper.Contrib.Extensions
         /// <returns>Identity of inserted entity, or number of inserted rows if inserting a list</returns>
         public static async Task<long> InsertAsync<T>(this IDbConnection connection, T entityToInsert, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
         {
+            string connectionProviderType = connection.GetType().Namespace;
+            if (connectionProviderType == "Oracle.ManagedDataAccess.Client")
+            {
+                SqlMapper.AddTypeMap(typeof(bool), DbType.Int32);
+                CheckForAndMitigateTruncationOfOracleNCLOB(entityToInsert);
+            }
+
             var isList = false;
 
             var type = typeof(T);
@@ -597,15 +648,45 @@ namespace Dapper.Contrib.Extensions
             {
                 var property = allPropertiesExceptKeyAndComputed[i];
                 adapter.AppendColumnName(sbColumnList, property.Name);  //fix for issue #336
+
+                //adapter.AppendColumnName(sbColumnList, $"["{property.Name}"]");  //fix for issue #336
                 if (i < allPropertiesExceptKeyAndComputed.Count - 1)
                     sbColumnList.Append(", ");
             }
 
             var sbParameterList = new StringBuilder(null);
+            
+
             for (var i = 0; i < allPropertiesExceptKeyAndComputed.Count; i++)
             {
                 var property = allPropertiesExceptKeyAndComputed[i];
-                sbParameterList.AppendFormat("@{0}", property.Name);
+                //sbParameterList.AppendFormat("@{0}", property.Name);
+
+                if (connectionProviderType == "Oracle.ManagedDataAccess.Client")
+                {
+                    //sbParameterList.AppendFormat(":{0}", property.Name);
+
+                    //sbParameterList.AppendFormat(":[{0}]", property.Name);  CommentOracle
+
+                    string sbColumnPropertyName = property.Name;
+                    if (sbColumnPropertyName == "Comment" || sbColumnPropertyName == "Start" )
+                    {
+
+                        sbParameterList.AppendFormat(":{0}", property.Name + "Oracle");
+
+                    }
+                    else
+                    {
+                        sbParameterList.AppendFormat(":{0}", property.Name);
+                    }
+
+
+                }
+                else 
+                { 
+                    sbParameterList.AppendFormat("@{0}", property.Name); 
+                }
+
                 if (i < allPropertiesExceptKeyAndComputed.Count - 1)
                     sbParameterList.Append(", ");
             }
@@ -616,6 +697,7 @@ namespace Dapper.Contrib.Extensions
 
             if (!isList)    //single entity
             {
+                
                 returnVal = adapter.Insert(connection, transaction, commandTimeout, name, sbColumnList.ToString(),
                     sbParameterList.ToString(), keyProperties, entityToInsert);
             }
@@ -713,6 +795,14 @@ namespace Dapper.Contrib.Extensions
         /// <returns>true if updated, false if not found or not modified (tracked entities)</returns>
         public static async Task<bool> UpdateAsync<T>(this IDbConnection connection, T entityToUpdate, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
         {
+
+            string connectionProviderType = connection.GetType().Namespace;
+            if (connectionProviderType == "Oracle.ManagedDataAccess.Client")
+            {
+                SqlMapper.AddTypeMap(typeof(bool), DbType.Int32);
+                CheckForAndMitigateTruncationOfOracleNCLOB(entityToUpdate);
+            }
+
             if (entityToUpdate is IProxy proxy && !proxy.IsDirty)
             {
                 return false;
@@ -843,6 +933,12 @@ namespace Dapper.Contrib.Extensions
         /// <returns>true if deleted, false if not found</returns>
         public static async Task<bool> DeleteAsync<T>(this IDbConnection connection, T entityToDelete, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
         {
+            string connectionProviderType = connection.GetType().Namespace;
+            if (connectionProviderType == "Oracle.ManagedDataAccess.Client")
+            {
+                SqlMapper.AddTypeMap(typeof(bool), DbType.Int32);
+            }
+
             if (entityToDelete == null)
                 throw new ArgumentException("Cannot Delete null Object", nameof(entityToDelete));
 
@@ -1113,7 +1209,12 @@ namespace Dapper.Contrib.Extensions
             //ISqlAdapter adapter = GetFormatter(connection);
             #region Customizations
             //char sqlParameterChar = adapter.SqlParameterChar();
+
+            //Sunan
+            //string sqlParameterChar = ":";
+
             string sqlParameterChar = "@";
+
             #endregion
             var sb = new StringBuilder();
             sb.AppendFormat("SELECT * FROM {0} WHERE ", name);
@@ -1157,7 +1258,12 @@ namespace Dapper.Contrib.Extensions
             //ISqlAdapter adapter = GetFormatter(connection);
             #region Customizations
             //char sqlParameterChar = adapter.SqlParameterChar();
+
+            //Sunan
+            //string sqlParameterChar = ":";
+
             string sqlParameterChar = "@";
+
             #endregion
             var sb = new StringBuilder();
             sb.AppendFormat("SELECT * FROM {0} WHERE ", name);
@@ -1248,6 +1354,7 @@ namespace Dapper.Contrib.Extensions
     public class ComputedAttribute : Attribute
     {
     }
+
 }
 
 /// <summary>
@@ -1635,5 +1742,80 @@ public partial class FbAdapter : ISqlAdapter
     public void AppendColumnNameEqualsValue(StringBuilder sb, string columnName)
     {
         sb.AppendFormat("{0} = @{1}", columnName, columnName);
+    }
+}
+
+
+/// <summary>
+/// The Oracle database adapter.
+/// </summary>
+public partial class OracleAdapter : ISqlAdapter
+{
+    /// <summary>
+    /// Inserts <paramref name="entityToInsert"/> into the database, returning the Id of the row created.
+    /// </summary>
+    /// <param name="connection">The connection to use.</param>
+    /// <param name="transaction">The transaction to use.</param>
+    /// <param name="commandTimeout">The command timeout to use.</param>
+    /// <param name="tableName">The table to insert into.</param>
+    /// <param name="columnList">The columns to set with this insert.</param>
+    /// <param name="parameterList">The parameters to set for this insert.</param>
+    /// <param name="keyProperties">The key columns in this table.</param>
+    /// <param name="entityToInsert">The entity to insert.</param>
+    /// <returns>The Id of the row created.</returns>
+    public int Insert(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, string tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
+    {
+
+        var cmd = $"insert into \"{tableName}\" ({columnList}) values ({parameterList})";
+        
+        connection.Execute(cmd, entityToInsert, transaction, commandTimeout);
+
+        //var r = connection.Query($"Select id from {tableName} where rownum = 1 ORDER BY id DESC", transaction: transaction, commandTimeout: commandTimeout);
+
+        var r = connection.Query($"Select \"id\" from \"{tableName}\" where ROWNUM = 1 ORDER BY \"id\" DESC", transaction: transaction, commandTimeout: commandTimeout);
+
+        var id = r.First().id;
+        if (id == null) return 0;
+        var propertyInfos = keyProperties as PropertyInfo[] ?? keyProperties.ToArray();
+        if (propertyInfos.Length == 0) return Convert.ToInt32(id);
+
+        var idp = propertyInfos[0];
+        idp.SetValue(entityToInsert, Convert.ChangeType(id, idp.PropertyType), null);
+
+        return Convert.ToInt32(id);
+
+    }
+
+    /// <summary>
+    /// Adds the name of a column.
+    /// </summary>
+    /// <param name="sb">The string builder  to append to.</param>
+    /// <param name="columnName">The column name.</param>
+    public void AppendColumnName(StringBuilder sb, string columnName)
+    {
+        //columnName = $"[{columnName}]";
+
+        sb.AppendFormat("\"{0}\"", columnName);
+        //sb.AppendFormat("{0}", columnName);
+    }
+
+    /// <summary>
+    /// Adds a column equality to a parameter.
+    /// </summary>
+    /// <param name="sb">The string builder  to append to.</param>
+    /// <param name="columnName">The column name.</param>
+    public void AppendColumnNameEqualsValue(StringBuilder sb, string columnName)
+    {
+        //sb.AppendFormat("\"{0}\" = :{1}", columnName, columnName);
+
+        if (columnName == "Comment" || columnName == "Start")
+        {
+            sb.AppendFormat("\"{0}\" = :{1}", columnName, columnName + "Oracle");
+        }
+        else
+        {
+            sb.AppendFormat("\"{0}\" = :{1}", columnName, columnName);
+        }
+
     }
 }

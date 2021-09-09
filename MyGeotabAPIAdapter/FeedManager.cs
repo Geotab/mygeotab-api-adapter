@@ -199,34 +199,26 @@ namespace MyGeotabAPIAdapter
                     // Execute the GetFeedAsync method according to the specifed FeedStartOption. Note that CurrentTime and SpecificTime are only for use in an initial GetFeedAsync call and all subsequent GetFeedAsync calls should use the FeedVersion option.
                     logger.Debug($"Calling GetFeedAsync<{typeParameterType.Name}>.");
                     FeedResult<T> feedResult = null;
-                    try
+                    switch (feedContainer.FeedStartOption)
                     {
-                        switch (feedContainer.FeedStartOption)
-                        {
-                            case Globals.FeedStartOption.CurrentTime:
-                                feedContainer.FeedStartTimeUtc = DateTime.UtcNow;
-                                feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.FeedStartTimeUtc, feedContainer.FeedResultsLimit);
+                        case Globals.FeedStartOption.CurrentTime:
+                            feedContainer.FeedStartTimeUtc = DateTime.UtcNow;
+                            feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.FeedStartTimeUtc, feedContainer.FeedResultsLimit);
 
-                                // Switch to FeedVersion for subsequent calls.
-                                feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
-                                break;
-                            case Globals.FeedStartOption.SpecificTime:
-                                feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.FeedStartTimeUtc, feedContainer.FeedResultsLimit);
+                            // Switch to FeedVersion for subsequent calls.
+                            feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
+                            break;
+                        case Globals.FeedStartOption.SpecificTime:
+                            feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.FeedStartTimeUtc, feedContainer.FeedResultsLimit);
 
-                                // Switch to FeedVersion for subsequent calls.
-                                feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
-                                break;
-                            case Globals.FeedStartOption.FeedVersion:
-                                feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.LastFeedVersion, feedContainer.FeedResultsLimit);
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
+                            // Switch to FeedVersion for subsequent calls.
+                            feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
+                            break;
+                        case Globals.FeedStartOption.FeedVersion:
+                            feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.LastFeedVersion, feedContainer.FeedResultsLimit);
+                            break;
+                        default:
+                            break;
                     }
 
                     cancellationToken.ThrowIfCancellationRequested();

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data.Common;
+using Oracle.ManagedDataAccess.Client;
 
 namespace MyGeotabAPIAdapter.Database
 {
@@ -10,11 +11,13 @@ namespace MyGeotabAPIAdapter.Database
     {
         String connectionProviderType;
         readonly String connectionString;
-        
+
         /// <summary>
         /// Supported <see cref="DbProviderFactory"/> types.
         /// </summary>
-        public enum DataAccessProviderType { PostgreSQL, SQLite, SQLServer }
+        /// public enum DataAccessProviderType { PostgreSQL, SQLite, SQLServer }
+        /// add Oracle support --- public enum DataAccessProviderType { PostgreSQL, SQLite, SQLServer, Oracle }
+        public enum DataAccessProviderType { PostgreSQL, SQLite, SQLServer, Oracle }
 
         /// <summary>
         /// The <see cref="System.Data.IDbConnection"/> provider type.
@@ -72,6 +75,11 @@ namespace MyGeotabAPIAdapter.Database
                 case DataAccessProviderType.SQLServer:
                     connectionProviderType = "System.Data.SqlClient";
                     DbProviderFactories.RegisterFactory(connectionProviderType, Microsoft.Data.SqlClient.SqlClientFactory.Instance);
+                    break;
+                case DataAccessProviderType.Oracle:
+                    connectionProviderType = "Oracle.ManagedDataAccess.Client";
+                    DbProviderFactories.RegisterFactory(connectionProviderType, OracleClientFactory.Instance);
+                    //Console.WriteLine("test 1");
                     break;
                 default:
                     break;

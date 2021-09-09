@@ -11,9 +11,11 @@
 --delete from "DVIRLogs";
 --delete from "ExceptionEvents";
 --delete from "FailedDVIRDefectUpdates";
+--delete from "FailedOVDSServerCommands";
 --delete from "FaultData";
 --delete from "LogRecords";
 --delete from "MyGeotabVersionInfo";
+--delete from "OVDSServerCommands";
 --delete from "Rules";
 --delete from "StatusData";
 --delete from "Trips";
@@ -46,11 +48,15 @@ select 'ExceptionEvents', count(0) from "ExceptionEvents"
 union all
 select 'FailedDVIRDefectUpdates', count(0) from "FailedDVIRDefectUpdates"
 union all
+select 'FailedOVDSServerCommands', count(0) from "FailedOVDSServerCommands"
+union all
 select 'FaultData', count(0) from "FaultData"
 union all
 select 'LogRecords', count(0) from "LogRecords"
 union all
 select 'MyGeotabVersionInfo', count(0) from "MyGeotabVersionInfo"
+union all
+select 'OVDSServerCommands', count(0) from "OVDSServerCommands"
 union all
 select 'Rules', count(0) from "Rules"
 union all

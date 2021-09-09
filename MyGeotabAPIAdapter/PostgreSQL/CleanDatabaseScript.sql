@@ -11,9 +11,11 @@
 -- delete from public."DVIRLogs";
 -- delete from public."ExceptionEvents";
 -- delete from public."FailedDVIRDefectUpdates";
+-- delete from public."FailedOVDSServerCommands";
 -- delete from public."FaultData";
 -- delete from public."LogRecords";
 -- delete from public."MyGeotabVersionInfo";
+-- delete from public."OVDSServerCommands";
 -- delete from public."Rules";
 -- delete from public."StatusData";
 -- delete from public."Trips";
@@ -32,8 +34,10 @@
 -- ALTER SEQUENCE public."DVIRLogs_id_seq" RESTART;
 -- ALTER SEQUENCE public."ExceptionEvents_id_seq" RESTART;
 -- ALTER SEQUENCE public."FailedDVIRDefectUpdates_id_seq" RESTART;
+-- ALTER SEQUENCE public."FailedOVDSServerCommands_id_seq" RESTART;
 -- ALTER SEQUENCE public."FaultData_id_seq" RESTART;
 -- ALTER SEQUENCE public."LogRecords_id_seq" RESTART;
+-- ALTER SEQUENCE public."OVDSServerCommands_id_seq" RESTART;
 -- ALTER SEQUENCE public."Rules_id_seq" RESTART;
 -- ALTER SEQUENCE public."StatusData_id_seq" RESTART;
 -- ALTER SEQUENCE public."Trips_id_seq" RESTART;
@@ -66,11 +70,15 @@ select 'ExceptionEvents', count(0) from public."ExceptionEvents"
 union all
 select 'FailedDVIRDefectUpdates', count(0) from public."FailedDVIRDefectUpdates"
 union all
+select 'FailedOVDSServerCommands', count(0) from public."FailedOVDSServerCommands"
+union all
 select 'FaultData', count(0) from public."FaultData"
 union all
 select 'LogRecords', count(0) from public."LogRecords"
 union all
 select 'MyGeotabVersionInfo', count(0) from public."MyGeotabVersionInfo"
+union all
+select 'OVDSServerCommands', count(0) from public."OVDSServerCommands"
 union all
 select 'Rules', count(0) from public."Rules"
 union all

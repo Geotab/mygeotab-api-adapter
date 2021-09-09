@@ -424,15 +424,15 @@ namespace MyGeotabAPIAdapter
                 // Property does not exist for the subject Device type.
             }
 
-            if (deviceLicensePlate.Length == 0)
+            if (deviceLicensePlate != null && deviceLicensePlate.Length == 0)
             {
                 deviceLicensePlate = null;
             }
-            if (deviceLicenseState.Length == 0)
+            if (deviceLicenseState != null && deviceLicenseState.Length == 0)
             {
                 deviceLicenseState = null;
             }
-            if (deviceVIN.Length == 0)
+            if (deviceVIN != null && deviceVIN.Length == 0)
             {
                 deviceVIN = null;
             }

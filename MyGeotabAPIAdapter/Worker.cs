@@ -3,6 +3,7 @@ using Geotab.Checkmate.ObjectModel.Engine;
 using Geotab.Checkmate.ObjectModel.Exceptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using MyGeotabAPIAdapter.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Logic;
 using MyGeotabAPIAdapter.Database.Models;
@@ -42,6 +43,7 @@ namespace MyGeotabAPIAdapter
         IDictionary<Id, DbZone> dbZonesDictionary;
         IDictionary<Id, DbZoneType> dbZoneTypesDictionary;
         IDictionary<Id, DefectListPartDefect> defectListPartDefectsDictionary;
+        UnmappedDiagnosticManager unmappedDiagnosticManager;
         DateTime defectListPartDefectCacheExpiryTime = DateTime.MinValue;
         bool initializationCompleted;
 
@@ -56,6 +58,17 @@ namespace MyGeotabAPIAdapter
             StateMachine.CurrentState = State.Normal;
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
+
+        /// <summary>
+        /// VSS-related output options derived based on configuration settings:
+        /// <list type="bullet">
+        /// <item><see cref="AdapterRecordOnly"/ - Only the core adapter data (e.g. <see cref="DbLogRecord"/> or <see cref="DbStatusData"/> entities) should be output.></item>
+        /// <item><see cref="AdapterRecordAndDbOVDSServerCommand"/ - Both the core adapter data (e.g. <see cref="DbLogRecord"/> or <see cref="DbStatusData"/> entities) and VSS data (i.e. <see cref="DbOVDSServerCommand"/> entities) should be output.></item>
+        /// <item><see cref="DbOVDSServerCommandOnly"/ - Only the VSS data (i.e. <see cref="DbOVDSServerCommand"/> entities) should be output.></item>
+        /// <item><see cref="None"/ - Neither the core adapter data (e.g. <see cref="DbLogRecord"/> or <see cref="DbStatusData"/> entities) nor VSS data (i.e. <see cref="DbOVDSServerCommand"/> entities) should be output. This option indicates a configuration issue leading to unnecessary data processing.></item>
+        /// </list>
+        /// </summary>
+        enum VSSOutputOptions { AdapterRecordOnly, AdapterRecordAndDbOVDSServerCommand, DbOVDSServerCommandOnly, None }
 
         /// <summary>
         /// Creates a <see cref="DefectListPartDefect"/> using the input parameter values and adds it to the <paramref name="defectListPartDefectsDictionary"/>.
@@ -373,7 +386,7 @@ namespace MyGeotabAPIAdapter
                     await GetAllFeedDataAndPersistToDatabaseAsync();
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
-              }
+                }
                 catch (OperationCanceledException)
                 {
                     string errorMessage = $"Worker process cancelled.";
@@ -422,27 +435,17 @@ namespace MyGeotabAPIAdapter
 
                     Task[] tasks = { getLogRecordFeedDataAndPersistToDatabaseAsyncTask, getStatusDataFeedDataAndPersistToDatabaseAsyncTask, getFaultDataFeedDataAndPersistToDatabaseAsyncTask, getDVIRLogFeedDataAndPersistToDatabaseAsyncTask, getTripFeedDataAndPersistToDatabaseAsyncTask, getExceptionEventFeedDataAndPersistToDatabaseAsyncTask, getDriverChangeFeedDataAndPersistToDatabaseAsyncTask };
 
-                    try
-                    {
-                        await Task.WhenAll(tasks);
-                    }
-                    catch (MyGeotabConnectionException myGeotabConnectionException)
-                    {
-                        throw new MyGeotabConnectionException($"One or more exceptions were encountered during data feed processing due to an apparent loss of connectivity with the MyGeotab server.", myGeotabConnectionException);
-                    }
-                    catch (DatabaseConnectionException databaseConnectionException)
-                    {
-                        throw new DatabaseConnectionException($"One or more exceptions were encountered during data feed processing due to an apparent loss of connectivity with the adapter database.", databaseConnectionException);
-                    }
-                    catch (AggregateException aggregateException)
-                    {
-                        Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.MyGeotabOrDatabase, "One or more exceptions were encountered during retrieval of data via feeds and persistance of data to database due to an apparent loss of connectivity with the MyGeotab server or the database.");
-                    }
+                    await Task.WhenAll(tasks);
                 }
                 catch (TaskCanceledException taskCanceledException)
                 {
                     string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
                     logger.Warn(errorMessage);
+                }
+                catch (Exception)
+                {
+                    cancellationTokenSource.Cancel();
+                    throw;
                 }
             }
 
@@ -545,6 +548,47 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Determines which of the <see cref="VSSOutputOptions"/> is to be used, in relation to <see cref="LogRecord"/>s, based on the combination of configured values in appsettings.json.
+        /// </summary>
+        /// <returns></returns>
+        VSSOutputOptions GetLogRecordOutputOption()
+        {
+            VSSOutputOptions logRecordOutputOption = VSSOutputOptions.None;
+            VSSConfiguration vssConfiguration = Globals.ConfigurationManager.VSSConfiguration;
+            if (vssConfiguration.EnableVSSAddOn == true)
+            {
+                if (vssConfiguration.DisableCorrespondingAdapterOutput == true)
+                {
+                    if (vssConfiguration.OutputLogRecordsToOVDS == true)
+                    {
+                        logRecordOutputOption = VSSOutputOptions.DbOVDSServerCommandOnly;
+                    }
+                }
+                else
+                {
+                    if (vssConfiguration.OutputLogRecordsToOVDS == true)
+                    {
+                        logRecordOutputOption = VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand;
+                    }
+                    else
+                    {
+                        logRecordOutputOption = VSSOutputOptions.AdapterRecordOnly;
+                    }
+                }
+            }
+            else
+            {
+                logRecordOutputOption = VSSOutputOptions.AdapterRecordOnly;
+            }
+
+            if (logRecordOutputOption == VSSOutputOptions.None)
+            {
+                logger.Warn($"A data feed is configured to stream LogRecords from the MyGeotab system, but the LogRecords are not configured to be output in any form to the adapter database. This will result in unnecessary processing of LogRecords.");
+            }
+            return logRecordOutputOption;
+        }
+
+        /// <summary>
         /// Retrieves data from the <see cref="StatusData"/> feed and persists the data to the database.
         /// </summary>
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
@@ -561,6 +605,47 @@ namespace MyGeotabAPIAdapter
             await ProcessStatusDataFeedResultsAsync(cancellationTokenSource);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Determines which of the <see cref="VSSOutputOptions"/> is to be used, in relation to <see cref="StatusData"/> records, based on the combination of configured values in appsettings.json.
+        /// </summary>
+        /// <returns></returns>
+        VSSOutputOptions GetStatusDataOutputOption()
+        {
+            VSSOutputOptions statusDataOutputOption = VSSOutputOptions.None;
+            VSSConfiguration vssConfiguration = Globals.ConfigurationManager.VSSConfiguration;
+            if (vssConfiguration.EnableVSSAddOn == true)
+            {
+                if (vssConfiguration.DisableCorrespondingAdapterOutput == true)
+                {
+                    if (vssConfiguration.OutputStatusDataToOVDS == true)
+                    {
+                        statusDataOutputOption = VSSOutputOptions.DbOVDSServerCommandOnly;
+                    }
+                }
+                else
+                {
+                    if (vssConfiguration.OutputStatusDataToOVDS == true)
+                    {
+                        statusDataOutputOption = VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand;
+                    }
+                    else
+                    {
+                        statusDataOutputOption = VSSOutputOptions.AdapterRecordOnly;
+                    }
+                }
+            }
+            else
+            {
+                statusDataOutputOption = VSSOutputOptions.AdapterRecordOnly;
+            }
+
+            if (statusDataOutputOption == VSSOutputOptions.None)
+            {
+                logger.Warn($"A data feed is configured to stream StatusData records from the MyGeotab system, but the StatusData records are not configured to be output in any form to the adapter database. This will result in unnecessary processing of StatusData records.");
+            }
+            return statusDataOutputOption;
         }
 
         /// <summary>
@@ -625,6 +710,11 @@ namespace MyGeotabAPIAdapter
                 {
                     HandleException(databaseConnectionException, NLog.LogLevel.Error, "Worker process caught an exception");
                 }
+                catch (Exception)
+                {
+                    cancellationTokenSource.Cancel();
+                    throw;
+                }
             }
 
             // Make sure that a feed version record exists for each type of feed that is utilized in this application (i.e. each MyGeotab object type for which there is a FeedContainer in the FeedManager class). For any that don't have a record (e.g. when the application is run for the first time), create a new record with its FeedVersion set to zero.
@@ -650,13 +740,20 @@ namespace MyGeotabAPIAdapter
             if (newDbConfigFeedVersions.Any())
             {
                 using var cancellationTokenSource = new CancellationTokenSource();
-                try
                 {
-                    await DbConfigFeedVersionService.InsertAsync(connectionInfo, newDbConfigFeedVersions, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                }
-                catch (DatabaseConnectionException databaseConnectionException)
-                {
-                    HandleException(databaseConnectionException, NLog.LogLevel.Error, "Worker process caught an exception");
+                    try
+                    {
+                        await DbConfigFeedVersionService.InsertAsync(connectionInfo, newDbConfigFeedVersions, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    }
+                    catch (DatabaseConnectionException databaseConnectionException)
+                    {
+                        HandleException(databaseConnectionException, NLog.LogLevel.Error, "Worker process caught an exception");
+                    }
+                    catch (Exception)
+                    {
+                        cancellationTokenSource.Cancel();
+                        throw;
+                    }
                 }
             }
 
@@ -693,6 +790,7 @@ namespace MyGeotabAPIAdapter
                     // Sort lists on Id.
                     dbDevicesDictionary = getAllDbDevicesTask.Result.ToDictionary(device => Id.Create(device.GeotabId));
                     dbDiagnosticsDictionary = getAllDbDiagnosticsTask.Result.ToDictionary(diagnostic => Id.Create(diagnostic.GeotabId));
+
                     dbUsersDictionary = getAllDbUsersTask.Result.ToDictionary(user => Id.Create(user.GeotabId));
                     dbDVIRDefectsDictionary = getAllDbDVIRDefectsTask.Result.ToDictionary(dvirDefect => Id.Create(dvirDefect.GeotabId));
                     dbDVIRDefectRemarksDictionary = getAllDbDVIRDefectRemarksTask.Result.ToDictionary(dvirDefectRemark => Id.Create(dvirDefectRemark.GeotabId));
@@ -708,6 +806,11 @@ namespace MyGeotabAPIAdapter
                 {
                     string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
                     logger.Warn(errorMessage);
+                }
+                catch (Exception)
+                {
+                    cancellationTokenSource.Cancel();
+                    throw;
                 }
             }
 
@@ -739,6 +842,21 @@ namespace MyGeotabAPIAdapter
                 dbConfigFeedVersions = await InitializeDbConfigFeedVersionListAsync();
                 cacheManager = CacheManager.Create();
                 feedManager = FeedManager.Create(dbConfigFeedVersions);
+
+                // Adjust (i.e. reduce) the FeedResultsLimit for LogRecords and/or StatusData records if they are being output as OVDS server commands. 
+                VSSConfiguration vssConfiguration = Globals.ConfigurationManager.VSSConfiguration;
+                if (vssConfiguration.EnableVSSAddOn == true && vssConfiguration.OutputLogRecordsToOVDS == true)
+                {
+                    FeedContainer logRecordFeedContainer = FeedManager.LogRecordFeedContainer;
+                    logRecordFeedContainer.FeedResultsLimit = VSSConfiguration.LogRecordFeedResultsLimitWhenOutputtingLogRecordsToOVDS;
+                }
+                if (vssConfiguration.EnableVSSAddOn == true && vssConfiguration.OutputStatusDataToOVDS == true)
+                {
+                    unmappedDiagnosticManager = new(vssConfiguration);
+                    FeedContainer statusDataFeedContainer = FeedManager.StatusDataFeedContainer;
+                    statusDataFeedContainer.FeedResultsLimit = VSSConfiguration.StatusDataFeedResultsLimitWhenOutputtingStatusDataToOVDS;
+                }
+
                 trackedDevicesDictionary = new Dictionary<Id, Device>();
                 trackedDiagnosticsDictionary = new Dictionary<Id, Diagnostic>();
                 defectListPartDefectsDictionary = new Dictionary<Id, DefectListPartDefect>();
@@ -795,19 +913,11 @@ namespace MyGeotabAPIAdapter
                 driverChangeDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
                 // Insert DbDriverChange entities into database.
-                try
-                {
-                    DateTime startTimeUTC = DateTime.UtcNow;
-                    long driverChangeEntitiesInserted = await DbDriverChangeService.InsertAsync(connectionInfo, dbDriverChanges, driverChangeDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                    double recordsProcessedPerSecond = (double)driverChangeEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {driverChangeEntitiesInserted} records into {ConfigurationManager.DbDriverChangeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                }
-                catch (Exception)
-                {
-                    cancellationTokenSource.Cancel();
-                    throw;
-                }
+                DateTime startTimeUTC = DateTime.UtcNow;
+                long driverChangeEntitiesInserted = await DbDriverChangeService.InsertAsync(connectionInfo, dbDriverChanges, driverChangeDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                double recordsProcessedPerSecond = (double)driverChangeEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                logger.Info($"Completed insertion of {driverChangeEntitiesInserted} records into {ConfigurationManager.DbDriverChangeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
 
                 // Clear FeedResultData.
                 FeedManager.DriverChangeFeedContainer.FeedResultData.Clear();
@@ -829,15 +939,7 @@ namespace MyGeotabAPIAdapter
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Update the DefectListPartDefect cache.
-            try
-            {
-                await UpdateDefectListPartDefectCacheAsync(cancellationTokenSource);
-            }
-            catch (Exception)
-            {
-                cancellationTokenSource.Cancel();
-                throw;
-            }
+            await UpdateDefectListPartDefectCacheAsync(cancellationTokenSource);
 
             DateTime recordChangedTimestampUtc = DateTime.UtcNow;
             var dbDVIRDefectsToInsert = new List<DbDVIRDefect>();
@@ -954,20 +1056,12 @@ namespace MyGeotabAPIAdapter
                     dvirLogDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                     dvirLogDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        string resultCounts = await DbDVIRLogService.PersistAllDVIRLogChangesToDatabase(connectionInfo, dbDVIRLogsForDatabaseWrite, dbDVIRDefectsToInsert, dbDVIRDefectsToUpdate, dbDVIRDefectRemarksToInsert, dvirLogDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    string resultCounts = await DbDVIRLogService.PersistAllDVIRLogChangesToDatabase(connectionInfo, dbDVIRLogsForDatabaseWrite, dbDVIRDefectsToInsert, dbDVIRDefectsToUpdate, dbDVIRDefectRemarksToInsert, dvirLogDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
 
-                        string[] individualResultCounts = resultCounts.Split(",");
-                        logger.Info($"Completed insertion of {individualResultCounts[0]} records into {ConfigurationManager.DbDVIRLogTableName} table, insertion of {individualResultCounts[1]} records into {ConfigurationManager.DbDVIRDefectTableName} table, update of {individualResultCounts[2]} records in {ConfigurationManager.DbDVIRDefectTableName} table and insertion of {individualResultCounts[3]} records into {ConfigurationManager.DbDVIRDefectRemarkTableName} table in {elapsedTime.TotalSeconds} seconds.");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    string[] individualResultCounts = resultCounts.Split(",");
+                    logger.Info($"Completed insertion of {individualResultCounts[0]} records into {ConfigurationManager.DbDVIRLogTableName} table, insertion of {individualResultCounts[1]} records into {ConfigurationManager.DbDVIRDefectTableName} table, update of {individualResultCounts[2]} records in {ConfigurationManager.DbDVIRDefectTableName} table and insertion of {individualResultCounts[3]} records into {ConfigurationManager.DbDVIRDefectRemarkTableName} table in {elapsedTime.TotalSeconds} seconds.");
                 }
 
                 // Clear FeedResultData.
@@ -1008,21 +1102,13 @@ namespace MyGeotabAPIAdapter
                 exceptionEventDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
                 // Insert DbExceptionEvents into database.
-                try
-                {
-                    DateTime startTimeUTC = DateTime.UtcNow;
-                    long noOfInserts = await DbExceptionEventService.InsertAsync(connectionInfo, dbExpectionEvents, exceptionEventDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                    double recordsProcessedPerSecond = (double)FeedManager.ExceptionEventFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {FeedManager.ExceptionEventFeedContainer.FeedResultData.Count} records into " +
-                        $"{ConfigurationManager.DbExceptionEventTableName} table in {elapsedTime.TotalSeconds} seconds " +
-                        $"({recordsProcessedPerSecond} per second throughput).");
-                }
-                catch (Exception)
-                {
-                    cancellationTokenSource.Cancel();
-                    throw;
-                }
+                DateTime startTimeUTC = DateTime.UtcNow;
+                long noOfInserts = await DbExceptionEventService.InsertAsync(connectionInfo, dbExpectionEvents, exceptionEventDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                double recordsProcessedPerSecond = (double)FeedManager.ExceptionEventFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
+                logger.Info($"Completed insertion of {FeedManager.ExceptionEventFeedContainer.FeedResultData.Count} records into " +
+                    $"{ConfigurationManager.DbExceptionEventTableName} table in {elapsedTime.TotalSeconds} seconds " +
+                    $"({recordsProcessedPerSecond} per second throughput).");
 
                 // Clear FeedResultData.
                 FeedManager.ExceptionEventFeedContainer.FeedResultData.Clear();
@@ -1071,19 +1157,11 @@ namespace MyGeotabAPIAdapter
                 faultDataDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
                 // Insert DbFaultData entities into database.
-                try
-                {
-                    DateTime startTimeUTC = DateTime.UtcNow;
-                    long faultDataEntitiesInserted = await DbFaultDataService.InsertAsync(connectionInfo, dbFaultDatas, faultDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                    double recordsProcessedPerSecond = (double)faultDataEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {faultDataEntitiesInserted} records into {ConfigurationManager.DbFaultDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                }
-                catch (Exception)
-                {
-                    cancellationTokenSource.Cancel();
-                    throw;
-                }
+                DateTime startTimeUTC = DateTime.UtcNow;
+                long faultDataEntitiesInserted = await DbFaultDataService.InsertAsync(connectionInfo, dbFaultDatas, faultDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                double recordsProcessedPerSecond = (double)faultDataEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                logger.Info($"Completed insertion of {faultDataEntitiesInserted} records into {ConfigurationManager.DbFaultDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
 
                 // Clear FeedResultData.
                 FeedManager.FaultDataFeedContainer.FeedResultData.Clear();
@@ -1121,19 +1199,41 @@ namespace MyGeotabAPIAdapter
                 logRecordDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                 logRecordDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
+                // Determine LogRecord output option.
+                VSSOutputOptions logRecordOutputOption = GetLogRecordOutputOption();
+
                 // Insert DbLogRecords into database.
-                try
+                List<DbOVDSServerCommand> dbOVDSServerCommands;
+                DateTime startTimeUTC = DateTime.UtcNow;
+                TimeSpan elapsedTime;
+                double recordsProcessedPerSecond;
+                switch (logRecordOutputOption)
                 {
-                    DateTime startTimeUTC = DateTime.UtcNow;
-                    long logRecordsInserted = await DbLogRecordService.InsertAsync(connectionInfo, dbLogRecords, logRecordDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                    double recordsProcessedPerSecond = (double)FeedManager.LogRecordFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {FeedManager.LogRecordFeedContainer.FeedResultData.Count} records into {ConfigurationManager.DbLogRecordTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                }
-                catch (Exception)
-                {
-                    cancellationTokenSource.Cancel();
-                    throw;
+                    case VSSOutputOptions.AdapterRecordOnly:
+                        long logRecordsInserted = await DbLogRecordService.InsertAsync(connectionInfo, dbLogRecords, logRecordDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        recordsProcessedPerSecond = (double)dbLogRecords.Count / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed insertion of {dbLogRecords.Count} records into {ConfigurationManager.DbLogRecordTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        break;
+                    case VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand:
+                        dbOVDSServerCommands = VSSObjectMapper.GetDbOVDSServerSetCommands(filteredLogRecords, Globals.ConfigurationManager.VSSConfiguration, cacheManager);
+                        string results = await DbOVDSServerCommandService.InsertOVDSServerCommandsAndLogRecordsAsync(connectionInfo, dbOVDSServerCommands, dbLogRecords, logRecordDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        recordsProcessedPerSecond = ((double)dbOVDSServerCommands.Count + (double)dbLogRecords.Count) / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed insertion of {dbOVDSServerCommands.Count} records into {ConfigurationManager.DbOVDSServerCommandTableName} table and {dbLogRecords.Count} records into {ConfigurationManager.DbLogRecordTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        break;
+                    case VSSOutputOptions.DbOVDSServerCommandOnly:
+                        dbOVDSServerCommands = VSSObjectMapper.GetDbOVDSServerSetCommands(filteredLogRecords, Globals.ConfigurationManager.VSSConfiguration, cacheManager);
+                        long ovdsServerCommandsInserted = await DbOVDSServerCommandService.InsertAsync(connectionInfo, dbOVDSServerCommands, logRecordDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        recordsProcessedPerSecond = (double)dbOVDSServerCommands.Count / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed insertion of {dbOVDSServerCommands.Count} records into {ConfigurationManager.DbOVDSServerCommandTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        break;
+                    case VSSOutputOptions.None:
+                        // Nothing to do here.
+                        break;
+                    default:
+                        throw new NotImplementedException($"Support for the '{logRecordOutputOption}' LogRecordOutputOption has not been implemented.");
                 }
 
                 // Clear FeedResultData.
@@ -1173,19 +1273,41 @@ namespace MyGeotabAPIAdapter
                 statusDataDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                 statusDataDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
+                // Determine StatusData output option.
+                VSSOutputOptions statusDataOutputOption = GetStatusDataOutputOption();
+
                 // Insert DbStatusData entities into database.
-                try
+                List<DbOVDSServerCommand> dbOVDSServerCommands;
+                DateTime startTimeUTC = DateTime.UtcNow;
+                TimeSpan elapsedTime;
+                double recordsProcessedPerSecond;
+                switch (statusDataOutputOption)
                 {
-                    DateTime startTimeUTC = DateTime.UtcNow;
-                    long statusDataEntitiesInserted = await DbStatusDataService.InsertAsync(connectionInfo, dbStatusDatas, statusDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                    double recordsProcessedPerSecond = (double)statusDataEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {statusDataEntitiesInserted} records into {ConfigurationManager.DbStatusDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                }
-                catch (Exception)
-                {
-                    cancellationTokenSource.Cancel();
-                    throw;
+                    case VSSOutputOptions.AdapterRecordOnly:
+                        long statusDataEntitiesInserted = await DbStatusDataService.InsertAsync(connectionInfo, dbStatusDatas, statusDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        recordsProcessedPerSecond = (double)statusDataEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed insertion of {dbStatusDatas.Count} records into {ConfigurationManager.DbStatusDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        break;
+                    case VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand:
+                        dbOVDSServerCommands = VSSObjectMapper.GetDbOVDSServerSetCommands(filteredStatusDatas, Globals.ConfigurationManager.VSSConfiguration, cacheManager, unmappedDiagnosticManager);
+                        string results = await DbOVDSServerCommandService.InsertOVDSServerCommandsAndStatusDatasAsync(connectionInfo, dbOVDSServerCommands, dbStatusDatas, statusDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        recordsProcessedPerSecond = ((double)dbOVDSServerCommands.Count + (double)dbStatusDatas.Count) / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed insertion of {dbOVDSServerCommands.Count} records into {ConfigurationManager.DbOVDSServerCommandTableName} table and {dbStatusDatas.Count} records into {ConfigurationManager.DbStatusDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        break;
+                    case VSSOutputOptions.DbOVDSServerCommandOnly:
+                        dbOVDSServerCommands = VSSObjectMapper.GetDbOVDSServerSetCommands(filteredStatusDatas, Globals.ConfigurationManager.VSSConfiguration, cacheManager, unmappedDiagnosticManager);
+                        long ovdsServerCommandsInserted = await DbOVDSServerCommandService.InsertAsync(connectionInfo, dbOVDSServerCommands, statusDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        recordsProcessedPerSecond = (double)dbOVDSServerCommands.Count / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed insertion of {dbOVDSServerCommands.Count} records into {ConfigurationManager.DbOVDSServerCommandTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                        break;
+                    case VSSOutputOptions.None:
+                        // Nothing to do here.
+                        break;
+                    default:
+                        throw new NotImplementedException($"Support for the '{statusDataOutputOption}' StatusDataOutputOption has not been implemented.");
                 }
 
                 // Clear FeedResultData.
@@ -1225,19 +1347,11 @@ namespace MyGeotabAPIAdapter
                 tripDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
 
                 // Insert DbTrip entities into database.
-                try
-                {
-                    DateTime startTimeUTC = DateTime.UtcNow;
-                    long tripsNoInserted = await DbTripService.InsertAsync(connectionInfo, dbTripList, tripDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                    double recordsProcessedPerSecond = (double)tripsNoInserted / (double)elapsedTime.TotalSeconds;
-                    logger.Info($"Completed insertion of {tripsNoInserted} records into {ConfigurationManager.DbTripTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                }
-                catch (Exception)
-                {
-                    cancellationTokenSource.Cancel();
-                    throw;
-                }
+                DateTime startTimeUTC = DateTime.UtcNow;
+                long tripsNoInserted = await DbTripService.InsertAsync(connectionInfo, dbTripList, tripDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                double recordsProcessedPerSecond = (double)tripsNoInserted / (double)elapsedTime.TotalSeconds;
+                logger.Info($"Completed insertion of {tripsNoInserted} records into {ConfigurationManager.DbTripTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
 
                 // Clear FeedResultData.
                 FeedManager.TripFeedContainer.FeedResultData.Clear();
@@ -1369,37 +1483,21 @@ namespace MyGeotabAPIAdapter
                 // Send any inserts to the database.
                 if (dbDevicesToInsert.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long deviceEntitiesInserted = await DbDeviceService.InsertAsync(connectionInfo, dbDevicesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)deviceEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {deviceEntitiesInserted} records into {ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long deviceEntitiesInserted = await DbDeviceService.InsertAsync(connectionInfo, dbDevicesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)deviceEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed insertion of {deviceEntitiesInserted} records into {ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
                 // Send any updates/deletes to the database.
                 if (dbDevicesToUpdate.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long deviceEntitiesUpdated = await DbDeviceService.UpdateAsync(connectionInfo, dbDevicesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)deviceEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {deviceEntitiesUpdated} records in {ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long deviceEntitiesUpdated = await DbDeviceService.UpdateAsync(connectionInfo, dbDevicesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)deviceEntitiesUpdated / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed updating of {deviceEntitiesUpdated} records in {ConfigurationManager.DbDeviceTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 CacheManager.DeviceCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
@@ -1491,37 +1589,21 @@ namespace MyGeotabAPIAdapter
                 // Send any inserts to the database.
                 if (dbDiagnosticsToInsert.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long diagnosticEntitiesInserted = await DbDiagnosticService.InsertAsync(connectionInfo, dbDiagnosticsToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)diagnosticEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {diagnosticEntitiesInserted} records into {ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long diagnosticEntitiesInserted = await DbDiagnosticService.InsertAsync(connectionInfo, dbDiagnosticsToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)diagnosticEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed insertion of {diagnosticEntitiesInserted} records into {ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
                 // Send any updates/deletes to the database.
                 if (dbDiagnosticsToUpdate.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long diagnosticEntitiesUpdated = await DbDiagnosticService.UpdateAsync(connectionInfo, dbDiagnosticsToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)diagnosticEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {diagnosticEntitiesUpdated} records in {ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long diagnosticEntitiesUpdated = await DbDiagnosticService.UpdateAsync(connectionInfo, dbDiagnosticsToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)diagnosticEntitiesUpdated / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed updating of {diagnosticEntitiesUpdated} records in {ConfigurationManager.DbDiagnosticTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 CacheManager.DiagnosticCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
@@ -1730,7 +1812,6 @@ namespace MyGeotabAPIAdapter
                         newDbUser.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
                         dbUsersDictionary.Add(Id.Create(newDbUser.GeotabId), newDbUser);
                         dbUsersToInsert.Add(newDbUser);
-
                     }
                 }
 
@@ -1739,37 +1820,21 @@ namespace MyGeotabAPIAdapter
                 // Send any inserts to the database.
                 if (dbUsersToInsert.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long userEntitiesInserted = await DbUserService.InsertAsync(connectionInfo, dbUsersToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)userEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {userEntitiesInserted} records into {ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long userEntitiesInserted = await DbUserService.InsertAsync(connectionInfo, dbUsersToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)userEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed insertion of {userEntitiesInserted} records into {ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
                 // Send any updates/deletes to the database.
                 if (dbUsersToUpdate.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long userEntitiesUpdated = await DbUserService.UpdateAsync(connectionInfo, dbUsersToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)userEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {userEntitiesUpdated} records in {ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long userEntitiesUpdated = await DbUserService.UpdateAsync(connectionInfo, dbUsersToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)userEntitiesUpdated / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed updating of {userEntitiesUpdated} records in {ConfigurationManager.DbUserTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 CacheManager.UserCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
@@ -1861,37 +1926,21 @@ namespace MyGeotabAPIAdapter
                 // Send any inserts to the database.
                 if (dbZonesToInsert.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long zoneEntitiesInserted = await DbZoneService.InsertAsync(connectionInfo, dbZonesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)zoneEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {zoneEntitiesInserted} records into {ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long zoneEntitiesInserted = await DbZoneService.InsertAsync(connectionInfo, dbZonesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)zoneEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed insertion of {zoneEntitiesInserted} records into {ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
                 // Send any updates/deletes to the database.
                 if (dbZonesToUpdate.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long zoneEntitiesUpdated = await DbZoneService.UpdateAsync(connectionInfo, dbZonesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)zoneEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {zoneEntitiesUpdated} records in {ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long zoneEntitiesUpdated = await DbZoneService.UpdateAsync(connectionInfo, dbZonesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)zoneEntitiesUpdated / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed updating of {zoneEntitiesUpdated} records in {ConfigurationManager.DbZoneTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 CacheManager.ZoneCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
@@ -1983,37 +2032,21 @@ namespace MyGeotabAPIAdapter
                 // Send any inserts to the database.
                 if (dbZoneTypesToInsert.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long zoneTypeEntitiesInserted = await DbZoneTypeService.InsertAsync(connectionInfo, dbZoneTypesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)zoneTypeEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed insertion of {zoneTypeEntitiesInserted} records into {ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long zoneTypeEntitiesInserted = await DbZoneTypeService.InsertAsync(connectionInfo, dbZoneTypesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)zoneTypeEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed insertion of {zoneTypeEntitiesInserted} records into {ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
 
                 // Send any updates/deletes to the database.
                 if (dbZoneTypesToUpdate.Any())
                 {
-                    try
-                    {
-                        DateTime startTimeUTC = DateTime.UtcNow;
-                        long zoneTypeEntitiesUpdated = await DbZoneTypeService.UpdateAsync(connectionInfo, dbZoneTypesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                        double recordsProcessedPerSecond = (double)zoneTypeEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                        logger.Info($"Completed updating of {zoneTypeEntitiesUpdated} records in {ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                    }
-                    catch (Exception)
-                    {
-                        cancellationTokenSource.Cancel();
-                        throw;
-                    }
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long zoneTypeEntitiesUpdated = await DbZoneTypeService.UpdateAsync(connectionInfo, dbZoneTypesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)zoneTypeEntitiesUpdated / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed updating of {zoneTypeEntitiesUpdated} records in {ConfigurationManager.DbZoneTypeTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                 }
                 CacheManager.ZoneTypeCacheContainer.LastPropagatedToDatabaseTimeUtc = DateTime.UtcNow;
             }
@@ -2113,7 +2146,6 @@ namespace MyGeotabAPIAdapter
             }
             catch (OperationCanceledException exception)
             {
-                cancellationTokenSource.Cancel();
                 throw new MyGeotabConnectionException($"MyGeotab API GetAsync call for type '{typeof(Defect).Name}' did not return within the allowed time of {Globals.ConfigurationManager.TimeoutSecondsForMyGeotabTasks} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
             }
 
@@ -2175,27 +2207,17 @@ namespace MyGeotabAPIAdapter
 
                     Task[] tasks = { updateUserCacheAndPersistToDatabaseAsyncTask, updateDeviceCacheAndPersistToDatabaseAsyncTask, updateZoneTypeCacheAndPersistToDatabaseAsyncTask, updateZoneCacheAndPersistToDatabaseAsyncTask, updateDiagnosticCacheAndPersistToDatabaseAsyncTask, updateControllerCacheAsyncTask, updateFailureModeCacheAsyncTask, updateUnitOfMeasureCacheAsyncTask, updateRuleCacheAndPersistToDatabaseAsyncTask, updateGroupCacheAsyncTask };
 
-                    try
-                    {
-                        await Task.WhenAll(tasks);
-                    }
-                    catch (MyGeotabConnectionException myGeotabConnectionException)
-                    {
-                        throw new MyGeotabConnectionException($"One or more exceptions were encountered during cache processing due to an apparent loss of connectivity with the MyGeotab server.", myGeotabConnectionException);
-                    }
-                    catch (DatabaseConnectionException databaseConnectionException)
-                    {
-                        throw new DatabaseConnectionException($"One or more exceptions were encountered during cache processing due to an apparent loss of connectivity with the adapter database.", databaseConnectionException);
-                    }
-                    catch (AggregateException aggregateException)
-                    {
-                        Globals.HandleConnectivityRelatedAggregateException(aggregateException, Globals.ConnectivityIssueType.MyGeotabOrDatabase, "One or more exceptions were encountered during retrieval of cache data and persistance of data to database due to an apparent loss of connectivity with the MyGeotab server or the database.");
-                    }
+                    await Task.WhenAll(tasks);
                 }
                 catch (TaskCanceledException taskCanceledException)
                 {
                     string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
                     logger.Warn(errorMessage);
+                }
+                catch (Exception)
+                {
+                    cancellationTokenSource.Cancel();
+                    throw;
                 }
             }
 

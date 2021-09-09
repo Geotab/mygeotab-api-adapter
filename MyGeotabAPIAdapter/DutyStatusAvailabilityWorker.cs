@@ -165,37 +165,21 @@ namespace MyGeotabAPIAdapter
                                         // Send any inserts to the database.
                                         if (dbDutyStatusAvailabilityEntitiesToInsert.Any())
                                         {
-                                            try
-                                            {
-                                                DateTime startTimeUTC = DateTime.UtcNow;
-                                                long dbDutyStatusAvailabilityEntitiesInserted = await DbDutyStatusAvailabilityService.InsertAsync(connectionInfo, dbDutyStatusAvailabilityEntitiesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                                                TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                                                double recordsProcessedPerSecond = (double)dbDutyStatusAvailabilityEntitiesInserted / (double)elapsedTime.TotalSeconds;
-                                                logger.Info($"Completed insertion of {dbDutyStatusAvailabilityEntitiesInserted} records into {ConfigurationManager.DbDutyStatusAvailabilityTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                                            }
-                                            catch (Exception)
-                                            {
-                                                cancellationTokenSource.Cancel();
-                                                throw;
-                                            }
+                                            DateTime startTimeUTC = DateTime.UtcNow;
+                                            long dbDutyStatusAvailabilityEntitiesInserted = await DbDutyStatusAvailabilityService.InsertAsync(connectionInfo, dbDutyStatusAvailabilityEntitiesToInsert, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                                            TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                                            double recordsProcessedPerSecond = (double)dbDutyStatusAvailabilityEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                                            logger.Info($"Completed insertion of {dbDutyStatusAvailabilityEntitiesInserted} records into {ConfigurationManager.DbDutyStatusAvailabilityTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                                         }
 
                                         // Send any updates/deletes to the database.
                                         if (dbDutyStatusAvailabilityEntitiesToUpdate.Any())
                                         {
-                                            try
-                                            {
-                                                DateTime startTimeUTC = DateTime.UtcNow;
-                                                long dbDutyStatusAvailabilityEntitiesUpdated = await DbDutyStatusAvailabilityService.UpdateAsync(connectionInfo, dbDutyStatusAvailabilityEntitiesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
-                                                TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
-                                                double recordsProcessedPerSecond = (double)dbDutyStatusAvailabilityEntitiesUpdated / (double)elapsedTime.TotalSeconds;
-                                                logger.Info($"Completed updating of {dbDutyStatusAvailabilityEntitiesUpdated} records in {ConfigurationManager.DbDutyStatusAvailabilityTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
-                                            }
-                                            catch (Exception)
-                                            {
-                                                cancellationTokenSource.Cancel();
-                                                throw;
-                                            }
+                                            DateTime startTimeUTC = DateTime.UtcNow;
+                                            long dbDutyStatusAvailabilityEntitiesUpdated = await DbDutyStatusAvailabilityService.UpdateAsync(connectionInfo, dbDutyStatusAvailabilityEntitiesToUpdate, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                                            TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                                            double recordsProcessedPerSecond = (double)dbDutyStatusAvailabilityEntitiesUpdated / (double)elapsedTime.TotalSeconds;
+                                            logger.Info($"Completed updating of {dbDutyStatusAvailabilityEntitiesUpdated} records in {ConfigurationManager.DbDutyStatusAvailabilityTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
                                         }
 
 
@@ -223,6 +207,11 @@ namespace MyGeotabAPIAdapter
                             {
                                 string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
                                 logger.Warn(errorMessage);
+                            }
+                            catch (Exception)
+                            {
+                                cancellationTokenSource.Cancel();
+                                throw;
                             }
                         }
                     }
@@ -309,6 +298,11 @@ namespace MyGeotabAPIAdapter
                 {
                     string errorMessage = $"Task was cancelled. TaskCanceledException: \nMESSAGE [{taskCanceledException.Message}]; \nSOURCE [{taskCanceledException.Source}]; \nSTACK TRACE [{taskCanceledException.StackTrace}]";
                     logger.Warn(errorMessage);
+                }
+                catch (Exception)
+                {
+                    cancellationTokenSource.Cancel();
+                    throw;
                 }
             }
 
