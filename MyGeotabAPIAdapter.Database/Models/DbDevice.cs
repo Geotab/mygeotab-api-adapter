@@ -11,6 +11,9 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string GeotabId { get; set; }
         public DateTime? ActiveFrom { get; set; }
         public DateTime? ActiveTo { get; set; }
+        public string? Comment { get; set; }
+        [Write(false)]
+        public string CommentOracle { get => Comment; }
         public string DeviceType { get; set; }
         public string LicensePlate { get; set; }
         public string LicenseState { get; set; }

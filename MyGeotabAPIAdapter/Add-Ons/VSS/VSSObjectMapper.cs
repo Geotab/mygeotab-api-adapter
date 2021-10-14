@@ -186,7 +186,7 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
                         vssValue = "true";
                     }
                     var vssValueBool = bool.Parse(vssValue);
-                    formattedVssValue = vssValueBool.ToString();
+                    formattedVssValue = vssValueBool.ToString().ToLower();
                     break;
                 case VSSDataType.Double:
                     var vssValueDouble = Convert.ToDouble(vssValue, CultureInfo.CurrentCulture.NumberFormat);

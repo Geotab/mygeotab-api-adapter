@@ -35,6 +35,7 @@ namespace MyGeotabAPIAdapter
         bool trackedDiagnosticsDictionaryIsPopulated;
         List<DbConfigFeedVersion> dbConfigFeedVersions;
         IDictionary<Id, DbDevice> dbDevicesDictionary;
+        IDictionary<Id, DbDeviceStatusInfo> dbDeviceStatusInfosDictionary;
         IDictionary<Id, DbDiagnostic> dbDiagnosticsDictionary;
         IDictionary<Id, DbDVIRDefect> dbDVIRDefectsDictionary;
         IDictionary<Id, DbDVIRDefectRemark> dbDVIRDefectRemarksDictionary;
@@ -154,6 +155,14 @@ namespace MyGeotabAPIAdapter
                     string errorMessage = "";
                     switch (entityTypeName)
                     {
+                        case nameof(BinaryData):
+                            var binaryDataToBeEvaluated = itemToBeEvaluated as BinaryData;
+                            itemToBeEvaluatedDevice = binaryDataToBeEvaluated.Device;
+                            break;
+                        case nameof(DeviceStatusInfo):
+                            var deviceStatusInfoToBeEvaluated = itemToBeEvaluated as DeviceStatusInfo;
+                            itemToBeEvaluatedDevice = deviceStatusInfoToBeEvaluated.Device;
+                            break;
                         case nameof(DriverChange):
                             var driverChangeToBeEvaluated = itemToBeEvaluated as DriverChange;
                             itemToBeEvaluatedDevice = driverChangeToBeEvaluated.Device;
@@ -425,6 +434,8 @@ namespace MyGeotabAPIAdapter
             {
                 try
                 {
+                    var getBinaryDataFeedDataAndPersistToDatabaseAsyncTask = GetBinaryDataFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
+                    var getDeviceStatusInfoFeedDataAndPersistToDatabaseAsyncTask = GetDeviceStatusInfoFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
                     var getLogRecordFeedDataAndPersistToDatabaseAsyncTask = GetLogRecordFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
                     var getStatusDataFeedDataAndPersistToDatabaseAsyncTask = GetStatusDataFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
                     var getFaultDataFeedDataAndPersistToDatabaseAsyncTask = GetFaultDataFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
@@ -433,7 +444,7 @@ namespace MyGeotabAPIAdapter
                     var getExceptionEventFeedDataAndPersistToDatabaseAsyncTask = GetExceptionEventFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
                     var getDriverChangeFeedDataAndPersistToDatabaseAsyncTask = GetDriverChangeFeedDataAndPersistToDatabaseAsync(cancellationTokenSource);
 
-                    Task[] tasks = { getLogRecordFeedDataAndPersistToDatabaseAsyncTask, getStatusDataFeedDataAndPersistToDatabaseAsyncTask, getFaultDataFeedDataAndPersistToDatabaseAsyncTask, getDVIRLogFeedDataAndPersistToDatabaseAsyncTask, getTripFeedDataAndPersistToDatabaseAsyncTask, getExceptionEventFeedDataAndPersistToDatabaseAsyncTask, getDriverChangeFeedDataAndPersistToDatabaseAsyncTask };
+                    Task[] tasks = { getBinaryDataFeedDataAndPersistToDatabaseAsyncTask, getDeviceStatusInfoFeedDataAndPersistToDatabaseAsyncTask, getLogRecordFeedDataAndPersistToDatabaseAsyncTask, getStatusDataFeedDataAndPersistToDatabaseAsyncTask, getFaultDataFeedDataAndPersistToDatabaseAsyncTask, getDVIRLogFeedDataAndPersistToDatabaseAsyncTask, getTripFeedDataAndPersistToDatabaseAsyncTask, getExceptionEventFeedDataAndPersistToDatabaseAsyncTask, getDriverChangeFeedDataAndPersistToDatabaseAsyncTask };
 
                     await Task.WhenAll(tasks);
                 }
@@ -448,6 +459,44 @@ namespace MyGeotabAPIAdapter
                     throw;
                 }
             }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from the <see cref="BinaryData"/> feed and persists the data to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task GetBinaryDataFeedDataAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await FeedManager.GetFeedDataAsync<BinaryData>(FeedManager.BinaryDataFeedContainer, cancellationTokenSource);
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProcessBinaryDataFeedResultsAsync(cancellationTokenSource);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves data from the <see cref="DeviceStatusInfo"/> feed and persists the data to the database.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task GetDeviceStatusInfoFeedDataAndPersistToDatabaseAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            await FeedManager.GetFeedDataAsync<DeviceStatusInfo>(FeedManager.DeviceStatusInfoFeedContainer, cancellationTokenSource);
+            cancellationToken.ThrowIfCancellationRequested();
+            await ProcessDeviceStatusInfoFeedResultsAsync(cancellationTokenSource);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -775,6 +824,7 @@ namespace MyGeotabAPIAdapter
                 try
                 {
                     var getAllDbDevicesTask = DbDeviceService.GetAllAsync(connectionInfo, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    var getAllDbDeviceStatusInfosTask = DbDeviceStatusInfoService.GetAllAsync(connectionInfo, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     var getAllDbDiagnosticsTask = DbDiagnosticService.GetAllAsync(connectionInfo, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     var getAllDbUsersTask = DbUserService.GetAllAsync(connectionInfo, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     var getAllDbDVIRDefectsTask = DbDVIRDefectService.GetAllAsync(connectionInfo, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
@@ -783,12 +833,13 @@ namespace MyGeotabAPIAdapter
                     var getAllDbZonesTask = DbZoneService.GetAllAsync(connectionInfo, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
                     var getAllDbZoneTypesTask = DbZoneTypeService.GetAllAsync(connectionInfo, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
 
-                    Task[] tasks = { getAllDbDevicesTask, getAllDbDiagnosticsTask, getAllDbUsersTask, getAllDbDVIRDefectsTask, getAllDbDVIRDefectRemarksTask, getAllDbRuleObjectsTask, getAllDbZonesTask, getAllDbZoneTypesTask };
+                    Task[] tasks = { getAllDbDevicesTask, getAllDbDeviceStatusInfosTask, getAllDbDiagnosticsTask, getAllDbUsersTask, getAllDbDVIRDefectsTask, getAllDbDVIRDefectRemarksTask, getAllDbRuleObjectsTask, getAllDbZonesTask, getAllDbZoneTypesTask };
 
                     Task.WaitAll(tasks);
 
                     // Sort lists on Id.
                     dbDevicesDictionary = getAllDbDevicesTask.Result.ToDictionary(device => Id.Create(device.GeotabId));
+                    dbDeviceStatusInfosDictionary = getAllDbDeviceStatusInfosTask.Result.ToDictionary(deviceStatusInfo => Id.Create(deviceStatusInfo.GeotabId));
                     dbDiagnosticsDictionary = getAllDbDiagnosticsTask.Result.ToDictionary(diagnostic => Id.Create(diagnostic.GeotabId));
 
                     dbUsersDictionary = getAllDbUsersTask.Result.ToDictionary(user => Id.Create(user.GeotabId));
@@ -878,6 +929,169 @@ namespace MyGeotabAPIAdapter
                 string errorMessage = $"Worker process caught an exception: \nMESSAGE [{ex.Message}]; \nSOURCE [{ex.Source}]; \nSTACK TRACE [{ex.StackTrace}]";
                 logger.Error(errorMessage);
                 throw new Exception(errorMessage, ex);
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+
+        /// <summary>
+        /// Processes <see cref="BinaryData"/> entities returned by the data feed.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task ProcessBinaryDataFeedResultsAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            // Add any returned BinaryData to the database, filtering-out those representing Devices that are not being tracked. Include persistence of the feed version within the same transaction to prevent issues in the event that an exception occurs between persistence of the data and persistence of the feed version.
+            if (FeedManager.BinaryDataFeedContainer.FeedResultData.Count > 0)
+            {
+                var feedResultBinaryDatas = FeedManager.BinaryDataFeedContainer.GetFeedResultDataValuesList<BinaryData>();
+                var filteredBinaryDatas = ApplyTrackedDevicesFilterToList<BinaryData>(feedResultBinaryDatas);
+
+                // Map BinaryDatas to DbBinaryDatas.
+                var dbBinaryDatas = ObjectMapper.GetDbBinaryDatas(filteredBinaryDatas);
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Get the feed version information.
+                var binaryDataDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.BinaryData.ToString()).First();
+                binaryDataDbConfigFeedVersion.LastProcessedFeedVersion = (long)FeedManager.BinaryDataFeedContainer.LastFeedVersion;
+                binaryDataDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                binaryDataDbConfigFeedVersion.RecordLastChangedUtc = DateTime.UtcNow;
+
+                // Insert DbBinaryDatas into database.
+                try
+                {
+                    DateTime startTimeUTC = DateTime.UtcNow;
+                    long binaryDatasInserted = await DbBinaryDataService.InsertAsync(connectionInfo, dbBinaryDatas, binaryDataDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                    TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                    double recordsProcessedPerSecond = (double)FeedManager.BinaryDataFeedContainer.FeedResultData.Count / (double)elapsedTime.TotalSeconds;
+                    logger.Info($"Completed insertion of {FeedManager.BinaryDataFeedContainer.FeedResultData.Count} records into {ConfigurationManager.DbBinaryDataTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                }
+                catch (Exception)
+                {
+                    cancellationTokenSource.Cancel();
+                    throw;
+                }
+
+                // Clear FeedResultData.
+                FeedManager.BinaryDataFeedContainer.FeedResultData.Clear();
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Processes <see cref="DeviceStatusInfo"/> entities returned by the data feed.
+        /// </summary>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        async Task ProcessDeviceStatusInfoFeedResultsAsync(CancellationTokenSource cancellationTokenSource)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+            // Add any returned DeviceStatusInfo to the database, filtering-out those representing Devices that are not being tracked. Include persistence of the feed version within the same transaction to prevent issues in the event that an exception occurs between persistence of the data and persistence of the feed version.
+            if (FeedManager.DeviceStatusInfoFeedContainer.FeedResultData.Count > 0)
+            {
+
+                DateTime recordChangedTimestampUtc = DateTime.UtcNow;
+                var dbDeviceStatusInfosToInsert = new List<DbDeviceStatusInfo>();
+                var dbDeviceStatusInfosToUpdate = new List<DbDeviceStatusInfo>();
+
+                var feedResultDeviceStatusInfos = FeedManager.DeviceStatusInfoFeedContainer.GetFeedResultDataValuesList<DeviceStatusInfo>();
+                var filteredDeviceStatusInfos = ApplyTrackedDevicesFilterToList<DeviceStatusInfo>(feedResultDeviceStatusInfos);
+
+                // Map DeviceStatusInfos to DbDeviceStatusInfos.
+                var dbDeviceStatusInfos = ObjectMapper.GetDbDeviceStatusInfos(filteredDeviceStatusInfos);
+
+                // Get the feed version information.
+                var deviceStatusInfoDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.DeviceStatusInfo.ToString()).First();
+                deviceStatusInfoDbConfigFeedVersion.LastProcessedFeedVersion = (long)FeedManager.DeviceStatusInfoFeedContainer.LastFeedVersion;
+                deviceStatusInfoDbConfigFeedVersion.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                deviceStatusInfoDbConfigFeedVersion.RecordLastChangedUtc = recordChangedTimestampUtc;
+
+                // Get feeded deviceStatusInfos.
+                var deviceStatusInfoFeed = (Dictionary<Id, DeviceStatusInfo>)FeedManager.DeviceStatusInfoFeedContainer.FeedResultData;
+
+                foreach (DeviceStatusInfo feededDeviceStatusInfo in deviceStatusInfoFeed.Values.ToList())
+                {
+                    // Try to find the existing database record for the feeded deviceStatusInfo.
+                    if (dbDeviceStatusInfosDictionary.TryGetValue(feededDeviceStatusInfo.Id, out var existingDbDeviceStatusInfo))
+                    {
+                        // The deviceStatusInfo has already been added to the database.
+                        bool dbDeviceStatusInfoRequiresUpdate = ObjectMapper.DbDeviceStatusInfoRequiresUpdate(existingDbDeviceStatusInfo, feededDeviceStatusInfo);
+                        if (dbDeviceStatusInfoRequiresUpdate)
+                        {
+                            DbDeviceStatusInfo updatedDbDeviceStatusInfo = ObjectMapper.GetDbDeviceStatusInfo(feededDeviceStatusInfo);
+                            updatedDbDeviceStatusInfo.id = existingDbDeviceStatusInfo.id;
+                            updatedDbDeviceStatusInfo.RecordLastChangedUtc = recordChangedTimestampUtc;
+                            updatedDbDeviceStatusInfo.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+
+                            dbDeviceStatusInfosDictionary[Id.Create(updatedDbDeviceStatusInfo.GeotabId)] = updatedDbDeviceStatusInfo;
+                            dbDeviceStatusInfosToUpdate.Add(updatedDbDeviceStatusInfo);
+                        }
+                    }
+                    else
+                    {
+                        // The deviceStatusInfo has not yet been added to the database. Create a DbDeviceStatusInfo, set its properties and add it to the feed.
+                        DbDeviceStatusInfo newDbDeviceStatusInfo = ObjectMapper.GetDbDeviceStatusInfo(feededDeviceStatusInfo);
+                        newDbDeviceStatusInfo.RecordLastChangedUtc = recordChangedTimestampUtc;
+                        newDbDeviceStatusInfo.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
+                        dbDeviceStatusInfosDictionary.Add(Id.Create(newDbDeviceStatusInfo.GeotabId), newDbDeviceStatusInfo);
+                        dbDeviceStatusInfosToInsert.Add(newDbDeviceStatusInfo);
+                    }
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Send any inserts to the database.
+                if (dbDeviceStatusInfosToInsert.Any())
+                {
+                    try
+                    {
+                        DateTime startTimeUTC = DateTime.UtcNow;
+                        long deviceStatusInfoEntitiesInserted = await DbDeviceStatusInfoService.InsertAsync(connectionInfo, dbDeviceStatusInfosToInsert, deviceStatusInfoDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        double recordsProcessedPerSecond = (double)deviceStatusInfoEntitiesInserted / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed insertion of {deviceStatusInfoEntitiesInserted} records into {ConfigurationManager.DbDeviceStatusInfoTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    }
+                    catch (Exception)
+                    {
+                        cancellationTokenSource.Cancel();
+                        throw;
+                    }
+                }
+
+                // Send any updates/deletes to the database.
+                if (dbDeviceStatusInfosToUpdate.Any())
+                {
+                    try
+                    {
+                        DateTime startTimeUTC = DateTime.UtcNow;
+                        long deviceStatusInfoEntitiesUpdated = await DbDeviceStatusInfoService.UpdateAsync(connectionInfo, dbDeviceStatusInfosToUpdate, deviceStatusInfoDbConfigFeedVersion, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
+                        TimeSpan elapsedTime = DateTime.UtcNow.Subtract(startTimeUTC);
+                        double recordsProcessedPerSecond = (double)deviceStatusInfoEntitiesUpdated / (double)elapsedTime.TotalSeconds;
+                        logger.Info($"Completed updating of {deviceStatusInfoEntitiesUpdated} records in {ConfigurationManager.DbDeviceStatusInfoTableName} table in {elapsedTime.TotalSeconds} seconds ({recordsProcessedPerSecond} per second throughput).");
+                    }
+                    catch (Exception)
+                    {
+                        cancellationTokenSource.Cancel();
+                        throw;
+                    }
+                }
+
+                FeedManager.DeviceStatusInfoFeedContainer.LastFeedRetrievalTimeUtc = DateTime.UtcNow;
+
+                // Clear FeedResultData.
+                FeedManager.DeviceStatusInfoFeedContainer.FeedResultData.Clear();
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");

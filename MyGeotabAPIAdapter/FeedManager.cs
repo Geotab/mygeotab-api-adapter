@@ -21,6 +21,8 @@ namespace MyGeotabAPIAdapter
         // FeedCurrentThresholdRecordCount is used to set FeedContainer.FeedCurrent; if the FeedResult returned in a GetFeed call contains less than this number of entities, the feed will be considered up-to-date.
         const int FeedCurrentThresholdRecordCount = 1000;
         static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        static readonly FeedContainer binaryDataFeedContainer = new();
+        static readonly FeedContainer deviceStatusInfoFeedContainer = new();
         static readonly FeedContainer driverChangeFeedContainer = new();
         static readonly FeedContainer dvirLogFeedContainer = new();
         static readonly FeedContainer exceptionEventFeedContainer = new();
@@ -102,8 +104,36 @@ namespace MyGeotabAPIAdapter
                 Globals.ConfigurationManager.DriverChangeFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
                 Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, driverChangeDbConfigFeedVersion.LastProcessedFeedVersion);
 
+            // Setup a data feed for DeviceStatusInfo.
+            DbConfigFeedVersion deviceStatusInfoDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.DeviceStatusInfo.ToString()).First();
+            SetupFeedContainer<DeviceStatusInfo>(deviceStatusInfoFeedContainer, false, Globals.ConfigurationManager.EnableDeviceStatusInfoFeed,
+                Globals.ConfigurationManager.DeviceStatusInfoFeedIntervalSeconds, Globals.FeedStartOption.FeedVersion, Globals.ConfigurationManager.FeedStartOption,
+                Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, deviceStatusInfoDbConfigFeedVersion.LastProcessedFeedVersion);
+
+            // Setup a data feed for BinaryData.
+            DbConfigFeedVersion binaryDataDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.BinaryData.ToString()).First();
+            SetupFeedContainer<BinaryData>(binaryDataFeedContainer, false, Globals.ConfigurationManager.EnableBinaryDataFeed,
+                Globals.ConfigurationManager.BinaryDataFeedIntervalSeconds, currentFeedStartOption, Globals.ConfigurationManager.FeedStartOption,
+                Globals.ConfigurationManager.FeedStartSpecificTimeUTC, Globals.GetFeedResultLimitDefault, binaryDataDbConfigFeedVersion.LastProcessedFeedVersion);
+
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return feedManager;
+        }
+
+        /// <summary>
+        /// Holds <see cref="BinaryData"/> information obtained via data feed.
+        /// </summary>
+        public static FeedContainer BinaryDataFeedContainer
+        {
+            get => binaryDataFeedContainer;
+        }
+
+        /// <summary>
+        /// Holds <see cref="DeviceStatusInfo"/> information obtained via data feed.
+        /// </summary>
+        public static FeedContainer DeviceStatusInfoFeedContainer
+        {
+            get => deviceStatusInfoFeedContainer;
         }
 
         /// <summary>
@@ -199,20 +229,43 @@ namespace MyGeotabAPIAdapter
                     // Execute the GetFeedAsync method according to the specifed FeedStartOption. Note that CurrentTime and SpecificTime are only for use in an initial GetFeedAsync call and all subsequent GetFeedAsync calls should use the FeedVersion option.
                     logger.Debug($"Calling GetFeedAsync<{typeParameterType.Name}>.");
                     FeedResult<T> feedResult = null;
+
                     switch (feedContainer.FeedStartOption)
                     {
                         case Globals.FeedStartOption.CurrentTime:
-                            feedContainer.FeedStartTimeUtc = DateTime.UtcNow;
-                            feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.FeedStartTimeUtc, feedContainer.FeedResultsLimit);
+                            // GetFeed *search not supported for DeviceStatusInfo. 
+                            if (typeParameterType == typeof(DeviceStatusInfo))
+                            {
+                                feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.LastFeedVersion, feedContainer.FeedResultsLimit);
 
-                            // Switch to FeedVersion for subsequent calls.
-                            feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
+                                // Switch to FeedVersion for subsequent calls.
+                                feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
+                            }
+                            else
+                            {
+                                feedContainer.FeedStartTimeUtc = DateTime.UtcNow;
+                                feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.FeedStartTimeUtc, feedContainer.FeedResultsLimit);
+
+                                // Switch to FeedVersion for subsequent calls.
+                                feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
+                            }
                             break;
                         case Globals.FeedStartOption.SpecificTime:
-                            feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.FeedStartTimeUtc, feedContainer.FeedResultsLimit);
+                            // GetFeed *search not supported for DeviceStatusInfo. 
+                            if (typeParameterType == typeof(DeviceStatusInfo))
+                            {
+                                feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.LastFeedVersion, feedContainer.FeedResultsLimit);
 
-                            // Switch to FeedVersion for subsequent calls.
-                            feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
+                                // Switch to FeedVersion for subsequent calls.
+                                feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
+                            }
+                            else
+                            {
+                                feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.FeedStartTimeUtc, feedContainer.FeedResultsLimit);
+
+                                // Switch to FeedVersion for subsequent calls.
+                                feedContainer.FeedStartOption = Globals.FeedStartOption.FeedVersion;
+                            }
                             break;
                         case Globals.FeedStartOption.FeedVersion:
                             feedResult = await MyGeotabApiUtility.GetFeedAsync<T>(Globals.MyGeotabAPI, feedContainer.LastFeedVersion, feedContainer.FeedResultsLimit);
@@ -229,7 +282,17 @@ namespace MyGeotabAPIAdapter
                     // Add FeedResult data to the FeedContainer.
                     foreach (Entity feedResultItem in feedResult.Data)
                     {
-                        feedContainer.FeedResultData.Add(feedResultItem.Id, feedResultItem);
+                        if (typeParameterType.Name == typeof(DeviceStatusInfo).Name)
+                        {
+                            var deviceStatusInfo = (DeviceStatusInfo)feedResultItem;
+                            var device = deviceStatusInfo.Device;
+                            deviceStatusInfo.Id = device.Id;
+                            feedContainer.FeedResultData.Add(deviceStatusInfo.Id, feedResultItem);
+                        }
+                        else
+                        {
+                            feedContainer.FeedResultData.Add(feedResultItem.Id, feedResultItem);
+                        }
                     }
 
                     // Determine whether the feed is up-to-date.
@@ -298,6 +361,16 @@ namespace MyGeotabAPIAdapter
             DbConfigFeedVersion driverChangeDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.DriverChange.ToString()).First();
             driverChangeFeedContainer.LastFeedVersion = driverChangeDbConfigFeedVersion.LastProcessedFeedVersion;
             driverChangeFeedContainer.LastFeedRetrievalTimeUtc = DateTime.MinValue;
+
+            // DeviceStatusInfo:
+            DbConfigFeedVersion deviceStatusInfoDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.DeviceStatusInfo.ToString()).First();
+            deviceStatusInfoFeedContainer.LastFeedVersion = deviceStatusInfoDbConfigFeedVersion.LastProcessedFeedVersion;
+            deviceStatusInfoFeedContainer.LastFeedRetrievalTimeUtc = DateTime.MinValue;
+
+            // BinaryData:
+            DbConfigFeedVersion binaryDataDbConfigFeedVersion = dbConfigFeedVersions.Where(dbConfigFeedVersion => dbConfigFeedVersion.FeedTypeId == Globals.SupportedFeedTypes.BinaryData.ToString()).First();
+            binaryDataFeedContainer.LastFeedVersion = binaryDataDbConfigFeedVersion.LastProcessedFeedVersion;
+            binaryDataFeedContainer.LastFeedRetrievalTimeUtc = DateTime.MinValue;
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }

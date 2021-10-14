@@ -41,7 +41,35 @@ namespace MyGeotabAPIAdapter
             }
 
             string deviceDeviceType = device.DeviceType.ToString();
-            if (dbDevice.DeviceType != deviceDeviceType || dbDevice.Name != device.Name || dbDevice.SerialNumber != device.SerialNumber)
+            if (dbDevice.DeviceType != deviceDeviceType || dbDevice.Name != device.Name || dbDevice.SerialNumber != device.SerialNumber || dbDevice.Comment != device.Comment)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Indicates whether the <see cref="DbDeviceStatusInfo"/> differs from the <see cref="DeviceStatusInfo"/>, thereby requiring the <see cref="DbDeviceStatusInfo"/> to be updated in the database. 
+        /// </summary>
+        /// <param name="dbDeviceStatusInfo">The <see cref="DbDeviceStatusInfo"/> to be evaluated.</param>
+        /// <param name="deviceStatusInfo">The <see cref="DeviceStatusInfo"/> to compare against.</param>
+        /// <returns></returns>
+        public static bool DbDeviceStatusInfoRequiresUpdate(DbDeviceStatusInfo dbDeviceStatusInfo, DeviceStatusInfo deviceStatusInfo)
+        {
+            if (dbDeviceStatusInfo.GeotabId != deviceStatusInfo.Id.ToString())
+            {
+                throw new ArgumentException($"Cannot compare DeviceStatusInfo '{deviceStatusInfo.Id}' with DbDeviceStatusInfo '{dbDeviceStatusInfo.GeotabId}' because the IDs do not match.");
+            }
+
+            string deviceStatusInfoCurrentStateDuration = deviceStatusInfo.CurrentStateDuration.ToString();
+            if (dbDeviceStatusInfo.CurrentStateDuration != deviceStatusInfoCurrentStateDuration || dbDeviceStatusInfo.DateTime != deviceStatusInfo.DateTime)
+            {
+                return true;
+            }
+            if (dbDeviceStatusInfo.Bearing != deviceStatusInfo.Bearing || dbDeviceStatusInfo.DeviceId != deviceStatusInfo.Device.Id.ToString() || dbDeviceStatusInfo.DriverId != deviceStatusInfo.Driver.Id.ToString()
+                || dbDeviceStatusInfo.IsDeviceCommunicating != deviceStatusInfo.IsDeviceCommunicating || dbDeviceStatusInfo.IsDriving != deviceStatusInfo.IsDriving
+                || dbDeviceStatusInfo.IsHistoricLastDriver != deviceStatusInfo.IsHistoricLastDriver || dbDeviceStatusInfo.Latitude != deviceStatusInfo.Latitude
+                || dbDeviceStatusInfo.Longitude != deviceStatusInfo.Longitude || dbDeviceStatusInfo.Speed != deviceStatusInfo.Speed)
             {
                 return true;
             }
@@ -254,6 +282,55 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Converts the supplied <see cref="BinaryData"/> into a <see cref="DbBinaryData"/>.
+        /// </summary>
+        /// <param name="">The <see cref="BinaryData"/> to be converted.</param>
+        /// <returns></returns>
+        public static DbBinaryData GetDbBinaryData(BinaryData binaryData)
+        {
+            Device binaryDataDevice = binaryData.Device;
+            DbBinaryData dbBinaryData = new()
+            {
+                GeotabId = binaryData.Id.ToString(),
+                ControllerId = binaryData.Controller.Id.ToString(),
+                Data = Convert.ToBase64String(binaryData.Data),
+                DateTime = binaryData.DateTime.GetValueOrDefault(),
+            };
+            if (binaryDataDevice.Id != null)
+            {
+                dbBinaryData.DeviceId = binaryDataDevice.Id.ToString();
+            }
+            if (binaryData.BinaryType != null)
+            {
+                dbBinaryData.BinaryType = binaryData.BinaryType.ToString();
+            }
+            if (binaryData.Version != null)
+            {
+                dbBinaryData.Version = binaryData.Version.ToString();
+            }
+
+            return dbBinaryData;
+        }
+
+        /// <summary>
+        /// Converts the supplied list of <see cref="BinaryData"/> objects into a list of <see cref="DbBinaryData"/> objects.
+        /// </summary>
+        /// <param name="binaryDatas">The list of <see cref="BinaryData"/> objects to be converted.</param>
+        /// <returns></returns>
+        public static List<DbBinaryData> GetDbBinaryDatas(List<BinaryData> binaryDatas)
+        {
+            DateTime recordCreationTimeUtc = DateTime.UtcNow;
+            var dbBinaryDatas = new List<DbBinaryData>();
+            foreach (var binaryData in binaryDatas)
+            {
+                DbBinaryData dbBinaryData = GetDbBinaryData(binaryData);
+                dbBinaryData.RecordCreationTimeUtc = recordCreationTimeUtc;
+                dbBinaryDatas.Add(dbBinaryData);
+            }
+            return dbBinaryDatas;
+        }
+
+        /// <summary>
         /// Converts the supplied <see cref="Condition"/> into a <see cref="DbCondition"/>.
         /// </summary>
         /// <param name="condition">The <see cref="Condition"/> to be converted.</param>
@@ -397,6 +474,8 @@ namespace MyGeotabAPIAdapter
             string deviceVIN = "";
             dynamic convertedDevice = Convert.ChangeType(device, device.GetType());
 
+            string deviceComment = device.Comment;
+
             try
             {
                 deviceLicensePlate = convertedDevice.LicensePlate;
@@ -436,11 +515,15 @@ namespace MyGeotabAPIAdapter
             {
                 deviceVIN = null;
             }
-
+            if (deviceComment != null && deviceComment.Length == 0)
+            {
+                deviceComment = null;
+            }
             DbDevice dbDevice = new()
             {
                 ActiveFrom = device.ActiveFrom,
                 ActiveTo = device.ActiveTo,
+                Comment = deviceComment,
                 DeviceType = device.DeviceType.ToString(),
                 GeotabId = device.Id.ToString(),
                 LicensePlate = deviceLicensePlate,
@@ -540,6 +623,53 @@ namespace MyGeotabAPIAdapter
                 dbDevices.Add(dbDevice);
             }
             return dbDevices;
+        }
+
+        /// <summary>
+        /// Converts the supplied <see cref="DeviceStatusInfo"/> into a <see cref="DbDeviceStatusInfo"/>.
+        /// </summary>
+        /// <param name="">The <see cref="DeviceStatusInfo"/> to be converted.</param>
+        /// <returns></returns>
+        public static DbDeviceStatusInfo GetDbDeviceStatusInfo(DeviceStatusInfo deviceStatusInfo)
+        {
+            Device deviceStatusInfoDevice = deviceStatusInfo.Device;
+            Driver deviceStatusInfoDriver = deviceStatusInfo.Driver;
+
+            DbDeviceStatusInfo dbDeviceStatusInfo = new()
+            {
+                Bearing = deviceStatusInfo.Bearing.Value,
+                GeotabId = deviceStatusInfo.Id.ToString(),
+                CurrentStateDuration = deviceStatusInfo.CurrentStateDuration.ToString(),
+                DateTime = deviceStatusInfo.DateTime.GetValueOrDefault(),
+                DeviceId = deviceStatusInfoDevice.Id.ToString(),
+                DriverId = deviceStatusInfoDriver.Id.ToString(),
+                IsDeviceCommunicating = deviceStatusInfo.IsDeviceCommunicating,
+                IsDriving = deviceStatusInfo.IsDriving,
+                IsHistoricLastDriver = deviceStatusInfo.IsHistoricLastDriver,
+                Latitude = deviceStatusInfo.Latitude.Value,
+                Longitude = deviceStatusInfo.Longitude.Value,
+                Speed = deviceStatusInfo.Speed.Value
+            };
+
+            return dbDeviceStatusInfo;
+        }
+
+        /// <summary>
+        /// Converts the supplied list of <see cref="DeviceStatusInfo"/> objects into a list of <see cref="DbDeviceStatusInfo"/> objects.
+        /// </summary>
+        /// <param name="deviceStatusInfos">The list of <see cref="DeviceStatusInfo"/> objects to be converted.</param>
+        /// <returns></returns>
+        public static List<DbDeviceStatusInfo> GetDbDeviceStatusInfos(List<DeviceStatusInfo> deviceStatusInfos)
+        {
+            DateTime recordLastChangedUtc = DateTime.UtcNow;
+            var dbDeviceStatusInfos = new List<DbDeviceStatusInfo>();
+            foreach (var deviceStatusInfo in deviceStatusInfos)
+            {
+                DbDeviceStatusInfo dbDeviceStatusInfo = GetDbDeviceStatusInfo(deviceStatusInfo);
+                dbDeviceStatusInfo.RecordLastChangedUtc = recordLastChangedUtc;
+                dbDeviceStatusInfos.Add(dbDeviceStatusInfo);
+            }
+            return dbDeviceStatusInfos;
         }
 
         /// <summary>
@@ -1278,5 +1408,9 @@ namespace MyGeotabAPIAdapter
             zoneTypeIds.Append(']');
             return zoneTypeIds.ToString();
         }
+
+
+
+
     }
 }

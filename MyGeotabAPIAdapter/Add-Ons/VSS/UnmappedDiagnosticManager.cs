@@ -15,7 +15,8 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         static readonly Logger logger = LogManager.GetCurrentClassLogger();
         public IDictionary<Id, UnmappedDiagnostic> UnmappedDiagnosticsDictionary { get; }
         public DateTime UnmappedDiagnosticsLastLoggedTimeUtc { get; set; }
-        VSSConfiguration VSSConfiguration;
+
+        readonly VSSConfiguration VSSConfiguration;
 
         /// <summary>
         /// Creates a new instance of the <see cref="UnmappedDiagnosticManager"/> class.

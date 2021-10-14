@@ -1,7 +1,9 @@
 /* Clean Database */ 
+-- delete from public."BinaryData";
 -- delete from public."Conditions";
 -- delete from public."ConfigFeedVersions";
 -- delete from public."Devices";
+-- delete from public."DeviceStatusInfo";
 -- delete from public."Diagnostics";
 -- delete from public."DriverChanges";
 -- delete from public."DutyStatusAvailabilities";
@@ -22,9 +24,11 @@
 -- delete from public."Users";
 -- delete from public."Zones";
 -- delete from public."ZoneTypes";
+-- ALTER SEQUENCE public."BinaryData_id_seq" RESTART;
 -- ALTER SEQUENCE public."Conditions_id_seq" RESTART;
 -- ALTER SEQUENCE public."ConfigFeedVersions_id_seq" RESTART;
 -- ALTER SEQUENCE public."Devices_id_seq" RESTART;
+-- ALTER SEQUENCE public."DeviceStatusInfo_id_seq" RESTART;
 -- ALTER SEQUENCE public."Diagnostics_id_seq" RESTART;
 -- ALTER SEQUENCE public."DriverChanges_id_seq" RESTART;
 -- ALTER SEQUENCE public."DutyStatusAvailabilities_id_seq" RESTART;
@@ -46,11 +50,15 @@
 -- ALTER SEQUENCE public."ZoneTypes_id_seq" RESTART;
 
 /* Check counts */
+select 'BinaryData' as "TableName", count(0) as "RecordCount" from public."BinaryData"
+union all
 select 'Conditions' as "TableName", count(0) as "RecordCount" from public."Conditions"
 union all
 select 'ConfigFeedVersions', count(0) from public."ConfigFeedVersions"
 union all
 select 'Devices', count(0) from public."Devices"
+union all
+select 'DeviceStatusInfo', count(0) from public."DeviceStatusInfo"
 union all
 select 'Diagnostics', count(0) from public."Diagnostics"
 union all

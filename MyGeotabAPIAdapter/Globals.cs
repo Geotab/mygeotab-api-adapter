@@ -61,7 +61,8 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// A list of MyGeotab object types for which data feeds are utilized in this application (i.e. those for which the <see cref="FeedManager"/> has a <see cref="FeedContainer"/>). Any time a new feed type is added, this enum will need to be updated. 
         /// </summary>
-        public enum SupportedFeedTypes { DriverChange, DVIRLog, ExceptionEvent, FaultData, LogRecord, StatusData, Trip }
+        //public enum SupportedFeedTypes { DriverChange, DVIRLog, ExceptionEvent, FaultData, LogRecord, StatusData, Trip }
+        public enum SupportedFeedTypes { BinaryData, DeviceStatusInfo, DriverChange, DVIRLog, ExceptionEvent, FaultData, LogRecord, StatusData, Trip }
 
         /// <summary>
         /// The Global ConfigurationManager reference object

@@ -8,8 +8,8 @@
     <Authors>Geotab Inc.</Authors>
 
     <Product>MyGeotab API Adapter</Product>
-    <Version>1.4.0.8</Version>
-    <InformationalVersion>1.4.0.8</InformationalVersion>
+    <Version>1.4.0.9</Version>
+    <InformationalVersion>1.4.0.9</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,7 +1,9 @@
 ﻿/* Clean Database */ 
+-- truncate table [dbo].[BinaryData];
 -- truncate table [dbo].[Conditions];
 -- truncate table [dbo].[ConfigFeedVersions];
 -- truncate table [dbo].[Devices];
+-- truncate table [dbo].[DeviceStatusInfo];
 -- truncate table [dbo].[Diagnostics];
 -- truncate table [dbo].[DriverChanges];
 -- truncate table [dbo].[DutyStatusAvailabilities];
@@ -22,9 +24,11 @@
 -- truncate table [dbo].[Users];
 -- truncate table [dbo].[Zones];
 -- truncate table [dbo].[ZoneTypes];
+--DBCC CHECKIDENT ('dbo.BinaryData', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Conditions', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.ConfigFeedVersions', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Devices', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.DeviceStatusInfo', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Diagnostics', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DriverChanges', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DutyStatusAvailabilities', RESEED, 0);
@@ -47,11 +51,15 @@
 
 set nocount on;
 /* Check counts */
+select 'BinaryData' as "TableName", SUM(st.row_count) as "RecordCount" FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'BinaryData'
+union all
 select 'Conditions' as "TableName", SUM(st.row_count) as "RecordCount" FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Conditions'
 union all
 select 'ConfigFeedVersions', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'ConfigFeedVersions'
 union all
 select 'Devices', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'Devices'
+union all
+select 'DeviceStatusInfo', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DeviceStatusInfo'
 union all
 select 'DriverChanges', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DriverChanges'
 union all

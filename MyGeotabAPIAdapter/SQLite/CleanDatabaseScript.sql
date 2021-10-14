@@ -1,7 +1,9 @@
 /* Clean Database */ 
+--delete from "BinaryData";
 --delete from "Conditions";
 --delete from "ConfigFeedVersions";
 --delete from "Devices";
+--delete from "DeviceStatusInfo";
 --delete from "Diagnostics";
 --delete from "DriverChanges";
 --delete from "DutyStatusAvailabilities";
@@ -24,11 +26,15 @@
 --delete from "ZoneTypes";
 
 /* Check counts */
+select 'BinaryData' as "TableName", count(0) as "RecordCount" from "BinaryData"
+union all
 select 'Conditions' as "TableName", count(0) as "RecordCount" from "Conditions"
 union all
 select 'ConfigFeedVersions', count(0) from "ConfigFeedVersions"
 union all
 select 'Devices', count(0) from "Devices"
+union all
+select 'DeviceStatusInfo', count(0) from "DeviceStatusInfo"
 union all
 select 'Diagnostics', count(0) from "Diagnostics"
 union all

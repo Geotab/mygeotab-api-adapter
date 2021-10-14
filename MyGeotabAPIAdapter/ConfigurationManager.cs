@@ -79,6 +79,12 @@ namespace MyGeotabAPIAdapter
         const string ArgNameFeedStartSpecificTimeUTC = "AppSettings:GeneralFeedSettings:FeedStartSpecificTimeUTC";
         public readonly string ArgNameDevicesToTrack = "AppSettings:GeneralFeedSettings:DevicesToTrack";
         public readonly string ArgNameDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:DiagnosticsToTrack";
+        // > AppSettings:Feeds:DeviceStatusInfo
+        const string ArgNameEnableDeviceStatusInfoFeed = "AppSettings:Feeds:DeviceStatusInfo:EnableDeviceStatusInfoFeed";
+        const string ArgNameDeviceStatusInfoFeedIntervalSeconds = "AppSettings:Feeds:DeviceStatusInfo:DeviceStatusInfoFeedIntervalSeconds";
+        // > AppSettings:Feeds:BinaryData
+        const string ArgNameEnableBinaryDataFeed = "AppSettings:Feeds:BinaryData:EnableBinaryDataFeed";
+        const string ArgNameBinaryDataFeedIntervalSeconds = "AppSettings:Feeds:BinaryData:BinaryDataFeedIntervalSeconds";
         // > AppSettings:Feeds:DriverChange
         const string ArgNameEnableDriverChangeFeed = "AppSettings:Feeds:DriverChange:EnableDriverChangeFeed";
         const string ArgNameDriverChangeFeedIntervalSeconds = "AppSettings:Feeds:DriverChange:DriverChangeFeedIntervalSeconds";
@@ -109,7 +115,6 @@ namespace MyGeotabAPIAdapter
         const string ArgNameEnableDVIRLogManipulator = "AppSettings:Manipulators:DVIRLog:EnableDVIRLogManipulator";
         const string ArgNameDVIRLogManipulatorIntervalSeconds = "AppSettings:Manipulators:DVIRLog:DVIRLogManipulatorIntervalSeconds";
 
-
         // Arbitrary limits to prevent API abuse:
         // > Cache refresh
         const int MinCacheRefreshIntervalMinutes = 60;
@@ -133,8 +138,10 @@ namespace MyGeotabAPIAdapter
         const int MinTimeoutSeconds = 10;
 
         // Database table names:
+        const string TableNameDbBinaryData = "BinaryData";
         const string TableNameDbConfigFeedVersions = "ConfigFeedVersions";
         const string TableNameDbDevice = "Devices";
+        const string TableNameDbDeviceStatusInfo = "DeviceStatusInfo";
         const string TableNameDbDiagnostic = "Diagnostics";
         const string TableNameDbDriverChange = "DriverChanges";
         const string TableNameDbDutyStatusAvailability = "DutyStatusAvailability";
@@ -177,6 +184,8 @@ namespace MyGeotabAPIAdapter
         int diagnosticCacheRefreshIntervalMinutes;
         int diagnosticCacheUpdateIntervalMinutes;
         string diagnosticsToTrackList;
+        int binaryDataFeedIntervalSeconds;
+        int deviceStatusInfoFeedIntervalSeconds;
         int driverChangeFeedIntervalSeconds;
         int dutyStatusAvailabilityFeedIntervalSeconds;
         int dutyStatusAvailabilityFeedLastAccessDateCutoffDays;
@@ -184,6 +193,8 @@ namespace MyGeotabAPIAdapter
         int dvirDefectListCacheRefreshIntervalMinutes;
         int dvirLogDataFeedIntervalSeconds;
         int dvirLogManipulatorIntervalSeconds;
+        bool enableBinaryDataFeed;
+        bool enableDeviceStatusInfoFeed;
         bool enableDriverChangeFeed;
         bool enableDutyStatusAvailabilityDataFeed;
         bool enableDVIRLogDataFeed;
@@ -320,6 +331,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// The name of the database table for <see cref="BinaryData"/> information.
+        /// </summary>
+        public static string DbBinaryDataTableName
+        {
+            get => TableNameDbBinaryData;
+        }
+
+        /// <summary>
         /// The name of the database table for data feed ToVersion information.
         /// </summary>
         public static string DbConfigFeedVersionsTableName
@@ -333,6 +352,14 @@ namespace MyGeotabAPIAdapter
         public static string DbDeviceTableName
         {
             get => TableNameDbDevice;
+        }
+
+        /// <summary>
+        /// The name of the database table for <see cref="DeviceStatusInfo"/> information.
+        /// </summary>
+        public static string DbDeviceStatusInfoTableName
+        {
+            get => TableNameDbDeviceStatusInfo;
         }
 
         /// <summary>
@@ -608,6 +635,21 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <summary>
+        /// Indicates whether a <see cref="BinaryData"/> data feed should be enabled. 
+        /// </summary>
+        public bool EnableBinaryDataFeed
+        {
+            get => enableBinaryDataFeed;
+        }
+
+        /// <summary>
+        /// Indicates whether a <see cref="DeviceStatusInfo"/> data feed should be enabled. 
+        /// </summary>
+        public bool EnableDeviceStatusInfoFeed
+        {
+            get => enableDeviceStatusInfoFeed;
+        }
+        /// <summary>
         /// Indicates whether a <see cref="DriverChange"/> data feed should be enabled. 
         /// </summary>
         public bool EnableDriverChangeFeed
@@ -758,6 +800,22 @@ namespace MyGeotabAPIAdapter
         public int GroupCacheUpdateIntervalMinutes
         {
             get => groupCacheUpdateIntervalMinutes;
+        }
+
+        /// <summary>
+        /// The minimum number of seconds to wait between GetFeed() calls for <see cref="BinaryData"/> objects.
+        /// </summary>
+        public int BinaryDataFeedIntervalSeconds
+        {
+            get => binaryDataFeedIntervalSeconds;
+        }
+
+        /// <summary>
+        /// The minimum number of seconds to wait between GetFeed() calls for <see cref="DeviceStatusInfo"/> objects.
+        /// </summary>
+        public int DeviceStatusInfoFeedIntervalSeconds
+        {
+            get => deviceStatusInfoFeedIntervalSeconds;
         }
 
         /// <summary>
@@ -1295,6 +1353,12 @@ namespace MyGeotabAPIAdapter
             zoneTypeCacheUpdateIntervalMinutes = GetConfigKeyValueInt(ArgNameZoneTypeCacheUpdateIntervalMinutes, null, false, MinCacheUpdateIntervalMinutes, MaxCacheUpdateIntervalMinutes, DefaultCacheUpdateIntervalMinutes);
 
             // Feed:
+            enableBinaryDataFeed = GetConfigKeyValueBoolean(ArgNameEnableBinaryDataFeed);
+            binaryDataFeedIntervalSeconds = GetConfigKeyValueInt(ArgNameBinaryDataFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+
+            enableDeviceStatusInfoFeed = GetConfigKeyValueBoolean(ArgNameEnableDeviceStatusInfoFeed);
+            deviceStatusInfoFeedIntervalSeconds = GetConfigKeyValueInt(ArgNameDeviceStatusInfoFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+
             enableDriverChangeFeed = GetConfigKeyValueBoolean(ArgNameEnableDriverChangeFeed);
             driverChangeFeedIntervalSeconds = GetConfigKeyValueInt(ArgNameDriverChangeFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
