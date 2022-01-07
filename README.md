@@ -6,10 +6,6 @@ The MyGeotab API Adapter solution serves as both an example of proper integratio
 - For detailed information, refer to the [MyGeotab API Adapter - Solution and Implementation Guide](https://docs.google.com/document/d/12TIgTCuWVF_AYc3evsIms9VOecc1NT4P9Kn-eVg-H7k/edit?usp=sharing).
 - Want to access the above materials, but don't have a Gmail address or aren't permitted to use one? No problem - you can [create a Google account without using Gmail](https://accounts.google.com/signup/v2/webcreateaccount?flowName=GlifWebSignIn&flowEntry=SignUp&nogm=true).
 
-## Disclaimer
-
-This tool is not intended for use by U.S. Federal Government customers or otherwise in the FedRamp environment.
-
 ## Prerequisites
 
 The solution requires:
@@ -23,7 +19,7 @@ The solution requires:
 	- Npgsql
 	- Oracle.ManagedDataAccess.Core
 	- System.Data.SQLite.Core
-- MyGeotab credentials with all ìViewî clearances enabled on any MyGeotab database with which the MyGeotab API Adapter is to be used. It is recommended that a Service Account be set-up for this purpose. See the [Service Account Guidelines](https://docs.google.com/document/d/1KXJY3S6xyTjp9-qLgxo4PTedQjEuxrqKDlVWgfcC_lc/edit#heading=h.flbpi6nh4xjx) document for more details.
+- MyGeotab credentials with all ‚ÄúView‚Äù clearances enabled on any MyGeotab database with which the MyGeotab API Adapter is to be used. It is recommended that a Service Account be set-up for this purpose. See the [Service Account Guidelines](https://docs.google.com/document/d/1KXJY3S6xyTjp9-qLgxo4PTedQjEuxrqKDlVWgfcC_lc/edit#heading=h.flbpi6nh4xjx) document for more details.
 - If **PostgreSQL** is the chosen database provider, access to a PostgreSQL 11 (or greater) server on which the adapter database is deployed.
 	- If the adapter and database will reside on separate servers, it may be necessary to ensure that appropriate security and networking steps are undertaken to ensure the ability of the adapter to interact with the database.
 	- Although not a strict requirement, it is recommended to have access to a tool such as [pgAdmin](https://www.pgadmin.org/) to view data that the adapter writes to the database.
