@@ -11,6 +11,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public long OVDSServerCommandId { get; set; }
         public string Command { get; set; }
         public string FailureMessage { get; set; }
+        [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

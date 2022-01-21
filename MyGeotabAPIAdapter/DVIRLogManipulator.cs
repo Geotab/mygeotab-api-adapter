@@ -329,7 +329,7 @@ namespace MyGeotabAPIAdapter
             try
             {
                 // Setup the ConfigurationManager Globals reference
-                connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+                connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType, Databases.AdapterDatabase);
 
                 // Allow longer database command timeout because another process could be writing a batch of records to the DVIRDefectUpdates table and this could cause a bit of delay.
                 commandTimeout = Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks * 2;

@@ -29,6 +29,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public long? DurationTicks { get; set; }
         public string RuleId { get; set; }
         public long? Version { get; set; }
+        [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
     }
 }

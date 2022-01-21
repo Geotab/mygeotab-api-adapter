@@ -41,7 +41,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public async Task<long> InsertAsync(ConnectionInfo connectionInfo, List<DbTrip> dbTrips, DbConfigFeedVersion dbConfigFeedVersion, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public async Task<long> InsertAsync(ConnectionInfo connectionInfo, IEnumerable<DbTrip> dbTrips, DbConfigFeedVersion dbConfigFeedVersion, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
             long insertedRowsCount = 0;
@@ -81,7 +81,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public async Task<long> UpdateAsync(ConnectionInfo connectionInfo, List<DbTrip> dbTrips, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public async Task<long> UpdateAsync(ConnectionInfo connectionInfo, IEnumerable<DbTrip> dbTrips, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
             long updatedRowsCount = 0;

@@ -197,7 +197,7 @@ namespace MyGeotabAPIAdapter
                             throw new Exception(errorMessage);
                     }
 
-                    if (trackedDevicesDictionary.ContainsKey(itemToBeEvaluatedDevice.Id))
+                    if (itemToBeEvaluatedDevice != null && trackedDevicesDictionary.ContainsKey(itemToBeEvaluatedDevice.Id))
                     {
                         filteredList.Add(itemToBeEvaluated);
                     }
@@ -249,7 +249,7 @@ namespace MyGeotabAPIAdapter
                             throw new Exception(errorMessage);
                     }
 
-                    if (trackedDiagnosticsDictionary.ContainsKey(itemToBeEvaluatedDiagnostic.Id))
+                    if (itemToBeEvaluatedDiagnostic != null && trackedDiagnosticsDictionary.ContainsKey(itemToBeEvaluatedDiagnostic.Id))
                     {
                         filteredList.Add(itemToBeEvaluated);
                     }
@@ -887,7 +887,7 @@ namespace MyGeotabAPIAdapter
                 var assemblyName = GetType().Assembly.GetName().Name;
                 var assemblyVersion = GetType().Assembly.GetName().Version.ToString();
                 logger.Info($"******** INITIALIZING APPLICATION - {assemblyName} (v{assemblyVersion}) ********");
-                connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+                connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType, Databases.AdapterDatabase);
                 await Globals.AuthenticateMyGeotabApiAsync();
                 await ValidateMyGeotabVersionInformationAsync();
                 dbConfigFeedVersions = await InitializeDbConfigFeedVersionListAsync();

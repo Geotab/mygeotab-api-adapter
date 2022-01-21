@@ -20,6 +20,11 @@ namespace MyGeotabAPIAdapter.Database
         public enum DataAccessProviderType { PostgreSQL, SQLite, SQLServer, Oracle }
 
         /// <summary>
+        /// The <see cref="Databases"/> identifier for the database associated with the subject <see cref="ConnectionInfo"/> instance.
+        /// </summary>
+        public Databases Database { get; private set; }
+
+        /// <summary>
         /// The <see cref="System.Data.IDbConnection"/> provider type.
         /// </summary>
         public string ConnectionProviderType
@@ -45,10 +50,12 @@ namespace MyGeotabAPIAdapter.Database
         /// </summary>
         /// <param name="connectionString">The database connection string.</param>
         /// <param name="dataAccessProviderType">A <see cref="String"/> representation of the <see cref="DataAccessProviderType"/> to be used when creating <see cref="System.Data.IDbConnection"/> instances.</param>
-        public ConnectionInfo(String connectionString, string dataAccessProviderType)
+        /// <param name="database">The <see cref="Databases"/> identifier for the database associated with the subject <see cref="ConnectionInfo"/> instance.</param>
+        public ConnectionInfo(String connectionString, string dataAccessProviderType, Databases database)
         {
             this.connectionString = connectionString;
             RegisterDbProviderFactory(dataAccessProviderType);
+            this.Database = database;
         }
 
         /// <summary>

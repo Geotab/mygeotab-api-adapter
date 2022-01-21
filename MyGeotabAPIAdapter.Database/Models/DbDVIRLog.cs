@@ -25,6 +25,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string TrailerId { get; set; }
         public string TrailerName { get; set; }
         public long? Version { get; set; }
+        [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
     }
 }

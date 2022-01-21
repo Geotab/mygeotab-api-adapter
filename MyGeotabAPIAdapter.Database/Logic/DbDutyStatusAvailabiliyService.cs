@@ -17,7 +17,7 @@ namespace MyGeotabAPIAdapter.Database.Logic
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public static async Task<long> DeleteAsync(ConnectionInfo connectionInfo, IList<DbDutyStatusAvailability> dbDutyStatusAvailabilitys, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public static async Task<long> DeleteAsync(ConnectionInfo connectionInfo, IEnumerable<DbDutyStatusAvailability> dbDutyStatusAvailabilitys, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             return await new DbDutyStatusAvailabilityRepository().DeleteAsync(connectionInfo, dbDutyStatusAvailabilitys, cancellationTokenSource, commandTimeout);
         }
@@ -54,7 +54,7 @@ namespace MyGeotabAPIAdapter.Database.Logic
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public static async Task<long> InsertAsync(ConnectionInfo connectionInfo, List<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntities, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public static async Task<long> InsertAsync(ConnectionInfo connectionInfo, IEnumerable<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntities, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             return await new DbDutyStatusAvailabilityRepository().InsertAsync(connectionInfo, dbDutyStatusAvailabilityEntities, cancellationTokenSource, commandTimeout);
         }
@@ -67,7 +67,7 @@ namespace MyGeotabAPIAdapter.Database.Logic
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public static async Task<long> UpdateAsync(ConnectionInfo connectionInfo, List<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntities, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public static async Task<long> UpdateAsync(ConnectionInfo connectionInfo, IEnumerable<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntities, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             return await new DbDutyStatusAvailabilityRepository().UpdateAsync(connectionInfo, dbDutyStatusAvailabilityEntities, cancellationTokenSource, commandTimeout);
         }

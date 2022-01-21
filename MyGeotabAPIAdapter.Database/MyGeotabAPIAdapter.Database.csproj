@@ -4,17 +4,29 @@
     <TargetFramework>net5.0</TargetFramework>
     <Authors>Geotab Inc.</Authors>
     <Product>MyGeotab API Adapter</Product>
-    <Version>1.4.0.9</Version>
-    <InformationalVersion>1.4.0.9</InformationalVersion>    
+    <Version>1.5.0.0</Version>
+    <InformationalVersion>1.5.0.0</InformationalVersion>    
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.0.90" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="3.0.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="3.0.0" />
     <PackageReference Include="NLog.Extensions.Logging" Version="1.7.4" />
     <PackageReference Include="Npgsql" Version="5.0.10" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.3" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.115" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Configuration\MyGeotabAPIAdapter.Configuration.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Helpers\MyGeotabAPIAdapter.Helpers.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Logging\MyGeotabAPIAdapter.Logging.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Configuration\MyGeotabAPIAdapter.Configuration.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Helpers\MyGeotabAPIAdapter.Helpers.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Logging\MyGeotabAPIAdapter.Logging.csproj" />
   </ItemGroup>
 
 </Project>

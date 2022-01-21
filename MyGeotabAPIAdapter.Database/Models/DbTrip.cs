@@ -158,6 +158,7 @@ namespace MyGeotabAPIAdapter.Database.Models
             }
         }
         public long? WorkStopDurationTicks { get; set; }
+        [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
     }
 }

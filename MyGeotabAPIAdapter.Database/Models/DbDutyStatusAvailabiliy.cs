@@ -105,6 +105,7 @@ namespace MyGeotabAPIAdapter.Database.Models
             }
         }
         public long? WorkdayTicks { get; set; }
+        [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

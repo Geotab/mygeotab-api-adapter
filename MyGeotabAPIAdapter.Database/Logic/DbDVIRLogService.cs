@@ -61,7 +61,7 @@ namespace MyGeotabAPIAdapter.Database.Logic
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public static async Task<string> PersistAllDVIRLogChangesToDatabase(ConnectionInfo connectionInfo, List<DbDVIRLog> dbDVIRLogsToInsert, List<DbDVIRDefect> dbDVIRDefectsToInsert, List<DbDVIRDefect> dbDVIRDefectsToUpdate, List<DbDVIRDefectRemark> dbDVIRDefectRemarksToInsert, DbConfigFeedVersion dbConfigFeedVersion, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public static async Task<string> PersistAllDVIRLogChangesToDatabase(ConnectionInfo connectionInfo, IEnumerable<DbDVIRLog> dbDVIRLogsToInsert, IEnumerable<DbDVIRDefect> dbDVIRDefectsToInsert, IEnumerable<DbDVIRDefect> dbDVIRDefectsToUpdate, IEnumerable<DbDVIRDefectRemark> dbDVIRDefectRemarksToInsert, DbConfigFeedVersion dbConfigFeedVersion, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             return await new DbDVIRLogRepository().PersistAllDVIRLogChangesToDatabase(connectionInfo, dbDVIRLogsToInsert, dbDVIRDefectsToInsert, dbDVIRDefectsToUpdate, dbDVIRDefectRemarksToInsert, dbConfigFeedVersion, cancellationTokenSource, commandTimeout);
         }

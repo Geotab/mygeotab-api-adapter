@@ -48,7 +48,7 @@ namespace MyGeotabAPIAdapter.Database.Logic
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public static async Task<long> InsertAsync(ConnectionInfo connectionInfo, List<DbZone> dbZones, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public static async Task<long> InsertAsync(ConnectionInfo connectionInfo, IEnumerable<DbZone> dbZones, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             return await new DbZoneRepository().InsertAsync(connectionInfo, dbZones, cancellationTokenSource, commandTimeout);
         }
@@ -61,7 +61,7 @@ namespace MyGeotabAPIAdapter.Database.Logic
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public static async Task<long> UpdateAsync(ConnectionInfo connectionInfo, List<DbZone> dbZones, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public static async Task<long> UpdateAsync(ConnectionInfo connectionInfo, IEnumerable<DbZone> dbZones, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             return await new DbZoneRepository().UpdateAsync(connectionInfo, dbZones, cancellationTokenSource, commandTimeout);
         }

@@ -4,8 +4,20 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("Users")]
-    public class DbUser
+    public class DbUser : IDbEntity, IIdCacheableDbEntity
     {
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "Users";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public DateTime LastUpsertedUtc { get => RecordLastChangedUtc; }
+
         [Key]
         public long id { get; set; }
         public string GeotabId { get; set; }
@@ -19,8 +31,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string LastName { get; set; }
         public string Name { get; set; }
         public int EntityStatus { get; set; }
+        [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
-        [Write(false)]
-        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
     }
 }

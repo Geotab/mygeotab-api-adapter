@@ -20,7 +20,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public async Task<long> DeleteAsync(ConnectionInfo connectionInfo, IList<DbDutyStatusAvailability> dbDutyStatusAvailabilitys, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public async Task<long> DeleteAsync(ConnectionInfo connectionInfo, IEnumerable<DbDutyStatusAvailability> dbDutyStatusAvailabilitys, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
             long deletedRowsCount = 0;
@@ -75,7 +75,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public async Task<long> InsertAsync(ConnectionInfo connectionInfo, List<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntities, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public async Task<long> InsertAsync(ConnectionInfo connectionInfo, IEnumerable<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntities, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
             long insertedRowsCount = 0;
@@ -112,7 +112,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <returns></returns>
-        public async Task<long> UpdateAsync(ConnectionInfo connectionInfo, List<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntities, CancellationTokenSource cancellationTokenSource, int commandTimeout)
+        public async Task<long> UpdateAsync(ConnectionInfo connectionInfo, IEnumerable<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntities, CancellationTokenSource cancellationTokenSource, int commandTimeout)
         {
             CancellationToken cancellationToken = cancellationTokenSource.Token;
             long updatedRowsCount = 0;

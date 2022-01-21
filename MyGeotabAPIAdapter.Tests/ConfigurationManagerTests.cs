@@ -54,10 +54,10 @@ namespace MyGeotabAPIAdapter.Tests
         public void GetConfigKeyValueInt_SimpleValuesShouldCalculate()
         {
             //Arrange
-            int expected = 300;
+            int expected = 10;
 
             //Act
-            string keyString = "AppSettings:DeviceCacheUpdateIntervalMinutes";
+            string keyString = "AppSettings:Caches:Device:DeviceCacheUpdateIntervalMinutes";
             string sectionString = "";
             int actual = ConfigurationManager.GetConfigKeyValueInt(keyString, sectionString);
 
@@ -73,7 +73,7 @@ namespace MyGeotabAPIAdapter.Tests
             bool expected = true;
 
             //Act
-            string keyString = "AppSettings:EnableLogRecordFeed";
+            string keyString = "AppSettings:Feeds:LogRecord:EnableLogRecordFeed";
             string sectionString = "";
             bool actual = ConfigurationManager.GetConfigKeyValueBoolean(keyString, sectionString);
 

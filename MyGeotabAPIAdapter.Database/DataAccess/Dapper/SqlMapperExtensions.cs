@@ -1,17 +1,16 @@
-﻿using System;
+﻿using MyGeotabAPIAdapter.Database;
+using MyGeotabAPIAdapter.Database.DataAccess;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 #region Customizations
-using System.Threading;
 using System.Threading.Tasks;
 #endregion
 using System.Collections.Concurrent;
 using System.Reflection.Emit;
-using Oracle.ManagedDataAccess.Client;
-using Oracle.ManagedDataAccess.Types;
 using Dapper;
 
 namespace Dapper.Contrib.Extensions
@@ -60,6 +59,9 @@ namespace Dapper.Contrib.Extensions
         private static readonly ConcurrentDictionary<RuntimeTypeHandle, IEnumerable<PropertyInfo>> ExplicitKeyProperties = new ConcurrentDictionary<RuntimeTypeHandle, IEnumerable<PropertyInfo>>();
         private static readonly ConcurrentDictionary<RuntimeTypeHandle, IEnumerable<PropertyInfo>> TypeProperties = new ConcurrentDictionary<RuntimeTypeHandle, IEnumerable<PropertyInfo>>();
         private static readonly ConcurrentDictionary<RuntimeTypeHandle, IEnumerable<PropertyInfo>> ComputedProperties = new ConcurrentDictionary<RuntimeTypeHandle, IEnumerable<PropertyInfo>>();
+        #region Customizations
+        private static readonly ConcurrentDictionary<RuntimeTypeHandle, IEnumerable<PropertyInfo>> ChangeTrackerProperties = new();
+        #endregion
         private static readonly ConcurrentDictionary<RuntimeTypeHandle, string> GetQueries = new ConcurrentDictionary<RuntimeTypeHandle, string>();
         private static readonly ConcurrentDictionary<RuntimeTypeHandle, string> TypeTableName = new ConcurrentDictionary<RuntimeTypeHandle, string>();
 
@@ -75,6 +77,21 @@ namespace Dapper.Contrib.Extensions
                 ["mysqlconnection"] = new MySqlAdapter(),
                 ["fbconnection"] = new FbAdapter()
             };
+
+        #region Customizations
+        private static List<PropertyInfo> ChangeTrackerPropertiesCache(Type type)
+        {
+            if (ChangeTrackerProperties.TryGetValue(type.TypeHandle, out IEnumerable<PropertyInfo> pi))
+            {
+                return pi.ToList();
+            }
+
+            var changeTrackerProperties = TypePropertiesCache(type).Where(p => p.GetCustomAttributes(true).Any(a => a is ChangeTrackerAttribute)).ToList();
+
+            ChangeTrackerProperties[type.TypeHandle] = changeTrackerProperties;
+            return changeTrackerProperties;
+        }
+        #endregion
 
         private static List<PropertyInfo> ComputedPropertiesCache(Type type)
         {
@@ -190,7 +207,22 @@ namespace Dapper.Contrib.Extensions
             var explicitKeys = ExplicitKeyPropertiesCache(type);
             var keyCount = keys.Count + explicitKeys.Count;
             if (keyCount > 1)
-                throw new DataException($"{method}<T> only supports an entity with a single [Key] or [ExplicitKey] property. [Key] Count: {keys.Count}, [ExplicitKey] Count: {explicitKeys.Count}");
+            {
+                //throw new DataException($"{method}<T> only supports an entity with a single [Key] or [ExplicitKey] property. [Key] Count: {keys.Count}, [ExplicitKey] Count: {explicitKeys.Count}");
+                #region Customizations
+                // If there is an ExplicitKey and another column named "id", which may be a surrogate key, drop the "id" column from the list of keys as it is the ExplicitKey that we want to use. 
+                if (keys.Count == 1 && keys[0].Name == "id")
+                {
+                    keys.Clear();
+                    keyCount = keys.Count + explicitKeys.Count;
+                }
+                else
+                {
+                    throw new DataException($"{method}<T> only supports an entity with a single [Key] or [ExplicitKey] property. [Key] Count: {keys.Count}, [ExplicitKey] Count: {explicitKeys.Count}");
+                }
+                #endregion
+
+            }
             if (keyCount == 0)
                 throw new DataException($"{method}<T> only supports an entity with a [Key] or an [ExplicitKey] property");
 
@@ -401,44 +433,32 @@ namespace Dapper.Contrib.Extensions
         /// <param name="transaction">The transaction to run under, null (the default) if none</param>
         /// <param name="commandTimeout">Number of seconds before command execution timeout</param>
         /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
+        /// <param name="changedSince">Only select entities where the <see cref="ChangeTrackerAttribute"/> property has a value greater than this <see cref="DateTime"/>. If null, no <see cref="DateTime"/> filter is applied.</param>
         /// <returns>Entity of T</returns>
-        public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, int? commandTimeout = null, int? resultsLimit = null) where T : class
+        public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, int? commandTimeout = null, int? resultsLimit = null, DateTime? changedSince = null) where T : class
         {
             var type = typeof(T);
             var cacheType = typeof(List<T>);
+            var changedSinceDateTime = DateTime.MinValue;
 
             if (!GetQueries.TryGetValue(cacheType.TypeHandle, out string sql))
             {
-                GetSingleKey<T>(nameof(GetAllAsync));
-                var name = GetTableName(type);
+                var tableName = GetTableName(type);
+                var key = GetSingleKey<T>(nameof(GetAllAsync));
+                var changeTrackerProperties = ChangeTrackerPropertiesCache(type);
+                PropertyInfo changedSinceProperty = null;
+#nullable enable
+                string? changedSinceColumnName = null;
+#nullable disable
+                string connectionProviderType = connection.GetType().Namespace;
 
-                // If a resultsLimit is specified, apply the limit to the SQL statement based on the database provider type.
-                if (resultsLimit == null || resultsLimit < 1)
+                if (changedSince != null && changeTrackerProperties.Count > 0)
                 {
-                    sql = $"select * from \"{name}\"";
-                    //sql = $"select * from {name}";
+                    changedSinceProperty = changeTrackerProperties[0];
+                    changedSinceColumnName = changedSinceProperty.Name;
                 }
-                else
-                {
-                    string connectionProviderType = connection.GetType().Namespace;
-                    switch (connectionProviderType)
-                    {
-                        case "Npgsql":
-                        case "System.Data.SQLite":
-                            sql = $"select * from \"{name}\" limit {resultsLimit}";
-                            break;
-                        case "Microsoft.Data.SqlClient":
-                        case "System.Data.SqlClient":
-                            sql = $"select top ({resultsLimit}) * from \"{name}\"";
-                            break;
-                        case "Oracle.ManagedDataAccess.Client":
-                            sql = $"select * from \"{name}\" where rownum <= {resultsLimit}";
-                            //sql = $"select * from {name} where rownum <= {resultsLimit}";
-                            break;
-                        default:
-                            throw new NotImplementedException($"Support for the '{connectionProviderType}' connection provider type has not been implemented in this method.");
-                    }
-                }
+
+                sql = SqlMapperSqlBuilder.GetSqlForGetAllAsync(tableName, key.Name, changedSinceColumnName, connectionProviderType, resultsLimit, changedSince);
                 GetQueries[cacheType.TypeHandle] = sql;
             }
 
@@ -1248,42 +1268,33 @@ namespace Dapper.Contrib.Extensions
         /// <param name="parms">The dynamic parameters to be used comprise the WHERE clause of the subject operation.</param>
         /// <param name="transaction">The database transaction within which to perform the subject operation.</param>
         /// <param name="commandTimeout">The command timeout setting.</param>
+        /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
+        /// <param name="changedSince">Only select entities where the <see cref="ChangeTrackerAttribute"/> property has a value greater than this <see cref="DateTime"/>. If null, no <see cref="DateTime"/> filter is applied.</param>
         /// <returns></returns>
-        public static async Task<IEnumerable<T>> GetByParamAsync<T>(this IDbConnection connection, dynamic parms, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
+        public static async Task<IEnumerable<T>> GetByParamAsync<T>(this IDbConnection connection, dynamic parms, IDbTransaction transaction = null, int? commandTimeout = null, int? resultsLimit = null, DateTime? changedSince = null) where T : class
         {
             var type = typeof(T);
+            string connectionProviderType = connection.GetType().Namespace;
+            var changedSinceDateTime = DateTime.MinValue;
             string sqlStmt;
+            DynamicParameters dynParms;
 
-            var name = GetTableName(type);
-            //ISqlAdapter adapter = GetFormatter(connection);
-            #region Customizations
-            //char sqlParameterChar = adapter.SqlParameterChar();
+            var key = GetSingleKey<T>(nameof(GetByParamAsync));
+            var changeTrackerProperties = ChangeTrackerPropertiesCache(type);
+            var tableName = GetTableName(type);
+            PropertyInfo changedSinceProperty = null;
+#nullable enable
+            string? changedSinceColumnName = null;
+#nullable disable
 
-            //Sunan
-            //string sqlParameterChar = ":";
-
-            string sqlParameterChar = "@";
-
-            #endregion
-            var sb = new StringBuilder();
-            sb.AppendFormat("SELECT * FROM {0} WHERE ", name);
-
-            var allProperties = parms.GetType().GetProperties();
-
-            var dynParms = new DynamicParameters();
-
-            for (var i = 0; i < allProperties.Length; i++)
+            if (changedSince != null && changeTrackerProperties.Count > 0)
             {
-                // Create the SQL statement with where clause based on dynamic parameters
-                var property = allProperties[i];
-                sb.AppendFormat("{0} = {1}{2}", property.Name, sqlParameterChar, property.Name);
-                if (i < allProperties.Length - 1)
-                    sb.AppendFormat(" and ");
-
-                // Create the DynamicParameters
-                dynParms.Add(String.Format("{0}{1}", sqlParameterChar, property.Name), property.GetValue(parms, null));
+                changedSinceProperty = changeTrackerProperties[0];
+                changedSinceColumnName = changedSinceProperty.Name;
             }
-            sqlStmt = sb.ToString();
+
+            (sqlStmt, dynParms) = ((string, DynamicParameters))SqlMapperSqlBuilder.GetSqlForGetByParamAsync(tableName, key.Name, parms, changedSinceColumnName, connectionProviderType, resultsLimit, changedSince);
+
             return await connection.QueryAsync<T>(sqlStmt, dynParms, transaction: transaction, commandTimeout: commandTimeout);
         }
         #endregion

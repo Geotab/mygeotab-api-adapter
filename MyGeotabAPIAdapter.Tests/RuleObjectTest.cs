@@ -38,13 +38,25 @@ namespace MyGeotabAPIAdapter.Tests
                 Name = "Test Device"
             };
 
+            int activeFromMonth = DateTime.Now.Month - 1;
+            if (activeFromMonth < 1)
+            {
+                activeFromMonth = 1;
+            }
+            int activeToMonth = DateTime.Now.Month + 1;
+            if (activeToMonth > 12)
+            {
+                activeToMonth = 12;
+            }
+            int activeToOrFromDay = 15;
+
             Rule rule = new()
             {
                 Id = Id.Create("test"),
                 Name = "test",
                 Version = 11111,
-                ActiveFrom = new DateTime(DateTime.Now.Year, DateTime.Now.Month - 1, DateTime.Now.Day),
-                ActiveTo = new DateTime(DateTime.Now.Year, DateTime.Now.Month + 1, DateTime.Now.Day),
+                ActiveFrom = new DateTime(DateTime.Now.Year, activeFromMonth, activeToOrFromDay),
+                ActiveTo = new DateTime(DateTime.Now.Year, activeToMonth, activeToOrFromDay),
                 BaseType = ExceptionRuleBaseType.Custom
             };
 

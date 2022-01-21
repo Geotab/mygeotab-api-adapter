@@ -31,7 +31,7 @@ namespace MyGeotabAPIAdapter
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            ConnectionInfo connectionInfo = new(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+            ConnectionInfo connectionInfo = new(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType, Databases.AdapterDatabase);
 
             string sql = "SELECT * from \"vwRuleObject\" ORDER BY \"GeotabId\"";
             IEnumerable<DbVwRuleObject> dbVwRuleObjects;
@@ -144,7 +144,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public async static Task<bool> InsertDbRuleObjectAsync(DbRuleObject dbRuleObject, CancellationTokenSource cancellationTokenSource)
         {
-            ConnectionInfo connectionInfo = new(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+            ConnectionInfo connectionInfo = new(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType, Databases.AdapterDatabase);
 
             long ruleEntitiesInserted;
             ruleEntitiesInserted = await DbRuleService.InsertRuleAsync(connectionInfo, dbRuleObject.DbRule, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);
@@ -209,7 +209,7 @@ namespace MyGeotabAPIAdapter
             int count = 0;
             List<DbRule> dbRuleList = dbRuleObjectList.Select(o => o.DbRule).ToList();
 
-            ConnectionInfo connectionInfo = new(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+            ConnectionInfo connectionInfo = new(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType, Databases.AdapterDatabase);
 
             // Update all the DbRules
             Task updateRulesTask = DbRuleService.UpdateAsync(connectionInfo, dbRuleList, cancellationTokenSource, Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks);

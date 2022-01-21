@@ -22,6 +22,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string RepairStatus { get; set; }
         public string RepairUserId { get; set; }
         public int EntityStatus { get; set; }
+        [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

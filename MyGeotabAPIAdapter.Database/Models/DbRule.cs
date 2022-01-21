@@ -34,6 +34,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         // The version of the entity.
         public long? Version { get; set; }
         public int EntityStatus { get; set; }
+        [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

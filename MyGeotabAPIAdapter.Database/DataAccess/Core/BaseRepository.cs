@@ -161,8 +161,9 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="connectionInfo">The database connection information.</param>
         /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
         /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
+        /// <param name="changedSince">Only select entities where the <see cref="ChangeTrackerAttribute"/> property has a value greater than this <see cref="DateTime"/>. If null, no <see cref="DateTime"/> filter is applied.</param>
         /// <returns></returns>
-        public async Task<IEnumerable<T>> GetAllAsync(ConnectionInfo connectionInfo, int commandTimeout, int? resultsLimit = null)
+        public async Task<IEnumerable<T>> GetAllAsync(ConnectionInfo connectionInfo, int commandTimeout, int? resultsLimit = null, DateTime? changedSince = null)
         {
             try
             {
@@ -172,7 +173,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 SetConnection(connectionInfo);
                 using (var connection = await connectionProvider.GetOpenConnectionAsync())
                 {
-                    return await connection.GetAllAsync<T>(null, null, resultsLimit);
+                    return await connection.GetAllAsync<T>(null, null, resultsLimit, changedSince);
                 }
             }
             catch (OperationCanceledException exception)

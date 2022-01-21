@@ -28,6 +28,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string Cond_WorkTimeId { get; set; }
         public string Cond_ZoneId { get; set; }
         public int Cond_EntityStatus { get; set; }
+        [ChangeTracker]
         public DateTime Cond_RecordLastChangedUtc { get; set; }
     }
 }

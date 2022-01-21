@@ -18,6 +18,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public DateTime? RemarkDateTime { get; set; }
         public string RemarkUserId { get; set; }
         public string FailureMessage { get; set; }
+        [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

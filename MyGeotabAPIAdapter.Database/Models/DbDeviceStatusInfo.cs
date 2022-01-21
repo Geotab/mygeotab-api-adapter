@@ -20,6 +20,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public double Speed { get; set; }
+        [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

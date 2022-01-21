@@ -31,6 +31,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         // Zone reference if it exists
         public string ZoneId { get; set; }
         public int EntityStatus { get; set; }
+        [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

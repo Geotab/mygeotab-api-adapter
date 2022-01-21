@@ -24,6 +24,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string ZoneTypeIds { get; set; }
         public long? Version { get; set; }
         public int EntityStatus { get; set; }
+        [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

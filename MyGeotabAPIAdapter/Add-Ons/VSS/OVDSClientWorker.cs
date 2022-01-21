@@ -252,7 +252,7 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
             try
             {
                 // Setup the ConfigurationManager Globals reference
-                connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+                connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType, Databases.AdapterDatabase);
 
                 // Allow longer database command timeout because the main Worker process may be inserting a batch of 150K records at the same time as one of these queries are being executed and that may exceed the timeout.
                 commandTimeout = Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks * 2;

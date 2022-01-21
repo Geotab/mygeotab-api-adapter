@@ -347,7 +347,7 @@ CREATE TABLE public."Devices" (
     "GeotabId" character varying(50) NOT NULL,
     "ActiveFrom" timestamp(4) without time zone,
     "ActiveTo" timestamp(4) without time zone,
-	"Comment" character varying(500),
+	"Comment" character varying(1024),
     "DeviceType" character varying(50) NOT NULL,
     "LicensePlate" character varying(50),
     "LicenseState" character varying(50),

@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NLog.Extensions.Logging" Version="1.7.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Configuration\MyGeotabAPIAdapter.Configuration.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Database\MyGeotabAPIAdapter.Database.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Logging\MyGeotabAPIAdapter.Logging.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -10,6 +10,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public long id { get; set; }
         public string FeedTypeId { get; set; }
         public long LastProcessedFeedVersion { get; set; }
+        [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

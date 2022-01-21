@@ -151,7 +151,7 @@
 	"GeotabId" NVARCHAR2(50), 
 	"ActiveFrom" TIMESTAMP (7), 
 	"ActiveTo" TIMESTAMP (7), 
-	"Comment" NVARCHAR2(500), 
+	"Comment" NVARCHAR2(1024), 
 	"DeviceType" NVARCHAR2(50), 
 	"LicensePlate" NVARCHAR2(50), 
 	"LicenseState" NVARCHAR2(50), 

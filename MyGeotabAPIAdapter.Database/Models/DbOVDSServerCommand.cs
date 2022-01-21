@@ -9,6 +9,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         [Key]
         public long id { get; set; }
         public string Command { get; set; }
+        [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
         [Write(false)]
         public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }

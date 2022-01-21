@@ -321,7 +321,7 @@ namespace MyGeotabAPIAdapter
             try
             {
                 // Setup the ConfigurationManager Globals reference
-                connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType);
+                connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType, Databases.AdapterDatabase);
 
                 // Wait for the main Worker to complete authentication of the MyGeotab API.
                 bool myGeotabAPIAuthenticated = false;

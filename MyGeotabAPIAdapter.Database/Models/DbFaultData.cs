@@ -4,8 +4,16 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("FaultData")]
-    public class DbFaultData
+    public class DbFaultData : IDbEntity
     {
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "FaultData";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
         [Key]
         public long id { get; set; }
         public string GeotabId { get; set; }
@@ -29,6 +37,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public bool? RedStopLamp { get; set; }
         public string Severity { get; set; }
         public int? SourceAddress { get; set; }
+        [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
     }
 }

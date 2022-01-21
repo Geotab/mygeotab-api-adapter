@@ -15,6 +15,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string ApplicationCommit { get; set; }
         public string GoTalkVersion { get; set; }
         [ExplicitKey]
+        [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
     }
 }
