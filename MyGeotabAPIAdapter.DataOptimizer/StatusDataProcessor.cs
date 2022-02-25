@@ -40,6 +40,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         readonly IGenericEntityPersister<DbStatusData> dbStatusDataEntityPersister;
         readonly IGenericEntityPersister<DbStatusDataT> dbStatusDataTEntityPersister;
         readonly IGenericDbObjectCache<DbDeviceT> dbDeviceTObjectCache;
+        readonly DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache;
         readonly IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache;
         readonly IExceptionHelper exceptionHelper;
         readonly IMessageLogger messageLogger;
@@ -60,7 +61,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <summary>
         /// Initializes a new instance of the <see cref="StatusDataProcessor"/> class.
         /// </summary>
-        public StatusDataProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbStatusDataDbStatusDataTEntityMapper dbStatusDataDbStatusDataTEntityMapper, IGenericEntityPersister<DbStatusData> dbStatusDataEntityPersister, IGenericEntityPersister<DbStatusDataT> dbStatusDataTEntityPersister, IGenericDbObjectCache<DbDeviceT> dbDeviceTObjectCache, IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
+        public StatusDataProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbStatusDataDbStatusDataTEntityMapper dbStatusDataDbStatusDataTEntityMapper, IGenericEntityPersister<DbStatusData> dbStatusDataEntityPersister, IGenericEntityPersister<DbStatusDataT> dbStatusDataTEntityPersister, IGenericDbObjectCache<DbDeviceT> dbDeviceTObjectCache, DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache, IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -80,6 +81,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             this.dbStatusDataEntityPersister = dbStatusDataEntityPersister;
             this.dbStatusDataTEntityPersister = dbStatusDataTEntityPersister;
             this.dbDeviceTObjectCache = dbDeviceTObjectCache;
+            this.dbDiagnosticIdTObjectCache = dbDiagnosticIdTObjectCache;
             this.dbDiagnosticTObjectCache = dbDiagnosticTObjectCache;
 
             this.adapterContext = adapterContext;
@@ -145,13 +147,18 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         {
                             await dbDiagnosticTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
                         }
+                        if (dbDiagnosticIdTObjectCache.IsInitialized == false)
+                        {
+                            await dbDiagnosticIdTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
+                        }
 
                         // Get a batch of DbStatusDatas.
                         IEnumerable<DbStatusData> dbStatusDatas;
+                        string sortColumnName = (string)nameof(DbStatusData.DateTime);
                         using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                         {
                             var dbStatusDataRepo = new DbStatusDataRepository2(adapterContext);
-                            dbStatusDatas = await dbStatusDataRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.StatusDataProcessorBatchSize);
+                            dbStatusDatas = await dbStatusDataRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.StatusDataProcessorBatchSize, null, sortColumnName);
                         }
 
                         lastBatchRecordCount = dbStatusDatas.Count();
@@ -168,7 +175,8 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                             foreach (var dbStatusData in dbStatusDatas)
                             {
                                 var deviceId = await dbDeviceTObjectCache.GetObjectIdAsync(dbStatusData.DeviceId);
-                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdAsync(dbStatusData.DiagnosticId);
+                                var diagnosticIdT = await dbDiagnosticIdTObjectCache.GetObjectAsync(dbStatusData.DiagnosticId);
+                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdAsync(diagnosticIdT.GeotabGUID);
                                 if (deviceId == null)
                                 {
                                     logger.Warn($"Could not process {nameof(DbStatusData)} '{dbStatusData.id} (GeotabId {dbStatusData.GeotabId})' because a {nameof(DbDeviceT)} with a {nameof(DbDeviceT.GeotabId)} matching the {nameof(DbStatusData.DeviceId)} could not be found.");

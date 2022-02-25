@@ -1,5 +1,5 @@
 --------------------------------------------------------
---  File created - Monday-September-27-2021   
+--  File created - Tuesday-February-15-2022   
 --------------------------------------------------------
 --------------------------------------------------------
 --  DDL for Table BinaryData
@@ -169,6 +169,7 @@
   CREATE TABLE "Diagnostics" 
    (	"id" NUMBER(20,0) GENERATED ALWAYS AS IDENTITY MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE , 
 	"GeotabId" NVARCHAR2(100), 
+	"GeotabGUID" NVARCHAR2(36), 
 	"ControllerId" NVARCHAR2(100), 
 	"DiagnosticCode" NUMBER(10,0), 
 	"DiagnosticName" NVARCHAR2(255), 
@@ -768,7 +769,7 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "BinaryData" MODIFY ("Data" NOT NULL ENABLE);
   ALTER TABLE "BinaryData" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "BinaryData" ADD CONSTRAINT "PK_BINARYDATA" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_BINARYDATA"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table Conditions
 --------------------------------------------------------
@@ -779,7 +780,7 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "Conditions" MODIFY ("EntityStatus" NOT NULL ENABLE);
   ALTER TABLE "Conditions" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "Conditions" ADD CONSTRAINT "PK_CONDITIONS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_CONDITIONS"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table ConfigFeedVersions
 --------------------------------------------------------
@@ -789,7 +790,7 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "ConfigFeedVersions" MODIFY ("LastProcessedFeedVersion" NOT NULL ENABLE);
   ALTER TABLE "ConfigFeedVersions" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "ConfigFeedVersions" ADD CONSTRAINT "PK_CONFIGFEEDVERSIONS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_CONFIGFEEDVERSIONS"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table DVIRDefectRemarks
 --------------------------------------------------------
@@ -801,7 +802,7 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "DVIRDefectRemarks" MODIFY ("EntityStatus" NOT NULL ENABLE);
   ALTER TABLE "DVIRDefectRemarks" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "DVIRDefectRemarks" ADD CONSTRAINT "PK_DVIRDEFECTREMARKS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_DVIRDEFECTREMARKS"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table DVIRDefectUpdates
 --------------------------------------------------------
@@ -811,15 +812,15 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "DVIRDefectUpdates" MODIFY ("DVIRDefectId" NOT NULL ENABLE);
   ALTER TABLE "DVIRDefectUpdates" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "DVIRDefectUpdates" ADD CONSTRAINT "PK_DVIRDEFECTUPDATES" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_DVIRDEFECTUPDATES"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table DVIRDefects
 --------------------------------------------------------
 
+  ALTER TABLE "DVIRDefects" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "DVIRDefects" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "DVIRDefects" ADD CONSTRAINT "PK_DVIRDEFECTS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
-  ALTER TABLE "DVIRDefects" MODIFY ("id" NOT NULL ENABLE);
+  USING INDEX "PK_DVIRDEFECTS"  ENABLE;
   ALTER TABLE "DVIRDefects" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "DVIRDefects" MODIFY ("DVIRLogId" NOT NULL ENABLE);
   ALTER TABLE "DVIRDefects" MODIFY ("EntityStatus" NOT NULL ENABLE);
@@ -833,7 +834,7 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "DVIRLogs" MODIFY ("Version" NOT NULL ENABLE);
   ALTER TABLE "DVIRLogs" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "DVIRLogs" ADD CONSTRAINT "PK_DVIRLOGS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_DVIRLOGS"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table DeviceStatusInfo
 --------------------------------------------------------
@@ -853,19 +854,19 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "DeviceStatusInfo" MODIFY ("Speed" NOT NULL ENABLE);
   ALTER TABLE "DeviceStatusInfo" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "DeviceStatusInfo" ADD CONSTRAINT "PK_DEVICESTATUSINFO" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_DEVICESTATUSINFO"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table Devices
 --------------------------------------------------------
 
+  ALTER TABLE "Devices" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
+  ALTER TABLE "Devices" ADD CONSTRAINT "PK_DEVICES" PRIMARY KEY ("id")
+  USING INDEX "PK_DEVICES"  ENABLE;
   ALTER TABLE "Devices" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "Devices" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "Devices" MODIFY ("DeviceType" NOT NULL ENABLE);
   ALTER TABLE "Devices" MODIFY ("Name" NOT NULL ENABLE);
   ALTER TABLE "Devices" MODIFY ("EntityStatus" NOT NULL ENABLE);
-  ALTER TABLE "Devices" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
-  ALTER TABLE "Devices" ADD CONSTRAINT "PK_DEVICES" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table Diagnostics
 --------------------------------------------------------
@@ -880,12 +881,11 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "Diagnostics" MODIFY ("EntityStatus" NOT NULL ENABLE);
   ALTER TABLE "Diagnostics" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "Diagnostics" ADD CONSTRAINT "PK_DIAGNOSTICS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_DIAGNOSTICS"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table DriverChanges
 --------------------------------------------------------
 
-  ALTER TABLE "DriverChanges" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "DriverChanges" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "DriverChanges" MODIFY ("DeviceId" NOT NULL ENABLE);
   ALTER TABLE "DriverChanges" MODIFY ("DriverId" NOT NULL ENABLE);
@@ -893,52 +893,52 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "DriverChanges" MODIFY ("Version" NOT NULL ENABLE);
   ALTER TABLE "DriverChanges" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "DriverChanges" ADD CONSTRAINT "PK_DRIVERCHANGES" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_DRIVERCHANGES"  ENABLE;
+  ALTER TABLE "DriverChanges" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table DutyStatusAvailabilities
 --------------------------------------------------------
 
-  ALTER TABLE "DutyStatusAvailabilities" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "DutyStatusAvailabilities" MODIFY ("DriverId" NOT NULL ENABLE);
   ALTER TABLE "DutyStatusAvailabilities" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "DutyStatusAvailabilities" ADD CONSTRAINT "PK_DUTYSTATUSAVAILABILITIES" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_DUTYSTATUSAVAILABILITIES"  ENABLE;
+  ALTER TABLE "DutyStatusAvailabilities" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table ExceptionEvents
 --------------------------------------------------------
 
-  ALTER TABLE "ExceptionEvents" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "ExceptionEvents" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "ExceptionEvents" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "ExceptionEvents" ADD CONSTRAINT "PK_EXCEPTIONEVENTS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_EXCEPTIONEVENTS"  ENABLE;
+  ALTER TABLE "ExceptionEvents" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table FailedDVIRDefectUpdates
 --------------------------------------------------------
 
-  ALTER TABLE "FailedDVIRDefectUpdates" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "FailedDVIRDefectUpdates" MODIFY ("DVIRDefectUpdateId" NOT NULL ENABLE);
   ALTER TABLE "FailedDVIRDefectUpdates" MODIFY ("DVIRLogId" NOT NULL ENABLE);
   ALTER TABLE "FailedDVIRDefectUpdates" MODIFY ("DVIRDefectId" NOT NULL ENABLE);
   ALTER TABLE "FailedDVIRDefectUpdates" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "FailedDVIRDefectUpdates" ADD CONSTRAINT "PK_FAILEDDVIRDEFECTUPDATES" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_FAILEDDVIRDEFECTUPDATES"  ENABLE;
+  ALTER TABLE "FailedDVIRDefectUpdates" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table FailedOVDSServerCommands
 --------------------------------------------------------
 
-  ALTER TABLE "FailedOVDSServerCommands" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "FailedOVDSServerCommands" MODIFY ("OVDSServerCommandId" NOT NULL ENABLE);
   ALTER TABLE "FailedOVDSServerCommands" MODIFY ("Command" NOT NULL ENABLE);
   ALTER TABLE "FailedOVDSServerCommands" MODIFY ("FailureMessage" NOT NULL ENABLE);
   ALTER TABLE "FailedOVDSServerCommands" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "FailedOVDSServerCommands" ADD CONSTRAINT "PK_FAILEDOVDSSERVERCOMMANDS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_FAILEDOVDSSERVERCOMMANDS"  ENABLE;
+  ALTER TABLE "FailedOVDSServerCommands" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table FaultData
 --------------------------------------------------------
 
-  ALTER TABLE "FaultData" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "FaultData" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "FaultData" MODIFY ("ControllerId" NOT NULL ENABLE);
   ALTER TABLE "FaultData" MODIFY ("Count" NOT NULL ENABLE);
@@ -947,12 +947,12 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "FaultData" MODIFY ("FailureModeId" NOT NULL ENABLE);
   ALTER TABLE "FaultData" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "FaultData" ADD CONSTRAINT "PK_FAULTDATA" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_FAULTDATA"  ENABLE;
+  ALTER TABLE "FaultData" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table LogRecords
 --------------------------------------------------------
 
-  ALTER TABLE "LogRecords" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "LogRecords" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "LogRecords" MODIFY ("DateTime" NOT NULL ENABLE);
   ALTER TABLE "LogRecords" MODIFY ("DeviceId" NOT NULL ENABLE);
@@ -961,12 +961,12 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "LogRecords" MODIFY ("Speed" NOT NULL ENABLE);
   ALTER TABLE "LogRecords" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "LogRecords" ADD CONSTRAINT "PK_LOGRECORDS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_LOGRECORDS"  ENABLE;
+  ALTER TABLE "LogRecords" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table MyGeotabVersionInfo
 --------------------------------------------------------
 
-  ALTER TABLE "MyGeotabVersionInfo" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "MyGeotabVersionInfo" MODIFY ("DatabaseName" NOT NULL ENABLE);
   ALTER TABLE "MyGeotabVersionInfo" MODIFY ("Server" NOT NULL ENABLE);
   ALTER TABLE "MyGeotabVersionInfo" MODIFY ("DatabaseVersion" NOT NULL ENABLE);
@@ -976,43 +976,43 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "MyGeotabVersionInfo" MODIFY ("GoTalkVersion" NOT NULL ENABLE);
   ALTER TABLE "MyGeotabVersionInfo" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "MyGeotabVersionInfo" ADD CONSTRAINT "PK_MYGEOTABVERSIONINFO" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_MYGEOTABVERSIONINFO"  ENABLE;
+  ALTER TABLE "MyGeotabVersionInfo" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table OVDSServerCommands
 --------------------------------------------------------
 
-  ALTER TABLE "OVDSServerCommands" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "OVDSServerCommands" MODIFY ("Command" NOT NULL ENABLE);
   ALTER TABLE "OVDSServerCommands" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "OVDSServerCommands" ADD CONSTRAINT "PK_OVDSSERVERCOMMANDS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_OVDSSERVERCOMMANDS"  ENABLE;
+  ALTER TABLE "OVDSServerCommands" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table Rules
 --------------------------------------------------------
 
-  ALTER TABLE "Rules" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "Rules" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "Rules" MODIFY ("Version" NOT NULL ENABLE);
   ALTER TABLE "Rules" MODIFY ("EntityStatus" NOT NULL ENABLE);
   ALTER TABLE "Rules" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "Rules" ADD CONSTRAINT "PK_RULES" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_RULES"  ENABLE;
+  ALTER TABLE "Rules" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table StatusData
 --------------------------------------------------------
 
-  ALTER TABLE "StatusData" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "StatusData" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "StatusData" MODIFY ("DeviceId" NOT NULL ENABLE);
   ALTER TABLE "StatusData" MODIFY ("DiagnosticId" NOT NULL ENABLE);
   ALTER TABLE "StatusData" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "StatusData" ADD CONSTRAINT "PK_STATUSDATA" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_STATUSDATA"  ENABLE;
+  ALTER TABLE "StatusData" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table Trips
 --------------------------------------------------------
 
-  ALTER TABLE "Trips" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "Trips" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "Trips" MODIFY ("DeviceId" NOT NULL ENABLE);
   ALTER TABLE "Trips" MODIFY ("Distance" NOT NULL ENABLE);
@@ -1021,10 +1021,11 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "Trips" MODIFY ("NextTripStart" NOT NULL ENABLE);
   ALTER TABLE "Trips" MODIFY ("Start" NOT NULL ENABLE);
   ALTER TABLE "Trips" MODIFY ("Stop" NOT NULL ENABLE);
+  ALTER TABLE "Trips" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "Trips" MODIFY ("StopDurationTicks" NOT NULL ENABLE);
   ALTER TABLE "Trips" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "Trips" ADD CONSTRAINT "PK_TRIPS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_TRIPS"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table Users
 --------------------------------------------------------
@@ -1038,7 +1039,7 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "Users" MODIFY ("EntityStatus" NOT NULL ENABLE);
   ALTER TABLE "Users" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "Users" ADD CONSTRAINT "PK_USERS" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_USERS"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table ZoneTypes
 --------------------------------------------------------
@@ -1049,7 +1050,7 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "ZoneTypes" MODIFY ("EntityStatus" NOT NULL ENABLE);
   ALTER TABLE "ZoneTypes" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "ZoneTypes" ADD CONSTRAINT "PK_ZONETYPES" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_ZONETYPES"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table Zones
 --------------------------------------------------------
@@ -1061,4 +1062,4 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "Zones" MODIFY ("EntityStatus" NOT NULL ENABLE);
   ALTER TABLE "Zones" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "Zones" ADD CONSTRAINT "PK_ZONES" PRIMARY KEY ("id")
-  USING INDEX  ENABLE;
+  USING INDEX "PK_ZONES"  ENABLE;

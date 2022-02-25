@@ -86,6 +86,12 @@ namespace MyGeotabAPIAdapter
         {
             if (dbDiagnostic.GeotabId != diagnostic.Id.ToString())
             {
+                // The Id may have changed due to a new KnownId being assigned to the Diagnostic. Check whether this is the case and only throw an exception if not.
+                var diagnosticIdHasChanged = DiagnosticIdHasChanged(dbDiagnostic, diagnostic);
+                if (diagnosticIdHasChanged)
+                {
+                    return true;
+                }
                 throw new ArgumentException($"Cannot compare Diagnostic '{diagnostic.Id}' with DbDiagnostic '{dbDiagnostic.GeotabId}' because the IDs do not match.");
             }
 
@@ -277,6 +283,28 @@ namespace MyGeotabAPIAdapter
             if ((dbZoneType.Name != zoneType.Name) && (dbZoneType.Name != null && zoneType.Name != ""))
             {
                 return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the <paramref name="diagnostic"/> <see cref="Diagnostic.Id"/> is different from the <paramref name="dbDiagnostic"/> <see cref="DbDiagnostic.GeotabId"/>, but the underlying GUIDs are the same. Otherwise, returns <c>false</c>. A return value of <c>false</c> does not necessarily mean that the Diagnostic Id has changed, since it is possible for mis-matched <paramref name="dbDiagnostic"/> and <paramref name="diagnostic"/> to be supplied as inputs. Intended to assist in identifying <see cref="Diagnostic"/>s whose <see cref="Diagnostic.Id"/>s have been changed as a result of the assignment of a <see cref="KnownId"/>.
+        /// </summary>
+        /// <param name="dbDiagnostic">The <see cref="DbDiagnostic"/> to be evaluated.</param>
+        /// <param name="diagnostic">The <see cref="Diagnostic"/> to be evaluated.</param>
+        /// <returns></returns>
+        public static bool DiagnosticIdHasChanged(DbDiagnostic dbDiagnostic, Diagnostic diagnostic)
+        {
+            if (dbDiagnostic.GeotabId != diagnostic.Id.ToString())
+            {
+                // The Id may have changed due to a new KnownId being assigned to the Diagnostic. Check whether this is the case and only throw an exception if not.
+                var dbDiagnosticGeotabId = Id.Create(dbDiagnostic.GeotabId);
+                var dbDiagnosticGeotabGUID = dbDiagnosticGeotabId.GetValue().ToString();
+                var diagnosticGeotabGUID = diagnostic.Id.GetValue().ToString();
+                if (diagnosticGeotabGUID == dbDiagnosticGeotabGUID)
+                {
+                    return true;
+                }
             }
             return false;
         }
@@ -546,6 +574,7 @@ namespace MyGeotabAPIAdapter
             Source diagnosticSource = diagnostic.Source;
             UnitOfMeasure diagnosticUnitOfMeasure = diagnostic.UnitOfMeasure;
             Controller diagnosticController = diagnostic.Controller;
+            var geotabGUID = diagnostic.Id.GetValue().ToString();
 
             DbDiagnostic dbDiagnostic = new()
             {
@@ -555,7 +584,8 @@ namespace MyGeotabAPIAdapter
                 DiagnosticSourceName = diagnosticSource.Name,
                 DiagnosticUnitOfMeasureId = diagnosticUnitOfMeasure.Id.ToString(),
                 DiagnosticUnitOfMeasureName = diagnosticUnitOfMeasure.Name,
-                GeotabId = diagnostic.Id.ToString()
+                GeotabId = diagnostic.Id.ToString(),
+                GeotabGUID = geotabGUID
             };
             if (diagnosticController != null)
             {

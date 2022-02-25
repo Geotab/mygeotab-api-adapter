@@ -42,7 +42,7 @@ namespace MyGeotabAPIAdapter.Logging
             bool allInnerExceptionsAreTaskCanceledExceptions = true;
             foreach (var exception in aggregateException.InnerExceptions)
             {
-                if (!(exception is TaskCanceledException))
+                if (exception is not TaskCanceledException)
                 {
                     allInnerExceptionsAreTaskCanceledExceptions = false;
                     break;

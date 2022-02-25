@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 13.3
--- Dumped by pg_dump version 13.3
+-- Dumped from database version 14.0
+-- Dumped by pg_dump version 14.0
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,7 +20,7 @@ SET row_security = off;
 -- Name: geotabadapterdb; Type: DATABASE; Schema: -; Owner: geotabadapter_owner
 --
 
-CREATE DATABASE geotabadapterdb WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'English_United States.1252' LC_CTYPE = 'English_United States.1252';
+CREATE DATABASE geotabadapterdb WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE = 'English_United States.1252';
 
 
 ALTER DATABASE geotabadapterdb OWNER TO geotabadapter_owner;
@@ -40,19 +40,19 @@ SET row_security = off;
 
 SET default_tablespace = '';
 
-SET default_with_oids = false;
+SET default_table_access_method = heap;
 
 --
 -- Name: BinaryData; Type: TABLE; Schema: public; Owner: geotabadapter_owner
--- 
+--
 
 CREATE TABLE public."BinaryData" (
     id bigint NOT NULL,
     "GeotabId" character varying(50) NOT NULL,
-	"BinaryType" character varying(50),	
-	"ControllerId" character varying(50) NOT NULL,
-	"Data" character varying(1024) NOT NULL,	
-	"DateTime" timestamp without time zone,
+    "BinaryType" character varying(50),
+    "ControllerId" character varying(50) NOT NULL,
+    "Data" character varying(1024) NOT NULL,
+    "DateTime" timestamp without time zone,
     "DeviceId" character varying(50),
     "Version" character varying(50),
     "RecordCreationTimeUtc" timestamp without time zone NOT NULL
@@ -339,15 +339,60 @@ ALTER SEQUENCE public."DVIRLogs_id_seq" OWNED BY public."DVIRLogs".id;
 
 
 --
+-- Name: DeviceStatusInfo; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."DeviceStatusInfo" (
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "Bearing" double precision DEFAULT 0 NOT NULL,
+    "CurrentStateDuration" character varying(50) NOT NULL,
+    "DateTime" timestamp without time zone NOT NULL,
+    "DeviceId" character varying(50) NOT NULL,
+    "DriverId" character varying(50) NOT NULL,
+    "IsDeviceCommunicating" boolean NOT NULL,
+    "IsDriving" boolean NOT NULL,
+    "IsHistoricLastDriver" boolean NOT NULL,
+    "Latitude" double precision DEFAULT 0 NOT NULL,
+    "Longitude" double precision DEFAULT 0 NOT NULL,
+    "Speed" real DEFAULT 0 NOT NULL,
+    "RecordLastChangedUtc" timestamp(4) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."DeviceStatusInfo" OWNER TO geotabadapter_owner;
+
+--
+-- Name: DeviceStatusInfo_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."DeviceStatusInfo_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."DeviceStatusInfo_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: DeviceStatusInfo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."DeviceStatusInfo_id_seq" OWNED BY public."DeviceStatusInfo".id;
+
+
+--
 -- Name: Devices; Type: TABLE; Schema: public; Owner: geotabadapter_owner
--- 
+--
 
 CREATE TABLE public."Devices" (
     id bigint NOT NULL,
     "GeotabId" character varying(50) NOT NULL,
     "ActiveFrom" timestamp(4) without time zone,
     "ActiveTo" timestamp(4) without time zone,
-	"Comment" character varying(1024),
+    "Comment" character varying(1024),
     "DeviceType" character varying(50) NOT NULL,
     "LicensePlate" character varying(50),
     "LicenseState" character varying(50),
@@ -384,57 +429,13 @@ ALTER SEQUENCE public."Devices_id_seq" OWNED BY public."Devices".id;
 
 
 --
--- Name: DeviceStatusInfo; Type: TABLE; Schema: public; Owner: geotabadapter_owner
--- 
-
-CREATE TABLE public."DeviceStatusInfo" (
-    id bigint NOT NULL,
-    "GeotabId" character varying(50) NOT NULL,
-    "Bearing" double precision DEFAULT 0 NOT NULL,
-	"CurrentStateDuration" character varying(50) NOT NULL,
-	"DateTime" timestamp without time zone NOT NULL,
-    "DeviceId" character varying(50) NOT NULL,
-    "DriverId" character varying(50) NOT NULL,
-    "IsDeviceCommunicating" boolean NOT NULL,	
-    "IsDriving" boolean NOT NULL,	
-    "IsHistoricLastDriver" boolean NOT NULL,	
-    "Latitude" double precision DEFAULT 0 NOT NULL,
-    "Longitude" double precision DEFAULT 0 NOT NULL,
-    "Speed" real DEFAULT 0 NOT NULL,
-    "RecordLastChangedUtc" timestamp(4) without time zone NOT NULL
-);
-
-
-ALTER TABLE public."DeviceStatusInfo" OWNER TO geotabadapter_owner;
-
---
--- Name: DeviceStatusInfo_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
---
-
-CREATE SEQUENCE public."DeviceStatusInfo_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public."DeviceStatusInfo_id_seq" OWNER TO geotabadapter_owner;
-
---
--- Name: DeviceStatusInfo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
---
-
-ALTER SEQUENCE public."DeviceStatusInfo_id_seq" OWNED BY public."DeviceStatusInfo".id;
-
-
---
 -- Name: Diagnostics; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
 CREATE TABLE public."Diagnostics" (
     id bigint NOT NULL,
     "GeotabId" character varying(100) NOT NULL,
+    "GeotabGUID" character varying(36) NOT NULL,
     "ControllerId" character varying(100),
     "DiagnosticCode" integer,
     "DiagnosticName" character varying(255) NOT NULL,
@@ -1117,6 +1118,7 @@ ALTER TABLE public."vwRuleObject" OWNER TO geotabadapter_owner;
 
 ALTER TABLE ONLY public."BinaryData" ALTER COLUMN id SET DEFAULT nextval('public."BinaryData_id_seq"'::regclass);
 
+
 --
 -- Name: Conditions id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
@@ -1160,17 +1162,17 @@ ALTER TABLE ONLY public."DVIRLogs" ALTER COLUMN id SET DEFAULT nextval('public."
 
 
 --
--- Name: Devices id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
---
-
-ALTER TABLE ONLY public."Devices" ALTER COLUMN id SET DEFAULT nextval('public."Devices_id_seq"'::regclass);
-
-
---
 -- Name: DeviceStatusInfo id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
 ALTER TABLE ONLY public."DeviceStatusInfo" ALTER COLUMN id SET DEFAULT nextval('public."DeviceStatusInfo_id_seq"'::regclass);
+
+
+--
+-- Name: Devices id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Devices" ALTER COLUMN id SET DEFAULT nextval('public."Devices_id_seq"'::regclass);
 
 
 --
@@ -1321,19 +1323,19 @@ ALTER TABLE ONLY public."DVIRLogs"
 
 
 --
--- Name: Devices Devices_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
---
-
-ALTER TABLE ONLY public."Devices"
-    ADD CONSTRAINT "Devices_pkey" PRIMARY KEY (id);
-
-
---
 -- Name: DeviceStatusInfo DeviceStatusInfo_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
 ALTER TABLE ONLY public."DeviceStatusInfo"
     ADD CONSTRAINT "DeviceStatusInfo_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Devices Devices_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."Devices"
+    ADD CONSTRAINT "Devices_pkey" PRIMARY KEY (id);
 
 
 --
@@ -1541,20 +1543,6 @@ GRANT ALL ON SEQUENCE public."DVIRLogs_id_seq" TO geotabadapter_client;
 
 
 --
--- Name: TABLE "Devices"; Type: ACL; Schema: public; Owner: geotabadapter_owner
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Devices" TO geotabadapter_client;
-
-
---
--- Name: SEQUENCE "Devices_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
---
-
-GRANT ALL ON SEQUENCE public."Devices_id_seq" TO geotabadapter_client;
-
-
---
 -- Name: TABLE "DeviceStatusInfo"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1566,6 +1554,20 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DeviceStatusInfo" TO geotabad
 --
 
 GRANT ALL ON SEQUENCE public."DeviceStatusInfo_id_seq" TO geotabadapter_client;
+
+
+--
+-- Name: TABLE "Devices"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Devices" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "Devices_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."Devices_id_seq" TO geotabadapter_client;
 
 
 --

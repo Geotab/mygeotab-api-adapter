@@ -1,9 +1,11 @@
 using System;
+using System.Net.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MyGeotabAPIAdapter.Add_Ons.VSS;
+using MyGeotabAPIAdapter.Helpers;
 using NLog;
 using NLog.Extensions.Logging;
 
@@ -50,10 +52,14 @@ namespace MyGeotabAPIAdapter
                 .ConfigureServices((hostContext, services) =>
                 {
                     IConfiguration configuration = hostContext.Configuration;
-                    services.AddHostedService<Worker>();
-                    services.AddHostedService<DutyStatusAvailabilityWorker>();
-                    services.AddHostedService<DVIRLogManipulator>();
-                    services.AddHostedService<OVDSClientWorker>();
+
+                    HttpClient httpClient = new();
+                    services.AddSingleton(httpClient)
+                    .AddTransient<IHttpHelper, HttpHelper>()
+                    .AddHostedService<Worker>()
+                    .AddHostedService<DutyStatusAvailabilityWorker>()
+                    .AddHostedService<DVIRLogManipulator>()
+                    .AddHostedService<OVDSClientWorker>();
                 });
     }
 }

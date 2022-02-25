@@ -11,12 +11,14 @@
 -- delete from [dbo].[StatusDataT];
 -- delete from [dbo].[UsersT];
 -- delete from [dbo].[DevicesT];
+-- delete from [dbo].[DiagnosticIdsT];
 -- delete from [dbo].[DiagnosticsT];
 --DBCC CHECKIDENT ('dbo.BinaryDataT', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.BinaryTypesT', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.ControllersT', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DevicesT', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DiagnosticsT', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.DiagnosticIdsT', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DriverChangesT', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DriverChangeTypesT', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.FaultDataT', RESEED, 0);
@@ -37,6 +39,8 @@ union all
 select 'DevicesT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DevicesT'
 union all
 select 'DiagnosticsT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DiagnosticsT'
+union all
+select 'DiagnosticIdsT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DiagnosticIdsT'
 union all
 select 'DriverChangesT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DriverChangesT'
 union all

@@ -158,10 +158,11 @@ namespace MyGeotabAPIAdapter.DataOptimizer
 
                         // Get a batch of DbBinaryDatas.
                         IEnumerable<DbBinaryData> dbBinaryDatas;
+                        string sortColumnName = (string)nameof(DbBinaryData.DateTime);
                         using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                         {
                             var dbBinaryDataRepo = new DbBinaryDataRepository2(adapterContext);
-                            dbBinaryDatas = await dbBinaryDataRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.BinaryDataProcessorBatchSize);
+                            dbBinaryDatas = await dbBinaryDataRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.BinaryDataProcessorBatchSize, null, sortColumnName);
                         }
 
                         lastBatchRecordCount = dbBinaryDatas.Count();

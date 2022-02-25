@@ -3,11 +3,11 @@ using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Logic;
 using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.Helpers;
 using NLog;
 using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -27,6 +27,7 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         const string VSSPathMapFileName = "VSSPathMaps.json";
         const string VSSPathMapTempFileName = "DOWNLOAD-VSSPathMaps.json";
 
+        readonly IHttpHelper httpHelper;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IConfiguration configuration;
         ConnectionInfo connectionInfo;
@@ -39,9 +40,10 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         /// <summary>
         /// Instantiates a new instance of the <see cref="OVDSClientWorker"/> class.
         /// </summary>
-        public OVDSClientWorker(IConfiguration configuration)
+        public OVDSClientWorker(IConfiguration configuration, IHttpHelper httpHelper)
         {
             this.configuration = configuration;
+            this.httpHelper = httpHelper;
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
@@ -277,7 +279,7 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         /// <summary>
         /// Reloads the LogRecordVSSPathMaps and StatusDataVSSPathMaps from appsettings.json and updates <see cref="ConfigurationManager.vssConfiguration"/> accordingly so that changes can be made to the VSS path maps while the application is running. Only performs this activity if <see cref="Globals.ConfigurationManager.VSSConfiguration.VSSPathMapUpdateIntervalMinutes"/> has elapsed since the last time this activity was performed.
         /// </summary>
-        void UpdateVSSPathMaps()
+        async void UpdateVSSPathMaps()
         {
             if (Globals.TimeIntervalHasElapsed(lastVSSConfigurationRefreshTime, Globals.DateTimeIntervalType.Minutes, Globals.ConfigurationManager.VSSConfiguration.VSSPathMapUpdateIntervalMinutes))
             {
@@ -301,10 +303,7 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
                 var downloadTempFilePath = $"{AppContext.BaseDirectory}{VSSPathMapTempFileName}";
                 try
                 {
-                    using (WebClient webClient = new())
-                    {
-                        webClient.DownloadFile(uri.AbsoluteUri, downloadTempFilePath);
-                    }
+                    await httpHelper.DownloadFileAsync(uri.AbsoluteUri, downloadTempFilePath);
                     File.Move(downloadTempFilePath, vssFilePath, true);
                 }
                 catch (Exception exception)

@@ -40,6 +40,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         readonly IGenericEntityPersister<DbFaultData> dbFaultDataEntityPersister;
         readonly IGenericEntityPersister<DbFaultDataT> dbFaultDataTEntityPersister;
         readonly IGenericDbObjectCache<DbDeviceT> dbDeviceTObjectCache;
+        readonly DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache;
         readonly IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache;
         readonly IGenericDbObjectCache<DbUserT> dbUserTObjectCache;
         readonly IExceptionHelper exceptionHelper;
@@ -61,7 +62,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <summary>
         /// Initializes a new instance of the <see cref="FaultDataProcessor"/> class.
         /// </summary>
-        public FaultDataProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IOptimizerEnvironment optimizerEnvironment, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbFaultDataDbFaultDataTEntityMapper dbFaultDataDbFaultDataTEntityMapper, IGenericEntityPersister<DbFaultData> dbFaultDataEntityPersister, IGenericDbObjectCache<DbDeviceT> dbDeviceTObjectCache, IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, IGenericDbObjectCache<DbUserT> dbUserTObjectCache, IGenericEntityPersister<DbFaultDataT> dbFaultDataTEntityPersister, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
+        public FaultDataProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IOptimizerEnvironment optimizerEnvironment, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbFaultDataDbFaultDataTEntityMapper dbFaultDataDbFaultDataTEntityMapper, IGenericEntityPersister<DbFaultData> dbFaultDataEntityPersister, IGenericDbObjectCache<DbDeviceT> dbDeviceTObjectCache, DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache, IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, IGenericDbObjectCache<DbUserT> dbUserTObjectCache, IGenericEntityPersister<DbFaultDataT> dbFaultDataTEntityPersister, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -81,6 +82,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             this.dbFaultDataEntityPersister = dbFaultDataEntityPersister;
             this.dbFaultDataTEntityPersister = dbFaultDataTEntityPersister;
             this.dbDeviceTObjectCache = dbDeviceTObjectCache;
+            this.dbDiagnosticIdTObjectCache = dbDiagnosticIdTObjectCache;
             this.dbDiagnosticTObjectCache = dbDiagnosticTObjectCache;
             this.dbUserTObjectCache = dbUserTObjectCache;
 
@@ -147,6 +149,10 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         {
                             await dbDiagnosticTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
                         }
+                        if (dbDiagnosticIdTObjectCache.IsInitialized == false)
+                        {
+                            await dbDiagnosticIdTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
+                        }
                         if (dbUserTObjectCache.IsInitialized == false)
                         {
                             await dbUserTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
@@ -154,10 +160,11 @@ namespace MyGeotabAPIAdapter.DataOptimizer
 
                         // Get a batch of DbFaultDatas.
                         IEnumerable<DbFaultData> dbFaultDatas;
+                        string sortColumnName = (string)nameof(DbFaultData.DateTime);
                         using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                         {
                             var dbFaultDataRepo = new DbFaultDataRepository2(adapterContext);
-                            dbFaultDatas = await dbFaultDataRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.FaultDataProcessorBatchSize);
+                            dbFaultDatas = await dbFaultDataRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.FaultDataProcessorBatchSize, null, sortColumnName);
                         }
 
                         lastBatchRecordCount = dbFaultDatas.Count();
@@ -174,7 +181,8 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                             foreach (var dbFaultData in dbFaultDatas)
                             {
                                 var deviceId = await dbDeviceTObjectCache.GetObjectIdAsync(dbFaultData.DeviceId);
-                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdAsync(dbFaultData.DiagnosticId);
+                                var diagnosticIdT = await dbDiagnosticIdTObjectCache.GetObjectAsync(dbFaultData.DiagnosticId);
+                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdAsync(diagnosticIdT.GeotabGUID);
                                 var dismissUserId = await dbUserTObjectCache.GetObjectIdAsync(dbFaultData.DismissUserId);
                                 if (deviceId == null)
                                 {

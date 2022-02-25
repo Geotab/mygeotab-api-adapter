@@ -16,7 +16,7 @@ namespace MyGeotabAPIAdapter.Tests
     public class MockBaseRepository2<T> : IBaseRepository2<T>, IDisposable where T : class, IIdCacheableDbEntity
     {
         const int TimeoutSeconds = 120;
-        List<T> dataStore;
+        readonly List<T> dataStore;
         long sequence = 0;
 
         /// <inheritdoc/>
@@ -75,7 +75,7 @@ namespace MyGeotabAPIAdapter.Tests
         /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
         /// <param name="changedSince">Only select entities where the <see cref="ChangeTrackerAttribute"/> property has a value greater than this <see cref="DateTime"/>. If null, no <see cref="DateTime"/> filter is applied.</param>
         /// <returns></returns>
-        public async Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null)
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "")
         {
             await Task.Delay(1);
             var entitiesSorted = dataStore.OrderBy(entity => entity.LastUpsertedUtc);
@@ -95,7 +95,7 @@ namespace MyGeotabAPIAdapter.Tests
         /// <summary>
         /// NOT IMPLEMENTED
         /// </summary>
-        public async Task<IEnumerable<T>> GetAsync(dynamic dynamicParams, CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null)
+        public async Task<IEnumerable<T>> GetAsync(dynamic dynamicParams, CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "")
         {
             await Task.Delay(1);
             throw new NotImplementedException();

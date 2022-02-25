@@ -20,7 +20,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
     {
         static string CurrentClassName { get => $"{nameof(GenericDbObjectCache<T>)}<{typeof(T).Name}>"; }
 
-        readonly ConcurrentDictionary<long, T> objectCache = new();
+        protected readonly ConcurrentDictionary<long, T> objectCache = new();
         readonly ConcurrentDictionary<string, long> geotabIdCache = new();
 
         int cacheUpdateIntervalMinutes = 5;

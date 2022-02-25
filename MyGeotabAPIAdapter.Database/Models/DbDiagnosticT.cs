@@ -20,8 +20,20 @@ namespace MyGeotabAPIAdapter.Database.Models
 
         [Write(false)]
         public long id { get; set; }
+        /// <summary>
+        /// NOTE: The <see cref="GeotabId"/> property is included in the <see cref="DbDiagnosticT"/> class only to satisfy the <see cref="IIdCacheableDbEntity"/> interface. The corresponding column does not exist in the database table. The <see cref="GeotabGUID"/> property is the actual ExplicitKey for the <see cref="DbDiagnosticT"/>. If used, this property will simply relay to/from the <see cref="GeotabGUID"/> property.
+        /// </summary>
+        [Computed]
+        public string GeotabId
+        {
+            get => GeotabGUID; 
+            set
+            {
+                GeotabGUID = value;
+            }
+        }
         [ExplicitKey]
-        public string GeotabId { get; set; }
+        public string GeotabGUID { get; set; }
         public string ControllerId { get; set; }
         public int? DiagnosticCode { get; set; }
         public string DiagnosticName { get; set; }

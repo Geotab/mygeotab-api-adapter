@@ -113,7 +113,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <inheritdoc/>
-        public async Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null)
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "")
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
 
@@ -125,7 +125,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
                 var connection = context.GetConnection();
                 var transaction = context.GetTransaction();
-                records = await connection.GetAllAsync<T>(transaction, context.TimeoutSecondsForDatabaseTasks, resultsLimit, changedSince);
+                records = await connection.GetAllAsync<T>(transaction, context.TimeoutSecondsForDatabaseTasks, resultsLimit, changedSince, sortColumnName);
             }
             catch (OperationCanceledException exception)
             {
@@ -145,7 +145,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <inheritdoc/>
-        public async Task<IEnumerable<T>> GetAsync(dynamic dynamicParams, CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null)
+        public async Task<IEnumerable<T>> GetAsync(dynamic dynamicParams, CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "")
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
 
@@ -157,7 +157,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
                 var connection = context.GetConnection();
                 var transaction = context.GetTransaction();
-                records = await connection.GetByParamAsync<T>(dynamicParams as object, transaction, null, resultsLimit, changedSince);
+                records = await connection.GetByParamAsync<T>(dynamicParams as object, transaction, null, resultsLimit, changedSince, sortColumnName);
             }
             catch (OperationCanceledException exception)
             {

@@ -18,6 +18,9 @@
         public string DbDeviceTTableName => "DevicesT";
 
         /// <inheritdoc/>
+        public string DbDiagnosticIdTTableName => "DiagnosticIdsT";
+
+        /// <inheritdoc/>
         public string DbDiagnosticTTableName => "DiagnosticsT";
 
         /// <inheritdoc/>

@@ -35,8 +35,9 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
         /// <param name="changedSince">Only select entities where the <see cref="ChangeTrackerAttribute"/> property has a value greater than this <see cref="DateTime"/>. If null, no <see cref="DateTime"/> filter is applied.</param>
+        /// <param name="sortColumnName">If a valid column name is supplied, the query to retrieve entities will sort on this column instead of the column marked with the [Key] attribute.</param>
         /// <returns></returns>
-        Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null);
+        Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "");
 
         /// <summary>
         /// Returns a collection of <see cref="T"/> entities matching the specified search criteria from the associated database table.
@@ -45,8 +46,9 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
         /// <param name="changedSince">Only select entities where the <see cref="ChangeTrackerAttribute"/> property has a value greater than this <see cref="DateTime"/>. If null, no <see cref="DateTime"/> filter is applied.</param>
+        /// <param name="sortColumnName">If a valid column name is supplied, the query to retrieve entities will sort on this column instead of the column marked with the [Key] attribute.</param>
         /// <returns></returns>
-        Task<IEnumerable<T>> GetAsync(dynamic dynamicParams, CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null);
+        Task<IEnumerable<T>> GetAsync(dynamic dynamicParams, CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "");
 
         /// <summary>
         /// Returns a <see cref="T"/> entity from its associated database table.

@@ -230,6 +230,43 @@ namespace Dapper.Contrib.Extensions
         }
 
         #region Customizations
+        private static PropertyInfo GetSortKey<T>(string sortColumnName)
+        {
+            var type = typeof(T);
+
+            if (type.IsArray)
+            {
+                type = type.GetElementType();
+            }
+            else if (type.IsGenericType)
+            {
+                var typeInfo = type.GetTypeInfo();
+                bool implementsGenericIEnumerableOrIsGenericIEnumerable =
+                    typeInfo.ImplementedInterfaces.Any(ti => ti.IsGenericType && ti.GetGenericTypeDefinition() == typeof(IEnumerable<>)) ||
+                    typeInfo.GetGenericTypeDefinition() == typeof(IEnumerable<>);
+
+                if (implementsGenericIEnumerableOrIsGenericIEnumerable)
+                {
+                    type = type.GetGenericArguments()[0];
+                }
+            }
+
+            var allProperties = TypePropertiesCache(type);
+
+            if (allProperties.Count > 0)
+            {
+                var sortKeyProp = allProperties.Find(p => string.Equals(p.Name, sortColumnName, StringComparison.CurrentCultureIgnoreCase));
+                if (sortKeyProp != null)
+                {
+                    return sortKeyProp;
+                }
+            }
+
+            throw new DataException($"GetSortKey<T> cannot find a property named {sortColumnName} for type {type}.");
+        }
+        #endregion
+
+        #region Customizations
         ///// <summary>
         ///// Returns a single entity by a single id from table "Ts".  
         ///// Id must be marked with [Key] attribute.
@@ -434,8 +471,9 @@ namespace Dapper.Contrib.Extensions
         /// <param name="commandTimeout">Number of seconds before command execution timeout</param>
         /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
         /// <param name="changedSince">Only select entities where the <see cref="ChangeTrackerAttribute"/> property has a value greater than this <see cref="DateTime"/>. If null, no <see cref="DateTime"/> filter is applied.</param>
+        /// <param name="sortColumnName">If a valid column name is supplied, the query to retrieve entities will sort on this column instead of the column marked with the [Key] attribute.</param>
         /// <returns>Entity of T</returns>
-        public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, int? commandTimeout = null, int? resultsLimit = null, DateTime? changedSince = null) where T : class
+        public static async Task<IEnumerable<T>> GetAllAsync<T>(this IDbConnection connection, IDbTransaction transaction = null, int? commandTimeout = null, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "") where T : class
         {
             var type = typeof(T);
             var cacheType = typeof(List<T>);
@@ -445,6 +483,10 @@ namespace Dapper.Contrib.Extensions
             {
                 var tableName = GetTableName(type);
                 var key = GetSingleKey<T>(nameof(GetAllAsync));
+                if (sortColumnName != "")
+                {
+                    key = GetSortKey<T>(sortColumnName);
+                }
                 var changeTrackerProperties = ChangeTrackerPropertiesCache(type);
                 PropertyInfo changedSinceProperty = null;
 #nullable enable
@@ -1270,8 +1312,9 @@ namespace Dapper.Contrib.Extensions
         /// <param name="commandTimeout">The command timeout setting.</param>
         /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
         /// <param name="changedSince">Only select entities where the <see cref="ChangeTrackerAttribute"/> property has a value greater than this <see cref="DateTime"/>. If null, no <see cref="DateTime"/> filter is applied.</param>
+        /// <param name="sortColumnName">If a valid column name is supplied, the query to retrieve entities will sort on this column instead of the column marked with the [Key] attribute.</param>
         /// <returns></returns>
-        public static async Task<IEnumerable<T>> GetByParamAsync<T>(this IDbConnection connection, dynamic parms, IDbTransaction transaction = null, int? commandTimeout = null, int? resultsLimit = null, DateTime? changedSince = null) where T : class
+        public static async Task<IEnumerable<T>> GetByParamAsync<T>(this IDbConnection connection, dynamic parms, IDbTransaction transaction = null, int? commandTimeout = null, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "") where T : class
         {
             var type = typeof(T);
             string connectionProviderType = connection.GetType().Namespace;
@@ -1280,6 +1323,10 @@ namespace Dapper.Contrib.Extensions
             DynamicParameters dynParms;
 
             var key = GetSingleKey<T>(nameof(GetByParamAsync));
+            if (sortColumnName != "")
+            {
+                key = GetSortKey<T>(sortColumnName);
+            }
             var changeTrackerProperties = ChangeTrackerPropertiesCache(type);
             var tableName = GetTableName(type);
             PropertyInfo changedSinceProperty = null;

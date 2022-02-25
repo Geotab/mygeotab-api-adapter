@@ -28,6 +28,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbDeviceTTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbDiagnosticIdT"/> entities.
+        /// </summary>
+        string DbDiagnosticIdTTableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbDiagnosticT"/> entities.
         /// </summary>
         string DbDiagnosticTTableName { get; }

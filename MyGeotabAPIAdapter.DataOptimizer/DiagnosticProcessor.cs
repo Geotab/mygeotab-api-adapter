@@ -34,9 +34,12 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         readonly IConnectionInfoContainer connectionInfoContainer;
         readonly IDataOptimizerConfiguration dataOptimizerConfiguration;
         readonly IDateTimeHelper dateTimeHelper;
+        readonly IDbDiagnosticDbDiagnosticIdTEntityMapper dbDiagnosticDbDiagnosticIdTEntityMapper;
         readonly IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper;
+        readonly IGenericEntityPersister<DbDiagnosticIdT> dbDiagnosticIdTEntityPersister;
         readonly IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister;
         readonly IGenericDbObjectCache<DbDiagnostic> dbDiagnosticObjectCache;
+        readonly DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache;
         readonly IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache;
         readonly IExceptionHelper exceptionHelper;
         readonly IMessageLogger messageLogger;
@@ -56,7 +59,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <summary>
         /// Initializes a new instance of the <see cref="DiagnosticProcessor"/> class.
         /// </summary>
-        public DiagnosticProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper, IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister, IGenericDbObjectCache<DbDiagnostic> dbDiagnosticObjectCache, IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
+        public DiagnosticProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbDiagnosticDbDiagnosticIdTEntityMapper dbDiagnosticDbDiagnosticIdTEntityMapper, IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper, IGenericEntityPersister<DbDiagnosticIdT> dbDiagnosticIdTEntityPersister, IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister, IGenericDbObjectCache<DbDiagnostic> dbDiagnosticObjectCache, DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache, IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -71,9 +74,12 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             this.stateMachine = stateMachine;
             this.connectionInfoContainer = connectionInfoContainer;
             this.processorTracker = processorTracker;
+            this.dbDiagnosticDbDiagnosticIdTEntityMapper = dbDiagnosticDbDiagnosticIdTEntityMapper;
             this.dbDiagnosticDbDiagnosticTEntityMapper = dbDiagnosticDbDiagnosticTEntityMapper;
+            this.dbDiagnosticIdTEntityPersister = dbDiagnosticIdTEntityPersister;
             this.dbDiagnosticTEntityPersister = dbDiagnosticTEntityPersister;
             this.dbDiagnosticObjectCache = dbDiagnosticObjectCache;
+            this.dbDiagnosticIdTObjectCache = dbDiagnosticIdTObjectCache;
             this.dbDiagnosticTObjectCache = dbDiagnosticTObjectCache;
 
             this.adapterContext = adapterContext;
@@ -145,6 +151,10 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         {
                             await dbDiagnosticTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
                         }
+                        if (dbDiagnosticIdTObjectCache.IsInitialized == false)
+                        {
+                            await dbDiagnosticIdTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
+                        }
 
                         if (dbDiagnosticObjectCache.Any())
                         {
@@ -160,17 +170,20 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                             {
                                 engageExecutionThrottle = changedDbDiagnostics.Count < ThrottleEngagingBatchRecordCount;
                                 var dbDiagnosticTsToPersist = new List<DbDiagnosticT>();
+                                var dbDiagnosticIdTsToPersist = new List<DbDiagnosticIdT>();
 
                                 // Iterate through the list of added/changed DbDiagnostics.
                                 foreach (var changedDbDiagnostic in changedDbDiagnostics)
                                 {
-                                    // Try to get the DbDiagnosticT that corresponds with the DbDiagnostic.
-                                    var dbDiagnosticT = await dbDiagnosticTObjectCache.GetObjectAsync(changedDbDiagnostic.GeotabId);
+                                    // Try to get the DbDiagnosticT that corresponds with the DbDiagnostic based on matching the GeotabGUID.
+                                    var dbDiagnosticT = await dbDiagnosticTObjectCache.GetObjectAsync(changedDbDiagnostic.GeotabGUID);
                                     if (dbDiagnosticT == null)
                                     {
-                                        // The DbDiagnosticT doesn't yet exist. Create a new one.
+                                        // The DbDiagnosticT doesn't yet exist. Create a new one along with a corresponding DbDiagnosticIdT.
                                         dbDiagnosticT = dbDiagnosticDbDiagnosticTEntityMapper.CreateEntity(changedDbDiagnostic);
                                         dbDiagnosticTsToPersist.Add(dbDiagnosticT);
+                                        var dbDiagnosticIdT = dbDiagnosticDbDiagnosticIdTEntityMapper.CreateEntity(changedDbDiagnostic);
+                                        dbDiagnosticIdTsToPersist.Add(dbDiagnosticIdT);
 
                                         adapterDbLastId = changedDbDiagnostic.id;
                                         adapterDbLastGeotabId = changedDbDiagnostic.GeotabId;
@@ -178,9 +191,17 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                                     }
                                     else
                                     {
-                                        // Update the existing DbDiagnosticT.
+                                        // The DbDiagnosticT already exists. Update the existing DbDiagnosticT.
                                         dbDiagnosticDbDiagnosticTEntityMapper.UpdateEntity(dbDiagnosticT, changedDbDiagnostic);
                                         dbDiagnosticTsToPersist.Add(dbDiagnosticT);
+
+                                        // Check to see whether the Diagnostic Id has changed and, if so, add a new DbDiagnosticIdT.
+                                        var dbDiagnosticIdTs = await dbDiagnosticIdTObjectCache.GetObjectsAsync(changedDbDiagnostic.GeotabGUID, changedDbDiagnostic.GeotabId);
+                                        if (dbDiagnosticIdTs.Any() == false)
+                                        {
+                                            var dbDiagnosticIdT = dbDiagnosticDbDiagnosticIdTEntityMapper.CreateEntity(changedDbDiagnostic);
+                                            dbDiagnosticIdTsToPersist.Add(dbDiagnosticIdT);
+                                        }
                                     }
                                 }
 
@@ -191,6 +212,9 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                                     {
                                         // DbDiagnosticT:
                                         await dbDiagnosticTEntityPersister.PersistEntitiesToDatabaseAsync(optimizerContext, dbDiagnosticTsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                        // DbDiagnosticIdT:
+                                        await dbDiagnosticIdTEntityPersister.PersistEntitiesToDatabaseAsync(optimizerContext, dbDiagnosticIdTsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                         // DbOProcessorTracking:
                                         await processorTracker.UpdateDbOProcessorTrackingRecord(optimizerContext, DataOptimizerProcessor.DiagnosticProcessor, DbDiagnosticsLastQueriedUtc, adapterDbLastId, adapterDbLastRecordCreationTimeUtc, adapterDbLastGeotabId);

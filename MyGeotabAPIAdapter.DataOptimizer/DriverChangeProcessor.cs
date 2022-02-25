@@ -157,10 +157,11 @@ namespace MyGeotabAPIAdapter.DataOptimizer
 
                         // Get a batch of DbDriverChanges.
                         IEnumerable<DbDriverChange> dbDriverChanges;
+                        string sortColumnName = (string)nameof(DbDriverChange.DateTime);
                         using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                         {
                             var dbDriverChangeRepo = new DbDriverChangeRepository2(adapterContext);
-                            dbDriverChanges = await dbDriverChangeRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.DriverChangeProcessorBatchSize);
+                            dbDriverChanges = await dbDriverChangeRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.DriverChangeProcessorBatchSize, null, sortColumnName);
                         }
 
                         lastBatchRecordCount = dbDriverChanges.Count();

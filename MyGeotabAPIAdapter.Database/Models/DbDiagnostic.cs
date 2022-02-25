@@ -22,6 +22,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         [Key]
         public long id { get; set; }
         public string GeotabId { get; set; }
+        public string GeotabGUID { get; set; }
         public string ControllerId { get; set; }
         public int? DiagnosticCode { get; set; }
         public string DiagnosticName { get; set; }

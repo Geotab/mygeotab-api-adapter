@@ -142,10 +142,11 @@ namespace MyGeotabAPIAdapter.DataOptimizer
 
                         // Get a batch of DbLogRecords.
                         IEnumerable<DbLogRecord> dbLogRecords;
+                        string sortColumnName = (string)nameof(DbLogRecord.DateTime);
                         using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
-                        {
+                        {                            
                             var dbLogRecordRepo = new DbLogRecordRepository2(adapterContext);
-                            dbLogRecords = await dbLogRecordRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.LogRecordProcessorBatchSize);
+                            dbLogRecords = await dbLogRecordRepo.GetAllAsync(cancellationTokenSource, dataOptimizerConfiguration.LogRecordProcessorBatchSize, null, sortColumnName);
                         }
 
                         lastBatchRecordCount = dbLogRecords.Count();
