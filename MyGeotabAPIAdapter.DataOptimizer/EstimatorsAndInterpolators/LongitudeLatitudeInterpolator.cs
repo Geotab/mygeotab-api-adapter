@@ -99,7 +99,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer.EstimatorsAndInterpolators
             }
 
             // Get the duration, in ticks, between the lagDateTime and the leadDateTime.
-            var lagToLeadDurationTicks = lagDateTime.Ticks - leadDateTime.Ticks;
+            var lagToLeadDurationTicks = leadDateTime.Ticks - lagDateTime.Ticks;
             if (lagToLeadDurationTicks == 0)
             {
                 // The duration between the lagDateTime and the leadDateTime is zero. Simply return the lag coordinates.

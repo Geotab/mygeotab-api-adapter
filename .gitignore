@@ -79,3 +79,14 @@
 /MyGeotabAPIAdapter.Logging/bin/Debug/net6.0
 /MyGeotabAPIAdapter.MyGeotabAPI/bin/Debug/net6.0
 /MyGeotabAPIAdapter.Tests/bin/Debug/net6.0
+/MyGeotabAPIAdapter/bin/Release/net6.0
+/MyGeotabAPIAdapter.Configuration/bin/Release/net6.0
+/MyGeotabAPIAdapter.Database/bin/Release/net6.0
+/MyGeotabAPIAdapter.Database.EntityPersisters/bin/Release/net6.0
+/MyGeotabAPIAdapter.DataOptimizer/bin/Release/net6.0
+/MyGeotabAPIAdapter.Exceptions/bin/Release/net6.0
+/MyGeotabAPIAdapter.Geospatial/bin/Release/net6.0
+/MyGeotabAPIAdapter.Helpers/bin/Release/net6.0
+/MyGeotabAPIAdapter.Logging/bin/Release/net6.0
+/MyGeotabAPIAdapter.MyGeotabAPI/bin/Release/net6.0
+/MyGeotabAPIAdapter.Tests/bin/Release/net6.0
