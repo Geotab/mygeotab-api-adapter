@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29728.190
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyGeotabAPIAdapter", "MyGeotabAPIAdapter\MyGeotabAPIAdapter.csproj", "{DC828638-F0A2-4D3C-8726-0D9F694EE699}"
 EndProject
@@ -29,7 +29,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyGeotabAPIAdapter.Configur
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyGeotabAPIAdapter.Database.EntityPersisters", "MyGeotabAPIAdapter.Database.EntityPersisters\MyGeotabAPIAdapter.Database.EntityPersisters.csproj", "{B4B64C84-96A9-43A7-B593-25C256382D5C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyGeotabAPIAdapter.Geospatial", "MyGeotabAPIAdapter.Geospatial\MyGeotabAPIAdapter.Geospatial.csproj", "{6F7B27AC-E0E4-4393-9F41-2AA080A8F0C7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyGeotabAPIAdapter.Geospatial", "MyGeotabAPIAdapter.Geospatial\MyGeotabAPIAdapter.Geospatial.csproj", "{6F7B27AC-E0E4-4393-9F41-2AA080A8F0C7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DeployToAzure", "DeployToAzure", "{A40F9DBE-A35C-455C-B574-EE41A7D2535A}"
+	ProjectSection(SolutionItems) = preProject
+		DeployToAzure\ARM_Template.json = DeployToAzure\ARM_Template.json
+		DeployToAzure\ARM_TemplateParameterValues.json = DeployToAzure\ARM_TemplateParameterValues.json
+		DeployToAzure\AzureCLI_ResourceCreationScript.ps1 = DeployToAzure\AzureCLI_ResourceCreationScript.ps1
+		DeployToAzure\MyGeotabAPIAdapterDeploymentScript.ps1 = DeployToAzure\MyGeotabAPIAdapterDeploymentScript.ps1
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -84,6 +92,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A40F9DBE-A35C-455C-B574-EE41A7D2535A} = {DE34361C-1C64-4D86-9D77-ECF12B7EC1C0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28B1EC99-3BB0-4B69-8342-3DB08CE2B3F4}

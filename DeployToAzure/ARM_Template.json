@@ -1,0 +1,392 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure Resource Location (Region)"
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Virtual Network Name"
+      }
+    },
+    "vmName": {
+      "type": "string",
+      "metadata": {
+        "description": "Virtual Machine Name"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Virtual Machine Size"
+      }
+    },
+    "vmUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Virtual Machine Username"
+      }
+    },
+    "vmPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Virtual Machine User Password"
+      }
+    },
+    "nsgSourceAddressPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Network Security Group Source Address Prefix"
+      }
+    },
+    "sqlServerName": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure SQL Server Name"
+      }
+    },
+    "sqlAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure SQL Server Admin Username"
+      }
+    },
+    "sqlAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Azure SQL Server Admin Password"
+      }
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure SQL Database Name"
+      }
+    },
+    "sqlDatabaseServiceTier": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure SQL Database Service Tier"
+      }
+    },
+    "sqlDatabaseComputeSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure SQL Database Compute Size"
+      }
+    },
+    "scriptFilename": {
+      "type": "string",
+      "metadata": {
+        "description": "The script filename"
+      }
+    },
+    "rootPath": {
+      "type": "string",
+      "metadata": {
+        "description": "Root filesystem path to install on VM"
+      }
+    },
+    "appUser": {
+      "type": "string",
+      "metadata": {
+        "description": "SQL database username for application"
+      }
+    },
+    "appPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SQL database password for application"
+      }
+    },
+    "loginMYGServer": {
+      "type": "string",
+      "metadata": {
+        "description": "MYG server for Login"
+      }
+    },
+    "loginMYGDatabase": {
+      "type": "string",
+      "metadata": {
+        "description": "MYG database for Login"
+      }
+    },
+    "loginMYGUser": {
+      "type": "string",
+      "metadata": {
+        "description": "MYG user for Login"
+      }
+    },
+    "loginMYGPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "MYG password for Login"
+      }
+    },
+    "versionOfMyGeotabAPIAdapter": {
+      "type": "string",
+      "metadata": {
+        "description": "Latest Version of the Adapter"
+      }
+    },
+    "FeedStartOption": {
+      "type": "string",
+      "metadata": {
+        "description": "Data Feed Start Option"
+      }
+    },
+    "FeedStartSpecificTimeUTC": {
+      "type": "string",
+      "metadata": {
+        "description": "Data Feed Start Specific TimeUTC"
+      }
+    },
+    "StartAPIAdapterWhenDeployed": {
+      "type": "string",
+      "metadata": {
+        "description": "Start API Adapter When Deployed"
+      }
+    }
+  },
+  "functions": [],
+  "variables": {},
+  "resources": [
+    {
+      "name": "windowsVM1-PublicIP",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2020-11-01",
+      "location": "[parameters('location')]",
+      "tags": {
+        "displayName": "PublicIPAddress"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[toLower(parameters('vmName'))]"
+        }
+      }
+    },
+    {
+      "name": "windowsVM1-nsg",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2020-11-01",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "nsgRule1",
+            "properties": {
+              "description": "description",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "[parameters('nsgSourceAddressPrefix')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[parameters('vnetName')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2020-11-01",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', 'windowsVM1-nsg')]"
+      ],
+      "tags": {
+        "displayName": "[parameters('vnetName')]"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[concat(parameters('vnetName'),'-Subnet1')]",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'windowsVM1-nsg')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "windowsVM1-NetworkInterface",
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2020-11-01",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', 'windowsVM1-PublicIP')]",
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ],
+      "tags": {
+        "displayName": "windowsVM1 Network Interface"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipConfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'windowsVM1-PublicIP')]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), concat(parameters('vnetName'),'-Subnet1'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[parameters('sqlServerName')]",
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2021-02-01-preview",
+      "location": "[parameters('location')]",
+      "tags": {
+        "displayName": "[parameters('sqlServerName')]"
+      },
+      "properties": {
+        "administratorLogin": "[parameters('sqlAdminUsername')]",
+        "administratorLoginPassword": "[parameters('sqlAdminPassword')]"
+      },
+      "resources": [
+        {
+          "type": "firewallRules",
+          "apiVersion": "2021-02-01-preview",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+          ],
+          "location": "[parameters('location')]",
+          "name": "AllowAllWindowsAzureIps",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          }
+        },
+        {
+          "name": "[concat(parameters('sqlServerName'),'/',parameters('sqlDatabaseName'))]",
+          "type": "Microsoft.Sql/servers/databases",
+          "apiVersion": "2021-02-01-preview",
+          "location": "[parameters('location')]",
+          "tags": {
+            "displayName": "[parameters('sqlDatabaseName')]"
+          },
+          "sku": {
+            "name": "[parameters('sqlDatabaseComputeSize')]",
+            "tier": "[parameters('sqlDatabaseServiceTier')]"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', parameters('sqlServerName'))]"
+          ],
+          "properties": {
+            "collation": "SQL_Latin1_General_CP1_CI_AS"
+          }
+        }
+      ]
+    },
+    {
+      "name": "[parameters('vmName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2021-03-01",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', 'windowsVM1-NetworkInterface')]"
+      ],
+      "tags": {
+        "displayName": "[parameters('vmName')]"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('vmUsername')]",
+          "adminPassword": "[parameters('vmPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2019-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[concat('windowsVM1-OSDisk','_',parameters('vmName'))]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', 'windowsVM1-NetworkInterface')]"
+            }
+          ]
+        }
+      },
+      "resources": [
+        {
+          "name": "[concat(parameters('vmName'),'/','customScript1')]",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "apiVersion": "2021-03-01",
+          "location": "[resourceGroup().location]",
+          "tags": {
+            "displayName": "PS Install Script"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "autoUpgradeMinorVersion": true,
+            "typeHandlerVersion": "1.9",
+            "settings": {
+              "fileUris": [
+                "[concat('https://github.com/Geotab/mygeotab-api-adapter/releases/tag/', parameters('versionOfMyGeotabAPIAdapter'), '/', parameters('scriptFilename'))]"
+              ]
+            },
+            "protectedSettings": {
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ', parameters('scriptFilename'),  
+                                ' -sqlDatabaseName ', parameters('sqlDatabaseName'),                                                                
+                                ' -sqlServerName ', parameters('sqlServerName'), 
+                                ' -sqlUserName ', parameters('sqlAdminUsername'), 
+                                ' -sqlPassword ', parameters('sqlAdminPassword'),
+                                ' -rootPath ', parameters('rootPath'),
+                                ' -appUser ', parameters('appUser'),
+                                ' -appPassword ', parameters('appPassword'),
+                                ' -loginMYGServer ', parameters('loginMYGServer'),
+                                ' -loginMYGDatabase ', parameters('loginMYGDatabase'),
+                                ' -loginMYGUser ', parameters('loginMYGUser'),
+                                ' -loginMYGPassword ', parameters('loginMYGPassword'),
+                                ' -versionOfMyGeotabAPIAdapter ', parameters('versionOfMyGeotabAPIAdapter'),
+                                ' -FeedStartOption ', parameters('FeedStartOption'),
+                                ' -FeedStartSpecificTimeUTC ', parameters('FeedStartSpecificTimeUTC'),
+                                ' -StartAPIAdapterWhenDeployed ', parameters('StartAPIAdapterWhenDeployed')                                
+                                )]"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": {}
+}

@@ -45,3 +45,13 @@ The [MyGeotab API Adapter](https://docs.google.com/presentation/d/1PhsDhZwj23i2o
 ```shell
 > git clone https://github.com/Geotab/mygeotab-api-adapter.git mygeotab-api-adapter
 ```
+
+# Deploy to Azure
+
+An example process has been developed to facilitate rapid and semi-autonomous deployment of the MyGeotab API Adapter solution to the Microsoft Azure cloud platform. For more information, please refer to the [MyGeotab API Adapter - Guide for Deploying to Microsoft Azure](https://docs.google.com/document/d/1yfZhsy4gFTnRqHDGeo4xgxCft4FPDadSEebqCQSbJ88/edit?usp=sharing) guide. Click the button below to launch the Microsoft Azure Cloud Shell which is required early in the deployment process outlined in the guide.
+
+## Disclaimer
+
+Utilizing the deployment process outlined in this example **may result in charges** incurred for utilization of Microsoft Azure resources. Geotab is not liable under any circumstances for any charges incurred as a result of following this deployment example.
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#cloudshell)
