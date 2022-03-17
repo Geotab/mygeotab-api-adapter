@@ -361,7 +361,7 @@
             "typeHandlerVersion": "1.9",
             "settings": {
               "fileUris": [
-                "[concat('https://github.com/Geotab/mygeotab-api-adapter/releases/tag/', parameters('versionOfMyGeotabAPIAdapter'), '/', parameters('scriptFilename'))]"
+                "[concat('https://github.com/Geotab/mygeotab-api-adapter/releases/', parameters('versionOfMyGeotabAPIAdapter'), '/', parameters('scriptFilename'))]"
               ]
             },
             "protectedSettings": {
