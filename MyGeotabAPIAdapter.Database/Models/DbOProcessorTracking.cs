@@ -47,10 +47,10 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string? OptimizerMachineName { get; set; }
         public DateTime? EntitiesLastProcessedUtc
         {
-            // Allow null value to be written to the database, but substitute null value with the DefaultDateTime when returning in order to facilitate DateTime operations.
+            // Allow null value to be written to the database, but substitute null value with the DefaultDateTime when returning in order to facilitate DateTime operations. If the AdapterDbLastId is null, also return the DefaultDateTime because it is possible that no records may have been returned on previous checks (especially on start-up) and we do not want to miss any data.
             get 
             {
-                if (entitiesLastProcessedUtc == null)
+                if (entitiesLastProcessedUtc == null || AdapterDbLastId == null)
                 {
                     return DefaultDateTime;
                 }

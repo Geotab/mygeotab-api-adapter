@@ -139,11 +139,11 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         // Initialize object caches.
                         if (dbDeviceObjectCache.IsInitialized == false)
                         {
-                            await dbDeviceObjectCache.InitializeAsync(adapterContext, Databases.AdapterDatabase);
+                            await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
                         }
                         if (dbDeviceTObjectCache.IsInitialized == false)
                         {
-                            await dbDeviceTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
+                            await dbDeviceTObjectCache.InitializeAsync(Databases.OptimizerDatabase);
                         }
 
                         if (dbDeviceObjectCache.Any())

@@ -32,7 +32,7 @@ namespace MyGeotabAPIAdapter.Logging
         }
 
         /// <inheritdoc/>
-        public void LogWaitForPrerequisiteProcessorsServicePause(string loggingClassName, string processorsNeverRunStatement, string processorsNotRunningStatement, TimeSpan delayBeforeNextCheck)
+        public void LogWaitForPrerequisiteProcessorsServicePause(string loggingClassName, string processorsNeverRunStatement, string processorsNotRunningStatement, string processorsWithNoDataProcessedStatement, TimeSpan delayBeforeNextCheck)
         {
             var nextCheckDateTime = DateTime.UtcNow.Add(delayBeforeNextCheck);
 
@@ -45,6 +45,10 @@ namespace MyGeotabAPIAdapter.Logging
             if (processorsNotRunningStatement != "")
             {
                 message.AppendLine($"> {processorsNotRunningStatement}");
+            }
+            if (processorsWithNoDataProcessedStatement != "")
+            {
+                message.AppendLine($"> {processorsWithNoDataProcessedStatement}");
             }
             message.AppendLine($"Please ensure that all prerequisite processors are running. The {loggingClassName} will check again at {nextCheckDateTime} (UTC) and will resume operation if all prerequisite processors are running at that time.");
 

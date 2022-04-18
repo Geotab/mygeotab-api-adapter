@@ -31,8 +31,9 @@ namespace MyGeotabAPIAdapter.Logging
         /// <param name="loggingClassName">The class name of the service being paused.</param>
         /// <param name="processorsNeverRunStatement">A sentence listing all prerequisite processors that have never been run.</param>
         /// <param name="processorsNotRunningStatement">>A sentence listing all prerequisite processors that are not currently running.</param>
+        /// <param name="processorsWithNoDataProcessedStatement">A sentence listing all prerequisite processors that have not yet processed any data.</param>
         /// <param name="delayBeforeNextCheck"></param>
-        void LogWaitForPrerequisiteProcessorsServicePause(string loggingClassName, string processorsNeverRunStatement, string processorsNotRunningStatement, TimeSpan delayBeforeNextCheck);
+        void LogWaitForPrerequisiteProcessorsServicePause(string loggingClassName, string processorsNeverRunStatement, string processorsNotRunningStatement, string processorsWithNoDataProcessedStatement, TimeSpan delayBeforeNextCheck);
 
         /// <summary>
         /// Logs a message indicating that the <paramref name="loggingClassName"/> service is resuming operation now that all prerequisite processors are running.

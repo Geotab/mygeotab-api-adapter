@@ -95,7 +95,7 @@ namespace MyGeotabAPIAdapter.Database
         /// <summary>
         /// The name of the database table associated with <see cref="DbStatusDataTWithLagLeadLongLat"/> entities.
         /// </summary>
-        string DbStatusDataTWithLagLeadLongLatTableName { get; }
+        string DbStatusDataTWithLagLeadLongLatStoredProcedureName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbUserT"/> entities.

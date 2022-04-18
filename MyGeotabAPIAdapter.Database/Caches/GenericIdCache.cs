@@ -24,12 +24,14 @@ namespace MyGeotabAPIAdapter.Database.Caches
 
         int autoRefreshIntervalMinutes;
         IDictionary<long, string> cache;
-        UnitOfWorkContext context;
         Databases database;
+        readonly SemaphoreSlim initializationLock = new(1, 1);
         bool isInitialized;
         DateTime lastRefreshed = DateTime.MinValue;
+        readonly SemaphoreSlim updateLock = new(1, 1);
 
         readonly IDateTimeHelper dateTimeHelper;
+        readonly UnitOfWorkContext context;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <inheritdoc/>
@@ -62,12 +64,13 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <summary>
         /// Initializes a new instance of the <see cref="GenericIdCache{T}"/> class.
         /// </summary>
-        public GenericIdCache(IDateTimeHelper dateTimeHelper)
+        public GenericIdCache(IDateTimeHelper dateTimeHelper, UnitOfWorkContext context)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             this.dateTimeHelper = dateTimeHelper;
+            this.context = context;
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -99,24 +102,31 @@ namespace MyGeotabAPIAdapter.Database.Caches
         }
 
         /// <inheritdoc/>
-        public async Task InitializeAsync(UnitOfWorkContext context, Databases database, int autoRefreshIntervalMinutes)
+        public async Task InitializeAsync(Databases database, int autoRefreshIntervalMinutes)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            this.context = context;
-            this.database = database;
-            this.autoRefreshIntervalMinutes = autoRefreshIntervalMinutes;
-            isInitialized = true;
-            await RefreshAsync();
+            await initializationLock.WaitAsync();
+            try
+            {
+                this.database = database;
+                this.autoRefreshIntervalMinutes = autoRefreshIntervalMinutes;
+                isInitialized = true;
+                await RefreshAsync();
+            }
+            finally
+            {
+                initializationLock.Release();
+            }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
-        public async Task InitializeAsync(UnitOfWorkContext context, Databases database)
+        public async Task InitializeAsync(Databases database)
         {
-            await InitializeAsync(context, database, DefaultAutoRefreshIntervalMinutes);
+            await InitializeAsync(database, DefaultAutoRefreshIntervalMinutes);
         }
 
         /// <inheritdoc/>
@@ -125,25 +135,33 @@ namespace MyGeotabAPIAdapter.Database.Caches
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            if (isInitialized == false)
+            await updateLock.WaitAsync();
+            try
             {
-                throw new InvalidOperationException($"The {nameof(InitializeAsync)} method must be called at least once before calling the {nameof(RefreshAsync)} method.");
-            }
-
-            using (var cancellationTokenSource = new CancellationTokenSource())
-            {
-                var dbEntityRepo = new BaseRepository2<T>(context);
-                using (var uow = context.CreateUnitOfWork(database))
+                if (isInitialized == false)
                 {
-                    var dbEntites = await dbEntityRepo.GetAllAsync(cancellationTokenSource);
-                    cache = new Dictionary<long, string>();
-                    foreach (var dbEntity in dbEntites)
+                    throw new InvalidOperationException($"The {nameof(InitializeAsync)} method must be called at least once before calling the {nameof(RefreshAsync)} method.");
+                }
+
+                using (var cancellationTokenSource = new CancellationTokenSource())
+                {
+                    var dbEntityRepo = new BaseRepository2<T>(context);
+                    using (var uow = context.CreateUnitOfWork(database))
                     {
-                        cache.Add(dbEntity.id, dbEntity.GeotabId);
+                        var dbEntites = await dbEntityRepo.GetAllAsync(cancellationTokenSource);
+                        cache = new Dictionary<long, string>();
+                        foreach (var dbEntity in dbEntites)
+                        {
+                            cache.Add(dbEntity.id, dbEntity.GeotabId);
+                        }
                     }
                 }
+                lastRefreshed = DateTime.UtcNow;
             }
-            lastRefreshed = DateTime.UtcNow;
+            finally
+            {
+                updateLock.Release();
+            }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }

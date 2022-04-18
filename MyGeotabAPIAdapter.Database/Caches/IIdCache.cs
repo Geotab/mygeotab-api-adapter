@@ -43,19 +43,17 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <summary>
         /// Initializes this <see cref="IIdCache{T}"/> instance and calls the <see cref="RefreshAsync"/> method to populate the cache.
         /// </summary>
-        /// <param name="context">The <see cref="UnitOfWorkContext"/> to use.</param>
         /// <param name="database">The <see cref="Databases"/> to use.</param>
         /// <param name="autoRefreshIntervalMinutes">The value to use for <see cref="AutoRefreshIntervalMinutes"/>.</param>
         /// <returns></returns>
-        Task InitializeAsync(UnitOfWorkContext context, Databases database, int autoRefreshIntervalMinutes);
+        Task InitializeAsync(Databases database, int autoRefreshIntervalMinutes);
 
         /// <summary>
         /// Initializes this <see cref="IIdCache{T}"/> instance and calls the <see cref="RefreshAsync"/> method to populate the cache.
         /// </summary>
-        /// <param name="context">The <see cref="UnitOfWorkContext"/> to use.</param>
         /// <param name="database">The <see cref="Databases"/> to use.</param>
         /// <returns></returns>
-        Task InitializeAsync(UnitOfWorkContext context, Databases database);
+        Task InitializeAsync(Databases database);
 
         /// <summary>
         /// Refreshes the in-memory cache with a fresh snapshot from the database.

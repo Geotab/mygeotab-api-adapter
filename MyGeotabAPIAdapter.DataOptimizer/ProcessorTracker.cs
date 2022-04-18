@@ -57,6 +57,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             var allPrerequisiteProcessorsRunning = true;
             var processorsNeverRun = new List<DataOptimizerProcessor>();
             var processorsNotRunning = new List<DataOptimizerProcessor>();
+            var processorsWithNoDataProcessed = new List<DataOptimizerProcessor>();
 
             foreach (var prerequisiteProcessor in prerequisiteProcessors)
             {
@@ -72,9 +73,15 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                     allPrerequisiteProcessorsRunning = false;
                     processorsNotRunning.Add(prerequisiteProcessor);
                 }
+
+                var processorHasProcessedData = await ProcessorHasProcessedData(prerequisiteProcessor);
+                if (processorHasProcessedData == false)
+                {
+                    processorsWithNoDataProcessed.Add(prerequisiteProcessor);
+                }
             }
 
-            var result = new PrerequisiteProcessorOperationCheckResult(allPrerequisiteProcessorsRunning, processorsNeverRun, processorsNotRunning);
+            var result = new PrerequisiteProcessorOperationCheckResult(allPrerequisiteProcessorsRunning, processorsNeverRun, processorsNotRunning, processorsWithNoDataProcessed);
             return result;
         }
 
@@ -168,7 +175,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            await dbOProcessorTrackingObjectCache.InitializeAsync(context, Databases.OptimizerDatabase);
+            await dbOProcessorTrackingObjectCache.InitializeAsync(Databases.OptimizerDatabase);
 
             // Make sure that a OProcessorTracking record exists for each of the processors. For any that don't have a record (e.g. when the application is run for the first time), create a new record.
             var dbOProcessorTrackingsToPersist = new List<DbOProcessorTracking>();
@@ -234,6 +241,17 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         {
             var dbOProcessorTracking = await GetDbOProcessorTrackingRecordAsync(dataOptimizerProcessor);
             return dbOProcessorTracking.EntitiesHaveBeenProcessed;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> ProcessorHasProcessedData(DataOptimizerProcessor dataOptimizerProcessor)
+        {
+            var dbOProcessorTracking = await GetDbOProcessorTrackingRecordAsync(dataOptimizerProcessor);
+            if (dbOProcessorTracking.AdapterDbLastId != null)
+            {
+                return true;
+            }
+            return false;
         }
 
         /// <inheritdoc/>

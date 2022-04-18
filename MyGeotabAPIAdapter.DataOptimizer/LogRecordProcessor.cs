@@ -137,7 +137,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         // Initialize object caches.
                         if (dbDeviceTObjectCache.IsInitialized == false)
                         {
-                            await dbDeviceTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
+                            await dbDeviceTObjectCache.InitializeAsync(Databases.OptimizerDatabase);
                         }
 
                         // Get a batch of DbLogRecords.

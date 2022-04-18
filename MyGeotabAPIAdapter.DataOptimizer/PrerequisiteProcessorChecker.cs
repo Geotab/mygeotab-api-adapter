@@ -39,19 +39,26 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             // Perform initial check to see whether all prerequisite processors are running.
             var prerequisiteProcessorOperationCheckResult = await processorTracker.CheckOperationOfPrerequisiteProcessors(prerequisiteProcessors);
             var allPrerequisiteProcessorsRunning = prerequisiteProcessorOperationCheckResult.AllPrerequisiteProcessorsRunning;
-            
+            var allPrerequisiteProcessorsHaveProcessedData = false;
+
             // If all prerequisite processors are not running, keep checking until they are.
-            while (allPrerequisiteProcessorsRunning == false)
+            while (allPrerequisiteProcessorsRunning == false || allPrerequisiteProcessorsHaveProcessedData == false)
             {
                 prerequisiteProcessorOperationCheckResult = await processorTracker.CheckOperationOfPrerequisiteProcessors(prerequisiteProcessors);
                 allPrerequisiteProcessorsRunning = prerequisiteProcessorOperationCheckResult.AllPrerequisiteProcessorsRunning;
-                if (allPrerequisiteProcessorsRunning == false)
+
+                if (prerequisiteProcessorOperationCheckResult.ProcessorsWithNoDataProcessed.Count == 0)
                 {
-                    messageLogger.LogWaitForPrerequisiteProcessorsServicePause(dependentProcessorClassName, prerequisiteProcessorOperationCheckResult.ProcessorsNeverRunStatement, prerequisiteProcessorOperationCheckResult.ProcessorsNotRunningStatement, prerequisiteProcessorOperationCheckResult.RecommendedDelayBeforeNextCheck);
+                    allPrerequisiteProcessorsHaveProcessedData = true;
+                }
+
+                if (allPrerequisiteProcessorsRunning == false || allPrerequisiteProcessorsHaveProcessedData == false)
+                {
+                    messageLogger.LogWaitForPrerequisiteProcessorsServicePause(dependentProcessorClassName, prerequisiteProcessorOperationCheckResult.ProcessorsNeverRunStatement, prerequisiteProcessorOperationCheckResult.ProcessorsNotRunningStatement, prerequisiteProcessorOperationCheckResult.ProcessorsWithNoDataProcessedStatement, prerequisiteProcessorOperationCheckResult.RecommendedDelayBeforeNextCheck);
                     await Task.Delay(prerequisiteProcessorOperationCheckResult.RecommendedDelayBeforeNextCheck, cancellationToken);
+                    messageLogger.LogWaitForPrerequisiteProcessorsServiceResumption(dependentProcessorClassName);
                 }
                 cancellationToken.ThrowIfCancellationRequested();
-                messageLogger.LogWaitForPrerequisiteProcessorsServiceResumption(dependentProcessorClassName);
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");

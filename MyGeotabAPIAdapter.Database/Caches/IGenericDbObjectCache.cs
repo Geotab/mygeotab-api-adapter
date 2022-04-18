@@ -80,10 +80,9 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <summary>
         /// If not already initialized, initializes the current <see cref="IGenericDbObjectCache<T>"/> instance and executes the <see cref="UpdateAsync"/> method.
         /// </summary>
-        /// <param name="context">The <see cref="UnitOfWorkContext"/> to use.</param>
         /// <param name="database">The <see cref="Databases"/> identifier (i.e. database) to use.</param>
         /// <returns></returns>
-        Task InitializeAsync(UnitOfWorkContext context, Databases database);
+        Task InitializeAsync(Databases database);
 
         /// <summary>
         /// If the <see cref="CacheUpdateIntervalMinutes"/> has elapsed since <see cref="LastUpdated"/>, updates the current <see cref="IGenericDbObjectCache<T>"/> by adding any new dbEntities that were added to the database since the last time this method was called. Additionally, any entities that were changed in the database will be updated. If this is the first time this method has been called since application startup, all dbEntities will be loaded into the cache.

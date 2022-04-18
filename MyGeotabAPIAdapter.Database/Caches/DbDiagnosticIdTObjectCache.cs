@@ -18,7 +18,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <summary>
         /// Initializes a new instance of the <see cref="GenericDbObjectCache{T}"/> class.
         /// </summary>
-        public DbDiagnosticIdTObjectCache(IDateTimeHelper dateTimeHelper) : base(dateTimeHelper)
+        public DbDiagnosticIdTObjectCache(IDateTimeHelper dateTimeHelper, UnitOfWorkContext context) : base(dateTimeHelper, context)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -29,7 +29,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <summary>
         /// *** UNIT TESTING CONSTRUCTOR *** This constructor is designed for unit testing only. It accepts an additional <see cref="IBaseRepository2{T}"/> input, which may be a test class. Under normal operation, a <see cref="BaseRepository2{T}"/> is created and used within this class when required. Under normal operation, the other constructor should be used in conjunction with Dependency Injection.
         /// </summary>
-        public DbDiagnosticIdTObjectCache(IDateTimeHelper dateTimeHelper, IBaseRepository2<DbDiagnosticIdT> testDbEntityRepo) : base(dateTimeHelper, testDbEntityRepo)
+        public DbDiagnosticIdTObjectCache(IDateTimeHelper dateTimeHelper, UnitOfWorkContext context, IBaseRepository2<DbDiagnosticIdT> testDbEntityRepo) : base(dateTimeHelper, context, testDbEntityRepo)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");

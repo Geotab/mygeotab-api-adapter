@@ -85,7 +85,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="parameters">The parameter values to be supplied as an anonymous type to the stored procedure.</param>
         /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <returns></returns>
-        protected async Task<IEnumerable<T>> ExecuteStoredProcedureQueryAsync(string storedProcedureName, object parameters, CancellationTokenSource methodCancellationTokenSource)
+        public async Task<IEnumerable<T>> ExecuteStoredProcedureQueryAsync(string storedProcedureName, object parameters, CancellationTokenSource methodCancellationTokenSource)
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
 

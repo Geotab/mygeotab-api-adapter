@@ -107,6 +107,13 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         Task<bool> ProcessorHasBeenRun(DataOptimizerProcessor dataOptimizerProcessor);
 
         /// <summary>
+        /// Indicates whether the subject <see cref="DataOptimizerProcessor"/> has processed data.
+        /// </summary>
+        /// <param name="dataOptimizerProcessor">The <see cref="DataOptimizerProcessor"/> to check.</param>
+        /// <returns></returns>
+        Task<bool> ProcessorHasProcessedData(DataOptimizerProcessor dataOptimizerProcessor);
+
+        /// <summary>
         /// Indicates whether the subject <see cref="DataOptimizerProcessor"/> is currently running. Since processors can be distributed across multiple machines, this is a guess based on whether the subject <see cref="DataOptimizerProcessor"/> has processed any data within the past two days.
         /// </summary>
         /// <param name="dataOptimizerProcessor">The <see cref="DataOptimizerProcessor"/> to check.</param>

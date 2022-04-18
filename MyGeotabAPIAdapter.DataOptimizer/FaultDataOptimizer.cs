@@ -98,6 +98,9 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
+            var lastPollTimeForLongLatUpdates = DateTime.MinValue;
+            var lastPollTimeForDriverIdUpdates = DateTime.MinValue;
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 // If configured to operate on a schedule and the present time is currently outside of an operating window, delay until the next daily start time.
@@ -128,201 +131,232 @@ namespace MyGeotabAPIAdapter.DataOptimizer
 
                     using (var cancellationTokenSource = new CancellationTokenSource())
                     {
-                        var engageExecutionThrottle = true;
                         var processorTrackingInfoUpdated = false;
                         DbFaultDataTBatchLastRetrievedUtc = DateTime.UtcNow;
 
                         // Populate Longitude and Latitude fields if configured to do so:
                         if (dataOptimizerConfiguration.FaultDataOptimizerPopulateLongitudeLatitude == true)
                         {
-                            DbFaultDataTBatchLastRetrievedUtc = DateTime.UtcNow;
-
-                            // Get a batch of DbFaultDataTWithLagLeadLongLats.
-                            IEnumerable<DbFaultDataTWithLagLeadLongLat> dbFaultDataTWithLagLeadLongLats;
-                            using (var optimizerUOW = optimizerContext.CreateUnitOfWork(Databases.OptimizerDatabase))
+                            // Only proceed if not being throttled due to the minimum record threshold having not been met on the previous iteration.
+                            if (dateTimeHelper.TimeIntervalHasElapsed(lastPollTimeForLongLatUpdates, DateTimeIntervalType.Seconds, dataOptimizerConfiguration.FaultDataOptimizerExecutionIntervalSeconds))
                             {
-                                var dbFaultDataTWithLagLeadLongLatRepo = new DbFaultDataTWithLagLeadLongLatRepository(optimizerContext, optimizerDatabaseObjectNames);
-                                dbFaultDataTWithLagLeadLongLats = await dbFaultDataTWithLagLeadLongLatRepo.GetAllAsync(cancellationTokenSource);
-                            }
+                                DbFaultDataTBatchLastRetrievedUtc = DateTime.UtcNow;
 
-                            lastBatchRecordCount = dbFaultDataTWithLagLeadLongLats.Count();
-                            if (dbFaultDataTWithLagLeadLongLats.Any())
-                            {
-                                engageExecutionThrottle = lastBatchRecordCount < ThrottleEngagingBatchRecordCount;
-                                // Process the batch of DbFaultDataTWithLagLeadLongLats.
-                                List<DbFaultDataTLongLatUpdate> dbFaultDataTLongLatUpdates = new();
-                                foreach (var dbFaultDataTWithLagLeadLongLat in dbFaultDataTWithLagLeadLongLats)
-                                {
-                                    // Create a DbFaultDataTLongLatUpdate object to use for updating the subject record in the FaultDataT table.
-                                    DbFaultDataTLongLatUpdate dbFaultDataTLongLatUpdate = new()
-                                    {
-                                        id = dbFaultDataTWithLagLeadLongLat.id,
-                                        GeotabId = dbFaultDataTWithLagLeadLongLat.GeotabId,
-                                        LongLatProcessed = true,
-                                        DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update,
-                                        RecordLastChangedUtc = DateTime.UtcNow
-                                    };
-
-                                    // If the DbFaultDataTWithLagLeadLongLat has lag/lead data, perform the interpolation steps. Otherwise, determine the reason for lack of lag/lead data and update the DbFaultDataTLongLatUpdate object accordingly to avoid scenarios where the same DbFaultDataT records keep getting retrieved even though it will never be possible to obtain lag/lead LogRecords and interpolate.
-                                    if (dbFaultDataTWithLagLeadLongLat.LagDateTime != null && dbFaultDataTWithLagLeadLongLat.LeadDateTime != null)
-                                    {
-                                        // Get the interpolated coordinates for the current DbFaultDataTWithLagLeadLongLat.
-                                        LongitudeLatitudeInterpolationResult longitudeLatitudeInterpolationResult = longitudeLatitudeInterpolator.InterpolateCoordinates(dbFaultDataTWithLagLeadLongLat.FaultDataDateTime, (DateTime)dbFaultDataTWithLagLeadLongLat.LagDateTime, (double)dbFaultDataTWithLagLeadLongLat.LagLongitude, (double)dbFaultDataTWithLagLeadLongLat.LagLatitude, (DateTime)dbFaultDataTWithLagLeadLongLat.LeadDateTime, (double)dbFaultDataTWithLagLeadLongLat.LeadLongitude, (double)dbFaultDataTWithLagLeadLongLat.LeadLatitude, dataOptimizerConfiguration.FaultDataOptimizerNumberOfCompassDirections);
-
-                                        // If interpolation was successful, capture the coordinates. Otherwise, capture the reason why interpolation was unsuccessful.
-                                        if (longitudeLatitudeInterpolationResult.Success)
-                                        {
-                                            dbFaultDataTLongLatUpdate.Longitude = longitudeLatitudeInterpolationResult.Longitude;
-                                            dbFaultDataTLongLatUpdate.Latitude = longitudeLatitudeInterpolationResult.Latitude;
-                                            if (dataOptimizerConfiguration.FaultDataOptimizerPopulateSpeed == true)
-                                            {
-                                                dbFaultDataTLongLatUpdate.Speed = dbFaultDataTWithLagLeadLongLat.LagSpeed;
-                                            }
-                                            if (dataOptimizerConfiguration.FaultDataOptimizerPopulateBearing == true)
-                                            {
-                                                dbFaultDataTLongLatUpdate.Bearing = longitudeLatitudeInterpolationResult.Bearing;
-                                            }
-                                            if (dataOptimizerConfiguration.FaultDataOptimizerPopulateDirection == true)
-                                            {
-                                                dbFaultDataTLongLatUpdate.Direction = longitudeLatitudeInterpolationResult.Direction;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            dbFaultDataTLongLatUpdate.LongLatReason = (byte?)longitudeLatitudeInterpolationResult.Reason;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (dbFaultDataTWithLagLeadLongLat.FaultDataDateTime < dbFaultDataTWithLagLeadLongLat.LogRecordsTMinDateTime)
-                                        {
-                                            // The DateTime of the subject FaultDataT record is older than the DateTime of any LogRecordT records. It is highly unlikely that new LogRecords with older dates will come-in, since the adapter only moves forward in time once started. 
-                                            dbFaultDataTLongLatUpdate.LongLatReason = (byte?)LongitudeLatitudeInterpolationResultReason.TargetEntityDateTimeBelowMinDbLogRecordTDateTime;
-                                        }
-                                        else if (dbFaultDataTWithLagLeadLongLat.FaultDataDateTime < dbFaultDataTWithLagLeadLongLat.DeviceLogRecordsTMinDateTime)
-                                        {
-                                            // The DateTime of the subject FaultDataT record is older than the DateTime of any LogRecordT records for the associated Device. It is highly unlikely that new LogRecords with older dates will come-in, since the adapter only moves forward in time once started. 
-                                            dbFaultDataTLongLatUpdate.LongLatReason = (byte?)LongitudeLatitudeInterpolationResultReason.TargetEntityDateTimeBelowMinDbLogRecordTDateTimeForDevice;
-                                        }
-                                        else
-                                        {
-                                            // The lag/lead DbLogRecordT info was not found for an unknown reason.
-                                            dbFaultDataTLongLatUpdate.LongLatReason = (byte?)LongitudeLatitudeInterpolationResultReason.LagLeadDbLogRecordTInfoNotFound;
-                                        }
-                                    }
-                                    dbFaultDataTLongLatUpdates.Add(dbFaultDataTLongLatUpdate);
-                                }
-
-                                // Persist changes to database.
+                                // Get a batch of DbFaultDataTWithLagLeadLongLats.
+                                IEnumerable<DbFaultDataTWithLagLeadLongLat> dbFaultDataTWithLagLeadLongLats;
                                 using (var optimizerUOW = optimizerContext.CreateUnitOfWork(Databases.OptimizerDatabase))
                                 {
-                                    try
+                                    var dbFaultDataTWithLagLeadLongLatRepo = new DbFaultDataTWithLagLeadLongLatRepository(optimizerContext, optimizerDatabaseObjectNames);
+                                    dbFaultDataTWithLagLeadLongLats = await dbFaultDataTWithLagLeadLongLatRepo.GetAllAsync(cancellationTokenSource);
+                                }
+
+                                lastBatchRecordCount = dbFaultDataTWithLagLeadLongLats.Count();
+                                
+                                // Implement throttling if necessary.
+                                if (!dbFaultDataTWithLagLeadLongLats.Any() || lastBatchRecordCount < ThrottleEngagingBatchRecordCount)
+                                {
+                                    lastPollTimeForLongLatUpdates = DateTime.UtcNow;
+                                    var delayTimeSpan = TimeSpan.FromSeconds(dataOptimizerConfiguration.FaultDataOptimizerExecutionIntervalSeconds);
+                                    logger.Info($"{CurrentClassName} pausing Long/Lat optimization for {delayTimeSpan} because fewer than {ThrottleEngagingBatchRecordCount} records were processed during the current execution interval.");
+                                }
+                                else
+                                {
+                                    lastPollTimeForLongLatUpdates = DateTime.MinValue;
+                                }
+
+                                if (dbFaultDataTWithLagLeadLongLats.Any())
+                                {
+                                    // Process the batch of DbFaultDataTWithLagLeadLongLats.
+                                    List<DbFaultDataTLongLatUpdate> dbFaultDataTLongLatUpdates = new();
+                                    foreach (var dbFaultDataTWithLagLeadLongLat in dbFaultDataTWithLagLeadLongLats)
                                     {
-                                        // DbFaultDataTLongLatUpdate:
-                                        await dbFaultDataTLongLatUpdateEntityPersister.PersistEntitiesToDatabaseAsync(optimizerContext, dbFaultDataTLongLatUpdates, cancellationTokenSource, Logging.LogLevel.Info);
+                                        // Create a DbFaultDataTLongLatUpdate object to use for updating the subject record in the FaultDataT table.
+                                        DbFaultDataTLongLatUpdate dbFaultDataTLongLatUpdate = new()
+                                        {
+                                            id = dbFaultDataTWithLagLeadLongLat.id,
+                                            GeotabId = dbFaultDataTWithLagLeadLongLat.GeotabId,
+                                            LongLatProcessed = true,
+                                            DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update,
+                                            RecordLastChangedUtc = DateTime.UtcNow
+                                        };
 
-                                        // DbOProcessorTracking:
-                                        await processorTracker.UpdateDbOProcessorTrackingRecord(optimizerContext, DataOptimizerProcessor.FaultDataOptimizer, DbFaultDataTBatchLastRetrievedUtc, null, null, null);
+                                        // If the DbFaultDataTWithLagLeadLongLat has lag/lead data, perform the interpolation steps. Otherwise, determine the reason for lack of lag/lead data and update the DbFaultDataTLongLatUpdate object accordingly to avoid scenarios where the same DbFaultDataT records keep getting retrieved even though it will never be possible to obtain lag/lead LogRecords and interpolate.
+                                        if (dbFaultDataTWithLagLeadLongLat.LagDateTime != null && dbFaultDataTWithLagLeadLongLat.LeadDateTime != null)
+                                        {
+                                            // Get the interpolated coordinates for the current DbFaultDataTWithLagLeadLongLat.
+                                            LongitudeLatitudeInterpolationResult longitudeLatitudeInterpolationResult = longitudeLatitudeInterpolator.InterpolateCoordinates(dbFaultDataTWithLagLeadLongLat.FaultDataDateTime, (DateTime)dbFaultDataTWithLagLeadLongLat.LagDateTime, (double)dbFaultDataTWithLagLeadLongLat.LagLongitude, (double)dbFaultDataTWithLagLeadLongLat.LagLatitude, (DateTime)dbFaultDataTWithLagLeadLongLat.LeadDateTime, (double)dbFaultDataTWithLagLeadLongLat.LeadLongitude, (double)dbFaultDataTWithLagLeadLongLat.LeadLatitude, dataOptimizerConfiguration.FaultDataOptimizerNumberOfCompassDirections);
 
-                                        // Commit transactions:
-                                        await optimizerUOW.CommitAsync();
-                                        processorTrackingInfoUpdated = true;
+                                            // If interpolation was successful, capture the coordinates. Otherwise, capture the reason why interpolation was unsuccessful.
+                                            if (longitudeLatitudeInterpolationResult.Success)
+                                            {
+                                                dbFaultDataTLongLatUpdate.Longitude = longitudeLatitudeInterpolationResult.Longitude;
+                                                dbFaultDataTLongLatUpdate.Latitude = longitudeLatitudeInterpolationResult.Latitude;
+                                                if (dataOptimizerConfiguration.FaultDataOptimizerPopulateSpeed == true)
+                                                {
+                                                    dbFaultDataTLongLatUpdate.Speed = dbFaultDataTWithLagLeadLongLat.LagSpeed;
+                                                }
+                                                if (dataOptimizerConfiguration.FaultDataOptimizerPopulateBearing == true)
+                                                {
+                                                    dbFaultDataTLongLatUpdate.Bearing = longitudeLatitudeInterpolationResult.Bearing;
+                                                }
+                                                if (dataOptimizerConfiguration.FaultDataOptimizerPopulateDirection == true)
+                                                {
+                                                    dbFaultDataTLongLatUpdate.Direction = longitudeLatitudeInterpolationResult.Direction;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                dbFaultDataTLongLatUpdate.LongLatReason = (byte?)longitudeLatitudeInterpolationResult.Reason;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (dbFaultDataTWithLagLeadLongLat.FaultDataDateTime < dbFaultDataTWithLagLeadLongLat.LogRecordsTMinDateTime)
+                                            {
+                                                // The DateTime of the subject FaultDataT record is older than the DateTime of any LogRecordT records. It is highly unlikely that new LogRecords with older dates will come-in, since the adapter only moves forward in time once started. 
+                                                dbFaultDataTLongLatUpdate.LongLatReason = (byte?)LongitudeLatitudeInterpolationResultReason.TargetEntityDateTimeBelowMinDbLogRecordTDateTime;
+                                            }
+                                            else if (dbFaultDataTWithLagLeadLongLat.FaultDataDateTime < dbFaultDataTWithLagLeadLongLat.DeviceLogRecordsTMinDateTime)
+                                            {
+                                                // The DateTime of the subject FaultDataT record is older than the DateTime of any LogRecordT records for the associated Device. It is highly unlikely that new LogRecords with older dates will come-in, since the adapter only moves forward in time once started. 
+                                                dbFaultDataTLongLatUpdate.LongLatReason = (byte?)LongitudeLatitudeInterpolationResultReason.TargetEntityDateTimeBelowMinDbLogRecordTDateTimeForDevice;
+                                            }
+                                            else
+                                            {
+                                                // The lag/lead DbLogRecordT info was not found for an unknown reason.
+                                                dbFaultDataTLongLatUpdate.LongLatReason = (byte?)LongitudeLatitudeInterpolationResultReason.LagLeadDbLogRecordTInfoNotFound;
+                                            }
+                                        }
+                                        dbFaultDataTLongLatUpdates.Add(dbFaultDataTLongLatUpdate);
                                     }
-                                    catch (Exception)
+
+                                    // Persist changes to database.
+                                    using (var optimizerUOW = optimizerContext.CreateUnitOfWork(Databases.OptimizerDatabase))
                                     {
-                                        await optimizerUOW.RollBackAsync();
-                                        throw;
+                                        try
+                                        {
+                                            // DbFaultDataTLongLatUpdate:
+                                            await dbFaultDataTLongLatUpdateEntityPersister.PersistEntitiesToDatabaseAsync(optimizerContext, dbFaultDataTLongLatUpdates, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                            // DbOProcessorTracking:
+                                            await processorTracker.UpdateDbOProcessorTrackingRecord(optimizerContext, DataOptimizerProcessor.FaultDataOptimizer, DbFaultDataTBatchLastRetrievedUtc, null, null, null);
+
+                                            // Commit transactions:
+                                            await optimizerUOW.CommitAsync();
+                                            processorTrackingInfoUpdated = true;
+                                        }
+                                        catch (Exception)
+                                        {
+                                            await optimizerUOW.RollBackAsync();
+                                            throw;
+                                        }
                                     }
                                 }
-                            }
-                            else
-                            {
-                                logger.Debug($"No {nameof(DbFaultDataTWithLagLeadLongLat)} entities were returned during the current ExecuteAsync iteration of the {CurrentClassName}.");
+                                else
+                                {
+                                    logger.Debug($"No {nameof(DbFaultDataTWithLagLeadLongLat)} entities were returned during the current ExecuteAsync iteration of the {CurrentClassName}.");
+                                }
                             }
                         }
 
                         // Populate DriverId field if configured to do so:
                         if (dataOptimizerConfiguration.FaultDataOptimizerPopulateDriverId == true)
                         {
-                            DbFaultDataTBatchLastRetrievedUtc = DateTime.UtcNow;
-
-                            // Get a batch of DbFaultDataTWithLagLeadDriverChanges.
-                            IEnumerable<DbFaultDataTWithLagLeadDriverChange> dbFaultDataTWithLagLeadDriverChanges;
-                            using (var optimizerUOW = optimizerContext.CreateUnitOfWork(Databases.OptimizerDatabase))
+                            // Only proceed if not being throttled due to the minimum record threshold having not been met on the previous iteration.
+                            if (dateTimeHelper.TimeIntervalHasElapsed(lastPollTimeForDriverIdUpdates, DateTimeIntervalType.Seconds, dataOptimizerConfiguration.FaultDataOptimizerExecutionIntervalSeconds))
                             {
-                                var dbFaultDataTWithLagLeadDriverChangeRepo = new DbFaultDataTWithLagLeadDriverChangeRepository(optimizerContext);
-                                dbFaultDataTWithLagLeadDriverChanges = await dbFaultDataTWithLagLeadDriverChangeRepo.GetAllAsync(cancellationTokenSource);
-                            }
+                                DbFaultDataTBatchLastRetrievedUtc = DateTime.UtcNow;
 
-                            lastBatchRecordCount = dbFaultDataTWithLagLeadDriverChanges.Count();
-
-                            if (dbFaultDataTWithLagLeadDriverChanges.Any())
-                            {
-                                // Process the batch of DbFaultDataTWithLagLeadDriverChanges.
-                                List<DbFaultDataTDriverIdUpdate> dbFaultDataTDriverIdUpdates = new();
-                                foreach (var dbFaultDataTWithLagLeadDriverChange in dbFaultDataTWithLagLeadDriverChanges)
+                                // Get a batch of DbFaultDataTWithLagLeadDriverChanges.
+                                IEnumerable<DbFaultDataTWithLagLeadDriverChange> dbFaultDataTWithLagLeadDriverChanges;
+                                using (var optimizerUOW = optimizerContext.CreateUnitOfWork(Databases.OptimizerDatabase))
                                 {
-                                    // Create a DbFaultDataTDriverIdUpdate object to use for updating the subject record in the FaultDataT table.
-                                    DbFaultDataTDriverIdUpdate dbFaultDataTDriverIdUpdate = new()
-                                    {
-                                        id = dbFaultDataTWithLagLeadDriverChange.id,
-                                        GeotabId = dbFaultDataTWithLagLeadDriverChange.GeotabId,
-                                        DriverIdProcessed = true,
-                                        DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update,
-                                        RecordLastChangedUtc = DateTime.UtcNow
-                                    };
+                                    var dbFaultDataTWithLagLeadDriverChangeRepo = new DbFaultDataTWithLagLeadDriverChangeRepository(optimizerContext);
+                                    dbFaultDataTWithLagLeadDriverChanges = await dbFaultDataTWithLagLeadDriverChangeRepo.GetAllAsync(cancellationTokenSource);
+                                }
 
-                                    // If the DbFaultDataTWithLagLeadDriverChange has a LagDateTime, grab the DriverId. Otherwise, determine the reason for lack of LagDateTime and update the DbFaultDataTDriverIdUpdate object accordingly to avoid scenarios where the same DbFaultDataT records keep getting retrieved even though it will never be possible to obtain LagDateTime and DriverId information.
-                                    if (dbFaultDataTWithLagLeadDriverChange.LagDateTime != null)
+                                lastBatchRecordCount = dbFaultDataTWithLagLeadDriverChanges.Count();
+
+                                // Implement throttling if necessary.
+                                if (!dbFaultDataTWithLagLeadDriverChanges.Any() || lastBatchRecordCount < ThrottleEngagingBatchRecordCount)
+                                {
+                                    lastPollTimeForDriverIdUpdates = DateTime.UtcNow;
+                                    var delayTimeSpan = TimeSpan.FromSeconds(dataOptimizerConfiguration.FaultDataOptimizerExecutionIntervalSeconds);
+                                    logger.Info($"{CurrentClassName} pausing DriverId optimization for {delayTimeSpan} because fewer than {ThrottleEngagingBatchRecordCount} records were processed during the current execution interval.");
+                                }
+                                else
+                                {
+                                    lastPollTimeForDriverIdUpdates = DateTime.MinValue;
+                                }
+
+                                if (dbFaultDataTWithLagLeadDriverChanges.Any())
+                                {
+                                    // Process the batch of DbFaultDataTWithLagLeadDriverChanges.
+                                    List<DbFaultDataTDriverIdUpdate> dbFaultDataTDriverIdUpdates = new();
+                                    foreach (var dbFaultDataTWithLagLeadDriverChange in dbFaultDataTWithLagLeadDriverChanges)
                                     {
-                                        dbFaultDataTDriverIdUpdate.DriverId = dbFaultDataTWithLagLeadDriverChange.DriverId;
-                                    }
-                                    else
-                                    {
-                                        if (dbFaultDataTWithLagLeadDriverChange.FaultDataDateTime < dbFaultDataTWithLagLeadDriverChange.DriverChangesTMinDateTime)
+                                        // Create a DbFaultDataTDriverIdUpdate object to use for updating the subject record in the FaultDataT table.
+                                        DbFaultDataTDriverIdUpdate dbFaultDataTDriverIdUpdate = new()
                                         {
-                                            // The DateTime of the subject FaultDataT record is older than the DateTime of any DriverChangeT records. It is highly unlikely that new DriverChanges with older dates will come-in, since the adapter only moves forward in time once started.
-                                            dbFaultDataTDriverIdUpdate.DriverIdReason = (byte?)DriverIdEstimationResultReason.TargetEntityDateTimeBelowMinDbDriverChangeTDateTime;
-                                        }
-                                        else if (dbFaultDataTWithLagLeadDriverChange.FaultDataDateTime < dbFaultDataTWithLagLeadDriverChange.DeviceDriverChangesTMinDateTime)
+                                            id = dbFaultDataTWithLagLeadDriverChange.id,
+                                            GeotabId = dbFaultDataTWithLagLeadDriverChange.GeotabId,
+                                            DriverIdProcessed = true,
+                                            DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update,
+                                            RecordLastChangedUtc = DateTime.UtcNow
+                                        };
+
+                                        // If the DbFaultDataTWithLagLeadDriverChange has a LagDateTime, grab the DriverId. Otherwise, determine the reason for lack of LagDateTime and update the DbFaultDataTDriverIdUpdate object accordingly to avoid scenarios where the same DbFaultDataT records keep getting retrieved even though it will never be possible to obtain LagDateTime and DriverId information.
+                                        if (dbFaultDataTWithLagLeadDriverChange.LagDateTime != null)
                                         {
-                                            // The DateTime of the subject FaultDataT record is older than the DateTime of any DriverChangeT records for the associated Device. It is highly unlikely that new DriverChanges with older dates will come-in, since the adapter only moves forward in time once started.
-                                            dbFaultDataTDriverIdUpdate.DriverIdReason = (byte?)DriverIdEstimationResultReason.TargetEntityDateTimeBelowMinDbDriverChangeTDateTimeForDevice;
+                                            dbFaultDataTDriverIdUpdate.DriverId = dbFaultDataTWithLagLeadDriverChange.DriverId;
                                         }
                                         else
                                         {
-                                            // The lag DbDriverChangeT info was not found for an unknown reason.
-                                            dbFaultDataTDriverIdUpdate.DriverIdReason = (byte?)DriverIdEstimationResultReason.LagDbDriverChangeTNotFound;
+                                            if (dbFaultDataTWithLagLeadDriverChange.FaultDataDateTime < dbFaultDataTWithLagLeadDriverChange.DriverChangesTMinDateTime)
+                                            {
+                                                // The DateTime of the subject FaultDataT record is older than the DateTime of any DriverChangeT records. It is highly unlikely that new DriverChanges with older dates will come-in, since the adapter only moves forward in time once started.
+                                                dbFaultDataTDriverIdUpdate.DriverIdReason = (byte?)DriverIdEstimationResultReason.TargetEntityDateTimeBelowMinDbDriverChangeTDateTime;
+                                            }
+                                            else if (dbFaultDataTWithLagLeadDriverChange.FaultDataDateTime < dbFaultDataTWithLagLeadDriverChange.DeviceDriverChangesTMinDateTime)
+                                            {
+                                                // The DateTime of the subject FaultDataT record is older than the DateTime of any DriverChangeT records for the associated Device. It is highly unlikely that new DriverChanges with older dates will come-in, since the adapter only moves forward in time once started.
+                                                dbFaultDataTDriverIdUpdate.DriverIdReason = (byte?)DriverIdEstimationResultReason.TargetEntityDateTimeBelowMinDbDriverChangeTDateTimeForDevice;
+                                            }
+                                            else
+                                            {
+                                                // The lag DbDriverChangeT info was not found for an unknown reason.
+                                                dbFaultDataTDriverIdUpdate.DriverIdReason = (byte?)DriverIdEstimationResultReason.LagDbDriverChangeTNotFound;
+                                            }
+                                        }
+                                        dbFaultDataTDriverIdUpdates.Add(dbFaultDataTDriverIdUpdate);
+                                    }
+
+                                    // Persist changes to database.
+                                    using (var optimizerUOW = optimizerContext.CreateUnitOfWork(Databases.OptimizerDatabase))
+                                    {
+                                        try
+                                        {
+                                            // DbFaultDataTDriverIdUpdate:
+                                            await dbFaultDataTDriverIdUpdateEntityPersister.PersistEntitiesToDatabaseAsync(optimizerContext, dbFaultDataTDriverIdUpdates, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                            // DbOProcessorTracking:
+                                            await processorTracker.UpdateDbOProcessorTrackingRecord(optimizerContext, DataOptimizerProcessor.FaultDataOptimizer, DbFaultDataTBatchLastRetrievedUtc, null, null, null);
+
+                                            // Commit transactions:
+                                            await optimizerUOW.CommitAsync();
+                                            processorTrackingInfoUpdated = true;
+                                        }
+                                        catch (Exception)
+                                        {
+                                            await optimizerUOW.RollBackAsync();
+                                            throw;
                                         }
                                     }
-                                    dbFaultDataTDriverIdUpdates.Add(dbFaultDataTDriverIdUpdate);
                                 }
-
-                                // Persist changes to database.
-                                using (var optimizerUOW = optimizerContext.CreateUnitOfWork(Databases.OptimizerDatabase))
+                                else
                                 {
-                                    try
-                                    {
-                                        // DbFaultDataTDriverIdUpdate:
-                                        await dbFaultDataTDriverIdUpdateEntityPersister.PersistEntitiesToDatabaseAsync(optimizerContext, dbFaultDataTDriverIdUpdates, cancellationTokenSource, Logging.LogLevel.Info);
-
-                                        // DbOProcessorTracking:
-                                        await processorTracker.UpdateDbOProcessorTrackingRecord(optimizerContext, DataOptimizerProcessor.FaultDataOptimizer, DbFaultDataTBatchLastRetrievedUtc, null, null, null);
-
-                                        // Commit transactions:
-                                        await optimizerUOW.CommitAsync();
-                                        processorTrackingInfoUpdated = true;
-                                    }
-                                    catch (Exception)
-                                    {
-                                        await optimizerUOW.RollBackAsync();
-                                        throw;
-                                    }
+                                    logger.Debug($"No {nameof(DbFaultDataTWithLagLeadDriverChange)} entities were returned during the current ExecuteAsync iteration of the {CurrentClassName}.");
                                 }
-                            }
-                            else
-                            {
-                                logger.Debug($"No {nameof(DbFaultDataTWithLagLeadDriverChange)} entities were returned during the current ExecuteAsync iteration of the {CurrentClassName}.");
                             }
                         }
 
@@ -344,11 +378,24 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                             }
                         }
 
-                        // If necessary, add a delay to implement the configured execution interval.
-                        if (engageExecutionThrottle == true)
+                        // If all optimization processes are configured to be throttled, add a delay to prevent unnecessary CPU usage.
+                        var addDelay = false;
+                        if (lastPollTimeForLongLatUpdates != DateTime.MinValue && lastPollTimeForDriverIdUpdates != DateTime.MinValue)
+                        {
+                            addDelay = true;
+                        }
+                        else if (lastPollTimeForLongLatUpdates != DateTime.MinValue && dataOptimizerConfiguration.FaultDataOptimizerPopulateDriverId == false)
+                        {
+                            addDelay = true;
+                        }
+                        else if (lastPollTimeForDriverIdUpdates != DateTime.MinValue && dataOptimizerConfiguration.FaultDataOptimizerPopulateLongitudeLatitude == false)
+                        {
+                            addDelay = true;
+                        }
+                        if (addDelay == true)
                         {
                             var delayTimeSpan = TimeSpan.FromSeconds(dataOptimizerConfiguration.FaultDataOptimizerExecutionIntervalSeconds);
-                            logger.Info($"{CurrentClassName} pausing for {delayTimeSpan} because fewer than {ThrottleEngagingBatchRecordCount} records were processed during the current execution interval.");
+                            logger.Info($"{CurrentClassName} pausing for {delayTimeSpan} because all optimization subprocesses have been throttled during the current execution interval.");
                             await Task.Delay(delayTimeSpan, stoppingToken);
                         }
                     }

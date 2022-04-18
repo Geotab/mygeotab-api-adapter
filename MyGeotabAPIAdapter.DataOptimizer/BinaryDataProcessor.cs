@@ -145,15 +145,15 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         // Initialize object caches.
                         if (dbDeviceTObjectCache.IsInitialized == false)
                         {
-                            await dbDeviceTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
+                            await dbDeviceTObjectCache.InitializeAsync(Databases.OptimizerDatabase);
                         }
                         if (dbBinaryTypeTObjectCache.IsInitialized == false)
                         {
-                            await dbBinaryTypeTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
+                            await dbBinaryTypeTObjectCache.InitializeAsync(Databases.OptimizerDatabase);
                         }
                         if (dbControllerTObjectCache.IsInitialized == false)
                         {
-                            await dbControllerTObjectCache.InitializeAsync(optimizerContext, Databases.OptimizerDatabase);
+                            await dbControllerTObjectCache.InitializeAsync(Databases.OptimizerDatabase);
                         }
 
                         // Get a batch of DbBinaryDatas.

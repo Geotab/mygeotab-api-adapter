@@ -38,6 +38,16 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         public string ProcessorsNotRunningStatement { get; }
 
         /// <summary>
+        /// A list of any prerequisite processors that may have been run or be currently running, but which have not processed any data.
+        /// </summary>
+        public List<DataOptimizerProcessor> ProcessorsWithNoDataProcessed { get; }
+
+        /// <summary>
+        /// A statement listing any prerequisite processors that may have been run or be currently running, but which have not processed any data. Intended for use as part of a log message.
+        /// </summary>
+        public string ProcessorsWithNoDataProcessedStatement { get; }
+
+        /// <summary>
         /// The recommended time to wait, after checking whether all prerequisite processors are running, before checking again.
         /// </summary>
         public TimeSpan RecommendedDelayBeforeNextCheck { get => recommendedDelayBeforeNextCheck; }
@@ -48,10 +58,12 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <param name="allPrerequisiteProcessorsRunning">Indicates whether all prerequisite processors are running.</param>
         /// <param name="processorsNeverRun">A list of any prerequisite processors that have never been run.</param>
         /// <param name="processorsNotRunning">A list of any prerequisite processors that are not currently running.</param>
-        public PrerequisiteProcessorOperationCheckResult(bool allPrerequisiteProcessorsRunning, List<DataOptimizerProcessor>? processorsNeverRun, List<DataOptimizerProcessor>? processorsNotRunning)
+        /// <param name="processorsWithNoDataProcessed">A list of any prerequisite processors that may have been run or be currently running, but which have not yet processed any data.</param>
+        public PrerequisiteProcessorOperationCheckResult(bool allPrerequisiteProcessorsRunning, List<DataOptimizerProcessor>? processorsNeverRun, List<DataOptimizerProcessor>? processorsNotRunning, List<DataOptimizerProcessor>? processorsWithNoDataProcessed)
         {
             AllPrerequisiteProcessorsRunning = allPrerequisiteProcessorsRunning;
             
+            // Processors never run statement:
             if (processorsNeverRun == null)
             {
                 ProcessorsNeverRun = new List<DataOptimizerProcessor>();
@@ -92,6 +104,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                 ProcessorsNeverRunStatement = "";
             }
 
+            // Processors not running statement:
             if (processorsNotRunning == null)
             {
                 ProcessorsNotRunning = new List<DataOptimizerProcessor>();
@@ -130,6 +143,47 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             else
             {
                 ProcessorsNotRunningStatement = "";
+            }
+
+            // Processors that have not yet processed any data statement:
+            if (processorsWithNoDataProcessed == null)
+            {
+                ProcessorsWithNoDataProcessed = new List<DataOptimizerProcessor>();
+            }
+            else
+            {
+                ProcessorsWithNoDataProcessed = processorsWithNoDataProcessed;
+            }
+
+            if (processorsWithNoDataProcessed != null && processorsWithNoDataProcessed.Count > 0)
+            {
+                if (processorsWithNoDataProcessed.Count == 1)
+                {
+                    ProcessorsWithNoDataProcessedStatement = $"The prerequisite {processorsWithNoDataProcessed[0]} has not yet processed any data.";
+                }
+                else
+                {
+                    StringBuilder stringBuilder = new();
+                    stringBuilder.Append("The prerequisite ");
+                    for (int i = 0; i < processorsWithNoDataProcessed.Count; i++)
+                    {
+                        if (i > 0 && i < processorsWithNoDataProcessed.Count - 1)
+                        {
+                            stringBuilder.Append($", ");
+                        }
+                        else if (i > 0 && i >= processorsWithNoDataProcessed.Count - 1)
+                        {
+                            stringBuilder.Append($" and ");
+                        }
+                        stringBuilder.Append($"{processorsWithNoDataProcessed[i]}");
+                    }
+                    stringBuilder.Append(" have not yet processed any data.");
+                    ProcessorsWithNoDataProcessedStatement = stringBuilder.ToString();
+                }
+            }
+            else
+            {
+                ProcessorsWithNoDataProcessedStatement = "";
             }
         }
     }

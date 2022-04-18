@@ -57,7 +57,7 @@
         public string DbStatusDataTLongLatUpdateTableName => "StatusDataT";
 
         /// <inheritdoc/>
-        public string DbStatusDataTWithLagLeadLongLatTableName => "vwStatusDataTWithLagLeadLongLatBatch";
+        public string DbStatusDataTWithLagLeadLongLatStoredProcedureName => "spStatusDataTWithLagLeadLongLatBatch";
 
         /// <inheritdoc/>
         public string DbUserTTableName => "UsersT";
