@@ -38,9 +38,9 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         readonly IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper;
         readonly IGenericEntityPersister<DbDiagnosticIdT> dbDiagnosticIdTEntityPersister;
         readonly IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister;
-        readonly IGenericDbObjectCache<DbDiagnostic> dbDiagnosticObjectCache;
-        readonly DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache;
-        readonly IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache;
+        readonly IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnostic> dbDiagnosticObjectCache;
+        readonly IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT> dbDiagnosticIdTObjectCache;
+        readonly IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache;
         readonly IExceptionHelper exceptionHelper;
         readonly IMessageLogger messageLogger;
         readonly IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames;
@@ -59,7 +59,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <summary>
         /// Initializes a new instance of the <see cref="DiagnosticProcessor"/> class.
         /// </summary>
-        public DiagnosticProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbDiagnosticDbDiagnosticIdTEntityMapper dbDiagnosticDbDiagnosticIdTEntityMapper, IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper, IGenericEntityPersister<DbDiagnosticIdT> dbDiagnosticIdTEntityPersister, IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister, IGenericDbObjectCache<DbDiagnostic> dbDiagnosticObjectCache, DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache, IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
+        public DiagnosticProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbDiagnosticDbDiagnosticIdTEntityMapper dbDiagnosticDbDiagnosticIdTEntityMapper, IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper, IGenericEntityPersister<DbDiagnosticIdT> dbDiagnosticIdTEntityPersister, IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnostic> dbDiagnosticObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT> dbDiagnosticIdTObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -176,7 +176,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                                 foreach (var changedDbDiagnostic in changedDbDiagnostics)
                                 {
                                     // Try to get the DbDiagnosticT that corresponds with the DbDiagnostic based on matching the GeotabGUID.
-                                    var dbDiagnosticT = await dbDiagnosticTObjectCache.GetObjectAsync(changedDbDiagnostic.GeotabGUID);
+                                    var dbDiagnosticT = await dbDiagnosticTObjectCache.GetObjectByGeotabGUIDAsync(changedDbDiagnostic.GeotabGUID);
                                     if (dbDiagnosticT == null)
                                     {
                                         // The DbDiagnosticT doesn't yet exist. Create a new one along with a corresponding DbDiagnosticIdT.

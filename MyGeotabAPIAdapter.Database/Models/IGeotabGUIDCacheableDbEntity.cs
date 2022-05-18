@@ -3,10 +3,15 @@
 namespace MyGeotabAPIAdapter.Database.Models
 {
     /// <summary>
-    /// Interface for database entity models with <see cref="GeotabId"/>s that relate to objects from the Geotab platform and corresponding <see cref="id"/>s that are surrogate Ids used in the database. 
+    /// Interface for database entity models with <see cref="GeotabId"/>s and <see cref="GeotabGUID"/>s that relate to objects from the Geotab platform and corresponding <see cref="id"/>s that are surrogate Ids used in the database. 
     /// </summary>
-    public interface IIdCacheableDbEntity
+    public interface IGeotabGUIDCacheableDbEntity
     {
+        /// <summary>
+        /// The underlying GUID of the object in the Geotab platform.
+        /// </summary>
+        string GeotabGUID { get; set; }
+
         /// <summary>
         /// The Id of the object in the Geotab platform.
         /// </summary>

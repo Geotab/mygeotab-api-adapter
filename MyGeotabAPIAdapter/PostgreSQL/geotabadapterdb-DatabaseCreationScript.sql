@@ -435,7 +435,9 @@ ALTER SEQUENCE public."Devices_id_seq" OWNED BY public."Devices".id;
 CREATE TABLE public."Diagnostics" (
     id bigint NOT NULL,
     "GeotabId" character varying(100) NOT NULL,
-    "GeotabGUID" character varying(36) NOT NULL,
+    "GeotabGUID" character varying(100) NOT NULL,
+    "HasShimId" boolean,
+    "FormerShimGeotabGUID" character varying(100),
     "ControllerId" character varying(100),
     "DiagnosticCode" integer,
     "DiagnosticName" character varying(255) NOT NULL,

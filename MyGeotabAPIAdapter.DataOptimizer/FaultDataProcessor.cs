@@ -40,8 +40,8 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         readonly IGenericEntityPersister<DbFaultData> dbFaultDataEntityPersister;
         readonly IGenericEntityPersister<DbFaultDataT> dbFaultDataTEntityPersister;
         readonly IGenericDbObjectCache<DbDeviceT> dbDeviceTObjectCache;
-        readonly DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache;
-        readonly IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache;
+        readonly IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT> dbDiagnosticIdTObjectCache;
+        readonly IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache;
         readonly IGenericDbObjectCache<DbUserT> dbUserTObjectCache;
         readonly IExceptionHelper exceptionHelper;
         readonly IMessageLogger messageLogger;
@@ -62,7 +62,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <summary>
         /// Initializes a new instance of the <see cref="FaultDataProcessor"/> class.
         /// </summary>
-        public FaultDataProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IOptimizerEnvironment optimizerEnvironment, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbFaultDataDbFaultDataTEntityMapper dbFaultDataDbFaultDataTEntityMapper, IGenericEntityPersister<DbFaultData> dbFaultDataEntityPersister, IGenericDbObjectCache<DbDeviceT> dbDeviceTObjectCache, DbDiagnosticIdTObjectCache dbDiagnosticIdTObjectCache, IGenericDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, IGenericDbObjectCache<DbUserT> dbUserTObjectCache, IGenericEntityPersister<DbFaultDataT> dbFaultDataTEntityPersister, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
+        public FaultDataProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IOptimizerEnvironment optimizerEnvironment, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IStateMachine stateMachine, IConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbFaultDataDbFaultDataTEntityMapper dbFaultDataDbFaultDataTEntityMapper, IGenericEntityPersister<DbFaultData> dbFaultDataEntityPersister, IGenericDbObjectCache<DbDeviceT> dbDeviceTObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT> dbDiagnosticIdTObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, IGenericDbObjectCache<DbUserT> dbUserTObjectCache, IGenericEntityPersister<DbFaultDataT> dbFaultDataTEntityPersister, UnitOfWorkContext adapterContext, UnitOfWorkContext optimizerContext)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -181,8 +181,8 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                             foreach (var dbFaultData in dbFaultDatas)
                             {
                                 var deviceId = await dbDeviceTObjectCache.GetObjectIdAsync(dbFaultData.DeviceId);
-                                var diagnosticIdT = await dbDiagnosticIdTObjectCache.GetObjectAsync(dbFaultData.DiagnosticId);
-                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdAsync(diagnosticIdT.GeotabGUID);
+                                var diagnosticIdT = await dbDiagnosticIdTObjectCache.GetObjectByGeotabIdAsync(dbFaultData.DiagnosticId);
+                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdByGeotabGUIDAsync(diagnosticIdT.GeotabGUID);
                                 var dismissUserId = await dbUserTObjectCache.GetObjectIdAsync(dbFaultData.DismissUserId);
                                 if (deviceId == null)
                                 {

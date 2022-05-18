@@ -1,5 +1,5 @@
 --------------------------------------------------------
---  File created - Tuesday-February-15-2022   
+--  File created - Tuesday-May-03-2022   
 --------------------------------------------------------
 --------------------------------------------------------
 --  DDL for Table BinaryData
@@ -169,7 +169,9 @@
   CREATE TABLE "Diagnostics" 
    (	"id" NUMBER(20,0) GENERATED ALWAYS AS IDENTITY MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE , 
 	"GeotabId" NVARCHAR2(100), 
-	"GeotabGUID" NVARCHAR2(36), 
+	"GeotabGUID" NVARCHAR2(100), 
+	"HasShimId" NUMBER(3,0), 
+	"FormerShimGeotabGUID" NVARCHAR2(100), 
 	"ControllerId" NVARCHAR2(100), 
 	"DiagnosticCode" NUMBER(10,0), 
 	"DiagnosticName" NVARCHAR2(255), 
@@ -873,6 +875,7 @@ ON r."GeotabId" = c."RuleId"
 
   ALTER TABLE "Diagnostics" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "Diagnostics" MODIFY ("GeotabId" NOT NULL ENABLE);
+  ALTER TABLE "Diagnostics" MODIFY ("HasShimId" NOT NULL ENABLE);
   ALTER TABLE "Diagnostics" MODIFY ("DiagnosticName" NOT NULL ENABLE);
   ALTER TABLE "Diagnostics" MODIFY ("DiagnosticSourceId" NOT NULL ENABLE);
   ALTER TABLE "Diagnostics" MODIFY ("DiagnosticSourceName" NOT NULL ENABLE);

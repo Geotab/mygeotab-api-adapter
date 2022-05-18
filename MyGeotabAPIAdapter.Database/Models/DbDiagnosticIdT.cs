@@ -4,7 +4,7 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("DiagnosticIdsT")]
-    public class DbDiagnosticIdT : IDbEntity, IIdCacheableDbEntity
+    public class DbDiagnosticIdT : IDbEntity, IIdCacheableDbEntity, IGeotabGUIDCacheableDbEntity
     {
         /// <inheritdoc/>
         [Write(false)]
@@ -22,6 +22,8 @@ namespace MyGeotabAPIAdapter.Database.Models
         public long id { get; set; }
         public string GeotabGUID { get; set; }
         public string GeotabId { get; set; }
+        public bool HasShimId { get; set; }
+        public string FormerShimGeotabGUID { get; set; }
         [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
     }

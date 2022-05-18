@@ -36,7 +36,7 @@ namespace MyGeotabAPIAdapter
         List<DbConfigFeedVersion> dbConfigFeedVersions;
         IDictionary<Id, DbDevice> dbDevicesDictionary;
         IDictionary<Id, DbDeviceStatusInfo> dbDeviceStatusInfosDictionary;
-        IDictionary<Id, DbDiagnostic> dbDiagnosticsDictionary;
+        IDictionary<String, DbDiagnostic> dbDiagnosticsDictionary;
         IDictionary<Id, DbDVIRDefect> dbDVIRDefectsDictionary;
         IDictionary<Id, DbDVIRDefectRemark> dbDVIRDefectRemarksDictionary;
         IDictionary<Id, DbRuleObject> dbRuleObjectDictionary;
@@ -840,7 +840,7 @@ namespace MyGeotabAPIAdapter
                     // Sort lists on Id.
                     dbDevicesDictionary = getAllDbDevicesTask.Result.ToDictionary(device => Id.Create(device.GeotabId));
                     dbDeviceStatusInfosDictionary = getAllDbDeviceStatusInfosTask.Result.ToDictionary(deviceStatusInfo => Id.Create(deviceStatusInfo.GeotabId));
-                    dbDiagnosticsDictionary = getAllDbDiagnosticsTask.Result.ToDictionary(diagnostic => Id.Create(diagnostic.GeotabId));
+                    dbDiagnosticsDictionary = getAllDbDiagnosticsTask.Result.ToDictionary(diagnostic => diagnostic.GeotabGUID);
 
                     dbUsersDictionary = getAllDbUsersTask.Result.ToDictionary(user => Id.Create(user.GeotabId));
                     dbDVIRDefectsDictionary = getAllDbDVIRDefectsTask.Result.ToDictionary(dvirDefect => Id.Create(dvirDefect.GeotabId));
@@ -1759,7 +1759,7 @@ namespace MyGeotabAPIAdapter
                                 dbDiagnostic.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
                                 dbDiagnostic.RecordLastChangedUtc = recordChangedTimestampUtc;
                                 dbDiagnostic.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                dbDiagnosticsDictionary[Id.Create(dbDiagnostic.GeotabId)] = dbDiagnostic;
+                                dbDiagnosticsDictionary[dbDiagnostic.GeotabGUID] = dbDiagnostic;
                                 dbDiagnosticsToUpdate.Add(dbDiagnostic);
                             }
                         }
@@ -1769,8 +1769,12 @@ namespace MyGeotabAPIAdapter
                 // Iterate through cached diagnostics.
                 foreach (Diagnostic cachedDiagnostic in diagnosticCache.Values.ToList())
                 {
+                    // Get the underlying GUID of the cached diagnostic.
+                    var cachedDiagnosticId = cachedDiagnostic.Id;
+                    var cachedDiagnosticGUID = cachedDiagnosticId.GetValue().ToString();
+
                     // Try to find the existing database record for the cached diagnostic.
-                    if (dbDiagnosticsDictionary.TryGetValue(cachedDiagnostic.Id, out var existingDbDiagnostic))
+                    if (dbDiagnosticsDictionary.TryGetValue(cachedDiagnosticGUID, out var existingDbDiagnostic))
                     {
                         // The diagnostic has already been added to the database.
                         bool dbDiagnosticRequiresUpdate = ObjectMapper.DbDiagnosticRequiresUpdate(existingDbDiagnostic, cachedDiagnostic);
@@ -1782,18 +1786,30 @@ namespace MyGeotabAPIAdapter
                             updatedDbDiagnostic.RecordLastChangedUtc = recordChangedTimestampUtc;
                             updatedDbDiagnostic.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
 
-                            dbDiagnosticsDictionary[Id.Create(updatedDbDiagnostic.GeotabId)] = updatedDbDiagnostic;
+                            dbDiagnosticsDictionary[updatedDbDiagnostic.GeotabGUID] = updatedDbDiagnostic;
                             dbDiagnosticsToUpdate.Add(updatedDbDiagnostic);
                         }
                     }
                     else
                     {
-                        // The diagnostic has not yet been added to the database. Create a DbDiagnostic, set its properties and add it to the cache.
+                        // The diagnostic has not yet been added to the database. Create a DbDiagnostic and set its properties.
                         DbDiagnostic newDbDiagnostic = ObjectMapper.GetDbDiagnostic(cachedDiagnostic);
                         newDbDiagnostic.EntityStatus = (int)Common.DatabaseRecordStatus.Active;
                         newDbDiagnostic.RecordLastChangedUtc = recordChangedTimestampUtc;
                         newDbDiagnostic.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
-                        dbDiagnosticsDictionary.Add(Id.Create(newDbDiagnostic.GeotabId), newDbDiagnostic);
+
+                        // If the new DbDiagnostic does NOT have a ShimId (an Id that is known on the MyGeotab side, but not in the current Geotab.Checkmate.ObjectModel NuGet package), perform a secondary check to see if it had one in the past and, if so, link the current DbDiagnostic to the old one using the FormerShimGeotabGUID property.
+                        if (newDbDiagnostic.HasShimId == false)
+                        {
+                            var shimIdToTest = cachedDiagnostic.Id.ToString();
+                            if (dbDiagnosticsDictionary.TryGetValue(shimIdToTest, out var existingDbDiagnosticWithShimId))
+                            {
+                                newDbDiagnostic.FormerShimGeotabGUID = existingDbDiagnosticWithShimId.GeotabGUID;
+                            }
+                        }
+                        
+                        // Add the new DbDiagnostic to the cache.
+                        dbDiagnosticsDictionary.Add(newDbDiagnostic.GeotabGUID, newDbDiagnostic);
                         dbDiagnosticsToInsert.Add(newDbDiagnostic);
                     }
                 }

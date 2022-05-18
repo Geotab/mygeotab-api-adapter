@@ -16,6 +16,8 @@ namespace MyGeotabAPIAdapter
     /// </summary>
     static class ObjectMapper
     {
+        const string ShimIdTypeName = "ShimId";
+
         /// <summary>
         /// Indicates whether the <see cref="DbDevice"/> differs from the <see cref="Device"/>, thereby requiring the <see cref="DbDevice"/> to be updated in the database. 
         /// </summary>
@@ -574,7 +576,9 @@ namespace MyGeotabAPIAdapter
             Source diagnosticSource = diagnostic.Source;
             UnitOfMeasure diagnosticUnitOfMeasure = diagnostic.UnitOfMeasure;
             Controller diagnosticController = diagnostic.Controller;
-            var geotabGUID = diagnostic.Id.GetValue().ToString();
+            var diagnosticId = diagnostic.Id;
+            var geotabGUID = diagnosticId.GetValue().ToString();
+            var isShimId = (diagnosticId.GetType().Name == "ShimId");
 
             DbDiagnostic dbDiagnostic = new()
             {
@@ -585,7 +589,8 @@ namespace MyGeotabAPIAdapter
                 DiagnosticUnitOfMeasureId = diagnosticUnitOfMeasure.Id.ToString(),
                 DiagnosticUnitOfMeasureName = diagnosticUnitOfMeasure.Name,
                 GeotabId = diagnostic.Id.ToString(),
-                GeotabGUID = geotabGUID
+                GeotabGUID = geotabGUID,
+                HasShimId = isShimId
             };
             if (diagnosticController != null)
             {

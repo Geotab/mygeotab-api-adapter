@@ -16,6 +16,8 @@ namespace MyGeotabAPIAdapter.Database.EntityMappers
                 DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert,
                 GeotabGUID = entityToMapTo.GeotabGUID,
                 GeotabId = entityToMapTo.GeotabId,
+                HasShimId = entityToMapTo.HasShimId,
+                FormerShimGeotabGUID = entityToMapTo.FormerShimGeotabGUID,
                 RecordLastChangedUtc = DateTime.UtcNow
             };
             return DbDiagnosticIdT;

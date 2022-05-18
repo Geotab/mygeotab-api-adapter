@@ -148,9 +148,9 @@ namespace MyGeotabAPIAdapter.Database.Caches
                     var dbEntityRepo = new BaseRepository2<T>(context);
                     using (var uow = context.CreateUnitOfWork(database))
                     {
-                        var dbEntites = await dbEntityRepo.GetAllAsync(cancellationTokenSource);
+                        var dbEntities = await dbEntityRepo.GetAllAsync(cancellationTokenSource);
                         cache = new Dictionary<long, string>();
-                        foreach (var dbEntity in dbEntites)
+                        foreach (var dbEntity in dbEntities)
                         {
                             cache.Add(dbEntity.id, dbEntity.GeotabId);
                         }

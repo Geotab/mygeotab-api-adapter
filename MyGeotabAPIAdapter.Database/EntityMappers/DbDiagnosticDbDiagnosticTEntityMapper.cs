@@ -23,6 +23,8 @@ namespace MyGeotabAPIAdapter.Database.EntityMappers
                 DiagnosticUnitOfMeasureName = entityToMapTo.DiagnosticUnitOfMeasureName,
                 EntityStatus = entityToMapTo.EntityStatus,
                 GeotabGUID = entityToMapTo.GeotabGUID,
+                HasShimId = entityToMapTo.HasShimId,
+                FormerShimGeotabGUID = entityToMapTo.FormerShimGeotabGUID,
                 OBD2DTC = entityToMapTo.OBD2DTC,
                 RecordLastChangedUtc = DateTime.UtcNow
             };
