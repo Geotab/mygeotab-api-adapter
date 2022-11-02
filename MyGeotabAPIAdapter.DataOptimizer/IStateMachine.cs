@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace MyGeotabAPIAdapter.DataOptimizer
 {
     /// <summary>
-    /// Interface for a class that helps to keep track of overall application state with respect to MyGeotab API and database connectivity.
+    /// Interface for a class that helps to keep track of overall application state with respect to database connectivity.
     /// </summary>
     interface IStateMachine
     {
@@ -21,15 +21,16 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <summary>
         /// Indicates whether the adapter database is accessible.
         /// </summary>
+        /// <param name="context">The <see cref="AdapterDatabaseUnitOfWorkContext"/> to use.</param>
         /// <returns></returns>
-        Task<bool> IsAdapterDatabaseAccessibleAsync();
+        Task<bool> IsAdapterDatabaseAccessibleAsync(IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> context);
 
         /// <summary>
         /// Indicates whether the optimizer database is accessible.
         /// </summary>
-        /// <param name="context">The <see cref="UnitOfWorkContext"/> to use.</param>
+        /// <param name="context">The <see cref="OptimizerDatabaseUnitOfWorkContext"/> to use.</param>
         /// <returns></returns>
-        Task<bool> IsOptimizerDatabaseAccessibleAsync(UnitOfWorkContext context);
+        Task<bool> IsOptimizerDatabaseAccessibleAsync(IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> context);
 
         /// <summary>
         /// Sets the <see cref="State"/> and <see cref="StateReason"/> properties of the current <see cref="IStateMachine"/> instance.

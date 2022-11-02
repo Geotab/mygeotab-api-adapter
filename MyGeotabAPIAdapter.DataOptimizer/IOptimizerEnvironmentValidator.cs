@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace MyGeotabAPIAdapter.DataOptimizer
 {
+    /// <summary>
+    /// Interface for a class that includes validation logic to help ensure that only one instance of a given <see cref="DataOptimizerProcessor"/> is running against the same optimizer database in a distributed deployment scenario in which copies of the <see cref="MyGeotabAPIAdapter.DataOptimizer"/> are installed on multiple machines with different services running on each (in order to distribute load and maximize throughput) AND that the same version of the <see cref="MyGeotabAPIAdapter.DataOptimizer"/> is used on all machines involved. 
+    /// </summary>
     public interface IOptimizerEnvironmentValidator
     {
         /// <summary>

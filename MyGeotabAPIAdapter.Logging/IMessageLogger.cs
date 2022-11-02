@@ -26,19 +26,26 @@ namespace MyGeotabAPIAdapter.Logging
         void LogScheduledServiceResumption(string loggingClassName, TimeSpan serviceDailyStartTimeUTC, int serviceDailyRuntimeSeconds, DateTime nextScheduledPauseTimeUTC);
 
         /// <summary>
-        /// Logs a message indicating that the <paramref name="loggingClassName"/> service is being paused due to prerequisite processor(s) not running and provides related details.
+        /// Logs a message indicating that the <paramref name="loggingClassName"/> service is being paused due to the Orchestrator service having not yet been initialized.
         /// </summary>
         /// <param name="loggingClassName">The class name of the service being paused.</param>
-        /// <param name="processorsNeverRunStatement">A sentence listing all prerequisite processors that have never been run.</param>
-        /// <param name="processorsNotRunningStatement">>A sentence listing all prerequisite processors that are not currently running.</param>
-        /// <param name="processorsWithNoDataProcessedStatement">A sentence listing all prerequisite processors that have not yet processed any data.</param>
-        /// <param name="delayBeforeNextCheck"></param>
-        void LogWaitForPrerequisiteProcessorsServicePause(string loggingClassName, string processorsNeverRunStatement, string processorsNotRunningStatement, string processorsWithNoDataProcessedStatement, TimeSpan delayBeforeNextCheck);
+        /// <param name="delayBeforeNextCheck">The amount of time to delay before checking again.</param>
+        void LogWaitForOrchestratorServiceServicePause(string loggingClassName, TimeSpan delayBeforeNextCheck);
 
         /// <summary>
-        /// Logs a message indicating that the <paramref name="loggingClassName"/> service is resuming operation now that all prerequisite processors are running.
+        /// Logs a message indicating that the <paramref name="loggingClassName"/> service is being paused due to prerequisite service(s) not running and provides related details.
+        /// </summary>
+        /// <param name="loggingClassName">The class name of the service being paused.</param>
+        /// <param name="servicesNeverRunStatement">A sentence listing all prerequisite services that have never been run.</param>
+        /// <param name="servicesNotRunningStatement">>A sentence listing all prerequisite services that are not currently running.</param>
+        /// <param name="servicesWithNoDataProcessedStatement">A sentence listing all prerequisite services that have not yet processed any data.</param>
+        /// <param name="delayBeforeNextCheck">The amount of time to delay before checking again.</param>
+        void LogWaitForPrerequisiteServicesServicePause(string loggingClassName, string servicesNeverRunStatement, string servicesNotRunningStatement, string servicesWithNoDataProcessedStatement, TimeSpan delayBeforeNextCheck);
+
+        /// <summary>
+        /// Logs a message indicating that the <paramref name="loggingClassName"/> service is resuming operation now that all prerequisite services are running.
         /// </summary>
         /// <param name="loggingClassName"></param>
-        void LogWaitForPrerequisiteProcessorsServiceResumption(string loggingClassName);
+        void LogWaitForPrerequisiteServicesServiceResumption(string loggingClassName);
     }
 }

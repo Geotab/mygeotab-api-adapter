@@ -10,7 +10,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
     /// </summary>
     public class PrerequisiteProcessorOperationCheckResult
     {
-        readonly TimeSpan recommendedDelayBeforeNextCheck = TimeSpan.FromMinutes(5);
+        readonly TimeSpan recommendedDelayBeforeNextCheck = TimeSpan.FromSeconds(10);
 
         /// <summary>
         /// Indicates whether all prerequisite processors are running.

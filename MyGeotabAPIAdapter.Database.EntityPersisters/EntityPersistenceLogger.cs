@@ -36,12 +36,15 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
             string databaseOperationPreposition = "";
             switch (databaseWriteOperationType)
             {
+                case Common.DatabaseWriteOperationType.BulkInsert:
                 case Common.DatabaseWriteOperationType.Insert:
                     databaseOperationPreposition = Into;
                     break;
+                case Common.DatabaseWriteOperationType.BulkUpdate:
                 case Common.DatabaseWriteOperationType.Update:
                     databaseOperationPreposition = In;
                     break;
+                case Common.DatabaseWriteOperationType.BulkDelete:
                 case Common.DatabaseWriteOperationType.Delete:
                     databaseOperationPreposition = From;
                     break;

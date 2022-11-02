@@ -15,6 +15,8 @@ namespace MyGeotabAPIAdapter.Logging
         // Exception-related constants.
         public const string MyGeotabConnectionExceptionMessageSource = "System.Net.Http";
         public const string MyGeotabConnectionExceptionMessage_DbUnavailableException = "DbUnavailableException";
+        public const string MyGeotabConnectionExceptionMessage_HttpRequestException_Connection_refused = "HttpRequestException Connection refused";
+        public const string MyGeotabConnectionExceptionMessage_ServiceUnavailableException_Service_temporarily_unavailable = "ServiceUnavailableException Service temporarily unavailable";
         public const string MyGeotabConnectionExceptionStackTraceSource_Geotab_Checkmate_Web_WebServerInvoker = "Geotab.Checkmate.Web.WebServerInvoker";
 
         /// <inheritdoc/>
@@ -96,7 +98,9 @@ namespace MyGeotabAPIAdapter.Logging
         /// <inheritdoc/>
         public bool ExceptionIsRelatedToMyGeotabConnectivityLoss(Exception exception)
         {
-            if (exception.Message.Contains(MyGeotabConnectionExceptionMessage_DbUnavailableException))
+            if (exception.Message.Contains(MyGeotabConnectionExceptionMessage_DbUnavailableException)
+                || exception.Message.Contains(MyGeotabConnectionExceptionMessage_HttpRequestException_Connection_refused)
+                || exception.Message.Contains(MyGeotabConnectionExceptionMessage_ServiceUnavailableException_Service_temporarily_unavailable))
             {
                 return true;
             }

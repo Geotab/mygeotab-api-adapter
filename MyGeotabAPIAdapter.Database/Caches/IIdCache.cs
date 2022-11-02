@@ -17,7 +17,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         int AutoRefreshIntervalMinutes { get; set; }
 
         /// <summary>
-        /// Indicates whether the <see cref="InitializeAsync(UnitOfWorkContext, Databases)"/> method has been called since this <see cref="IIdCache{T}"/> instance was created.
+        /// Indicates whether the <see cref="InitializeAsync(OptimizerDatabaseUnitOfWorkContext, Databases)"/> method has been called since this <see cref="IIdCache{T}"/> instance was created.
         /// </summary>
         bool IsInitialized { get; }
 

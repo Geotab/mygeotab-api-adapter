@@ -127,41 +127,6 @@ ALTER SEQUENCE public."Conditions_id_seq" OWNED BY public."Conditions".id;
 
 
 --
--- Name: ConfigFeedVersions; Type: TABLE; Schema: public; Owner: geotabadapter_owner
---
-
-CREATE TABLE public."ConfigFeedVersions" (
-    id bigint NOT NULL,
-    "FeedTypeId" character varying(50) NOT NULL,
-    "LastProcessedFeedVersion" bigint NOT NULL,
-    "RecordLastChangedUtc" timestamp without time zone NOT NULL
-);
-
-
-ALTER TABLE public."ConfigFeedVersions" OWNER TO geotabadapter_owner;
-
---
--- Name: ConfigFeedVersions_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
---
-
-CREATE SEQUENCE public."ConfigFeedVersions_id_seq"
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public."ConfigFeedVersions_id_seq" OWNER TO geotabadapter_owner;
-
---
--- Name: ConfigFeedVersions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
---
-
-ALTER SEQUENCE public."ConfigFeedVersions_id_seq" OWNED BY public."ConfigFeedVersions".id;
-
-
---
 -- Name: DVIRDefectRemarks; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -565,9 +530,11 @@ CREATE TABLE public."ExceptionEvents" (
     "Distance" real,
     "DriverId" character varying(50),
     "DurationTicks" bigint,
+    "LastModifiedDateTime" timestamp without time zone,
     "RuleId" character varying(50),
+    "State" integer,
     "Version" bigint,
-    "RecordCreationTimeUtc" timestamp without time zone NOT NULL
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL
 );
 
 
@@ -778,6 +745,44 @@ CREATE TABLE public."MyGeotabVersionInfo" (
 ALTER TABLE public."MyGeotabVersionInfo" OWNER TO geotabadapter_owner;
 
 --
+-- Name: OServiceTracking; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."OServiceTracking" (
+    id bigint NOT NULL,
+    "ServiceId" character varying(50) NOT NULL,
+    "AdapterVersion" character varying(50),
+    "AdapterMachineName" character varying(100),
+    "EntitiesLastProcessedUtc" timestamp without time zone,
+    "LastProcessedFeedVersion" bigint,
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE public."OServiceTracking" OWNER TO geotabadapter_owner;
+
+--
+-- Name: OServiceTracking_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."OServiceTracking_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."OServiceTracking_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: OServiceTracking_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."OServiceTracking_id_seq" OWNED BY public."OServiceTracking".id;
+
+
+--
 -- Name: OVDSServerCommands; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -821,7 +826,7 @@ CREATE TABLE public."Rules" (
     "ActiveFrom" timestamp without time zone,
     "ActiveTo" timestamp without time zone,
     "BaseType" character varying(50),
-    "Comment" character varying(255),
+    "Comment" character varying,
     "Name" character varying(255),
     "Version" bigint NOT NULL,
     "EntityStatus" integer NOT NULL,
@@ -962,7 +967,7 @@ CREATE TABLE public."Users" (
     "ActiveTo" timestamp without time zone NOT NULL,
     "EmployeeNo" character varying(50),
     "FirstName" character varying(255),
-    "HosRuleSet" character varying(255),
+    "HosRuleSet" character varying,
     "IsDriver" boolean NOT NULL,
     "LastAccessDate" timestamp without time zone,
     "LastName" character varying(255),
@@ -1080,41 +1085,6 @@ ALTER SEQUENCE public."Zones_id_seq" OWNED BY public."Zones".id;
 
 
 --
--- Name: vwRuleObject; Type: VIEW; Schema: public; Owner: geotabadapter_owner
---
-
-CREATE VIEW public."vwRuleObject" AS
- SELECT r.id AS "RuleAdapterId",
-    r."GeotabId",
-    r."ActiveFrom",
-    r."ActiveTo",
-    r."BaseType",
-    r."Comment",
-    r."Name",
-    r."Version",
-    r."EntityStatus",
-    r."RecordLastChangedUtc",
-    c.id AS "ConditionAdapterId",
-    c."GeotabId" AS "Cond_Id",
-    c."ParentId" AS "Cond_ParentId",
-    c."RuleId" AS "Cond_RuleId",
-    c."ConditionType" AS "Cond_ConditionType",
-    c."DeviceId" AS "Cond_DeviceId",
-    c."DiagnosticId" AS "Cond_DiagnosticId",
-    c."DriverId" AS "Cond_DriverId",
-    c."Value" AS "Cond_Value",
-    c."WorkTimeId" AS "Cond_WorkTimeId",
-    c."ZoneId" AS "Cond_ZoneId",
-    c."EntityStatus" AS "Cond_EntityStatus",
-    c."RecordLastChangedUtc" AS "Cond_RecordLastChangedUtc"
-   FROM (public."Rules" r
-     JOIN public."Conditions" c ON (((r."GeotabId")::text = (c."RuleId")::text)))
-  ORDER BY r."GeotabId", c."GeotabId";
-
-
-ALTER TABLE public."vwRuleObject" OWNER TO geotabadapter_owner;
-
---
 -- Name: BinaryData id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1126,13 +1096,6 @@ ALTER TABLE ONLY public."BinaryData" ALTER COLUMN id SET DEFAULT nextval('public
 --
 
 ALTER TABLE ONLY public."Conditions" ALTER COLUMN id SET DEFAULT nextval('public."Conditions_id_seq"'::regclass);
-
-
---
--- Name: ConfigFeedVersions id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
---
-
-ALTER TABLE ONLY public."ConfigFeedVersions" ALTER COLUMN id SET DEFAULT nextval('public."ConfigFeedVersions_id_seq"'::regclass);
 
 
 --
@@ -1220,6 +1183,13 @@ ALTER TABLE ONLY public."LogRecords" ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: OServiceTracking id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."OServiceTracking" ALTER COLUMN id SET DEFAULT nextval('public."OServiceTracking_id_seq"'::regclass);
+
+
+--
 -- Name: OVDSServerCommands id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1282,14 +1252,6 @@ ALTER TABLE ONLY public."BinaryData"
 
 ALTER TABLE ONLY public."Conditions"
     ADD CONSTRAINT "Conditions_pkey" PRIMARY KEY (id);
-
-
---
--- Name: ConfigFeedVersions ConfigFeedVersions_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
---
-
-ALTER TABLE ONLY public."ConfigFeedVersions"
-    ADD CONSTRAINT "ConfigFeedVersions_pkey" PRIMARY KEY (id);
 
 
 --
@@ -1397,6 +1359,14 @@ ALTER TABLE ONLY public."LogRecords"
 
 
 --
+-- Name: OServiceTracking OServiceTracking_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."OServiceTracking"
+    ADD CONSTRAINT "OServiceTracking_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: OVDSServerCommands OVDSServerCommands_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1453,6 +1423,160 @@ ALTER TABLE ONLY public."Zones"
 
 
 --
+-- Name: IX_BinaryData_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_BinaryData_DateTime" ON public."BinaryData" USING btree ("DateTime");
+
+
+--
+-- Name: IX_Conditions_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_Conditions_RecordLastChangedUtc" ON public."Conditions" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_DVIRDefectRemarks_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_DVIRDefectRemarks_RecordLastChangedUtc" ON public."DVIRDefectRemarks" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_DVIRDefectUpdates_RecordCreationTimeUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_DVIRDefectUpdates_RecordCreationTimeUtc" ON public."DVIRDefectUpdates" USING btree ("RecordCreationTimeUtc");
+
+
+--
+-- Name: IX_DVIRDefects_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_DVIRDefects_RecordLastChangedUtc" ON public."DVIRDefects" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_DVIRLogs_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_DVIRLogs_DateTime" ON public."DVIRLogs" USING btree ("DateTime");
+
+
+--
+-- Name: IX_DeviceStatusInfo_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_DeviceStatusInfo_RecordLastChangedUtc" ON public."DeviceStatusInfo" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_Devices_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_Devices_RecordLastChangedUtc" ON public."Devices" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_Diagnostics_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_Diagnostics_RecordLastChangedUtc" ON public."Diagnostics" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_DriverChanges_RecordCreationTimeUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_DriverChanges_RecordCreationTimeUtc" ON public."DriverChanges" USING btree ("RecordCreationTimeUtc");
+
+
+--
+-- Name: IX_DutyStatusAvailabilities_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_DutyStatusAvailabilities_RecordLastChangedUtc" ON public."DutyStatusAvailabilities" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_ExceptionEvents_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_ExceptionEvents_RecordLastChangedUtc" ON public."ExceptionEvents" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_FaultData_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_FaultData_DateTime" ON public."FaultData" USING btree ("DateTime");
+
+
+--
+-- Name: IX_LogRecords_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_LogRecords_DateTime" ON public."LogRecords" USING btree ("DateTime");
+
+
+--
+-- Name: IX_MyGeotabVersionInfo_RecordCreationTimeUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_MyGeotabVersionInfo_RecordCreationTimeUtc" ON public."MyGeotabVersionInfo" USING btree ("RecordCreationTimeUtc");
+
+
+--
+-- Name: IX_OServiceTracking_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_OServiceTracking_RecordLastChangedUtc" ON public."OServiceTracking" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_Rules_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_Rules_RecordLastChangedUtc" ON public."Rules" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_StatusData_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_StatusData_DateTime" ON public."StatusData" USING btree ("DateTime");
+
+
+--
+-- Name: IX_Trips_RecordCreationTimeUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_Trips_RecordCreationTimeUtc" ON public."Trips" USING btree ("RecordCreationTimeUtc");
+
+
+--
+-- Name: IX_Users_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_Users_RecordLastChangedUtc" ON public."Users" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_ZoneTypes_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_ZoneTypes_RecordLastChangedUtc" ON public."ZoneTypes" USING btree ("RecordLastChangedUtc");
+
+
+--
+-- Name: IX_Zones_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_Zones_RecordLastChangedUtc" ON public."Zones" USING btree ("RecordLastChangedUtc");
+
+
+--
 -- Name: TABLE "BinaryData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1479,20 +1603,6 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Conditions" TO geotabadapter_
 
 REVOKE ALL ON SEQUENCE public."Conditions_id_seq" FROM geotabadapter_owner;
 GRANT ALL ON SEQUENCE public."Conditions_id_seq" TO geotabadapter_client;
-
-
---
--- Name: TABLE "ConfigFeedVersions"; Type: ACL; Schema: public; Owner: geotabadapter_owner
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."ConfigFeedVersions" TO geotabadapter_client;
-
-
---
--- Name: SEQUENCE "ConfigFeedVersions_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
---
-
-GRANT ALL ON SEQUENCE public."ConfigFeedVersions_id_seq" TO geotabadapter_client;
 
 
 --
@@ -1692,6 +1802,20 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."MyGeotabVersionInfo" TO geota
 
 
 --
+-- Name: TABLE "OServiceTracking"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."OServiceTracking" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "OServiceTracking_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."OServiceTracking_id_seq" TO geotabadapter_client;
+
+
+--
 -- Name: TABLE "OVDSServerCommands"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1788,13 +1912,6 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Zones" TO geotabadapter_clien
 --
 
 GRANT ALL ON SEQUENCE public."Zones_id_seq" TO geotabadapter_client;
-
-
---
--- Name: TABLE "vwRuleObject"; Type: ACL; Schema: public; Owner: geotabadapter_owner
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."vwRuleObject" TO geotabadapter_client;
 
 
 --

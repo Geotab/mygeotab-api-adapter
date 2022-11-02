@@ -4,8 +4,16 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("DVIRDefectUpdates")]
-    public class DbDVIRDefectUpdate
+    public class DbDVIRDefectUpdate : IDbEntity
     {
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "DVIRDefectUpdates";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
         [Key]
         public long id { get; set; }
         public string DVIRLogId { get; set; }
@@ -18,7 +26,5 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string RemarkUserId { get; set; }
         [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
-        [Write(false)]
-        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
     }
 }

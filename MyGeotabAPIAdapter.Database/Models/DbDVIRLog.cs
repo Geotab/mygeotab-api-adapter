@@ -4,10 +4,19 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("DVIRLogs")]
-    public class DbDVIRLog
+    public class DbDVIRLog : IDbEntity
     {
-        [Key]
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "DVIRLogs";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
+        [Write(false)]
         public long id { get; set; }
+        [ExplicitKey]
         public string GeotabId { get; set; }
         public string CertifiedByUserId { get; set; }
         public DateTime? CertifiedDate { get; set; }

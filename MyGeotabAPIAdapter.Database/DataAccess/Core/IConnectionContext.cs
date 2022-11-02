@@ -10,7 +10,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <summary>
         /// The <see cref="Databases"/> identifier for the database associated with the subject <see cref="ConnectionInfo"/> instance.
         /// </summary>
-        public Databases Database { get; }
+        Databases Database { get; }
 
         /// <summary>
         /// The maximum number of seconds that a database <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> should be thrown.
@@ -18,19 +18,19 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         int TimeoutSecondsForDatabaseTasks { get; }
 
         /// <summary>
-        /// Gets the <see cref="UnitOfWork.Connection"/> (an open <see cref="DbConnection"/>). Throws a <see cref="System.InvalidOperationException"/> if the <see cref="UnitOfWorkContext.IsUnitOfWorkOpen"/> property of the associated <see cref="UnitOfWorkContext"/> is <c>false</c>.
+        /// Gets the <see cref="UnitOfWork.Connection"/> (an open <see cref="DbConnection"/>). Throws a <see cref="System.InvalidOperationException"/> if the <see cref="IDatabaseUnitOfWorkContext.IsUnitOfWorkOpen"/> property of the associated <see cref="IDatabaseUnitOfWorkContext"/> is <c>false</c>.
         /// </summary>
         /// <returns></returns>
         DbConnection GetConnection();
 
         /// <summary>
-        /// Gets the <see cref="UnitOfWork.Transaction"/> (the <see cref="DbTransaction"/> associated with the open <see cref="UnitOfWork.Connection"/>). Throws a <see cref="System.InvalidOperationException"/> if the <see cref="UnitOfWorkContext.IsUnitOfWorkOpen"/> property of the associated <see cref="UnitOfWorkContext"/> is <c>false</c>.
+        /// Gets the <see cref="UnitOfWork.Transaction"/> (the <see cref="DbTransaction"/> associated with the open <see cref="UnitOfWork.Connection"/>). Throws a <see cref="System.InvalidOperationException"/> if the <see cref="IDatabaseUnitOfWorkContext.IsUnitOfWorkOpen"/> property of the associated <see cref="IDatabaseUnitOfWorkContext"/> is <c>false</c>.
         /// </summary>
         /// <returns></returns>
         DbTransaction GetTransaction();
 
         /// <summary>
-        /// The <see cref="UnitOfWork.Id"/> - a unique identifier assigned to the <see cref="UnitOfWork"/> at the time of its creation. Intended for debugging purposes. Throws a <see cref="System.InvalidOperationException"/> if the <see cref="UnitOfWorkContext.IsUnitOfWorkOpen"/> property of the associated <see cref="UnitOfWorkContext"/> is <c>false</c>.
+        /// The <see cref="UnitOfWork.Id"/> - a unique identifier assigned to the <see cref="UnitOfWork"/> at the time of its creation. Intended for debugging purposes. Throws a <see cref="System.InvalidOperationException"/> if the <see cref="IDatabaseUnitOfWorkContext.IsUnitOfWorkOpen"/> property of the associated <see cref="IDatabaseUnitOfWorkContext"/> is <c>false</c>.
         /// </summary>
         /// <returns></returns>
         string GetUnitOfWorkId();

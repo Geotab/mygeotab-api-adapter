@@ -9,7 +9,7 @@ namespace MyGeotabAPIAdapter.Database.Models
     {
         /// <inheritdoc/>
         [Write(false)]
-        public string DatabaseTableName => "DriverChangeTypesT";
+        public string DatabaseTableName => "BinaryDataT";
 
         /// <inheritdoc/>
         [Write(false)]

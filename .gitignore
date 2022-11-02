@@ -90,3 +90,6 @@
 /MyGeotabAPIAdapter.Logging/bin/Release/net6.0
 /MyGeotabAPIAdapter.MyGeotabAPI/bin/Release/net6.0
 /MyGeotabAPIAdapter.Tests/bin/Release/net6.0
+/MyGeotabAPIAdapter.GeotabObjectMappers/obj
+/MyGeotabAPIAdapter.GeotabObjectMappers/bin/Debug/net6.0
+/MyGeotabAPIAdapter.GeotabObjectMappers/bin/Release/net6.0

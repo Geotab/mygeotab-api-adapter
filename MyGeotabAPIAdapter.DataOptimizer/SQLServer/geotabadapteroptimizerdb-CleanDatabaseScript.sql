@@ -1,17 +1,17 @@
-/* Clean Database */ 
--- delete from [dbo].[BinaryDataT];
+--/* Clean Database */ 
+-- truncate table [dbo].[BinaryDataT];
 -- delete from [dbo].[BinaryTypesT];
 -- delete from [dbo].[ControllersT];
--- delete from [dbo].[DriverChangesT];
+-- truncate table [dbo].[DriverChangesT];
 -- delete from [dbo].[DriverChangeTypesT];
--- delete from [dbo].[FaultDataT];
--- delete from [dbo].[LogRecordsT];
--- delete from [dbo].[ODbErrors];
--- delete from [dbo].[OProcessorTracking];
--- delete from [dbo].[StatusDataT];
+-- truncate table [dbo].[FaultDataT];
+-- truncate table [dbo].[LogRecordsT];
+-- truncate table [dbo].[ODbErrors];
+-- truncate table [dbo].[OProcessorTracking];
+-- truncate table [dbo].[StatusDataT];
 -- delete from [dbo].[UsersT];
 -- delete from [dbo].[DevicesT];
--- delete from [dbo].[DiagnosticIdsT];
+-- truncate table [dbo].[DiagnosticIdsT];
 -- delete from [dbo].[DiagnosticsT];
 --DBCC CHECKIDENT ('dbo.BinaryDataT', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.BinaryTypesT', RESEED, 0);
@@ -30,31 +30,16 @@
 
 set nocount on;
 /* Check counts */
-select 'BinaryDataT' as "TableName", SUM(st.row_count) as "RecordCount" FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'BinaryDataT'
-union all
-select 'BinaryTypesT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'BinaryTypesT'
-union all
-select 'ControllersT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'ControllersT'
-union all
-select 'DevicesT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DevicesT'
-union all
-select 'DiagnosticsT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DiagnosticsT'
-union all
-select 'DiagnosticIdsT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DiagnosticIdsT'
-union all
-select 'DriverChangesT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DriverChangesT'
-union all
-select 'DriverChangeTypesT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'DriverChangeTypesT'
-union all
-select 'FaultDataT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'FaultDataT'
-union all
-select 'LogRecordsT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'LogRecordsT'
-union all
-select 'ODbErrors', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'ODbErrors'
-union all
-select 'OProcessorTracking', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'OProcessorTracking'
-union all
-select 'StatusDataT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'StatusDataT'
-union all
-select 'UsersT', SUM(st.row_count) FROM sys.dm_db_partition_stats st WHERE object_name(object_id) = 'UsersT'
-order by "TableName";
+SELECT 
+    (SCHEMA_NAME(A.schema_id) + '.' + A.Name) as "TableName",  
+    B.row_count as "RecordCount"
+FROM  
+    sys.dm_db_partition_stats B 
+LEFT JOIN 
+    sys.objects A 
+    ON A.object_id = B.object_id 
+WHERE 
+    SCHEMA_NAME(A.schema_id) <> 'sys' 
+    AND (B.index_id = '0' OR B.index_id = '1') 
+ORDER BY 
+    A.name 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 
 namespace MyGeotabAPIAdapter.Configuration
 {
@@ -50,5 +51,18 @@ namespace MyGeotabAPIAdapter.Configuration
         /// <param name="isMasked">Whether the return value should be masked or not in the log file output</param>
         /// <returns>String value associated with the key and section submitted.</returns>
         string GetConfigKeyValueString(string keyString, string sectionString = "", bool isLogged = true, bool isMasked = false);
+
+        /// <summary>
+        /// Parses the appsettings.json configuration file for the section provided.
+        /// </summary>
+        /// <param name="sectionString">Value of the configuration section to be returned.</param>
+        /// <returns></returns>
+        IConfigurationSection GetConfigSection(string sectionString);
+
+        /// <summary>
+        /// Replaces the default <see cref="IConfiguration"/> used by the current <see cref="IConfigurationHelper"/> implementation with the supplied <paramref name="configuration"/>.
+        /// </summary>
+        /// <param name="configuration">The <see cref="IConfiguration"/> to be used by the current <see cref="IConfigurationHelper"/> implementation.</param>
+        void SetConfiguration(IConfiguration configuration);
     }
 }

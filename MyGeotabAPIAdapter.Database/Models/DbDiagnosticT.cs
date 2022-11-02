@@ -1,10 +1,11 @@
-﻿using Dapper.Contrib.Extensions;
+﻿#nullable enable
+using Dapper.Contrib.Extensions;
 using System;
 
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("DiagnosticsT")]
-    public class DbDiagnosticT : IDbEntity, IIdCacheableDbEntity, IGeotabGUIDCacheableDbEntity
+    public class DbDiagnosticT : IDbEntity, IIdCacheableDbEntity, IGeotabGUIDCacheableDbEntity, IStatusableDbEntity
     {
         /// <inheritdoc/>
         [Write(false)]

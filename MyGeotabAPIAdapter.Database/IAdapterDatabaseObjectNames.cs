@@ -73,6 +73,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbFailedDVIRDefectUpdatesTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbFailedOVDSServerCommand"/> entities.
+        /// </summary>
+        string DbFailedOVDSServerCommandTableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbFaultData"/> entities.
         /// </summary>
         string DbFaultDataTableName { get; }
@@ -81,6 +86,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the database table associated with <see cref="DbLogRecord"/> entities.
         /// </summary>
         string DbLogRecordTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbOVDSServerCommand"/> entities.
+        /// </summary>
+        string DbOVDSServerCommandTableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbRule"/> entities.
@@ -111,5 +121,10 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the database table associated with <see cref="DbZoneType"/> entities.
         /// </summary>
         string DbZoneTypeTableName { get; }
+
+        /// <summary>
+        /// A unique identifier assigned during instantiation. Intended for debugging purposes.
+        /// </summary>
+        string Id { get; }
     }
 }

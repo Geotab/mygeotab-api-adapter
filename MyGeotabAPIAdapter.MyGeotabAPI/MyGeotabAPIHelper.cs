@@ -1,7 +1,10 @@
 ﻿using Geotab.Checkmate;
 using Geotab.Checkmate.ObjectModel;
+using Geotab.Checkmate.ObjectModel.Exceptions;
+using Geotab.Checkmate.Web;
 using MyGeotabAPIAdapter.Exceptions;
 using MyGeotabAPIAdapter.Logging;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -15,17 +18,56 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
     public class MyGeotabAPIHelper : IMyGeotabAPIHelper
     {
         public const int DefaultTimeoutSeconds = 30;
+        public const int MinTimeoutSeconds = 30;
 
         // For GetFeed result limts see <see href="https://geotab.github.io/sdk/software/api/reference/#M:Geotab.Checkmate.Database.DataStore.GetFeed1">GetFeed(...)</see>.
-        public const int GetFeedResultLimitDefault = 50000;
-        public const int GetFeedResultLimitDevice = 5000;
-        public const int GetFeedResultLimitMediaFile = 10000;
-        public const int GetFeedResultLimitRoute = 10000;
-        public const int GetFeedResultLimitRule = 10000;
-        public const int GetFeedResultLimitUser = 5000;
-        public const int GetFeedResultLimitZone = 10000;
+        public const int GetFeedResultLimitDefaultConst = 50000;
+        public const int GetFeedResultLimitDeviceConst = 5000;
+        public const int GetFeedResultLimitMediaFileConst = 10000;
+        public const int GetFeedResultLimitRouteConst = 10000;
+        public const int GetFeedResultLimitRuleConst = 10000;
+        public const int GetFeedResultLimitUserConst = 5000;
+        public const int GetFeedResultLimitZoneConst = 10000;
 
         readonly IExceptionHelper exceptionHelper;
+        readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+        /// <inheritdoc/>
+        public int GetFeedResultLimitDefault { get => GetFeedResultLimitDefaultConst; }
+
+        /// <inheritdoc/>
+        public int GetFeedResultLimitDevice { get => GetFeedResultLimitDeviceConst; }
+
+        /// <inheritdoc/>
+        public int GetFeedResultLimitMediaFile { get => GetFeedResultLimitMediaFileConst; }
+
+        /// <inheritdoc/>
+        public int GetFeedResultLimitRoute { get => GetFeedResultLimitRouteConst; }
+
+        /// <inheritdoc/>
+        public int GetFeedResultLimitRule { get => GetFeedResultLimitRuleConst; }
+
+        /// <inheritdoc/>
+        public int GetFeedResultLimitUser { get => GetFeedResultLimitUserConst; }
+
+        /// <inheritdoc/>
+        public int GetFeedResultLimitZone { get => GetFeedResultLimitZoneConst; }
+
+        /// <inheritdoc/>
+        public API MyGeotabAPI { get; private set; }
+
+        /// <inheritdoc/>
+        public bool MyGeotabAPIIsAuthenticated
+        {
+            get
+            {
+                if (MyGeotabAPI != null && MyGeotabAPI.SessionId != null)
+                {
+                    return true;
+                }
+                return false;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MyGeotabAPIHelper"/> class.
@@ -36,18 +78,51 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         }
 
         /// <inheritdoc/>
-        public async Task<IList<T>> GetAsync<T>(API myGeotabApi, Search search = null, int timeoutSeconds = DefaultTimeoutSeconds)
+        public async Task AuthenticateMyGeotabApiAsync(string userName, string password, string database, string server, int requestTimeoutSeconds = DefaultTimeoutSeconds)
         {
+            logger.Info($"Authenticating MyGeotab API (server:'{server}', database:'{database}', user:'{userName}').");
+
+            ValidateTimeoutSeconds(requestTimeoutSeconds);
+            var requestTimeoutMilliseconds = 0;
+            if (requestTimeoutSeconds > 0)
+            { 
+                requestTimeoutMilliseconds = requestTimeoutSeconds * 1000;
+            }
+
+            MyGeotabAPI = new API(userName, password, null, database, server, requestTimeoutMilliseconds);
+
+            try
+            {
+                await MyGeotabAPI.AuthenticateAsync();
+            }
+            catch (Exception exception)
+            {
+                // If the exception is related to connectivity, wrap it in a MyGeotabConnectionException. Otherwise, just pass it along.
+                if (exceptionHelper.ExceptionIsRelatedToMyGeotabConnectivityLoss(exception))
+                {
+                    throw new MyGeotabConnectionException("An exception occurred while attempting to authenticate the MyGeotab API.", exception);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<IList<T>> GetAsync<T>(Search search = null, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
+        {
+            ValidateTimeoutSeconds(timeoutSeconds);
+
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
             try
             {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-
-                Task<IList<T>> dataListTask = Task.Run(() => myGeotabApi.CallAsync<IList<T>>("Get", typeof(T), new { search }), cancellationTokenSource.Token);
-
-                return await dataListTask;
+                using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                {
+                    var dataListTask = await MyGeotabAPI.CallAsync<IList<T>>("Get", typeof(T), new { search }, cancellationTokenSource.Token);
+                    return dataListTask;
+                }
             }
             catch (OperationCanceledException exception)
             {
@@ -68,26 +143,48 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         }
 
         /// <inheritdoc/>
-        public async Task<FeedResult<T>> GetFeedAsync<T>(API myGeotabApi, DateTime? fromDate = null, int resultsLimit = GetFeedResultLimitDefault, int timeoutSeconds = DefaultTimeoutSeconds) where T : Entity
+        public async Task<FeedResult<T>> GetFeedAsync<T>(DateTime? fromDate = null, int resultsLimit = GetFeedResultLimitDefaultConst, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
         {
+            ValidateTimeoutSeconds(timeoutSeconds);
+
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
 
             try
             {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-
-                Task<FeedResult<T>> feedResultTask = Task.Run(() => myGeotabApi.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                if (typeParameterType.Name == nameof(ExceptionEvent))
                 {
-                    resultsLimit,
-                    search = new
+                    // Use an ExceptionEventSearch to enrure that invalidated ExceptionEvents are included in the data feed (since they are not by default).
+                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
                     {
-                        fromDate
+                        var feedResultTask = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                        {
+                            search = new ExceptionEventSearch 
+                            {
+                                FromDate = fromDate,
+                                IncludeInvalidated = true
+                            },
+                            resultsLimit
+                        }, cancellationTokenSource.Token);
+                        return feedResultTask;
                     }
-                }), cancellationTokenSource.Token);
-
-                return await feedResultTask;
+                }
+                else
+                {
+                    // Use the default search that includes FromDate only.
+                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    {
+                        var feedResultTask = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                        {
+                            resultsLimit,
+                            search = new
+                            {
+                                fromDate
+                            }
+                        }, cancellationTokenSource.Token);
+                        return feedResultTask;
+                    }
+                }
             }
             catch (OperationCanceledException exception)
             {
@@ -108,23 +205,45 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         }
 
         /// <inheritdoc/>
-        public async Task<FeedResult<T>> GetFeedAsync<T>(API myGeotabApi, long fromVersion, int resultsLimit = GetFeedResultLimitDefault, int timeoutSeconds = DefaultTimeoutSeconds) where T : Entity
+        public async Task<FeedResult<T>> GetFeedAsync<T>(long? fromVersion, int resultsLimit = GetFeedResultLimitDefaultConst, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
         {
+            ValidateTimeoutSeconds(timeoutSeconds);
+
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
 
             try
             {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-
-                Task<FeedResult<T>> feedResultTask = Task.Run(() => myGeotabApi.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                if (typeParameterType.Name == nameof(ExceptionEvent))
                 {
-                    fromVersion,
-                    resultsLimit
-                }), cancellationTokenSource.Token);
-
-                return await feedResultTask;
+                    // Use an ExceptionEventSearch to enrure that invalidated ExceptionEvents are included in the data feed (since they are not by default).
+                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    {
+                        var feedResultTask = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                        {
+                            search = new ExceptionEventSearch 
+                            { 
+                                IncludeInvalidated = true
+                            },
+                            fromVersion,
+                            resultsLimit
+                        }, cancellationTokenSource.Token);
+                        return feedResultTask;
+                    }
+                }
+                else
+                {
+                    // Use the default search that includes FromVersion only.
+                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    {
+                        var feedResultTask = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                        {
+                            fromVersion,
+                            resultsLimit
+                        }, cancellationTokenSource.Token);
+                        return feedResultTask;
+                    }
+                }
             }
             catch (OperationCanceledException exception)
             {
@@ -145,19 +264,51 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         }
 
         /// <inheritdoc/>
-        public async Task<object> SetAsync<T>(API myGeotabApi, T entity, int timeoutSeconds = DefaultTimeoutSeconds)
+        public async Task<VersionInformation> GetVersionInformationAsync(int timeoutSeconds = DefaultTimeoutSeconds)
         {
+            ValidateTimeoutSeconds(timeoutSeconds);
+
+            try
+            {
+                using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                {
+                    var versionInformationTask = await MyGeotabAPI.CallAsync<VersionInformation>("GetVersionInformation", null, cancellationTokenSource.Token);
+                    return versionInformationTask;
+                }
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new MyGeotabConnectionException($"MyGeotab API GetVersionInformationAsync call did not return within the allowed time of {timeoutSeconds} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
+            }
+            catch (Exception exception)
+            {
+                // If the exception is related to connectivity, wrap it in a MyGeotabConnectionException. Otherwise, just pass it along.
+                if (exceptionHelper.ExceptionIsRelatedToMyGeotabConnectivityLoss(exception))
+                {
+                    throw new MyGeotabConnectionException("An exception occurred while attempting to get data from the Geotab API via CallAsync (GetVersionInformation).", exception);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<object> SetAsync<T>(T entity, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
+        {
+            ValidateTimeoutSeconds(timeoutSeconds);
+
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
 
             try
             {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
-
-                Task<object> setTask = Task.Run(() => myGeotabApi.CallAsync<object>("Set", typeof(T), new { entity }), cancellationTokenSource.Token);
-
-                return await setTask;
+                using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                {
+                    var setTask = await MyGeotabAPI.CallAsync<object>("Set", typeof(T), new { entity }, cancellationTokenSource.Token);
+                    return setTask;
+                }
             }
             catch (OperationCanceledException exception)
             {
@@ -168,12 +319,24 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                 // If the exception is related to connectivity, wrap it in a MyGeotabConnectionException. Otherwise, just pass it along.
                 if (exceptionHelper.ExceptionIsRelatedToMyGeotabConnectivityLoss(exception))
                 {
-                    throw new MyGeotabConnectionException("An exception occurred while attempting to get data from the Geotab API via CallAsync (Get).", exception);
+                    throw new MyGeotabConnectionException("An exception occurred while attempting to get data from the Geotab API via CallAsync (Set).", exception);
                 }
                 else
                 {
                     throw;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Ensures that <paramref name="timeoutSeconds"/> is no less than <see cref="MinTimeoutSeconds"/> and throws an <see cref="ArgumentException"/> if otherwise.
+        /// </summary>
+        /// <param name="timeoutSeconds">The value to be validated.</param>
+        static void ValidateTimeoutSeconds(int timeoutSeconds)
+        {
+            if (timeoutSeconds < MinTimeoutSeconds)
+            {
+                throw new ArgumentException($"The supplied timeout value of {timeoutSeconds} seconds is lower than the minimum allowed timeout value of {MinTimeoutSeconds} seconds.");
             }
         }
     }

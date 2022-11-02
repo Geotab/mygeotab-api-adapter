@@ -4,8 +4,16 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("ExceptionEvents")]
-    public class DbExceptionEvent
+    public class DbExceptionEvent : IDbEntity
     {
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "ExceptionEvents";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
         [Key]
         public long id { get; set; }
         public string GeotabId { get; set; }
@@ -27,9 +35,11 @@ namespace MyGeotabAPIAdapter.Database.Models
             }
         }
         public long? DurationTicks { get; set; }
+        public DateTime LastModifiedDateTime { get; set; }
         public string RuleId { get; set; }
+        public short State { get; set; }
         public long? Version { get; set; }
         [ChangeTracker]
-        public DateTime RecordCreationTimeUtc { get; set; }
+        public DateTime RecordLastChangedUtc { get; set; }
     }
 }

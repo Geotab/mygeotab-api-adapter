@@ -11,13 +11,12 @@ namespace MyGeotabAPIAdapter.Database
     {
         String connectionProviderType;
         readonly String connectionString;
+        DataAccessProviderType providerType;
 
         /// <summary>
         /// Supported <see cref="DbProviderFactory"/> types.
         /// </summary>
-        /// public enum DataAccessProviderType { PostgreSQL, SQLite, SQLServer }
-        /// add Oracle support --- public enum DataAccessProviderType { PostgreSQL, SQLite, SQLServer, Oracle }
-        public enum DataAccessProviderType { PostgreSQL, SQLite, SQLServer, Oracle }
+        public enum DataAccessProviderType { PostgreSQL, SQLServer, Oracle, NullValue }
 
         /// <summary>
         /// The <see cref="Databases"/> identifier for the database associated with the subject <see cref="ConnectionInfo"/> instance.
@@ -41,6 +40,20 @@ namespace MyGeotabAPIAdapter.Database
         }
 
         /// <summary>
+        /// The <see cref="DataAccessProviderType"/> of the current <see cref="ConnectionInfo"/> instance.
+        /// </summary>
+        public DataAccessProviderType ProviderType 
+        { 
+            get => providerType;
+            private set { providerType = value; } 
+        }
+
+        /// <summary>
+        /// The maximum number of seconds that a database <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> should be thrown.
+        /// </summary>
+        public int TimeoutSecondsForDatabaseTasks { get; private set; }
+
+        /// <summary>
         /// Method is private to prevent usage.
         /// </summary>
         ConnectionInfo() { }
@@ -51,11 +64,13 @@ namespace MyGeotabAPIAdapter.Database
         /// <param name="connectionString">The database connection string.</param>
         /// <param name="dataAccessProviderType">A <see cref="String"/> representation of the <see cref="DataAccessProviderType"/> to be used when creating <see cref="System.Data.IDbConnection"/> instances.</param>
         /// <param name="database">The <see cref="Databases"/> identifier for the database associated with the subject <see cref="ConnectionInfo"/> instance.</param>
-        public ConnectionInfo(String connectionString, string dataAccessProviderType, Databases database)
+        /// <param name="timeoutSecondsForDatabaseTasks">The maximum number of seconds that a database <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> should be thrown.</param>
+        public ConnectionInfo(String connectionString, string dataAccessProviderType, Databases database, int timeoutSecondsForDatabaseTasks)
         {
             this.connectionString = connectionString;
             RegisterDbProviderFactory(dataAccessProviderType);
             this.Database = database;
+            this.TimeoutSecondsForDatabaseTasks = timeoutSecondsForDatabaseTasks;
         }
 
         /// <summary>
@@ -75,10 +90,6 @@ namespace MyGeotabAPIAdapter.Database
                     connectionProviderType = "Npgsql";
                     DbProviderFactories.RegisterFactory(connectionProviderType, Npgsql.NpgsqlFactory.Instance);
                     break;
-                case DataAccessProviderType.SQLite:
-                    connectionProviderType = "System.Data.SQLite";
-                    DbProviderFactories.RegisterFactory(connectionProviderType, System.Data.SQLite.SQLiteFactory.Instance);
-                    break;
                 case DataAccessProviderType.SQLServer:
                     connectionProviderType = "System.Data.SqlClient";
                     DbProviderFactories.RegisterFactory(connectionProviderType, Microsoft.Data.SqlClient.SqlClientFactory.Instance);
@@ -86,11 +97,12 @@ namespace MyGeotabAPIAdapter.Database
                 case DataAccessProviderType.Oracle:
                     connectionProviderType = "Oracle.ManagedDataAccess.Client";
                     DbProviderFactories.RegisterFactory(connectionProviderType, OracleClientFactory.Instance);
-                    //Console.WriteLine("test 1");
                     break;
                 default:
                     break;
             }
+
+            providerType = connectionProviderTypeValue;
         }
     }
 }

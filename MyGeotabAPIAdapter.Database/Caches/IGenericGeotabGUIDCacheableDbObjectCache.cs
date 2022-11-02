@@ -1,4 +1,5 @@
-﻿using MyGeotabAPIAdapter.Database.DataAccess;
+﻿#nullable enable
+using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.Models;
 using System;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         DateTime DefaultDateTime { get; }
 
         /// <summary>
-        /// Indicates whether the <see cref="InitializeAsync(UnitOfWorkContext, Databases)"/> has been invoked since the current class instance was created.
+        /// Indicates whether the <see cref="InitializeAsync(OptimizerDatabaseUnitOfWorkContext, Databases)"/> has been invoked since the current class instance was created.
         /// </summary>
         bool IsInitialized { get; }
 
@@ -48,21 +49,21 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// </summary>
         /// <param name="id">The <see cref="IGeotabGUIDCacheableDbEntity.id"/> of the object to retrieve from the cache.</param>
         /// <returns></returns>
-        Task<T> GetObjectAsync(long id);
+        Task<T?> GetObjectAsync(long id);
 
         /// <summary>
         /// Retrieves an object from the cache. If not found, returns <c>null</c>.
         /// </summary>
         /// <param name="geotabGUID">The <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/> of the object to retrieve from the cache.</param>
         /// <returns></returns>
-        Task<T> GetObjectByGeotabGUIDAsync(string geotabGUID);
+        Task<T?> GetObjectByGeotabGUIDAsync(string geotabGUID);
 
         /// <summary>
-        /// Retrieves an object from the cache. If not found, returns <c>null</c>. If multiple objects with the same <see cref="IGeotabGUIDCacheableDbEntity.GeotabId"/> are found, the one with the most recent <see cref="IGeotabGUIDCacheableDbEntity.LastUpsertedUtc"/> value will be returned.
+        /// Retrieves the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/> of an object in the cache. If not found, returns <c>null</c>.
         /// </summary>
-        /// <param name="geotabGUID">The <see cref="IGeotabGUIDCacheableDbEntity.GeotabId"/> of the object to retrieve from the cache.</param>
+        /// <param name="geotabId">The <see cref="IGeotabGUIDCacheableDbEntity.id"/> of the object in the cache for which to return the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/>.</param>
         /// <returns></returns>
-        Task<T> GetObjectByGeotabIdAsync(string geotabId);
+        Task<string?> GetObjectGeotabGUIDByGeotabIdAsync(string geotabId);
 
         /// <summary>
         /// Retrieves the <see cref="IGeotabGUIDCacheableDbEntity.id"/> of an object in the cache. If not found, returns <c>null</c>.
@@ -70,13 +71,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <param name="geotabGUID">The <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/> of the object in the cache for which to return the <see cref="IGeotabGUIDCacheableDbEntity.id"/>.</param>
         /// <returns></returns>
         Task<long?> GetObjectIdByGeotabGUIDAsync(string geotabGUID);
-
-        /// <summary>
-        /// Retrieves the <see cref="IGeotabGUIDCacheableDbEntity.id"/> of an object in the cache. If not found, returns <c>null</c>. If multiple objects with the same <see cref="IGeotabGUIDCacheableDbEntity.GeotabId"/> are found, the <see cref="IGeotabGUIDCacheableDbEntity.id"/> of the one with the most recent <see cref="IGeotabGUIDCacheableDbEntity.LastUpsertedUtc"/> value will be returned.
-        /// </summary>
-        /// <param name="geotabGUID">The <see cref="IGeotabGUIDCacheableDbEntity.GeotabId"/> of the object in the cache for which to return the <see cref="IGeotabGUIDCacheableDbEntity.id"/>.</param>
-        /// <returns></returns>
-        Task<long?> GetObjectIdByGeotabIdAsync(string geotabId);
 
         /// <summary>
         /// Retrieves all objects from the cache. If no objects are found, the returned list will be empty.

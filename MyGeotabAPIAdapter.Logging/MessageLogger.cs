@@ -32,7 +32,20 @@ namespace MyGeotabAPIAdapter.Logging
         }
 
         /// <inheritdoc/>
-        public void LogWaitForPrerequisiteProcessorsServicePause(string loggingClassName, string processorsNeverRunStatement, string processorsNotRunningStatement, string processorsWithNoDataProcessedStatement, TimeSpan delayBeforeNextCheck)
+        public void LogWaitForOrchestratorServiceServicePause(string loggingClassName, TimeSpan delayBeforeNextCheck)
+        {
+            var nextCheckDateTime = DateTime.UtcNow.Add(delayBeforeNextCheck);
+
+            var message = new StringBuilder();
+            message.AppendLine($"******** PAUSING SERVICE: {loggingClassName} because of the following:");
+            message.AppendLine($"> The Orchestrator service has not completed initialization.");
+            message.AppendLine($"The {loggingClassName} will check again at {nextCheckDateTime} (UTC) and will resume operation if the Orchestrator service has completed initialization at that time.");
+
+            logger.Info(message.ToString());
+        }
+
+        /// <inheritdoc/>
+        public void LogWaitForPrerequisiteServicesServicePause(string loggingClassName, string processorsNeverRunStatement, string processorsNotRunningStatement, string processorsWithNoDataProcessedStatement, TimeSpan delayBeforeNextCheck)
         {
             var nextCheckDateTime = DateTime.UtcNow.Add(delayBeforeNextCheck);
 
@@ -56,7 +69,7 @@ namespace MyGeotabAPIAdapter.Logging
         }
 
         /// <inheritdoc/>
-        public void LogWaitForPrerequisiteProcessorsServiceResumption(string loggingClassName)
+        public void LogWaitForPrerequisiteServicesServiceResumption(string loggingClassName)
         {
             logger.Info($"******** RESUMING SERVICE: {loggingClassName} now that all prerequisite processors are running.");
         }

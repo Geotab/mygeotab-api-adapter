@@ -1,10 +1,11 @@
-﻿using Dapper.Contrib.Extensions;
+﻿#nullable enable
+using Dapper.Contrib.Extensions;
 using System;
 
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("Users")]
-    public class DbUser : IDbEntity, IIdCacheableDbEntity
+    public class DbUser : IDbEntity, IIdCacheableDbEntity, IStatusableDbEntity
     {
         /// <inheritdoc/>
         [Write(false)]

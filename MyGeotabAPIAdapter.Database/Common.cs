@@ -13,6 +13,6 @@
         /// <summary>
         /// Database write operation types.
         /// </summary>
-        public enum DatabaseWriteOperationType { None, Insert, Update, Delete}
+        public enum DatabaseWriteOperationType { None, BulkInsert, Insert, BulkUpdate, Update, BulkDelete, Delete}
     }
 }

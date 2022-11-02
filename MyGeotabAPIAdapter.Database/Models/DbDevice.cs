@@ -5,7 +5,7 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("Devices")]
-    public class DbDevice : IDbEntity, IIdCacheableDbEntity
+    public class DbDevice : IDbEntity, IIdCacheableDbEntity, IStatusableDbEntity
     {
         /// <inheritdoc/>
         [Write(false)]

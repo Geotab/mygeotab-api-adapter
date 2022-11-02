@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using Microsoft.Data.SqlClient;
+using NLog;
 using System;
 using System.Data.Common;
 using System.Reflection;
@@ -12,6 +13,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     public class UnitOfWork : IDisposable
     {
         readonly Logger logger = LogManager.GetCurrentClassLogger();
+        SqlConnection sqlConnection;
 
         /// <summary>
         /// The <see cref="DbConnection"/> associated with the <see cref="UnitOfWork"/> instance.
@@ -29,6 +31,28 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         public bool IsDisposed { get; private set; } = false;
 
         /// <summary>
+        /// The <see cref="Microsoft.Data.SqlClient.SqlConnection"/> associated with the <see cref="UnitOfWork"/> instance. Intended for use with SQL Server bulk operations.
+        /// </summary>
+        public SqlConnection SqlConnection 
+        { 
+            get => sqlConnection;
+            internal set 
+            {
+                if (sqlConnection != null)
+                {
+                    throw new InvalidOperationException("Cannot set the SqlConnection because it has already been set.");
+                }
+                sqlConnection = value;
+                SqlTransaction = sqlConnection.BeginTransaction();
+            }
+        }
+
+        /// <summary>
+        /// The <see cref="Microsoft.Data.SqlClient.SqlTransaction"/> associated with the <see cref="UnitOfWork"/> instance. Intended for use with SQL Server bulk operations.
+        /// </summary>
+        public SqlTransaction SqlTransaction { get; private set; }
+
+        /// <summary>
         /// The maximum number of seconds that a database <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> should be thrown.
         /// </summary>
         public int TimeoutSecondsForDatabaseTasks { get; }
@@ -39,7 +63,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         public DbTransaction Transaction { get; private set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="UnitOfWork"/> class and starts a database transaction on the <paramref name="connection"/>. Should be called by the <see cref="IUnitOfWorkContext.CreateUnitOfWork(Databases, int)"/> method.
+        /// Initializes a new instance of the <see cref="UnitOfWork"/> class and starts a database transaction on the <paramref name="connection"/>. Should be called by the <see cref="IUnitOfWorkContext.CreateUnitOfWork(Databases, int, DatabaseConnectionType)"/> method.
         /// </summary>
         /// <param name="connection">An open <see cref="DbConnection"/> to be associated with the <see cref="UnitOfWork"/> instance.</param>
         /// <param name="timeoutSecondsForDatabaseTasks">The maximum number of seconds that a database <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> should be thrown.</param>
@@ -88,6 +112,18 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     Connection.Dispose();
                 }
 
+                if (SqlTransaction != null)
+                { 
+                    SqlTransaction.Dispose();
+                    logger.Trace($"{nameof(UnitOfWork)} [Id: {Id}] SQL Server database transaction disposed.");
+                }
+
+                if (SqlConnection != null && SqlConnection.State == System.Data.ConnectionState.Open)
+                { 
+                    SqlConnection.Close();
+                    SqlConnection.Dispose();
+                }
+
                 var id = Id;
                 Id = string.Empty;
                 IsDisposed = true;
@@ -104,9 +140,18 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            await Transaction.CommitAsync();
+            if (Transaction != null)
+            {
+                await Transaction.CommitAsync();
+                logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] database transaction committed.");
+            }
 
-            logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] database transaction committed.");
+            if (SqlTransaction != null)
+            { 
+                await SqlTransaction.CommitAsync();
+                logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] SQL Server database transaction committed.");
+            }
+            
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
@@ -119,9 +164,18 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            await Transaction.RollbackAsync();
+            if (Transaction != null)
+            {
+                await Transaction.RollbackAsync();
+                logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] database transaction rolled back.");
+            }
 
-            logger.Warn($"{nameof(UnitOfWork)} [Id: {Id}] database transaction rolled back.");
+            if (SqlTransaction != null)
+            {
+                await SqlTransaction.RollbackAsync();
+                logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] SQL Server database transaction rolled back.");
+            }
+
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }

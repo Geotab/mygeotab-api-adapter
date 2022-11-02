@@ -1,13 +1,27 @@
-﻿using Dapper.Contrib.Extensions;
+﻿#nullable enable
+using Dapper.Contrib.Extensions;
 using System;
 
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("DVIRDefects")]
-    public class DbDVIRDefect
+    public class DbDVIRDefect : IDbEntity, IIdCacheableDbEntity, IStatusableDbEntity
     {
-        [Key]
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "DVIRDefects";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public DateTime LastUpsertedUtc { get => RecordLastChangedUtc; }
+
+        [Write(false)]
         public long id { get; set; }
+        [ExplicitKey]
         public string GeotabId { get; set; }
         public string DVIRLogId { get; set; }
         public string DefectListAssetType { get; set; }
@@ -24,7 +38,5 @@ namespace MyGeotabAPIAdapter.Database.Models
         public int EntityStatus { get; set; }
         [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
-        [Write(false)]
-        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
     }
 }

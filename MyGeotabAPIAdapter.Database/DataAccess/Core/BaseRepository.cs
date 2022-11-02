@@ -1,7 +1,11 @@
-﻿using Dapper.Contrib.Extensions;
+﻿using Dapper;
+using Dapper.Contrib.Extensions;
+using NLog;
+using Polly;
+using Polly.Wrap;
 using System;
+using System.Data;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,15 +15,30 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     /// A generic base repository class that handles database CRUD operations.
     /// </summary>
     /// <typeparam name="T">The type of entity to be used for representation of database records and for which CRUD operations are to be performed.</typeparam>
-    public abstract class BaseRepository<T> : IDisposable where T : class
+    public class BaseRepository<T> : IBaseRepository<T>, IDisposable where T : class
     {
-        ConnectionProvider connectionProvider;
+        const long NullLongValue = -1;
 
-        /// <summary>
-        /// Creates a new <see cref="BaseRepository{T}"/> instance.
-        /// </summary>
-        public BaseRepository()
+        // Polly-related items:
+        const int MaxRetries = 10;
+        readonly AsyncPolicyWrap asyncDatabaseCommandTimeoutAndRetryPolicyWrap;
+
+        /// <inheritdoc/>
+        public DateTime MaxDateTimeForDatabaseParameters { get => new(2100, 1, 1); }
+
+        /// <inheritdoc/>
+        public DateTime MinDateTimeForDatabaseParameters { get => new(1900, 1, 1); }
+
+        readonly IConnectionContext connectionContext;
+
+        readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+        public BaseRepository(IConnectionContext connectionContext)
         {
+            this.connectionContext = connectionContext;
+
+            // Setup a database command timeout and retry policy wrap.
+            asyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(this.connectionContext.TimeoutSecondsForDatabaseTasks, MaxRetries, logger);
         }
 
         /// <summary>
@@ -39,398 +58,354 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             }
         }
 
-        /// <summary>
-        /// Deletes a record from a database table.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        /// <param name="entity">An entity representing the database record to be deleted.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<bool> DeleteAsync(ConnectionInfo connectionInfo, T entity, int commandTimeout)
+        /// <inheritdoc/>
+        public async Task<bool> DeleteAsync(T entity, CancellationTokenSource methodCancellationTokenSource)
         {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            bool result = false;
             try
             {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                SetConnection(connectionInfo);
-                using (var connection = await connectionProvider.GetOpenConnectionAsync())
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                 {
-                    return await connection.DeleteAsync<T>(entity);
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                    var connection = connectionContext.GetConnection();
+                    var transaction = connectionContext.GetTransaction();
+                    result = await connection.DeleteAsync<T>(entity, transaction, commandTimeout: timeoutSeconds);
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            if (result != false)
+            {
+                return result;
+            }
+            throw new Exception($"The subject {typeof(T).Name} entity was not deleted.");
+        }
+
+        /// <summary>
+        /// Executes the stored procedure identified by <paramref name="storedProcedureName"/>, supplying the parameter values included in <paramref name="parameters"/> and returns an <see cref="IEnumerable{T}"/> with the results (or <c>null</c> if no results are returned by the stored procedure). This method must be executed by an inheriting class that is able to receive specific parameter values for <typeparamref name="T"/> and build them into an anonymous type to be supplied as <paramref name="parameters"/>. 
+        /// </summary>
+        /// <param name="storedProcedureName">The name of the stored procedure to be executed.</param>
+        /// <param name="parameters">The parameter values to be supplied as an anonymous type to the stored procedure.</param>
+        /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns></returns>
+        public async Task<IEnumerable<T>> ExecuteStoredProcedureQueryAsync(string storedProcedureName, object parameters, CancellationTokenSource methodCancellationTokenSource)
+        {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            IEnumerable<T> records = null;
+            try
+            {
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                    var connection = connectionContext.GetConnection();
+                    var transaction = connectionContext.GetTransaction();
+                    records = await connection.QueryAsync<T>(storedProcedureName, parameters, transaction, commandTimeout: timeoutSeconds, commandType: CommandType.StoredProcedure);
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            return records;
+        }
+
+        /// <inheritdoc/>
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "")
+        {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            IEnumerable<T> records = null;
+            try
+            {
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                    var connection = connectionContext.GetConnection();
+                    var transaction = connectionContext.GetTransaction();
+                    records = await connection.GetAllAsync<T>(transaction, commandTimeout: timeoutSeconds, resultsLimit, changedSince, sortColumnName);
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            if (records != null)
+            {
+                return records;
+            }
+            throw new Exception($"GetAllAsync<...resultsLimit> method failed to return a result for entity type '{typeof(T).Name}'.");
+        }
+
+        /// <inheritdoc/>
+        public async Task<IEnumerable<T>> GetAsync(dynamic dynamicParams, CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "")
+        {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            IEnumerable<T> records = null;
+            try
+            {
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                    var connection = connectionContext.GetConnection();
+                    var transaction = connectionContext.GetTransaction();
+                    records = await connection.GetByParamAsync<T>(dynamicParams as object, transaction, commandTimeout: timeoutSeconds, resultsLimit, changedSince, sortColumnName);
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            if (records != null)
+            {
+                return records;
+            }
+            throw new Exception($"No {typeof(T).Name} entities matching the specified search parameters were found.");
+        }
+
+        /// <inheritdoc/>
+        public async Task<T> GetAsync(int Id, CancellationTokenSource methodCancellationTokenSource)
+        {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            T record = null;
+            try
+            {
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                    var connection = connectionContext.GetConnection();
+                    var transaction = connectionContext.GetTransaction();
+                    record = await connection.GetAsync<T>(Id, transaction, commandTimeout: timeoutSeconds);
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            // TODO: Determine whether to throw exception or just return null.
+
+            //if (record != null)
+            //{
+            //    return record;
+            //}
+            //throw new Exception($"{typeof(T).Name} with ID of '{Id}' not found.");
+            return record;
+        }
+
+        /// <inheritdoc/>
+        public async Task<T> GetAsync(string Id, CancellationTokenSource methodCancellationTokenSource)
+        {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            T record = null;
+            try
+            {
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                    var connection = connectionContext.GetConnection();
+                    var transaction = connectionContext.GetTransaction();
+                    record = await connection.GetAsync<T>(Id, transaction, commandTimeout: timeoutSeconds);
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            // TODO: Determine whether to throw exception or just return null.
+
+            //if (record != null)
+            //{
+            //    return record;
+            //}
+            //throw new Exception($"{typeof(T).Name} with ID of '{Id}' not found.");
+            return record;
+        }
+
+        /// <inheritdoc/>
+        public async Task<long> InsertAsync(T entity, CancellationTokenSource methodCancellationTokenSource)
+        {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            long result = NullLongValue;
+            try
+            {
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                    var connection = connectionContext.GetConnection();
+                    var transaction = connectionContext.GetTransaction();
+                    result = await connection.InsertAsync(entity, transaction, commandTimeout: timeoutSeconds);
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            if (result != NullLongValue)
+            {
+                return result;
+            }
+            throw new Exception($"The subject {typeof(T).Name} entity was not inserted.");
+        }
+
+        /// <inheritdoc/>
+        public async Task<long> InsertAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource)
+        {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            var insertedEntityCount = 0;
+
+            try
+            {
+                CancellationTokenSource timeoutCancellationTokenSource = new();
+                timeoutCancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(connectionContext.TimeoutSecondsForDatabaseTasks));
+
+                foreach (var entity in entities)
+                {
+                    await InsertAsync(entity, methodCancellationTokenSource);
+                    insertedEntityCount += 1;
+                    methodCancellationToken.ThrowIfCancellationRequested();
                 }
             }
             catch (OperationCanceledException exception)
             {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
             }
             catch (Exception exception)
             {
                 throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
             }
+
+            return insertedEntityCount;
         }
 
-        /// <summary>
-        /// Deletes a record from a database table as part of a <see cref="DbTransaction"/>.
-        /// </summary>
-        /// <param name="connection">The database connection to be used to perform the subject operation.</param>
-        /// <param name="transaction">The database transaction within which to perform the subject operation.</param>
-        /// <param name="entity">An entity representing the database record to be deleted.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<bool> DeleteAsync(DbConnection connection, DbTransaction transaction, T entity, int commandTimeout)
+        /// <inheritdoc/>
+        public async Task<bool> UpdateAsync(T entity, CancellationTokenSource methodCancellationTokenSource)
         {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            bool result = false;
             try
             {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                return await connection.DeleteAsync<T>(entity, transaction);
+                    var connection = connectionContext.GetConnection();
+                    var transaction = connectionContext.GetTransaction();
+                    result = await connection.UpdateAsync<T>(entity, transaction, commandTimeout: timeoutSeconds);
+                }, new Context());
             }
             catch (OperationCanceledException exception)
             {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
             }
             catch (Exception exception)
             {
                 throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
             }
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            if (result != false)
+            {
+                return result;
+            }
+            throw new Exception($"The subject {typeof(T).Name} entity was not updated.");
         }
 
-
-        /// <summary>
-        /// Returns a collection of objects representing records in a database table that match the specified search criteria.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        /// <param name="dynamicParams">The dynamic parameters to be used comprise the WHERE clause of the subject operation.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "<Pending>")]
-        public async Task<IEnumerable<T>> GetAsync(ConnectionInfo connectionInfo, dynamic dynamicParams, int commandTimeout)
+        /// <inheritdoc/>
+        public async Task<long> UpdateAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource)
         {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+
+            var updateedEntityCount = 0;
+
             try
             {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
+                CancellationTokenSource timeoutCancellationTokenSource = new();
+                timeoutCancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(connectionContext.TimeoutSecondsForDatabaseTasks));
 
-                SetConnection(connectionInfo);
-                using (var connection = await connectionProvider.GetOpenConnectionAsync())
+                foreach (var entity in entities)
                 {
-                    return await connection.GetByParamAsync<T>(dynamicParams as object);
+                    await UpdateAsync(entity, methodCancellationTokenSource);
+                    updateedEntityCount += 1;
+                    methodCancellationToken.ThrowIfCancellationRequested();
                 }
             }
             catch (OperationCanceledException exception)
             {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
             }
             catch (Exception exception)
             {
                 throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
             }
-        }
 
-        /// <summary>
-        /// Returns a collection of objects representing records in a database table that match the specified search criteria. This overload is intended for use within a <see cref="DbTransaction"/>.
-        /// </summary>
-        /// <param name="connection">The database connection to be used to perform the subject operation.</param>
-        /// <param name="transaction">The database transaction within which to perform the subject operation.</param>
-        /// <param name="dynamicParams">The dynamic parameters to be used comprise the WHERE clause of the subject operation.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<IEnumerable<T>> GetAsync(DbConnection connection, DbTransaction transaction, dynamic dynamicParams, int commandTimeout)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                return await connection.GetByParamAsync<T>(dynamicParams as object, transaction);
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Returns a collection of objects representing all records in a database table.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <param name="resultsLimit">The maximum number of entities to return. If null, no limit is applied.</param>
-        /// <param name="changedSince">Only select entities where the <see cref="ChangeTrackerAttribute"/> property has a value greater than this <see cref="DateTime"/>. If null, no <see cref="DateTime"/> filter is applied.</param>
-        /// <returns></returns>
-        public async Task<IEnumerable<T>> GetAllAsync(ConnectionInfo connectionInfo, int commandTimeout, int? resultsLimit = null, DateTime? changedSince = null)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                SetConnection(connectionInfo);
-                using (var connection = await connectionProvider.GetOpenConnectionAsync())
-                {
-                    return await connection.GetAllAsync<T>(null, null, resultsLimit, changedSince);
-                }
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Returns a collection of objects representing all records in a database table.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<IEnumerable<T>> GetAllAsync(ConnectionInfo connectionInfo, int commandTimeout)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                SetConnection(connectionInfo);
-                using (var connection = await connectionProvider.GetOpenConnectionAsync())
-                {
-                    return await connection.GetAllAsync<T>();
-                }
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Returns a collection of objects representing all records in a database table. This overload is intended for use within a <see cref="DbTransaction"/>.
-        /// </summary>
-        /// <param name="connection">The database connection to be used to perform the subject operation.</param>
-        /// <param name="transaction">The database transaction within which to perform the subject operation.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<IEnumerable<T>> GetAllAsync(DbConnection connection, DbTransaction transaction, int commandTimeout)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                return await connection.GetAllAsync<T>(transaction);
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Returns an object representing a single record in a database table.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        /// <param name="Id">The ID of the database record to be returned.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<T> GetAsync(ConnectionInfo connectionInfo, int Id, int commandTimeout)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                SetConnection(connectionInfo);
-                using (var connection = await connectionProvider.GetOpenConnectionAsync())
-                {
-                    var record = await connection.GetAsync<T>(Id);
-
-                    if (record != null)
-                    {
-                        return record;
-                    }
-                }
-                throw new Exception($"{typeof(T).Name} with ID of '{Id}' not found.");
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Returns an object representing a single record in a database table. This overload is intended for use within a <see cref="DbTransaction"/>.
-        /// </summary>
-        /// <param name="connection">The database connection to be used to perform the subject operation.</param>
-        /// <param name="transaction">The database transaction within which to perform the subject operation.</param>
-        /// <param name="Id">The ID of the database record to be returned.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<T> GetAsync(DbConnection connection, DbTransaction transaction, int Id, int commandTimeout)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                var record = await connection.GetAsync<T>(Id, transaction);
-
-                if (record != null)
-                {
-                    return record;
-                }
-                throw new Exception($"{typeof(T).Name} with ID of '{Id}' not found.");
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Inserts a record into a database table.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        /// <param name="entity">An entity representing the database record to be inserted.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<long> InsertAsync(ConnectionInfo connectionInfo, T entity, int commandTimeout)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                SetConnection(connectionInfo);
-                using (var connection = await connectionProvider.GetOpenConnectionAsync())
-                {
-                    return await connection.InsertAsync(entity);
-                }
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Inserts a record into a database table as part of a <see cref="DbTransaction"/>.
-        /// </summary>
-        /// <param name="connection">The database connection to be used to perform the subject operation.</param>
-        /// <param name="transaction">The database transaction within which to perform the subject operation.</param>
-        /// <param name="entity">An entity representing the database record to be inserted.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<long> InsertAsync(DbConnection connection, DbTransaction transaction, T entity, int commandTimeout)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                return await connection.InsertAsync(entity, transaction);
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Sets the <see cref="ConnectionProvider"/> to be used in working with <see cref="DbConnection"/> instances.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        public void SetConnection(ConnectionInfo connectionInfo)
-        {
-            connectionProvider = new ConnectionProvider(connectionInfo);
-        }
-
-        /// <summary>
-        /// Updates a record in a database table.
-        /// </summary>
-        /// <param name="connectionInfo">The database connection information.</param>
-        /// <param name="entity">An entity representing the database record to be updated.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<bool> UpdateAsync(ConnectionInfo connectionInfo, T entity, int commandTimeout)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                SetConnection(connectionInfo);
-                using (var connection = await connectionProvider.GetOpenConnectionAsync())
-                {
-                    return await connection.UpdateAsync<T>(entity);
-                }
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
-        }
-
-        /// <summary>
-        /// Updates a record in a database table as part of a <see cref="DbTransaction"/>.
-        /// </summary>
-        /// <param name="connection">The database connection to be used to perform the subject operation.</param>
-        /// <param name="transaction">The database transaction within which to perform the subject operation.</param>
-        /// <param name="entity">An entity representing the database record to be updated.</param>
-        /// <param name="commandTimeout">The number of seconds before command execution timeout.</param>
-        /// <returns></returns>
-        public async Task<bool> UpdateAsync(DbConnection connection, DbTransaction transaction, T entity, int commandTimeout)
-        {
-            try
-            {
-                CancellationTokenSource cancellationTokenSource = new();
-                cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(commandTimeout));
-
-                return await connection.UpdateAsync<T>(entity, transaction);
-            }
-            catch (OperationCanceledException exception)
-            {
-                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {commandTimeout} seconds.", exception);
-            }
-            catch (Exception exception)
-            {
-                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
-            }
+            return updateedEntityCount;
         }
     }
 }

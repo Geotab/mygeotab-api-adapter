@@ -13,6 +13,11 @@ namespace MyGeotabAPIAdapter.Helpers
         DateTimeIntervalType DateTimeIntervalType { get; }
 
         /// <summary>
+        /// The default <see cref="DateTime"/> value to use in place of a null value.
+        /// </summary>
+        DateTime DefaultDateTime { get; }
+
+        /// <summary>
         /// Indicates whether the timespan defined by <paramref name="range1MinDateTime"/> and <paramref name="range1MaxDateTime"/> falls within the timespan defined by <paramref name="range2MinDateTime"/> and <paramref name="range2MaxDateTime"/>
         /// </summary>
         /// <param name="range1MinDateTime">The lower limit of the "Range 1" timespan.</param>
@@ -29,6 +34,29 @@ namespace MyGeotabAPIAdapter.Helpers
         /// <param name="maxDateTime">The upper limit of the timespan.</param>
         /// <returns></returns>
         bool DateTimeRangeIsValid(DateTime? minDateTime, DateTime? maxDateTime);
+
+        /// <summary>
+        /// Returns the <paramref name="dateTime"/> if it is not null, or <see cref="DefaultDateTime"/> otherwise.
+        /// </summary>
+        /// <param name="dateTime">The <see cref="DateTime"/> to be evaluated.</param>
+        /// <returns></returns>
+        DateTime GetDateTimeOrDefault(DateTime? dateTime);
+
+        /// <summary>
+        /// Evaluates the supplied <see cref="DateTime"/> values and returns the greater of the two. If one is null, the other is returned. If both are null, an <see cref="ArgumentException"/> is thrown.
+        /// </summary>
+        /// <param name="dateTime1">The first DateTime to compare.</param>
+        /// <param name="dateTime2">The second DateTime to compare.</param>
+        /// <returns></returns>
+        DateTime GetGreatestDateTime(DateTime? dateTime1, DateTime? dateTime2);
+
+        /// <summary>
+        /// Determines the end time using the input parameter values and then returns the <see cref="TimeSpan"/> remaining between the current time and the end time.
+        /// </summary>
+        /// <param name="startTimeUTC">The start time, in Coordinated Universal Time (UTC), of the <see cref="TimeSpan"/>.</param>
+        /// <param name="timeSpanSeconds">The duration of the <see cref="TimeSpan"/> in seconds.</param>
+        /// <returns></returns>
+        TimeSpan GetRemainingTimeSpan(DateTime startTimeUTC, int timeSpanSeconds);
 
         /// <summary>
         /// Returns the <see cref="TimeSpan"/> to the next daily start time calculated based on the <see cref="DateTime.TimeOfDay"/> of the <paramref name="dailyStartTimeUTC"/> and the <paramref name="runTimeAfterStartSeconds"/>:

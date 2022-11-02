@@ -63,7 +63,28 @@ namespace MyGeotabAPIAdapter.Database.Models
         }
         public long? AdapterDbLastId { get; set; }
         public string? AdapterDbLastGeotabId { get; set; }
-        public DateTime? AdapterDbLastRecordCreationTimeUtc { get; set; }
+        [Write(false)]
+        public DateTime? AdapterDbLastRecordCreationTimeUtc
+        {
+            get 
+            {
+                if (AdapterDbLastRecordCreationTimeUtcTicks.HasValue)
+                { 
+                    var dateTime = new DateTime(AdapterDbLastRecordCreationTimeUtcTicks.Value);
+                    return dateTime;
+                }
+                return default; 
+            }
+            set
+            {
+                if (value.HasValue)
+                {
+                    var dateTime = value.Value;
+                    AdapterDbLastRecordCreationTimeUtcTicks = dateTime.Ticks;
+                }
+            }
+        }
+        public long? AdapterDbLastRecordCreationTimeUtcTicks { get; set; }
         [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
     }

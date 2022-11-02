@@ -1,53 +1,74 @@
 ﻿using Geotab.Checkmate.ObjectModel;
 using Geotab.Checkmate.ObjectModel.Engine;
 using Microsoft.CSharp.RuntimeBinder;
-using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.Configuration.Add_Ons.VSS;
+using MyGeotabAPIAdapter.Database.Models.Add_Ons.VSS;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Reflection;
 
 namespace MyGeotabAPIAdapter.Add_Ons.VSS
 {
     /// <summary>
-    /// Maps between various <see cref="Geotab.Checkmate.ObjectModel.Entity"/> objects and <see cref="MyGeotabAPIAdapter.Database.Models"/> objects related specifically to the VSS Add-On.
+    /// A class that maps between various <see cref="Entity"/> objects and <see cref="Database.Models.Add_Ons.VSS"/> objects related specifically to the VSS Add-On.
     /// </summary>
-    static class VSSObjectMapper
+    internal class VSSObjectMapper : IVSSObjectMapper
     {
         const string ISO8601DateTimeFormatString = "yyyy-MM-ddThh:mm:ssZ";
-        public const int MinimumLengthForVIN = 17;
+        const int MinLengthForVIN = 17;
+
+        readonly IGenericGeotabObjectHydrator<Device> deviceGeotabObjectHydrator;
+        readonly IUnmappedDiagnosticManager unmappedDiagnosticManager;
+        readonly IVSSConfiguration vssConfiguration;
+
+        readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+        /// <inheritdoc/>
+        public int MinimumLengthForVIN
+        {
+            get => MinLengthForVIN;
+        }
 
         /// <summary>
-        /// Converts the supplied <see cref="DbOVDSServerCommand"/> into a <see cref="DbFailedOVDSServerCommand"/>.
+        /// Initializes a new instance of the <see cref="VSSObjectMapper"/> class.
         /// </summary>
-        /// <param name="dbOVDSServerCommand">The <see cref="DbOVDSServerCommand"/> to be converted.</param>
-        /// <param name="failureMessage">A message indicating the reason why processing of the OVDS server command failed.</param>
-        /// <returns></returns>
-        public static DbFailedOVDSServerCommand GetDbFailedOVDSServerCommand(DbOVDSServerCommand dbOVDSServerCommand, string failureMessage)
+        public VSSObjectMapper(IGenericGeotabObjectHydrator<Device> deviceGeotabObjectHydrator, IUnmappedDiagnosticManager unmappedDiagnosticManager, IVSSConfiguration vssConfiguration)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            this.deviceGeotabObjectHydrator = deviceGeotabObjectHydrator;
+            this.unmappedDiagnosticManager = unmappedDiagnosticManager;
+            this.vssConfiguration = vssConfiguration;
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <inheritdoc/>
+        public DbFailedOVDSServerCommand GetDbFailedOVDSServerCommand(DbOVDSServerCommand dbOVDSServerCommand, string failureMessage)
         {
             DbFailedOVDSServerCommand dbFailedOVDSServerCommand = new()
             {
                 Command = dbOVDSServerCommand.Command,
                 OVDSServerCommandId = dbOVDSServerCommand.id,
-                FailureMessage = failureMessage
+                FailureMessage = failureMessage,
+                RecordCreationTimeUtc = DateTime.UtcNow,
+                DatabaseWriteOperationType = Database.Common.DatabaseWriteOperationType.Insert
             };
             return dbFailedOVDSServerCommand;
         }
 
-        /// <summary>
-        /// Converts the supplied list of <see cref="LogRecord"/> objects into a list of <see cref="DbOVDSServerCommand"/> objects.
-        /// </summary>
-        /// <param name="logRecords">The list of <see cref="LogRecord"/> objects to be converted.</param>
-        /// <param name="vssConfiguration">The <see cref="VSSConfiguration"/> from which to obtain needed configuration settings.</param>
-        /// <param name="cacheManager">The <see cref="CacheManager"/> to leverage for obtaining VIN information for <see cref="Device"/>s.</param>
-        /// <returns></returns>
-        public static List<DbOVDSServerCommand> GetDbOVDSServerSetCommands(IList<LogRecord> logRecords, VSSConfiguration vssConfiguration, CacheManager cacheManager)
+        /// <inheritdoc/>
+        public List<DbOVDSServerCommand> GetDbOVDSServerSetCommands(List<LogRecord> logRecords)
         {
             var dbOVDSServerCommands = new List<DbOVDSServerCommand>();
             DbOVDSServerCommand dbOVDSServerCommand;
             foreach (var logRecord in logRecords)
             {
                 // Get the VIN from the Device associated with the LogRecord. If no VIN is associated with the Device, do not generate OVDS SET command(s), since VIN is a crucial identifier.
-                string deviceVIN = GetVIN(cacheManager, logRecord.Device);
+                string deviceVIN = GetVIN(logRecord.Device);
                 if (deviceVIN.Length < MinimumLengthForVIN)
                 {
                     continue;
@@ -58,9 +79,9 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
                 {
                     string vssValue = vssPathMap.GeotabObjectPropertyName switch
                     {
-                        nameof(VSSConfiguration.GeotabObjectFieldNames.Latitude) => logRecord.Latitude.ToString(),
-                        nameof(VSSConfiguration.GeotabObjectFieldNames.Longitude) => logRecord.Longitude.ToString(),
-                        nameof(VSSConfiguration.GeotabObjectFieldNames.Speed) => logRecord.Speed.ToString(),
+                        nameof(GeotabObjectFieldNames.Latitude) => logRecord.Latitude.ToString(),
+                        nameof(GeotabObjectFieldNames.Longitude) => logRecord.Longitude.ToString(),
+                        nameof(GeotabObjectFieldNames.Speed) => logRecord.Speed.ToString(),
                         _ => throw new NotImplementedException($"Support for the '{vssPathMap.GeotabObjectPropertyName}' property has not been implemented."),
                     };
 
@@ -69,7 +90,8 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
                     // Generate a DbOVDSServerCommand and add it to the list.
                     dbOVDSServerCommand = new DbOVDSServerCommand
                     {
-                        Command = GetOVDSSetCommand(vssConfiguration.OVDSSetCommandTemplate, VSSConfiguration.PlaceholderStringForVINValue, VSSConfiguration.PlaceholderStringForPathValue, VSSConfiguration.PlaceholderStringForValueValue, VSSConfiguration.PlaceholderStringForTimestampValue, deviceVIN, vssPathMap.VSSPath, vssValueFormatted, logRecord.DateTime.GetValueOrDefault().ToString(ISO8601DateTimeFormatString)),
+                        Command = GetOVDSSetCommand(vssConfiguration.OVDSSetCommandTemplate, vssConfiguration.PlaceholderStringForVINValue, vssConfiguration.PlaceholderStringForPathValue, vssConfiguration.PlaceholderStringForValueValue, vssConfiguration.PlaceholderStringForTimestampValue, deviceVIN, vssPathMap.VSSPath, vssValueFormatted, logRecord.DateTime.GetValueOrDefault().ToString(ISO8601DateTimeFormatString)),
+                        DatabaseWriteOperationType = Database.Common.DatabaseWriteOperationType.Insert,
                         RecordCreationTimeUtc = DateTime.UtcNow
                     };
                     dbOVDSServerCommands.Add(dbOVDSServerCommand);
@@ -78,15 +100,8 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
             return dbOVDSServerCommands;
         }
 
-        /// <summary>
-        /// Converts the supplied list of <see cref="StatusData"/> objects into a list of <see cref="DbOVDSServerCommand"/> objects.
-        /// </summary>
-        /// <param name="statusDatas">The list of <see cref="StatusData"/> objects to be converted.</param>
-        /// <param name="vssConfiguration">The <see cref="VSSConfiguration"/> from which to obtain needed configuration settings.</param>
-        /// <param name="cacheManager">The <see cref="CacheManager"/> to leverage for obtaining VIN information for <see cref="Device"/>s.</param>
-        /// <param name="unmappedDiagnosticManager">The <see cref="UnmappedDiagnosticManager"/> to use if <see cref="UnmappedDiagnostic"/>s are being logged.</param>
-        /// <returns></returns>
-        public static List<DbOVDSServerCommand> GetDbOVDSServerSetCommands(IList<StatusData> statusDatas, VSSConfiguration vssConfiguration, CacheManager cacheManager, UnmappedDiagnosticManager unmappedDiagnosticManager = null)
+        /// <inheritdoc/>
+        public List<DbOVDSServerCommand> GetDbOVDSServerSetCommands(List<StatusData> statusDatas)
         {
             var dbOVDSServerCommands = new List<DbOVDSServerCommand>();
             DbOVDSServerCommand dbOVDSServerCommand;
@@ -115,7 +130,7 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
                 if (targetStatusDataVSSPathMap != null)
                 {
                     // Get the VIN from the Device associated with the StatusData. If no VIN is associated with the Device, do not generate OVDS SET command(s), since VIN is a crucial identifier.
-                    string deviceVIN = GetVIN(cacheManager, statusData.Device);
+                    string deviceVIN = GetVIN(statusData.Device);
                     if (deviceVIN.Length < MinimumLengthForVIN)
                     {
                         continue;
@@ -143,7 +158,8 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
 
                     dbOVDSServerCommand = new DbOVDSServerCommand
                     {
-                        Command = GetOVDSSetCommand(ovdsSetCommandTemplate, VSSConfiguration.PlaceholderStringForVINValue, VSSConfiguration.PlaceholderStringForPathValue, VSSConfiguration.PlaceholderStringForValueValue, VSSConfiguration.PlaceholderStringForTimestampValue, deviceVIN, targetStatusDataVSSPathMap.VSSPath, vssValueFormatted, statusData.DateTime.GetValueOrDefault().ToString(ISO8601DateTimeFormatString)),
+                        Command = GetOVDSSetCommand(ovdsSetCommandTemplate, vssConfiguration.PlaceholderStringForVINValue, vssConfiguration.PlaceholderStringForPathValue, vssConfiguration.PlaceholderStringForValueValue, vssConfiguration.PlaceholderStringForTimestampValue, deviceVIN, targetStatusDataVSSPathMap.VSSPath, vssValueFormatted, statusData.DateTime.GetValueOrDefault().ToString(ISO8601DateTimeFormatString)),
+                        DatabaseWriteOperationType = Database.Common.DatabaseWriteOperationType.Insert,
                         RecordCreationTimeUtc = DateTime.UtcNow
                     };
                     dbOVDSServerCommands.Add(dbOVDSServerCommand);
@@ -165,13 +181,8 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
             return dbOVDSServerCommands;
         }
 
-        /// <summary>
-        /// Formats the <paramref name="vssValue"/> based on the <paramref name="vssDataType"/> and returns the formatted value as a string.
-        /// </summary>
-        /// <param name="vssValue">The value to be formatted.</param>
-        /// <param name="vssDataType">The <see cref="VSSDataType"/> defining the format to be applied to <paramref name="vssValue"/>.</param>
-        /// <returns></returns>
-        static string GetFormattedVssValue(string vssValue, VSSDataType vssDataType)
+        /// <inheritdoc/>
+        public string GetFormattedVssValue(string vssValue, VSSDataType vssDataType)
         {
             string formattedVssValue;
             switch (vssDataType)
@@ -205,20 +216,8 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         }
 
 
-        /// <summary>
-        /// Generates a fully-populated OVDS server SET command using the supplied inputs. 
-        /// </summary>
-        /// <param name="ovdsSetCommandTemplate">The OVDS server SET command template.</param>
-        /// <param name="vinPlaceholder">The placeholder value used in the <paramref name="ovdsSetCommandTemplate"/> to mark the <c>VIN</c> property.</param>
-        /// <param name="pathPlaceholder">The placeholder value used in the <paramref name="ovdsSetCommandTemplate"/> to mark the <c>Path</c> property.</param>
-        /// <param name="valuePlaceholder">The placeholder value used in the <paramref name="ovdsSetCommandTemplate"/> to mark the <c>Value</c> property.</param>
-        /// <param name="timestampPlaceholder">The placeholder value used in the <paramref name="ovdsSetCommandTemplate"/> to mark the <c>Timestamp</c> property.</param>
-        /// <param name="vin">The value to be used to replace the <paramref name="vinPlaceholder"/> in the <paramref name="ovdsSetCommandTemplate"/> when generating the OVDS server SET command.</param>
-        /// <param name="path">The value to be used to replace the <paramref name="pathPlaceholder"/> in the <paramref name="ovdsSetCommandTemplate"/> when generating the OVDS server SET command.</param>
-        /// <param name="value">The value to be used to replace the <paramref name="valuePlaceholder"/> in the <paramref name="ovdsSetCommandTemplate"/> when generating the OVDS server SET command.</param>
-        /// <param name="timestamp">The value to be used to replace the <paramref name="timestampPlaceholder"/> in the <paramref name="ovdsSetCommandTemplate"/> when generating the OVDS server SET command.</param>
-        /// <returns></returns>
-        public static string GetOVDSSetCommand(string ovdsSetCommandTemplate, string vinPlaceholder, string pathPlaceholder, string valuePlaceholder, string timestampPlaceholder, string vin, string path, string value, string timestamp)
+        /// <inheritdoc/>
+        public string GetOVDSSetCommand(string ovdsSetCommandTemplate, string vinPlaceholder, string pathPlaceholder, string valuePlaceholder, string timestampPlaceholder, string vin, string path, string value, string timestamp)
         {
             string ovdsSetCommand = ovdsSetCommandTemplate;
             ovdsSetCommand = ovdsSetCommand.Replace(vinPlaceholder, vin);
@@ -228,16 +227,11 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
             return ovdsSetCommand;
         }
 
-        /// <summary>
-        /// Uses the <paramref name="cacheManager"/> to hydrate the <paramref name="device"/>, then converts the <paramref name="device"/> to the specific type of <see cref="Device"/> and returns its VIN. If the VIN cannot be obtained due to <see cref="Device.DeviceType"/> or VIN not being populated, an empty string is returned.
-        /// </summary>
-        /// <param name="cacheManager">The <see cref="CacheManager"/> to be used to hydrate the <paramref name="device"/>.</param>
-        /// <param name="device">The <see cref="Device"/> from which to obtain the VIN.</param>
-        /// <returns></returns>
-        public static string GetVIN(CacheManager cacheManager, Device device)
+        /// <inheritdoc/>
+        public string GetVIN(Device device)
         {
             string vin = "";
-            var hydratedDevice = CacheManager.HydrateDevice(device);
+            var hydratedDevice = deviceGeotabObjectHydrator.HydrateEntity(device, NoDevice.Value);
             if (hydratedDevice is NoDevice)
             {
                 return vin;

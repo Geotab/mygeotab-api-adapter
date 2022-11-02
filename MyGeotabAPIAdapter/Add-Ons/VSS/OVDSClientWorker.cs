@@ -1,12 +1,19 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
+using MyGeotabAPIAdapter.Configuration;
+using MyGeotabAPIAdapter.Configuration.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Database;
-using MyGeotabAPIAdapter.Database.Logic;
-using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.Database.DataAccess;
+using MyGeotabAPIAdapter.Database.DataAccess.Add_Ons.VSS;
+using MyGeotabAPIAdapter.Database.EntityPersisters;
+using MyGeotabAPIAdapter.Database.Models.Add_Ons.VSS;
+using MyGeotabAPIAdapter.Exceptions;
+using MyGeotabAPIAdapter.Logging;
 using MyGeotabAPIAdapter.Helpers;
 using NLog;
+using Polly;
+using Polly.Retry;
 using System;
-using System.IO;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -22,30 +29,64 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
     /// </summary>
     class OVDSClientWorker : BackgroundService
     {
-        const string URLJSONFileExtension = ".json";
-        const string URLVSSVersionDelimiter = "-v";
-        const string VSSPathMapFileName = "VSSPathMaps.json";
-        const string VSSPathMapTempFileName = "DOWNLOAD-VSSPathMaps.json";
+        string CurrentClassName { get => $"{GetType().Assembly.GetName().Name}.{GetType().Name} (v{GetType().Assembly.GetName().Version})"; }
+        string DefaultErrorMessagePrefix { get => $"{CurrentClassName} process caught an exception"; }
+        static int ThrottleEngagingBatchRecordCount { get => 1; }
 
+        // Polly-related items:
+        const int MaxRetries = 10;
+        readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
+
+        readonly IAdapterConfiguration adapterConfiguration;
+        readonly IAdapterEnvironment adapterEnvironment;
+        readonly IAdapterDatabaseObjectNames adapterDatabaseObjectNames;
+        readonly IDateTimeHelper dateTimeHelper;
+        readonly IExceptionHelper exceptionHelper;
+        readonly IGenericEntityPersister<DbFailedOVDSServerCommand> dbFailedOVDSServerCommandEntityPersister;
+        readonly IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister;
         readonly IHttpHelper httpHelper;
+        readonly IServiceTracker serviceTracker;
+        readonly IStateMachine stateMachine;
+        readonly IVSSConfiguration vssConfiguration;
+        readonly IVSSObjectMapper vssObjectMapper;
+
         readonly Logger logger = LogManager.GetCurrentClassLogger();
-        readonly IConfiguration configuration;
-        ConnectionInfo connectionInfo;
-        static readonly HttpClient httpClient = new();
-        bool initializationCompleted;
+        readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
+
+        readonly HttpClient httpClient = new();
         DateTime lastVSSConfigurationRefreshTime = DateTime.MinValue;
         DateTime lastIterationStartTimeUtc;
-        int commandTimeout = 0;
+        readonly int commandTimeout = 0;
 
         /// <summary>
         /// Instantiates a new instance of the <see cref="OVDSClientWorker"/> class.
         /// </summary>
-        public OVDSClientWorker(IConfiguration configuration, IHttpHelper httpHelper)
+        public OVDSClientWorker(IAdapterConfiguration adapterConfiguration, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IAdapterEnvironment adapterEnvironment, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbFailedOVDSServerCommand> dbFailedOVDSServerCommandEntityPersister, IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister, IHttpHelper httpHelper, IServiceTracker serviceTracker, IStateMachine stateMachine, IVSSConfiguration vssConfiguration, IVSSObjectMapper vssObjectMapper, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
-            this.configuration = configuration;
-            this.httpHelper = httpHelper;
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            this.adapterConfiguration = adapterConfiguration;
+            this.adapterDatabaseObjectNames = adapterDatabaseObjectNames;
+            this.adapterEnvironment = adapterEnvironment;
+            this.dateTimeHelper = dateTimeHelper;
+            this.exceptionHelper = exceptionHelper;
+            this.dbFailedOVDSServerCommandEntityPersister = dbFailedOVDSServerCommandEntityPersister;
+            this.dbOVDSServerCommandEntityPersister = dbOVDSServerCommandEntityPersister;
+            this.httpHelper = httpHelper;
+            this.serviceTracker = serviceTracker;
+            this.stateMachine = stateMachine;
+            this.vssConfiguration = vssConfiguration;
+            this.vssObjectMapper = vssObjectMapper;
+
+            this.adapterContext = adapterContext;
+            logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
+
+            // Allow longer database command timeout because the main Worker process may be inserting a batch of 150K records at the same time as one of these queries are being executed and that may exceed the timeout.
+            commandTimeout = adapterConfiguration.TimeoutSecondsForDatabaseTasks * 2;
+
+            // Setup a database transaction retry policy.
+            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(MaxRetries, logger);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -74,26 +115,21 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
             // This is the loop containing all of the business logic that is executed iteratively throughout the lifeime of the application.
             while (!stoppingToken.IsCancellationRequested)
             {
-                // Abort if waiting for restoration of connectivity to the MyGeotab server or to the database.
-                if (StateMachine.CurrentState == State.Waiting)
+                // Abort if waiting for connectivity restoration.
+                if (stateMachine.CurrentState == State.Waiting)
                 {
+                    await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                     continue;
                 }
 
-                if (initializationCompleted == false)
-                {
-                    PerformInitializationTasks();
-                    continue;
-                }
+                var engageExecutionThrottle = true;
 
                 try
                 {
                     logger.Trace($"Started iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-                    UpdateVSSPathMaps();
-
                     // Only proceed if the OVDSClientWorkerIntervalSeconds has elapsed since the last iteration was initiated.
-                    if (Globals.TimeIntervalHasElapsed(lastIterationStartTimeUtc, Globals.DateTimeIntervalType.Seconds, Globals.ConfigurationManager.VSSConfiguration.OVDSClientWorkerIntervalSeconds))
+                    if (dateTimeHelper.TimeIntervalHasElapsed(lastIterationStartTimeUtc, DateTimeIntervalType.Seconds, vssConfiguration.OVDSClientWorkerIntervalSeconds))
                     {
                         lastIterationStartTimeUtc = DateTime.UtcNow;
 
@@ -101,70 +137,137 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
                         {
                             try
                             {
+                                await vssConfiguration.UpdateVSSPathMapsAsync();
+
                                 // Retrieve a batch of DbOVDSServerCommand entities from the database.
-                                var dbOVDSServerCommands = await DbOVDSServerCommandService.GetAllAsync(connectionInfo, commandTimeout, VSSConfiguration.OVDSServerCommandBatchSize);
+                                IEnumerable<DbOVDSServerCommand> dbOVDSServerCommands = null;
+                                await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                                {
+                                    using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
+                                    {
+                                        var dbOVDSServerCommandRepo = new DbOVDSServerCommandRepository(adapterContext);
+                                        dbOVDSServerCommands = await dbOVDSServerCommandRepo.GetAllAsync(cancellationTokenSource, vssConfiguration.OVDSServerCommandBatchSize);
+                                    }
+                                }, new Context());
+
                                 int dbOVDSServerCommandCount = dbOVDSServerCommands.Count();
                                 int processedDbOVDSServerCommandCount = 0;
                                 int failedDbOVDSServerCommandCount = 0;
+                                engageExecutionThrottle = dbOVDSServerCommandCount < ThrottleEngagingBatchRecordCount;
 
                                 if (dbOVDSServerCommands.Any())
                                 {
-                                    logger.Info($"Retrieved {dbOVDSServerCommands.Count()} records from OVDSServerCommands table. Processing...");
+                                    logger.Info($"Retrieved {dbOVDSServerCommandCount} records from OVDSServerCommands table. Processing...");
+
+                                    // Process each of the retrieved DbOVDSServerCommands.
+                                    foreach (var dbOVDSServerCommand in dbOVDSServerCommands)
+                                    {
+                                        var dbOVDSServerCommandsToPersist = new List<DbOVDSServerCommand>();
+                                        var dbFailedOVDSServerCommandsToPersist = new List<DbFailedOVDSServerCommand>();
+                                        try
+                                        {
+                                            // Post the command to the OVDS server.
+                                            HttpContent httpContent = new StringContent(dbOVDSServerCommand.Command);
+                                            httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                                            HttpResponseMessage response = await httpClient.PostAsync(vssConfiguration.OVDSServerURL, httpContent, stoppingToken);
+                                            response.EnsureSuccessStatusCode();
+                                            string responseBody = await response.Content.ReadAsStringAsync(stoppingToken);
+                                            logger.Debug($"Command successfully POSTed to OVDS server. Command Id: '{dbOVDSServerCommand.id}'. Response body: ['{responseBody}']");
+
+                                            // Delete the successfully processed DbOVDSServerCommand.
+                                            dbOVDSServerCommand.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Delete;
+                                            dbOVDSServerCommandsToPersist.Add(dbOVDSServerCommand);
+                                            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                                            {
+                                                using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
+                                                {
+                                                    try
+                                                    {
+                                                        // DbOVDSServerCommand
+                                                        await dbOVDSServerCommandEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbOVDSServerCommandsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                                        await adapterUOW.CommitAsync();
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                                        await adapterUOW.RollBackAsync();
+                                                        throw;
+                                                    }
+                                                }
+                                            }, new Context());
+                                            processedDbOVDSServerCommandCount += 1;
+                                        }
+                                        catch (Exception exception)
+                                        {
+                                            try
+                                            {
+                                                failedDbOVDSServerCommandCount += 1;
+                                                var failureMessage = GenerateMessageForOVDSClientWorkerException(exception);
+
+                                                // Prepare a FailedOVDSServerCommand.
+                                                DbFailedOVDSServerCommand dbFailedOVDSServerCommand = vssObjectMapper.GetDbFailedOVDSServerCommand(dbOVDSServerCommand, failureMessage);
+                                                dbFailedOVDSServerCommandsToPersist.Add(dbFailedOVDSServerCommand);
+                                                dbOVDSServerCommand.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Delete;
+                                                dbOVDSServerCommandsToPersist.Add(dbOVDSServerCommand);
+
+                                                // Persist changes to database.
+                                                await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                                                {
+                                                    using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
+                                                    {
+                                                        try
+                                                        {
+                                                            // DbFailedOVDSServerCommand:
+                                                            await dbFailedOVDSServerCommandEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbFailedOVDSServerCommandsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                                            // DbOVDSServerCommand
+                                                            await dbOVDSServerCommandEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbOVDSServerCommandsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                                            await adapterUOW.CommitAsync();
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+                                                            exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                                            await adapterUOW.RollBackAsync();
+                                                            throw;
+                                                        }
+                                                    }
+                                                }, new Context());
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                throw new Exception($"Exception encountered while writing to {adapterDatabaseObjectNames.DbFailedOVDSServerCommandTableName} table or deleting from {adapterDatabaseObjectNames.DbOVDSServerCommandTableName} table.", ex);
+                                            }
+                                        }
+                                    }
+
+                                    logger.Info($"Of the {dbOVDSServerCommandCount} records from OVDSServerCommands table, {processedDbOVDSServerCommandCount} were successfully processed and {failedDbOVDSServerCommandCount} failed. Copies of any failed records have been inserted into the FailedOVDSServerCommands table for reference.");
                                 }
                                 else
                                 {
                                     logger.Debug($"No records retrieved from OVDSServerCommands table.");
-                                    continue;
                                 }
-                                
-                                // Process each of the retrieved DbOVDSServerCommands.
-                                foreach (var dbOVDSServerCommand in dbOVDSServerCommands)
+
+                                // Update the OServiceTracking record for this service to show that the service is operating.
+                                await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                                 {
-                                    var deleteCurrentDbOVDSServerCommandRecord = false;
-                                    try
-                                    {
-                                        // Post the command to the OVDS server.
-                                        HttpContent httpContent = new StringContent(dbOVDSServerCommand.Command);
-                                        httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                                        HttpResponseMessage response = await httpClient.PostAsync(Globals.ConfigurationManager.VSSConfiguration.OVDSServerURL, httpContent, stoppingToken);
-                                        response.EnsureSuccessStatusCode();
-                                        string responseBody = await response.Content.ReadAsStringAsync(stoppingToken);
-                                        logger.Debug($"Command successfully POSTed to OVDS server. Command Id: '{dbOVDSServerCommand.id}'. Response body: ['{responseBody}']");
-                                        deleteCurrentDbOVDSServerCommandRecord = true;
-                                        processedDbOVDSServerCommandCount += 1;
-                                    }
-                                    catch (Exception exception)
+                                    using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                                     {
                                         try
                                         {
-                                            failedDbOVDSServerCommandCount += 1;
-                                            var failureMessage = GenerateMessageForOVDSClientWorkerException(exception);
+                                            await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.OVDSClientWorker, DateTime.UtcNow);
 
-                                            // Insert a record into the FailedOVDSServerCommands table.
-                                            DbFailedOVDSServerCommand dbFailedOVDSServerCommand = VSSObjectMapper.GetDbFailedOVDSServerCommand(dbOVDSServerCommand, failureMessage);
-                                            dbFailedOVDSServerCommand.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert;
-                                            dbFailedOVDSServerCommand.RecordCreationTimeUtc = DateTime.UtcNow;
-                                            await DbFailedOVDSServerCommandService.InsertAsync(connectionInfo, dbFailedOVDSServerCommand, commandTimeout);
-
-                                            // Delete the current DbOVDSServerCommand from the OVDSServerCommands table.
-                                            await DbOVDSServerCommandService.DeleteAsync(connectionInfo, dbOVDSServerCommand, commandTimeout);
+                                            await adapterUOW.CommitAsync();
                                         }
                                         catch (Exception ex)
                                         {
-                                            throw new Exception($"Exception encountered while writing to {ConfigurationManager.DbFailedDbOVDSServerCommandsTableName} table or deleting from {ConfigurationManager.DbOVDSServerCommandTableName} table.", ex);
+                                            exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                            await adapterUOW.RollBackAsync();
+                                            throw;
                                         }
                                     }
-                                    finally
-                                    {
-                                        if (deleteCurrentDbOVDSServerCommandRecord == true)
-                                        {
-                                            // Delete the current DbOVDSServerCommand from the OVDSServerCommands table.
-                                            await DbOVDSServerCommandService.DeleteAsync(connectionInfo, dbOVDSServerCommand, commandTimeout);
-                                        }
-                                    }
-                                }
-
-                                logger.Info($"Of the {dbOVDSServerCommandCount} records from OVDSServerCommands table, {processedDbOVDSServerCommandCount} were successfully processed and {failedDbOVDSServerCommandCount} failed. Copies of any failed records have been inserted into the FailedOVDSServerCommands table for reference.");
+                                }, new Context());
                             }
                             catch (TaskCanceledException taskCanceledException)
                             {
@@ -180,26 +283,33 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
                     }
                     else
                     {
-                        logger.Debug($"No OVDS server commands will be processed on this iteration; {Globals.ConfigurationManager.VSSConfiguration.OVDSClientWorkerIntervalSeconds} seconds have not passed since the process was last initiated.");
+                        logger.Debug($"No OVDS server commands will be processed on this iteration; {vssConfiguration.OVDSClientWorkerIntervalSeconds} seconds have not passed since the process was last initiated.");
                     }
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
                 }
                 catch (OperationCanceledException)
                 {
-                    string errorMessage = $"{nameof(OVDSClientWorker)} process cancelled.";
+                    string errorMessage = $"{nameof(CurrentClassName)} process cancelled.";
                     logger.Warn(errorMessage);
                     throw new Exception(errorMessage);
                 }
-                catch (DatabaseConnectionException databaseConnectionException)
+                catch (AdapterDatabaseConnectionException databaseConnectionException)
                 {
-                    HandleException(databaseConnectionException, NLog.LogLevel.Error, $"{nameof(OVDSClientWorker)} process caught an exception");
+                    HandleException(databaseConnectionException, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
                 }
                 catch (Exception ex)
                 {
                     // If an exception hasn't been handled to this point, log it and kill the process.
-                    HandleException(ex, NLog.LogLevel.Fatal, $"******** {nameof(OVDSClientWorker)} process caught an unhandled exception and will self-terminate now.");
-                    System.Diagnostics.Process.GetCurrentProcess().Kill();
+                    HandleException(ex, NLogLogLevelName.Fatal, DefaultErrorMessagePrefix);
+                }
+
+                // If necessary, add a delay to implement the configured execution interval.
+                if (engageExecutionThrottle == true)
+                {
+                    var delayTimeSpan = TimeSpan.FromSeconds(vssConfiguration.OVDSClientWorkerIntervalSeconds);
+                    logger.Info($"{CurrentClassName} pausing for the configured feed interval ({delayTimeSpan}).");
+                    await Task.Delay(delayTimeSpan, stoppingToken);
                 }
             }
 
@@ -211,7 +321,7 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         /// </summary>
         /// <param name="exception">The <see cref="Exception"/>.</param>
         /// <returns>The generated error message.</returns>
-        static string GenerateMessageForOVDSClientWorkerException(Exception exception)
+        string GenerateMessageForOVDSClientWorkerException(Exception exception)
         {
             string exceptionTypeName = exception.GetType().Name;
             StringBuilder messageBuilder = new();
@@ -231,111 +341,25 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         }
 
         /// <summary>
-        /// Generates and logs an error message for the supplied <paramref name="exception"/>. Does NOT implement connectivity restoration logic like <see cref="Worker.WaitForConnectivityRestorationAsync(StateReason)"/> since the <see cref="Worker"/> will already be taking care of it.
-        /// /// </summary>
+        /// Generates and logs an error message for the supplied <paramref name="exception"/>. If the <paramref name="exception"/> is connectivity-related, the <see cref="stateMachine"/> will have its <see cref="IStateMachine.CurrentState"/> and <see cref="IStateMachine.Reason"/> set accordingly. If the value supplied for <paramref name="logLevel"/> is <see cref="NLogLogLevelName.Fatal"/>, the current process will be killed.
+        /// </summary>
         /// <param name="exception">The <see cref="Exception"/>.</param>
-        /// <param name="errorMessageLogLevel">The <see cref="NLog.LogLevel"/> to be used when logging the error message.</param>
+        /// <param name="logLevel">The <see cref="LogLevel"/> to be used when logging the error message.</param>
         /// <param name="errorMessagePrefix">The start of the error message, which will be followed by the <see cref="Exception.Message"/>, <see cref="Exception.Source"/> and <see cref="Exception.StackTrace"/>.</param>
         /// <returns></returns>
-        static void HandleException(Exception exception, NLog.LogLevel errorMessageLogLevel, string errorMessagePrefix = "An exception was encountered")
+        void HandleException(Exception exception, NLogLogLevelName logLevel, string errorMessagePrefix)
         {
-            Globals.LogException(exception, errorMessageLogLevel, errorMessagePrefix);
-        }
-
-        /// <summary>
-        /// Performs startup tasks.
-        /// </summary>
-        /// <returns></returns>
-        void PerformInitializationTasks()
-        {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            try
+            exceptionHelper.LogException(exception, logLevel, errorMessagePrefix);
+            if (exception is AdapterDatabaseConnectionException)
             {
-                // Setup the ConfigurationManager Globals reference
-                connectionInfo = new ConnectionInfo(Globals.ConfigurationManager.DatabaseConnectionString, Globals.ConfigurationManager.DatabaseProviderType, Databases.AdapterDatabase);
-
-                // Allow longer database command timeout because the main Worker process may be inserting a batch of 150K records at the same time as one of these queries are being executed and that may exceed the timeout.
-                commandTimeout = Globals.ConfigurationManager.TimeoutSecondsForDatabaseTasks * 2;
-
-                initializationCompleted = true;
-                logger.Info("Initialization completed.");
-            }
-            catch (DatabaseConnectionException databaseConnectionException)
-            {
-                HandleException(databaseConnectionException, NLog.LogLevel.Error, $"{nameof(OVDSClientWorker)} process caught an exception");
-            }
-            catch (Exception ex)
-            {
-                string errorMessage = $"{nameof(OVDSClientWorker)} process caught an exception: \nMESSAGE [{ex.Message}]; \nSOURCE [{ex.Source}]; \nSTACK TRACE [{ex.StackTrace}]";
-                logger.Error(errorMessage);
-                throw new Exception(errorMessage, ex);
+                stateMachine.SetState(State.Waiting, StateReason.AdapterDatabaseNotAvailable);
             }
 
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
-        }
-
-        /// <summary>
-        /// Reloads the LogRecordVSSPathMaps and StatusDataVSSPathMaps from appsettings.json and updates <see cref="ConfigurationManager.vssConfiguration"/> accordingly so that changes can be made to the VSS path maps while the application is running. Only performs this activity if <see cref="Globals.ConfigurationManager.VSSConfiguration.VSSPathMapUpdateIntervalMinutes"/> has elapsed since the last time this activity was performed.
-        /// </summary>
-        async void UpdateVSSPathMaps()
-        {
-            if (Globals.TimeIntervalHasElapsed(lastVSSConfigurationRefreshTime, Globals.DateTimeIntervalType.Minutes, Globals.ConfigurationManager.VSSConfiguration.VSSPathMapUpdateIntervalMinutes))
+            if (logLevel == NLogLogLevelName.Fatal)
             {
-                // Construct URL of VSS path map file - incorporating the VSS version.
-                StringBuilder urlBuilder = new();
-                urlBuilder.Append(Globals.ConfigurationManager.VSSConfiguration.VSSPathMapFileURL);
-                urlBuilder.Replace(URLJSONFileExtension, null);
-                urlBuilder.Append(URLVSSVersionDelimiter);
-                urlBuilder.Append(Globals.ConfigurationManager.VSSConfiguration.VSSVersion);
-                urlBuilder.Append(URLJSONFileExtension);
-
-                // Validate the URL.
-                bool urlIsValid = Uri.TryCreate(urlBuilder.ToString(), UriKind.Absolute, out Uri uri);
-                if (urlIsValid == false)
-                {
-                    throw new Exception($"Unable to construct valid URL using '{VSSConfiguration.ArgNameVSSPathMapFileURL}' and '{VSSConfiguration.ArgNameVSSVersion}' values from appsettings.json.");
-                }
-
-                // Download the VSS path map file.
-                var vssFilePath = $"{AppContext.BaseDirectory}{VSSPathMapFileName}";
-                var downloadTempFilePath = $"{AppContext.BaseDirectory}{VSSPathMapTempFileName}";
-                try
-                {
-                    await httpHelper.DownloadFileAsync(uri.AbsoluteUri, downloadTempFilePath);
-                    File.Move(downloadTempFilePath, vssFilePath, true);
-                }
-                catch (Exception exception)
-                {
-                    // Log the exception. If a previously-downloaded copy of the VSS path map file exists, use that one; otherwise, throw the exception.
-                    var exceptionMessage = GenerateMessageForOVDSClientWorkerException(exception);
-                    StringBuilder exceptionMessageBuilder = new();
-                    exceptionMessageBuilder.Append($"An exception was encountered while attempting to download the VSS path map file '{uri.AbsoluteUri}' to '{vssFilePath}'.");
-                    if (File.Exists(vssFilePath))
-                    {
-                        exceptionMessageBuilder.Append($"The previously-downloaded copy of the VSS path map file will be used this time. Exception details: {exceptionMessage}");
-                        logger.Warn(exceptionMessageBuilder.ToString());
-                    }
-                    else
-                    {
-                        exceptionMessageBuilder.Append($"Exception details: {exceptionMessage}");
-                        logger.Warn(exceptionMessageBuilder.ToString());
-                        throw;
-                    }
-                }
-
-                // Load the VSS path map file and process its contents.
-                var vssConfig = new ConfigurationBuilder()
-                    .SetBasePath(AppContext.BaseDirectory)
-                    .AddJsonFile(VSSPathMapFileName, optional: false)
-                    .Build();
-                Globals.ConfigurationManager.VSSConfiguration.LoadLogRecordVSSPathMaps(vssConfig);
-                Globals.ConfigurationManager.VSSConfiguration.LoadStatusDataVSSPathMaps(vssConfig);
-                Globals.ConfigurationManager.VSSConfiguration.LoadAttributeVSSPathMaps(vssConfig);
-
-                lastVSSConfigurationRefreshTime = DateTime.UtcNow;
+                System.Diagnostics.Process.GetCurrentProcess().Kill();
             }
+
         }
 
         /// <summary>
@@ -348,15 +372,39 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            // Only start if the VSS Add-On is enabled.
-            if (Globals.ConfigurationManager.VSSConfiguration.EnableVSSAddOn == true)
+            var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
+            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.OVDSClientWorker);
+            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
             {
-                logger.Info($"Starting {nameof(OVDSClientWorker)}.");
+                using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
+                {
+                    try
+                    {
+                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.OVDSClientWorker, adapterEnvironment.AdapterVersion.ToString(), adapterEnvironment.AdapterMachineName);
+                        await adapterUOW.CommitAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                        await adapterUOW.RollBackAsync();
+                        throw;
+                    }
+                }
+            }, new Context());
+
+            // Only start if the VSS Add-On is enabled.
+            if (vssConfiguration.EnableVSSAddOn == true)
+            {
+                logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
+
+                // Initialize the VSSConfiguration.
+                await vssConfiguration.InitializeAsync(AppContext.BaseDirectory, vssConfiguration.VSSPathMapFileName);
+
                 await base.StartAsync(cancellationToken);
             }
             else
             {
-                logger.Info($"VSS Add-On has not been enabled, so {nameof(OVDSClientWorker)} will not be started.");
+                logger.Info($"******** WARNING - SERVICE DISABLED: The VSS Add-On ({CurrentClassName}) service has not been enabled and will NOT be started.");
             }
         }
 
@@ -370,7 +418,7 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            logger.Info($"{nameof(OVDSClientWorker)} stopped.");
+            logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
         }
     }

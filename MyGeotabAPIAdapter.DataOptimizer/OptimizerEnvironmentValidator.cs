@@ -5,6 +5,9 @@ using System.Linq;
 
 namespace MyGeotabAPIAdapter.DataOptimizer
 {
+    /// <summary>
+    /// A class that includes validation logic to help ensure that only one instance of a given <see cref="DataOptimizerProcessor"/> is running against the same optimizer database in a distributed deployment scenario in which copies of the <see cref="MyGeotabAPIAdapter.DataOptimizer"/> are installed on multiple machines with different services running on each (in order to distribute load and maximize throughput) AND that the same version of the <see cref="MyGeotabAPIAdapter.DataOptimizer"/> is used on all machines involved. 
+    /// </summary>
     public class OptimizerEnvironmentValidator : IOptimizerEnvironmentValidator
     {
         /// <inheritdoc/>
@@ -14,7 +17,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
 
             if (subjectDbOProcessorTracking == null)
             {
-                throw new ArgumentException($"The '{dataOptimizerProcessor}' DataOptimizerProcessor was not found in the '{nameof(dbOProcessorTrackings)}' list. Unable to {nameof(ValidateOptimizerVersion)}.");
+                throw new ArgumentException($"The '{dataOptimizerProcessor}' DataOptimizerProcessor was not found in the '{nameof(dbOProcessorTrackings)}' list. Unable to {nameof(ValidateOptimizerMachineName)}.");
             }
 
             if (subjectDbOProcessorTracking.OptimizerMachineName != null)

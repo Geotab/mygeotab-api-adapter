@@ -1,5 +1,5 @@
 --------------------------------------------------------
---  File created - Tuesday-May-03-2022   
+--  File created - Monday-October-24-2022   
 --------------------------------------------------------
 --------------------------------------------------------
 --  DDL for Table BinaryData
@@ -33,16 +33,6 @@
 	"WorkTimeId" NVARCHAR2(50), 
 	"ZoneId" NVARCHAR2(50), 
 	"EntityStatus" NUMBER(10,0), 
-	"RecordLastChangedUtc" TIMESTAMP (7)
-   ) ;
---------------------------------------------------------
---  DDL for Table ConfigFeedVersions
---------------------------------------------------------
-
-  CREATE TABLE "ConfigFeedVersions" 
-   (	"id" NUMBER(20,0) GENERATED ALWAYS AS IDENTITY MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE , 
-	"FeedTypeId" NVARCHAR2(50), 
-	"LastProcessedFeedVersion" NUMBER(20,0), 
 	"RecordLastChangedUtc" TIMESTAMP (7)
    ) ;
 --------------------------------------------------------
@@ -231,9 +221,11 @@
 	"Distance" FLOAT(24), 
 	"DriverId" NVARCHAR2(50), 
 	"DurationTicks" NUMBER(20,0), 
+	"LastModifiedDateTime" TIMESTAMP (7), 
 	"RuleId" NVARCHAR2(50), 
+	"State" NUMBER(10,0), 
 	"Version" NUMBER(20,0), 
-	"RecordCreationTimeUtc" TIMESTAMP (7)
+	"RecordLastChangedUtc" TIMESTAMP (7)
    ) ;
 --------------------------------------------------------
 --  DDL for Table FailedDVIRDefectUpdates
@@ -323,6 +315,19 @@
 	"RecordCreationTimeUtc" TIMESTAMP (7)
    ) ;
 --------------------------------------------------------
+--  DDL for Table OServiceTracking
+--------------------------------------------------------
+
+  CREATE TABLE "OServiceTracking" 
+   (	"id" NUMBER(20,0) GENERATED ALWAYS AS IDENTITY MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE , 
+	"ServiceId" NVARCHAR2(50), 
+	"AdapterVersion" NVARCHAR2(50), 
+	"AdapterMachineName" NVARCHAR2(100), 
+	"EntitiesLastProcessedUtc" TIMESTAMP (7), 
+	"LastProcessedFeedVersion" NUMBER(20,0), 
+	"RecordLastChangedUtc" TIMESTAMP (7)
+   ) ;
+--------------------------------------------------------
 --  DDL for Table OVDSServerCommands
 --------------------------------------------------------
 
@@ -341,7 +346,7 @@
 	"ActiveFrom" TIMESTAMP (7), 
 	"ActiveTo" TIMESTAMP (7), 
 	"BaseType" NVARCHAR2(50), 
-	"Comment" NVARCHAR2(255), 
+	"Comment" NCLOB, 
 	"Name" NVARCHAR2(255), 
 	"Version" NUMBER(20,0), 
 	"EntityStatus" NUMBER(10,0), 
@@ -450,17 +455,137 @@
 	"RecordLastChangedUtc" TIMESTAMP (7)
    ) ;
 --------------------------------------------------------
---  DDL for View vwRuleObject
+--  DDL for Index IX_BinaryData_DateTime
 --------------------------------------------------------
 
-  CREATE OR REPLACE NONEDITIONABLE VIEW "vwRuleObject" ("RuleAdapterId", "GeotabId", "ActiveFrom", "ActiveTo", "BaseType", "Comment", "Name", "Version", "EntityStatus", "RecordLastChangedUtc", "ConditionAdapterId", "Cond_Id", "Cond_ParentId", "Cond_RuleId", "Cond_ConditionType", "Cond_DeviceId", "Cond_DiagnosticId", "Cond_Value", "Cond_WorkTimeId", "Cond_ZoneId", "Cond_EntityStatus", "Cond_RecordLastChangedUtc") AS 
-  SELECT r."id", r."GeotabId", r."ActiveFrom", r."ActiveTo", r."BaseType", r."Comment", r."Name", r."Version", r."EntityStatus", r."RecordLastChangedUtc", 
-c."id", c."GeotabId", c."ParentId", c."RuleId", c."ConditionType", c."DeviceId", c."DiagnosticId", c."Value", c."WorkTimeId", c."ZoneId", c."EntityStatus", c."RecordLastChangedUtc"
-FROM GeotabAdapter_Client."Rules" r
-INNER JOIN
-GeotabAdapter_Client."Conditions" c
-ON r."GeotabId" = c."RuleId"
-;
+  CREATE INDEX "IX_BinaryData_DateTime" ON "BinaryData" ("DateTime") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Conditions_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Conditions_RecordLastChangedUtc" ON "Conditions" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DVIRDefectRemarks_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DVIRDefectRemarks_RecordLastChangedUtc" ON "DVIRDefectRemarks" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DVIRDefectUpdates_RecordCreationTimeUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DVIRDefectUpdates_RecordCreationTimeUtc" ON "DVIRDefectUpdates" ("RecordCreationTimeUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DVIRDefects_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DVIRDefects_RecordLastChangedUtc" ON "DVIRDefects" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DVIRLogs_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DVIRLogs_DateTime" ON "DVIRLogs" ("DateTime") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DeviceStatusInfo_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DeviceStatusInfo_RecordLastChangedUtc" ON "DeviceStatusInfo" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Devices_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Devices_RecordLastChangedUtc" ON "Devices" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Diagnostics_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Diagnostics_RecordLastChangedUtc" ON "Diagnostics" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DriverChanges_RecordCreationTimeUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DriverChanges_RecordCreationTimeUtc" ON "DriverChanges" ("RecordCreationTimeUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DutyStatusAvailabilities_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DutyStatusAvailabilities_RecordLastChangedUtc" ON "DutyStatusAvailabilities" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_ExceptionEvents_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_ExceptionEvents_RecordLastChangedUtc" ON "ExceptionEvents" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_FaultData_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_FaultData_DateTime" ON "FaultData" ("DateTime") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_LogRecords_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_LogRecords_DateTime" ON "LogRecords" ("DateTime") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_MyGeotabVersionInfo_RecordCreationTimeUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_MyGeotabVersionInfo_RecordCreationTimeUtc" ON "MyGeotabVersionInfo" ("RecordCreationTimeUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_OServiceTracking_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_OServiceTracking_RecordLastChangedUtc" ON "OServiceTracking" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Rules_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Rules_RecordLastChangedUtc" ON "Rules" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_StatusData_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_StatusData_DateTime" ON "StatusData" ("DateTime") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Trips_RecordCreationTimeUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Trips_RecordCreationTimeUtc" ON "Trips" ("RecordCreationTimeUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Users_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Users_RecordLastChangedUtc" ON "Users" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_ZoneTypes_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_ZoneTypes_RecordLastChangedUtc" ON "ZoneTypes" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Zones_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Zones_RecordLastChangedUtc" ON "Zones" ("RecordLastChangedUtc") 
+  ;
 --------------------------------------------------------
 --  DDL for Index PK_BINARYDATA
 --------------------------------------------------------
@@ -472,12 +597,6 @@ ON r."GeotabId" = c."RuleId"
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_CONDITIONS" ON "Conditions" ("id") 
-  ;
---------------------------------------------------------
---  DDL for Index PK_CONFIGFEEDVERSIONS
---------------------------------------------------------
-
-  CREATE UNIQUE INDEX "PK_CONFIGFEEDVERSIONS" ON "ConfigFeedVersions" ("id") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_DEVICES
@@ -570,6 +689,12 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_MYGEOTABVERSIONINFO" ON "MyGeotabVersionInfo" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index PK_OServiceTracking
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "PK_OServiceTracking" ON "OServiceTracking" ("id") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_OVDSSERVERCOMMANDS
 --------------------------------------------------------
 
@@ -618,16 +743,22 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_BINARYDATA" ON "BinaryData" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_BinaryData_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_BinaryData_DateTime" ON "BinaryData" ("DateTime") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_CONDITIONS
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_CONDITIONS" ON "Conditions" ("id") 
   ;
 --------------------------------------------------------
---  DDL for Index PK_CONFIGFEEDVERSIONS
+--  DDL for Index IX_Conditions_RecordLastChangedUtc
 --------------------------------------------------------
 
-  CREATE UNIQUE INDEX "PK_CONFIGFEEDVERSIONS" ON "ConfigFeedVersions" ("id") 
+  CREATE INDEX "IX_Conditions_RecordLastChangedUtc" ON "Conditions" ("RecordLastChangedUtc") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_DVIRDEFECTREMARKS
@@ -636,10 +767,22 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_DVIRDEFECTREMARKS" ON "DVIRDefectRemarks" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_DVIRDefectRemarks_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DVIRDefectRemarks_RecordLastChangedUtc" ON "DVIRDefectRemarks" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_DVIRDEFECTUPDATES
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_DVIRDEFECTUPDATES" ON "DVIRDefectUpdates" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DVIRDefectUpdates_RecordCreationTimeUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DVIRDefectUpdates_RecordCreationTimeUtc" ON "DVIRDefectUpdates" ("RecordCreationTimeUtc") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_DVIRDEFECTS
@@ -648,16 +791,40 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_DVIRDEFECTS" ON "DVIRDefects" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_DVIRDefects_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DVIRDefects_RecordLastChangedUtc" ON "DVIRDefects" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_DVIRLOGS
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_DVIRLOGS" ON "DVIRLogs" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_DVIRLogs_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DVIRLogs_DateTime" ON "DVIRLogs" ("DateTime") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_DEVICESTATUSINFO
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_DEVICESTATUSINFO" ON "DeviceStatusInfo" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DeviceStatusInfo_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DeviceStatusInfo_RecordLastChangedUtc" ON "DeviceStatusInfo" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Devices_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Devices_RecordLastChangedUtc" ON "Devices" ("RecordLastChangedUtc") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_DEVICES
@@ -672,10 +839,22 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_DIAGNOSTICS" ON "Diagnostics" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_Diagnostics_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Diagnostics_RecordLastChangedUtc" ON "Diagnostics" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_DRIVERCHANGES
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_DRIVERCHANGES" ON "DriverChanges" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DriverChanges_RecordCreationTimeUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DriverChanges_RecordCreationTimeUtc" ON "DriverChanges" ("RecordCreationTimeUtc") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_DUTYSTATUSAVAILABILITIES
@@ -684,10 +863,22 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_DUTYSTATUSAVAILABILITIES" ON "DutyStatusAvailabilities" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_DutyStatusAvailabilities_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DutyStatusAvailabilities_RecordLastChangedUtc" ON "DutyStatusAvailabilities" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_EXCEPTIONEVENTS
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_EXCEPTIONEVENTS" ON "ExceptionEvents" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_ExceptionEvents_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_ExceptionEvents_RecordLastChangedUtc" ON "ExceptionEvents" ("RecordLastChangedUtc") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_FAILEDDVIRDEFECTUPDATES
@@ -708,16 +899,46 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_FAULTDATA" ON "FaultData" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_FaultData_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_FaultData_DateTime" ON "FaultData" ("DateTime") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_LOGRECORDS
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_LOGRECORDS" ON "LogRecords" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_LogRecords_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_LogRecords_DateTime" ON "LogRecords" ("DateTime") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_MYGEOTABVERSIONINFO
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_MYGEOTABVERSIONINFO" ON "MyGeotabVersionInfo" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_MyGeotabVersionInfo_RecordCreationTimeUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_MyGeotabVersionInfo_RecordCreationTimeUtc" ON "MyGeotabVersionInfo" ("RecordCreationTimeUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index PK_OServiceTracking
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "PK_OServiceTracking" ON "OServiceTracking" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_OServiceTracking_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_OServiceTracking_RecordLastChangedUtc" ON "OServiceTracking" ("RecordLastChangedUtc") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_OVDSSERVERCOMMANDS
@@ -732,6 +953,18 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_RULES" ON "Rules" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_Rules_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Rules_RecordLastChangedUtc" ON "Rules" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_StatusData_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_StatusData_DateTime" ON "StatusData" ("DateTime") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_STATUSDATA
 --------------------------------------------------------
 
@@ -744,10 +977,22 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_TRIPS" ON "Trips" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_Trips_RecordCreationTimeUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Trips_RecordCreationTimeUtc" ON "Trips" ("RecordCreationTimeUtc") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_USERS
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_USERS" ON "Users" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Users_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Users_RecordLastChangedUtc" ON "Users" ("RecordLastChangedUtc") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_ZONETYPES
@@ -756,10 +1001,22 @@ ON r."GeotabId" = c."RuleId"
   CREATE UNIQUE INDEX "PK_ZONETYPES" ON "ZoneTypes" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_ZoneTypes_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_ZoneTypes_RecordLastChangedUtc" ON "ZoneTypes" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_ZONES
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_ZONES" ON "Zones" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_Zones_RecordLastChangedUtc
+--------------------------------------------------------
+
+  CREATE INDEX "IX_Zones_RecordLastChangedUtc" ON "Zones" ("RecordLastChangedUtc") 
   ;
 --------------------------------------------------------
 --  Constraints for Table BinaryData
@@ -783,16 +1040,6 @@ ON r."GeotabId" = c."RuleId"
   ALTER TABLE "Conditions" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "Conditions" ADD CONSTRAINT "PK_CONDITIONS" PRIMARY KEY ("id")
   USING INDEX "PK_CONDITIONS"  ENABLE;
---------------------------------------------------------
---  Constraints for Table ConfigFeedVersions
---------------------------------------------------------
-
-  ALTER TABLE "ConfigFeedVersions" MODIFY ("id" NOT NULL ENABLE);
-  ALTER TABLE "ConfigFeedVersions" MODIFY ("FeedTypeId" NOT NULL ENABLE);
-  ALTER TABLE "ConfigFeedVersions" MODIFY ("LastProcessedFeedVersion" NOT NULL ENABLE);
-  ALTER TABLE "ConfigFeedVersions" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
-  ALTER TABLE "ConfigFeedVersions" ADD CONSTRAINT "PK_CONFIGFEEDVERSIONS" PRIMARY KEY ("id")
-  USING INDEX "PK_CONFIGFEEDVERSIONS"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table DVIRDefectRemarks
 --------------------------------------------------------
@@ -911,11 +1158,12 @@ ON r."GeotabId" = c."RuleId"
 --  Constraints for Table ExceptionEvents
 --------------------------------------------------------
 
+  ALTER TABLE "ExceptionEvents" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "ExceptionEvents" MODIFY ("GeotabId" NOT NULL ENABLE);
-  ALTER TABLE "ExceptionEvents" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
+  ALTER TABLE "ExceptionEvents" MODIFY ("LastModifiedDateTime" NOT NULL ENABLE);
+  ALTER TABLE "ExceptionEvents" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "ExceptionEvents" ADD CONSTRAINT "PK_EXCEPTIONEVENTS" PRIMARY KEY ("id")
   USING INDEX "PK_EXCEPTIONEVENTS"  ENABLE;
-  ALTER TABLE "ExceptionEvents" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table FailedDVIRDefectUpdates
 --------------------------------------------------------
@@ -982,6 +1230,15 @@ ON r."GeotabId" = c."RuleId"
   USING INDEX "PK_MYGEOTABVERSIONINFO"  ENABLE;
   ALTER TABLE "MyGeotabVersionInfo" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
+--  Constraints for Table OServiceTracking
+--------------------------------------------------------
+
+  ALTER TABLE "OServiceTracking" MODIFY ("id" NOT NULL ENABLE);
+  ALTER TABLE "OServiceTracking" MODIFY ("ServiceId" NOT NULL ENABLE);
+  ALTER TABLE "OServiceTracking" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
+  ALTER TABLE "OServiceTracking" ADD CONSTRAINT "PK_OServiceTracking" PRIMARY KEY ("id")
+  USING INDEX "PK_OServiceTracking"  ENABLE;
+--------------------------------------------------------
 --  Constraints for Table OVDSServerCommands
 --------------------------------------------------------
 
@@ -994,13 +1251,13 @@ ON r."GeotabId" = c."RuleId"
 --  Constraints for Table Rules
 --------------------------------------------------------
 
+  ALTER TABLE "Rules" MODIFY ("id" NOT NULL ENABLE);
   ALTER TABLE "Rules" MODIFY ("GeotabId" NOT NULL ENABLE);
   ALTER TABLE "Rules" MODIFY ("Version" NOT NULL ENABLE);
   ALTER TABLE "Rules" MODIFY ("EntityStatus" NOT NULL ENABLE);
   ALTER TABLE "Rules" MODIFY ("RecordLastChangedUtc" NOT NULL ENABLE);
   ALTER TABLE "Rules" ADD CONSTRAINT "PK_RULES" PRIMARY KEY ("id")
   USING INDEX "PK_RULES"  ENABLE;
-  ALTER TABLE "Rules" MODIFY ("id" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table StatusData
 --------------------------------------------------------

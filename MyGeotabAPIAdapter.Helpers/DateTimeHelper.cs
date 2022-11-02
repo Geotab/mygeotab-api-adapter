@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 
 namespace MyGeotabAPIAdapter.Helpers
 {
@@ -9,6 +10,9 @@ namespace MyGeotabAPIAdapter.Helpers
     {
         /// <inheritdoc/>
         public DateTimeIntervalType DateTimeIntervalType { get; }
+
+        /// <inheritdoc/>
+        public DateTime DefaultDateTime { get => DateTime.ParseExact("1912/06/23", "yyyy/MM/dd", CultureInfo.InvariantCulture); }
 
         /// <inheritdoc/>
         public bool DateTimeRange1FallsWithinDateTimeRange2(DateTime Range1MinDateTime, DateTime Range1MaxDateTime, DateTime Range2MinDateTime, DateTime Range2MaxDateTime)
@@ -32,6 +36,66 @@ namespace MyGeotabAPIAdapter.Helpers
                 return false;
             }
             return true;
+        }
+
+        /// <inheritdoc/>
+        public DateTime GetDateTimeOrDefault(DateTime? dateTime)
+        {
+            if (dateTime == null)
+            {
+                return DefaultDateTime;
+            }
+            return (DateTime)dateTime;
+        }
+
+        /// <inheritdoc/>
+        public DateTime GetGreatestDateTime(DateTime? dateTime1, DateTime? dateTime2)
+        {
+            if (dateTime1 == null && dateTime2 == null)
+            {
+                string errorMessage = $"Null values were provided for both the {nameof(dateTime1)} and {nameof(dateTime2)} parameters. At least one parameter must be a valid {nameof(DateTime)}.";
+                throw new ArgumentException(errorMessage);
+            }
+            if (dateTime1 == null)
+            {
+                return (DateTime)dateTime2;
+            }
+            if (dateTime2 == null)
+            {
+                return (DateTime)dateTime1;
+            }
+            if (dateTime2 > dateTime1)
+            {
+                return (DateTime)dateTime2;
+            }
+            return (DateTime)dateTime1;
+        }
+
+        /// <inheritdoc/>
+        public TimeSpan GetRemainingTimeSpan(DateTime startTimeUTC, int timeSpanSeconds)
+        {
+            const int MinTimeSpanSeconds = 0;
+            const int MaxTimeSpanSeconds = 86400; // 86400 sec = 1 day
+
+            if (timeSpanSeconds < MinTimeSpanSeconds)
+            {
+                string errorMessage = $"The value of '{timeSpanSeconds}' provided for the '{nameof(timeSpanSeconds)}' parameter is less than the minimum allowed value of '{MinTimeSpanSeconds}'.";
+                throw new ArgumentException(errorMessage);
+            }
+            if (timeSpanSeconds > MaxTimeSpanSeconds)
+            {
+                string errorMessage = $"The value of '{timeSpanSeconds}' provided for the '{nameof(timeSpanSeconds)}' parameter is greater than the maximum allowed value of '{MaxTimeSpanSeconds}'.";
+                throw new ArgumentException(errorMessage);
+            }
+
+            var endTime = startTimeUTC.AddSeconds(timeSpanSeconds);
+            var currentTimeUTC = DateTime.UtcNow;
+            if (endTime < currentTimeUTC)
+            { 
+                return TimeSpan.Zero;
+            }
+            var remainingTimeSpan = endTime - currentTimeUTC;
+            return remainingTimeSpan;
         }
 
         /// <inheritdoc/>

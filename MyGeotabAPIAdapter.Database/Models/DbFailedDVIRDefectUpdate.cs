@@ -4,8 +4,16 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("FailedDVIRDefectUpdates")]
-    public class DbFailedDVIRDefectUpdate
+    public class DbFailedDVIRDefectUpdate : IDbEntity
     {
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "FailedDVIRDefectUpdates";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
         [Key]
         public long id { get; set; }
         public long DVIRDefectUpdateId { get; set; }
@@ -20,7 +28,5 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string FailureMessage { get; set; }
         [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
-        [Write(false)]
-        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
     }
 }

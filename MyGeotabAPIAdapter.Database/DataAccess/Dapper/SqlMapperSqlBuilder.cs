@@ -11,7 +11,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     public static class SqlMapperSqlBuilder
     {
         const string ConnectionProviderTypeNpgsql = "Npgsql";
-        const string ConnectionProviderTypeSQLite = "System.Data.SQLite";
         const string ConnectionProviderTypeMicrosoftSqlClient = "Microsoft.Data.SqlClient";
         const string ConnectionProviderTypeSystemSqlClient = "System.Data.SqlClient";
         const string ConnectionProviderTypeOracle = "Oracle.ManagedDataAccess.Client";
@@ -36,8 +35,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 {
                     ConnectionProviderTypeNpgsql =>
                         $" where \"{changedSinceColumnName}\" > \'{changedSinceDateTime:yyyy-MM-dd HH:mm:ss.ffffff}\'",
-                    ConnectionProviderTypeSQLite =>
-                        $" where \"{changedSinceColumnName}\" > \'{changedSinceDateTime:yyyy-MM-dd HH:mm:ss.fffffffz}\'",
                     ConnectionProviderTypeMicrosoftSqlClient or ConnectionProviderTypeSystemSqlClient =>
                         $" where \"{changedSinceColumnName}\" > \'{changedSinceDateTime:yyyy-MM-dd HH:mm:ss.fffffff}\'",
                     ConnectionProviderTypeOracle =>
@@ -56,7 +53,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             {
                 sqlStatement = connectionProviderType switch
                 {
-                    ConnectionProviderTypeNpgsql or ConnectionProviderTypeSQLite =>
+                    ConnectionProviderTypeNpgsql =>
                         $"select * from \"{tableName}\"{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\" limit {resultsLimit}",
                     ConnectionProviderTypeMicrosoftSqlClient or ConnectionProviderTypeSystemSqlClient =>
                         $"select top ({resultsLimit}) * from \"{tableName}\"{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\"",
@@ -91,8 +88,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 {
                     ConnectionProviderTypeNpgsql =>
                         $"where \"{changedSinceColumnName}\" > \'{changedSinceDateTime:yyyy-MM-dd HH:mm:ss.ffffff}\'",
-                    ConnectionProviderTypeSQLite =>
-                        $"where \"{changedSinceColumnName}\" > \'{changedSinceDateTime:yyyy-MM-dd HH:mm:ss.fffffffz}\'",
                     ConnectionProviderTypeMicrosoftSqlClient or ConnectionProviderTypeSystemSqlClient =>
                         $"where \"{changedSinceColumnName}\" > \'{changedSinceDateTime:yyyy-MM-dd HH:mm:ss.fffffff}\'",
                     ConnectionProviderTypeOracle =>
@@ -107,7 +102,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             switch (connectionProviderType)
             {
                 case ConnectionProviderTypeNpgsql:
-                case ConnectionProviderTypeSQLite:
                     sb.Append($"select * from \"{tableName}\" {whereChangedSincePortionOfSqlStatement} ");
                     break;
                 case ConnectionProviderTypeMicrosoftSqlClient:
@@ -154,7 +148,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             switch (connectionProviderType)
             {
                 case ConnectionProviderTypeNpgsql:
-                case ConnectionProviderTypeSQLite:
                     sb.Append($" order by \"{keyColumnName}\"");
                     if (resultsLimit != null && resultsLimit > 0)
                     {

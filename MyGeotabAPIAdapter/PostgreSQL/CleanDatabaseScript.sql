@@ -1,7 +1,6 @@
 /* Clean Database */ 
 -- delete from public."BinaryData";
 -- delete from public."Conditions";
--- delete from public."ConfigFeedVersions";
 -- delete from public."Devices";
 -- delete from public."DeviceStatusInfo";
 -- delete from public."Diagnostics";
@@ -17,6 +16,7 @@
 -- delete from public."FaultData";
 -- delete from public."LogRecords";
 -- delete from public."MyGeotabVersionInfo";
+-- delete from public."OServiceTracking";
 -- delete from public."OVDSServerCommands";
 -- delete from public."Rules";
 -- delete from public."StatusData";
@@ -26,7 +26,6 @@
 -- delete from public."ZoneTypes";
 -- ALTER SEQUENCE public."BinaryData_id_seq" RESTART;
 -- ALTER SEQUENCE public."Conditions_id_seq" RESTART;
--- ALTER SEQUENCE public."ConfigFeedVersions_id_seq" RESTART;
 -- ALTER SEQUENCE public."Devices_id_seq" RESTART;
 -- ALTER SEQUENCE public."DeviceStatusInfo_id_seq" RESTART;
 -- ALTER SEQUENCE public."Diagnostics_id_seq" RESTART;
@@ -41,6 +40,7 @@
 -- ALTER SEQUENCE public."FailedOVDSServerCommands_id_seq" RESTART;
 -- ALTER SEQUENCE public."FaultData_id_seq" RESTART;
 -- ALTER SEQUENCE public."LogRecords_id_seq" RESTART;
+-- ALTER SEQUENCE public."OServiceTracking_id_seq" RESTART;
 -- ALTER SEQUENCE public."OVDSServerCommands_id_seq" RESTART;
 -- ALTER SEQUENCE public."Rules_id_seq" RESTART;
 -- ALTER SEQUENCE public."StatusData_id_seq" RESTART;
@@ -53,8 +53,6 @@
 select 'BinaryData' as "TableName", count(0) as "RecordCount" from public."BinaryData"
 union all
 select 'Conditions' as "TableName", count(0) as "RecordCount" from public."Conditions"
-union all
-select 'ConfigFeedVersions', count(0) from public."ConfigFeedVersions"
 union all
 select 'Devices', count(0) from public."Devices"
 union all
@@ -85,6 +83,8 @@ union all
 select 'LogRecords', count(0) from public."LogRecords"
 union all
 select 'MyGeotabVersionInfo', count(0) from public."MyGeotabVersionInfo"
+union all
+select 'OServiceTracking', count(0) from public."OServiceTracking"
 union all
 select 'OVDSServerCommands', count(0) from public."OVDSServerCommands"
 union all

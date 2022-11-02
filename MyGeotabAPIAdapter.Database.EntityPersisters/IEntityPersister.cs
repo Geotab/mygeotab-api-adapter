@@ -16,12 +16,23 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// <summary>
         /// Persists the <paramref name="entitiesToPersist"/> to database.
         /// </summary>
-        /// <param name="context">The <see cref="IConnectionContext"/> to use.</param>
+        /// <param name="adapterContext">The <see cref="AdapterDatabaseUnitOfWorkContext"/> to use.</param>
         /// <param name="entitiesToPersist">The list of entities to be persisted to database.</param>
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <param name="logLevel">The <see cref="LogLevel"/> to apply to the log message.</param>
         /// <param name="logPersistenceOperationDetails">Indicates whether to log the details of the persistence operation (i.e. number of records inserted/updated, etc.)</param>
         /// <returns></returns>
-        Task PersistEntitiesToDatabaseAsync(IConnectionContext context, IEnumerable<T> entitiesToPersist, CancellationTokenSource cancellationTokenSource, LogLevel logLevel, bool logPersistenceOperationDetails = true);
+        Task PersistEntitiesToDatabaseAsync(IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext, IEnumerable<T> entitiesToPersist, CancellationTokenSource cancellationTokenSource, Logging.LogLevel logLevel, bool logPersistenceOperationDetails = true);
+
+        /// <summary>
+        /// Persists the <paramref name="entitiesToPersist"/> to database.
+        /// </summary>
+        /// <param name="optimizerContext">The <see cref="OptimizerDatabaseUnitOfWorkContext"/> to use.</param>
+        /// <param name="entitiesToPersist">The list of entities to be persisted to database.</param>
+        /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <param name="logLevel">The <see cref="LogLevel"/> to apply to the log message.</param>
+        /// <param name="logPersistenceOperationDetails">Indicates whether to log the details of the persistence operation (i.e. number of records inserted/updated, etc.)</param>
+        /// <returns></returns>
+        Task PersistEntitiesToDatabaseAsync(IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> optimizerContext, IEnumerable<T> entitiesToPersist, CancellationTokenSource cancellationTokenSource, Logging.LogLevel logLevel, bool logPersistenceOperationDetails = true);
     }
 }

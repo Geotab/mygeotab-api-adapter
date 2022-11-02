@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace MyGeotabAPIAdapter.DataOptimizer
 {
     /// <summary>
-    /// Interface for a class that helps manage <see cref="DbOProcessorTracking"/> information for all <see cref="DataOptimizerProcessor"/>.
+    /// Interface for a class that helps manage <see cref="DbOProcessorTracking"/> information for all <see cref="DataOptimizerProcessor"/>s.
     /// </summary>
     public interface IProcessorTracker
     {
@@ -22,10 +22,15 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// </summary>
         /// <param name="prerequisiteProcessors">The list of prerequisite <see cref="DataOptimizerProcessor"/>s to check.</param>
         /// <returns></returns>
-        Task<PrerequisiteProcessorOperationCheckResult> CheckOperationOfPrerequisiteProcessors(List<DataOptimizerProcessor> prerequisiteProcessors);
+        Task<PrerequisiteProcessorOperationCheckResult> CheckOperationOfPrerequisiteProcessorsAsync(List<DataOptimizerProcessor> prerequisiteProcessors);
 
         /// <summary>
-        /// The <see cref="DbOProcessorTracking"/> entities associated with all <see cref="DataOptimizerProcessor"/>.
+        /// Retrieves the <see cref="DbOProcessorTracking"/> entity associated with the <see cref="DataOptimizerProcessor.BinaryDataProcessor"/>.
+        /// </summary>
+        Task<DbOProcessorTracking> GetBinaryDataProcessorInfoAsync();
+
+        /// <summary>
+        /// The <see cref="DbOProcessorTracking"/> entities associated with all <see cref="DataOptimizerProcessor"/>s.
         /// </summary>
         Task<List<DbOProcessorTracking>> GetDbOProcessorTrackingListAsync();
 
@@ -35,11 +40,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <param name="dataOptimizerProcessor">The <see cref="DataOptimizerProcessor"/> of the <see cref="DbOProcessorTracking"/> entity to be retrieved.</param>
         /// <returns></returns>
         Task<DbOProcessorTracking> GetDbOProcessorTrackingRecordAsync(DataOptimizerProcessor dataOptimizerProcessor);
-
-        /// <summary>
-        /// Retrieves the <see cref="DbOProcessorTracking"/> entity associated with the <see cref="DataOptimizerProcessor.BinaryDataProcessor"/>.
-        /// </summary>
-        Task<DbOProcessorTracking> GetBinaryDataProcessorInfoAsync();
 
         /// <summary>
         /// Retrieves the <see cref="DbOProcessorTracking"/> entity associated with the <see cref="DataOptimizerProcessor.DeviceProcessor"/>.
@@ -93,54 +93,47 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         Task InitializeDbOProcessorTrackingListAsync();
 
         /// <summary>
-        /// Persists the <paramref name="dbOProcessorTrackingsToPersist"/> to database.
-        /// </summary>
-        /// <param name="dbOProcessorTrackingsToPersist">The list of <see cref="DbOProcessorTracking"/> entities to persist to database.</param>
-        /// <returns></returns>
-        Task PersistDbOProcessorTrackingRecordsToDatabase(List<DbOProcessorTracking> dbOProcessorTrackingsToPersist);
-
-        /// <summary>
         /// Indicates whether the subject <see cref="DataOptimizerProcessor"/> has ever been run.
         /// </summary>
         /// <param name="dataOptimizerProcessor">The <see cref="DataOptimizerProcessor"/> to check.</param>
         /// <returns></returns>
-        Task<bool> ProcessorHasBeenRun(DataOptimizerProcessor dataOptimizerProcessor);
+        Task<bool> ProcessorHasBeenRunAsync(DataOptimizerProcessor dataOptimizerProcessor);
 
         /// <summary>
         /// Indicates whether the subject <see cref="DataOptimizerProcessor"/> has processed data.
         /// </summary>
         /// <param name="dataOptimizerProcessor">The <see cref="DataOptimizerProcessor"/> to check.</param>
         /// <returns></returns>
-        Task<bool> ProcessorHasProcessedData(DataOptimizerProcessor dataOptimizerProcessor);
+        Task<bool> ProcessorHasProcessedDataAsync(DataOptimizerProcessor dataOptimizerProcessor);
 
         /// <summary>
         /// Indicates whether the subject <see cref="DataOptimizerProcessor"/> is currently running. Since processors can be distributed across multiple machines, this is a guess based on whether the subject <see cref="DataOptimizerProcessor"/> has processed any data within the past two days.
         /// </summary>
         /// <param name="dataOptimizerProcessor">The <see cref="DataOptimizerProcessor"/> to check.</param>
         /// <returns></returns>
-        Task<bool> ProcessorIsRunning(DataOptimizerProcessor dataOptimizerProcessor);
+        Task<bool> ProcessorIsRunningAsync(DataOptimizerProcessor dataOptimizerProcessor);
 
         /// <summary>
         /// Updates the <see cref="DbOProcessorTracking"/> entity associated with the specified <paramref name="dataOptimizerProcessor"/> setting its properties with the associated supplied parameter values. Any properties for which null values are supplied will not be updated. 
         /// </summary>
-        /// <param name="context">The <see cref="UnitOfWorkContext"/> to use.</param>
+        /// <param name="context">The <see cref="OptimizerDatabaseUnitOfWorkContext"/> to use.</param>
         /// <param name="dataOptimizerProcessor">The <see cref="DataOptimizerProcessor"/> of the <see cref="DbOProcessorTracking"/> entity to be updated.</param>
         /// <param name="entitiesLastProcessedUtc">The new <see cref="DbOProcessorTracking.EntitiesLastProcessedUtc"/> value to use.</param>
         /// <param name="adapterDbLastId">The new <see cref="DbOProcessorTracking.AdapterDbLastId"/> value to use.</param>
         /// <param name="adapterDbLastRecordCreationTimeUtc">The new <see cref="DbOProcessorTracking.AdapterDbLastRecordCreationTimeUtc"/> value to use.</param>
         /// <param name="adapterDbLastGeotabId">The new <see cref="DbOProcessorTracking.AdapterDbLastGeotabId"/> value to use.</param>
         /// <returns></returns>
-        Task UpdateDbOProcessorTrackingRecord(UnitOfWorkContext context, DataOptimizerProcessor dataOptimizerProcessor, DateTime? entitiesLastProcessedUtc, long? adapterDbLastId, DateTime? adapterDbLastRecordCreationTimeUtc, string? adapterDbLastGeotabId);
+        Task UpdateDbOProcessorTrackingRecordAsync(IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> context, DataOptimizerProcessor dataOptimizerProcessor, DateTime? entitiesLastProcessedUtc, long? adapterDbLastId, DateTime? adapterDbLastRecordCreationTimeUtc, string? adapterDbLastGeotabId);
 
         /// <summary>
         /// Updates the <see cref="DbOProcessorTracking"/> entity associated with the specified <paramref name="dataOptimizerProcessor"/> setting its properties with the associated supplied parameter values. Any properties for which null values are supplied will not be updated.
         /// </summary>
-        /// <param name="context">The <see cref="UnitOfWorkContext"/> to use.</param>
+        /// <param name="context">The <see cref="OptimizerDatabaseUnitOfWorkContext"/> to use.</param>
         /// <param name="dataOptimizerProcessor">The <see cref="DataOptimizerProcessor"/> of the <see cref="DbOProcessorTracking"/> entity to be updated.</param>
         /// <param name="optimizerVersion">The new <see cref="DbOProcessorTracking.OptimizerVersion"/> value to use.</param>
         /// <param name="optimizerMachineName">The new <see cref="DbOProcessorTracking.OptimizerMachineName"/> value to use.</param>
         /// <returns></returns>
-        Task UpdateDbOProcessorTrackingRecord(UnitOfWorkContext context, DataOptimizerProcessor dataOptimizerProcessor, string? optimizerVersion, string? optimizerMachineName);
+        Task UpdateDbOProcessorTrackingRecordAsync(IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> context, DataOptimizerProcessor dataOptimizerProcessor, string? optimizerVersion, string? optimizerMachineName);
 
         /// <summary>
         /// Waits until <see cref="IsUpdating"/> is <c>false</c>. Intended for use by methods that enumerate and retrieve cached objects.

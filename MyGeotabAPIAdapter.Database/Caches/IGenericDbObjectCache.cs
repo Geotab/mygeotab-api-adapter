@@ -23,7 +23,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         DateTime DefaultDateTime { get; }
 
         /// <summary>
-        /// Indicates whether the <see cref="InitializeAsync(UnitOfWorkContext, Databases)"/> has been invoked since the current class instance was created.
+        /// Indicates whether the <see cref="InitializeAsync(IDatabaseUnitOfWorkContext, Databases)"/> has been invoked since the current class instance was created.
         /// </summary>
         bool IsInitialized { get; }
 

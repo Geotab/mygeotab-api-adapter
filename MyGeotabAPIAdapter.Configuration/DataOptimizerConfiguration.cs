@@ -113,7 +113,7 @@ namespace MyGeotabAPIAdapter.Configuration
         // Arbitrary timeout limits:
         const int DefaultTimeoutSeconds = 30;
         const int MinTimeoutSeconds = 10;
-        const int MaxTimeoutSeconds = 120;
+        const int MaxTimeoutSeconds = 3600;
 
         /// <inheritdoc/>
         public string AdapterDatabaseProviderType { get; private set; }
@@ -339,8 +339,13 @@ namespace MyGeotabAPIAdapter.Configuration
         /// </summary>
         public DataOptimizerConfiguration(IConfigurationHelper configurationHelper)
         {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
             this.configurationHelper = configurationHelper;
             ProcessConfigItems();
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>

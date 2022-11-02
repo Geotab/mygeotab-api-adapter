@@ -12,7 +12,7 @@ namespace MyGeotabAPIAdapter.Configuration
     {
         const string MaskString = "************";
 
-        readonly IConfiguration configuration;
+        IConfiguration configuration;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
@@ -173,6 +173,29 @@ namespace MyGeotabAPIAdapter.Configuration
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return output;
+        }
+
+        /// <inheritdoc/>
+        public IConfigurationSection GetConfigSection(string sectionString)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            var output = configuration.GetSection(sectionString);
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            return output;
+        }
+
+        /// <inheritdoc/>
+        public void SetConfiguration(IConfiguration configuration)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            this.configuration = configuration;
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

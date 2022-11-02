@@ -5,8 +5,16 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("MyGeotabVersionInfo")]
-    public class DbMyGeotabVersionInfo
+    public class DbMyGeotabVersionInfo : IDbEntity
     {
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "MyGeotabVersionInfo";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
         public string DatabaseName { get; set; }
         public string Server { get; set; }
         public string DatabaseVersion { get; set; }

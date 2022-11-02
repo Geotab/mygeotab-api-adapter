@@ -45,10 +45,16 @@
         public string DbFailedDVIRDefectUpdatesTableName => "FailedDVIRDefectUpdates";
 
         /// <inheritdoc/>
+        public string DbFailedOVDSServerCommandTableName => "FailedOVDSServerCommands";
+
+        /// <inheritdoc/>
         public string DbFaultDataTableName => "FaultData";
 
         /// <inheritdoc/>
         public string DbLogRecordTableName => "LogRecords";
+
+        /// <inheritdoc/>
+        public string DbOVDSServerCommandTableName => "OVDSServerCommands";
 
         /// <inheritdoc/>
         public string DbRuleTableName => "Rules";
@@ -67,5 +73,8 @@
 
         /// <inheritdoc/>
         public string DbZoneTypeTableName => "ZoneTypes";
+
+        /// <inheritdoc/>
+        public string Id { get; private set; }
     }
 }

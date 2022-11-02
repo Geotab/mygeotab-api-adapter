@@ -13,7 +13,7 @@ namespace MyGeotabAPIAdapter.Tests
     /// A generic mock base repository class that handles database CRUD operations. Instead of interacting with an actual database, an internal list of objects is used and the methods of this class interact with that list.
     /// </summary>
     /// <typeparam name="T">The type of entity being used for mocking.</typeparam>
-    public class MockBaseRepository2<T> : IBaseRepository2<T>, IDisposable where T : class, IIdCacheableDbEntity
+    public class MockBaseRepository2<T> : IBaseRepository<T>, IDisposable where T : class, IIdCacheableDbEntity
     {
         const int TimeoutSeconds = 120;
         readonly List<T> dataStore;

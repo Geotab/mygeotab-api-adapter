@@ -1,12 +1,14 @@
-﻿using MyGeotabAPIAdapter.Database.DataAccess;
+﻿#nullable enable
+using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Helpers;
 using NLog;
+using Polly;
+using Polly.Retry;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,12 +23,17 @@ namespace MyGeotabAPIAdapter.Database.Caches
     {
         static string CurrentClassName { get => $"{nameof(GenericGeotabGUIDCacheableDbObjectCache<T>)}<{typeof(T).Name}>"; }
 
-        protected readonly ConcurrentDictionary<long, T> objectCache = new();
-        readonly ConcurrentDictionary<string, long> geotabGUIDCache = new();
+        // Polly-related items:
+        const int MaxRetries = 10;
+        readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
+
+        protected readonly ConcurrentDictionary<long, T> dbObjectFromDbIdCache = new();
+        readonly ConcurrentDictionary<string, long> dbIdFromGeotabGuidCache = new();
+        readonly ConcurrentDictionary<string, string> geotabGuidFromGeotabIdCache = new();
 
         int cacheUpdateIntervalMinutes = 5;
         Databases database;
-        IBaseRepository2<T> dbEntityRepo;
+        IBaseRepository<T> dbEntityRepo;
         readonly DateTime defaultDateTime = DateTime.ParseExact("1912/06/23", "yyyy/MM/dd", CultureInfo.InvariantCulture);
         readonly SemaphoreSlim initializationLock = new(1, 1);
         bool isInitialized;
@@ -35,7 +42,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         readonly SemaphoreSlim updateLock = new(1, 1);
 
         readonly IDateTimeHelper dateTimeHelper;
-        readonly UnitOfWorkContext context;
+        readonly OptimizerDatabaseUnitOfWorkContext context;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <inheritdoc/>
@@ -53,8 +60,8 @@ namespace MyGeotabAPIAdapter.Database.Caches
         {
             get
             {
-                // The objectCache may be empty if the source was not yet populated when the cache was initialized (e.g. if the API Adapter and Data Optimizer were started at the same time, or in some situations based on combinations of appsettings.json values). If this is the case, we want to re-initialize to capture the first batch of data that may have subsequently come-in.
-                if (objectCache.IsEmpty)
+                // The dbObjectFromDbIdCache may be empty if the source was not yet populated when the cache was initialized (e.g. if the API Adapter and Data Optimizer were started at the same time, or in some situations based on combinations of appsettings.json values). If this is the case, we want to re-initialize to capture the first batch of data that may have subsequently come-in.
+                if (dbObjectFromDbIdCache.IsEmpty && isUpdating == false)
                 {
                     isInitialized = false;
                 }
@@ -71,13 +78,13 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public bool Any()
         {
-            return !objectCache.IsEmpty;
+            return !dbObjectFromDbIdCache.IsEmpty;
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GenericGeotabGUIDCacheableDbObjectCache{T}"/> class.
         /// </summary>
-        public GenericGeotabGUIDCacheableDbObjectCache(IDateTimeHelper dateTimeHelper, UnitOfWorkContext context)
+        public GenericGeotabGUIDCacheableDbObjectCache(IDateTimeHelper dateTimeHelper, OptimizerDatabaseUnitOfWorkContext context)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -86,15 +93,18 @@ namespace MyGeotabAPIAdapter.Database.Caches
             this.dateTimeHelper = dateTimeHelper;
 
             this.context = context;
-            logger.Debug($"{nameof(UnitOfWorkContext)} [Id: {context.Id}] associated with {CurrentClassName}.");
+            logger.Debug($"{nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {context.Id}] associated with {CurrentClassName}.");
+
+            // Setup a database transaction retry policy.
+            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(MaxRetries, logger);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
-        /// *** UNIT TESTING CONSTRUCTOR *** This constructor is designed for unit testing only. It accepts an additional <see cref="IBaseRepository2{T}"/> input, which may be a test class. Under normal operation, a <see cref="BaseRepository2{T}"/> is created and used within this class when required. Under normal operation, the other constructor should be used in conjunction with Dependency Injection.
+        /// *** UNIT TESTING CONSTRUCTOR *** This constructor is designed for unit testing only. It accepts an additional <see cref="IBaseRepository{T}"/> input, which may be a test class. Under normal operation, a <see cref="BaseRepository{T}"/> is created and used within this class when required. Under normal operation, the other constructor should be used in conjunction with Dependency Injection.
         /// </summary>
-        public GenericGeotabGUIDCacheableDbObjectCache(IDateTimeHelper dateTimeHelper, UnitOfWorkContext context, IBaseRepository2<T> testDbEntityRepo)
+        public GenericGeotabGUIDCacheableDbObjectCache(IDateTimeHelper dateTimeHelper, OptimizerDatabaseUnitOfWorkContext context, IBaseRepository<T> testDbEntityRepo)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -103,7 +113,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
             this.dateTimeHelper = dateTimeHelper;
 
             this.context = context;
-            logger.Debug($"{nameof(UnitOfWorkContext)} [Id: {context.Id}] associated with {CurrentClassName}.");
+            logger.Debug($"{nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {context.Id}] associated with {CurrentClassName}.");
 
             dbEntityRepo = testDbEntityRepo;
 
@@ -111,7 +121,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         }
 
         /// <inheritdoc/>
-        public async Task<T> GetObjectAsync(long id)
+        public async Task<T?> GetObjectAsync(long id)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -119,7 +129,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
             await UpdateAsync();
             await WaitIfUpdatingAsync();
 
-            if (objectCache.TryGetValue(id, out T obj))
+            if (dbObjectFromDbIdCache.TryGetValue(id, out T obj))
             {
                 return obj;
             }
@@ -127,7 +137,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         }
 
         /// <inheritdoc/>
-        public async Task<T> GetObjectByGeotabGUIDAsync(string geotabGUID)
+        public async Task<T?> GetObjectByGeotabGUIDAsync(string geotabGUID)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -142,7 +152,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         }
 
         /// <inheritdoc/>
-        public async Task<T> GetObjectByGeotabIdAsync(string geotabId)
+        public async Task<string?> GetObjectGeotabGUIDByGeotabIdAsync(string geotabId)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -150,26 +160,9 @@ namespace MyGeotabAPIAdapter.Database.Caches
             await UpdateAsync();
             await WaitIfUpdatingAsync();
 
-            var resultCandidates = new List<T>();
-            var objectEnumerator = objectCache.GetEnumerator();
-            objectEnumerator.Reset();
-            while (objectEnumerator.MoveNext())
+            if (geotabGuidFromGeotabIdCache.TryGetValue(geotabId, out string geotabGUID))
             {
-                var currentKVP = objectEnumerator.Current;
-                var currentObject = currentKVP.Value;
-                if (currentObject.GeotabId == geotabId)
-                {
-                    resultCandidates.Add(currentObject);
-                }
-            }
-            if (resultCandidates.Count == 1)
-            {
-                return resultCandidates[0];
-            }
-            else if (resultCandidates.Count > 1)
-            {
-                var sortedresultCandidates = resultCandidates.OrderByDescending(x => x.LastUpsertedUtc);
-                return sortedresultCandidates.First();
+                return geotabGUID;
             }
             return default;
         }
@@ -183,42 +176,9 @@ namespace MyGeotabAPIAdapter.Database.Caches
             await UpdateAsync();
             await WaitIfUpdatingAsync();
 
-            if (geotabGUIDCache.TryGetValue(geotabGUID, out long id))
+            if (dbIdFromGeotabGuidCache.TryGetValue(geotabGUID, out long id))
             {
                 return id;
-            }
-            return default;
-        }
-
-        /// <inheritdoc/>
-        public async Task<long?> GetObjectIdByGeotabIdAsync(string geotabId)
-        {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            var resultCandidates = new List<T>();
-            var objectEnumerator = objectCache.GetEnumerator();
-            objectEnumerator.Reset();
-            while (objectEnumerator.MoveNext())
-            {
-                var currentKVP = objectEnumerator.Current;
-                var currentObject = currentKVP.Value;
-                if (currentObject.GeotabId == geotabId)
-                {
-                    resultCandidates.Add(currentObject);
-                }
-            }
-            if (resultCandidates.Count == 1)
-            {
-                return resultCandidates[0].id;
-            }
-            else if (resultCandidates.Count > 1)
-            {
-                var sortedresultCandidates = resultCandidates.OrderByDescending(x => x.LastUpsertedUtc);
-                var result = sortedresultCandidates.First().id;
             }
             return default;
         }
@@ -233,7 +193,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
             await WaitIfUpdatingAsync();
 
             var results = new List<T>();
-            var objectEnumerator = objectCache.GetEnumerator();
+            var objectEnumerator = dbObjectFromDbIdCache.GetEnumerator();
             objectEnumerator.Reset();
             while (objectEnumerator.MoveNext())
             {
@@ -254,7 +214,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
             await WaitIfUpdatingAsync();
 
             var results = new List<T>();
-            var objectEnumerator = objectCache.GetEnumerator();
+            var objectEnumerator = dbObjectFromDbIdCache.GetEnumerator();
             objectEnumerator.Reset();
             while (objectEnumerator.MoveNext())
             {
@@ -278,7 +238,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
             await WaitIfUpdatingAsync();
 
             var results = new List<T>();
-            var objectEnumerator = objectCache.GetEnumerator();
+            var objectEnumerator = dbObjectFromDbIdCache.GetEnumerator();
             objectEnumerator.Reset();
             while (objectEnumerator.MoveNext())
             {
@@ -341,46 +301,62 @@ namespace MyGeotabAPIAdapter.Database.Caches
                 {
                     if (dbEntityRepo == null)
                     {
-                        dbEntityRepo = new BaseRepository2<T>(context);
+                        dbEntityRepo = new BaseRepository<T>(context);
                     }
 
                     isUpdating = true;
-                    using (var uow = context.CreateUnitOfWork(database))
+                    await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                     {
-                        // Get any dbEntities that have been updated since the last time this GenericGeotabGUIDCacheableDbObjectCache was updated. If this is the first time this method has been called since application startup, all dbEntities will be loaded into the cache.
-                        var dbEntities = await dbEntityRepo.GetAllAsync(cancellationTokenSource, null, lastUpdated);
-
-                        foreach (var dbEntity in dbEntities)
+                        using (var uow = context.CreateUnitOfWork(database))
                         {
-                            // If the dbEntity is already in the objectCache, remove it so that it can be replaced with the new one.
-                            if (objectCache.ContainsKey(dbEntity.id))
-                            {
-                                if (!objectCache.TryRemove(dbEntity.id, out T retrievedValue))
-                                {
-                                    throw new Exception($"Unable to remove {typeof(T).Name} with id \"{dbEntity.id}\" from objectCache.");
-                                }
-                            }
+                            // Get any dbEntities that have been updated since the last time this GenericGeotabGUIDCacheableDbObjectCache was updated. If this is the first time this method has been called since application startup, all dbEntities will be loaded into the cache.
+                            var dbEntities = await dbEntityRepo.GetAllAsync(cancellationTokenSource, null, lastUpdated);
 
-                            // Add the dbEntity to the objectCache.
-                            if (!objectCache.TryAdd(dbEntity.id, dbEntity))
+                            foreach (var dbEntity in dbEntities)
                             {
-                                throw new Exception($"Unable to add {typeof(T).Name} with id \"{dbEntity.id}\" to objectCache.");
-                            }
-
-                            // Add or update the geotabGUIDCache.
-                            _ = geotabGUIDCache.AddOrUpdate(dbEntity.GeotabGUID, dbEntity.id,
-                                (geotabGUID, existingEntityId) =>
+                                // If the dbEntity is already in the dbObjectFromDbIdCache, remove it so that it can be replaced with the new one.
+                                if (dbObjectFromDbIdCache.ContainsKey(dbEntity.id))
                                 {
-                                    // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the geotabGUIDCache that has the same GeotabGUID, but a different Id.
-                                    if (dbEntity.id != existingEntityId)
+                                    if (!dbObjectFromDbIdCache.TryRemove(dbEntity.id, out T retrievedValue))
                                     {
-                                        throw new ArgumentException($"A {typeof(T).Name} with GeotabGUID \"{dbEntity.GeotabGUID}\" already exists objectCache. Duplicates are not allowed. The existing {typeof(T).Name} has an Id of \"{existingEntityId}\". The {typeof(T).Name} with the same GeotabGUID that cannot be added to the objectCache has an Id of \"{dbEntity.id}\".");
+                                        throw new Exception($"Unable to remove {typeof(T).Name} with id \"{dbEntity.id}\" from dbObjectFromDbIdCache.");
                                     }
-                                    // Nothing to do here, since the Id is the only updatable property.
-                                    return existingEntityId;
-                                });
+                                }
+
+                                // Add the dbEntity to the dbObjectFromDbIdCache.
+                                if (!dbObjectFromDbIdCache.TryAdd(dbEntity.id, dbEntity))
+                                {
+                                    throw new Exception($"Unable to add {typeof(T).Name} with id \"{dbEntity.id}\" to dbObjectFromDbIdCache.");
+                                }
+
+                                // Add or update the dbIdFromGeotabGuidCache.
+                                _ = dbIdFromGeotabGuidCache.AddOrUpdate(dbEntity.GeotabGUID, dbEntity.id,
+                                    (geotabGUID, existingEntityId) =>
+                                    {
+                                        // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the dbIdFromGeotabGuidCache that has the same GeotabGUID, but a different Id.
+                                        if (dbEntity.id != existingEntityId)
+                                        {
+                                            throw new ArgumentException($"A {typeof(T).Name} with GeotabGUID \"{dbEntity.GeotabGUID}\" already exists in the dbObjectFromDbIdCache. Duplicates are not allowed. The existing {typeof(T).Name} has an Id of \"{existingEntityId}\". The {typeof(T).Name} with the same GeotabGUID that cannot be added to the dbObjectFromDbIdCache has an Id of \"{dbEntity.id}\".");
+                                        }
+                                        // Nothing to do here, since the Id is the only updatable property.
+                                        return existingEntityId;
+                                    });
+
+                                // Add or update to geotabGuidFromGeotabIdCache.
+                                _ = geotabGuidFromGeotabIdCache.AddOrUpdate(dbEntity.GeotabId, dbEntity.GeotabGUID,
+                                    (geotabID, existingEntityGeotabGUID) =>
+                                    {
+                                        // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the geotabGuidFromGeotabIdCache that has the same GeotabId, but a different GeotabGUID.
+                                        if (dbEntity.GeotabGUID != existingEntityGeotabGUID)
+                                        {
+                                            throw new ArgumentException($"A {typeof(T).Name} with GeotabId \"{dbEntity.GeotabId}\" already exists in the geotabGuidFromGeotabIdCache. Duplicates are not allowed. The existing {typeof(T).Name} has a GeotabGUID of \"{existingEntityGeotabGUID}\". The {typeof(T).Name} with the same GeotabId that cannot be added to the geotabGuidFromGeotabIdCache has a GeotabGUID of \"{dbEntity.GeotabGUID}\".");
+                                        }
+                                        // Nothing to do here, since the GeotabGUID is the only updatable property.
+                                        return existingEntityGeotabGUID;
+                                    });
+                            }
                         }
-                    }
+                    }, new Context());
                     isUpdating = false;
                 }
                 lastUpdated = DateTime.UtcNow;
@@ -394,7 +370,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         }
 
         /// <summary>
-        /// Checks whether the <see cref="InitializeAsync(UnitOfWorkContext, Databases)"/> has been invoked since the current class instance was created and throws an <see cref="InvalidOperationException"/> if initialization has not been performed.
+        /// Checks whether the <see cref="InitializeAsync(OptimizerDatabaseUnitOfWorkContext, Databases)"/> has been invoked since the current class instance was created and throws an <see cref="InvalidOperationException"/> if initialization has not been performed.
         /// </summary>
         void ValidateInitialized()
         {

@@ -4,8 +4,16 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("Trips")]
-    public class DbTrip
+    public class DbTrip : IDbEntity
     {
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "Trips";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
         [Key]
         public long id { get; set; }
         public string GeotabId { get; set; }

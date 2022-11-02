@@ -2,6 +2,8 @@
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Helpers;
 using NLog;
+using Polly;
+using Polly.Retry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,6 +24,10 @@ namespace MyGeotabAPIAdapter.Database.Caches
         const int MaxAutoRefreshIntervalMinutes = 1440;
         const int MinAutoRefreshIntervalMinutes = 1;
 
+        // Polly-related items:
+        const int MaxRetries = 10;
+        readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
+
         int autoRefreshIntervalMinutes;
         IDictionary<long, string> cache;
         Databases database;
@@ -31,7 +37,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         readonly SemaphoreSlim updateLock = new(1, 1);
 
         readonly IDateTimeHelper dateTimeHelper;
-        readonly UnitOfWorkContext context;
+        readonly OptimizerDatabaseUnitOfWorkContext context;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <inheritdoc/>
@@ -64,13 +70,16 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <summary>
         /// Initializes a new instance of the <see cref="GenericIdCache{T}"/> class.
         /// </summary>
-        public GenericIdCache(IDateTimeHelper dateTimeHelper, UnitOfWorkContext context)
+        public GenericIdCache(IDateTimeHelper dateTimeHelper, OptimizerDatabaseUnitOfWorkContext context)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             this.dateTimeHelper = dateTimeHelper;
             this.context = context;
+
+            // Setup a database transaction retry policy.
+            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(MaxRetries, logger);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -145,16 +154,19 @@ namespace MyGeotabAPIAdapter.Database.Caches
 
                 using (var cancellationTokenSource = new CancellationTokenSource())
                 {
-                    var dbEntityRepo = new BaseRepository2<T>(context);
-                    using (var uow = context.CreateUnitOfWork(database))
+                    var dbEntityRepo = new BaseRepository<T>(context);
+                    await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                     {
-                        var dbEntities = await dbEntityRepo.GetAllAsync(cancellationTokenSource);
-                        cache = new Dictionary<long, string>();
-                        foreach (var dbEntity in dbEntities)
+                        using (var uow = context.CreateUnitOfWork(database))
                         {
-                            cache.Add(dbEntity.id, dbEntity.GeotabId);
+                            var dbEntities = await dbEntityRepo.GetAllAsync(cancellationTokenSource);
+                            cache = new Dictionary<long, string>();
+                            foreach (var dbEntity in dbEntities)
+                            {
+                                cache.Add(dbEntity.id, dbEntity.GeotabId);
+                            }
                         }
-                    }
+                    }, new Context());
                 }
                 lastRefreshed = DateTime.UtcNow;
             }

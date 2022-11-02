@@ -2,7 +2,6 @@
 /* 
 DELETE FROM GeotabAdapter_Client."BinaryData";
 DELETE FROM GeotabAdapter_Client."Conditions";
-DELETE FROM GeotabAdapter_Client."ConfigFeedVersions";
 DELETE FROM GeotabAdapter_Client."Devices";
 DELETE FROM GeotabAdapter_Client."DeviceStatusInfo";
 DELETE FROM GeotabAdapter_Client."Diagnostics";
@@ -18,6 +17,7 @@ DELETE FROM GeotabAdapter_Client."FailedOVDSServerCommands";
 DELETE FROM GeotabAdapter_Client."FaultData";
 DELETE FROM GeotabAdapter_Client."LogRecords";
 DELETE FROM GeotabAdapter_Client."MyGeotabVersionInfo";
+DELETE FROM GeotabAdapter_Client."OServiceTracking";
 DELETE FROM GeotabAdapter_Client."OVDSServerCommands";
 DELETE FROM GeotabAdapter_Client."Rules";
 DELETE FROM GeotabAdapter_Client."StatusData";
@@ -27,7 +27,6 @@ DELETE FROM GeotabAdapter_Client."Zones";
 DELETE FROM GeotabAdapter_Client."ZoneTypes";
 ALTER TABLE GeotabAdapter_Client."BinaryData" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."Conditions" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
-ALTER TABLE GeotabAdapter_Client."ConfigFeedVersions" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."Devices" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."DeviceStatusInfo" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."Diagnostics" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
@@ -43,6 +42,7 @@ ALTER TABLE GeotabAdapter_Client."FailedOVDSServerCommands" MODIFY("id" GENERATE
 ALTER TABLE GeotabAdapter_Client."FaultData" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."LogRecords" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."MyGeotabVersionInfo" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
+ALTER TABLE GeotabAdapter_Client."OServiceTracking" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."OVDSServerCommands" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."Rules" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."StatusData" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));

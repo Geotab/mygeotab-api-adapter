@@ -4,8 +4,26 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("DutyStatusAvailabilities")]
-    public class DbDutyStatusAvailability
+    public class DbDutyStatusAvailability : IDbEntity, IIdCacheableDbEntity
     {
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "DutyStatusAvailabilities";
+        
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public DateTime LastUpsertedUtc { get => RecordLastChangedUtc; }
+
+        /// <summary>
+        /// A surrogate for <see cref="DriverId"/> to allow this class to be used as an <see cref="IIdCacheableDbEntity"/>.
+        /// </summary>
+        [Write(false)]
+        public string GeotabId { get => DriverId; set => DriverId = value; }
+
         [Key]
         public long id { get; set; }
         public string DriverId { get; set; }
@@ -107,7 +125,5 @@ namespace MyGeotabAPIAdapter.Database.Models
         public long? WorkdayTicks { get; set; }
         [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }
-        [Write(false)]
-        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
     }
 }

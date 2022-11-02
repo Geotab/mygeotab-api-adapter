@@ -4,7 +4,10 @@ using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Helpers;
+using MyGeotabAPIAdapter.Logging;
 using NLog;
+using Polly;
+using Polly.Retry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,13 +22,24 @@ namespace MyGeotabAPIAdapter.DataOptimizer
     /// </summary>
     public class ProcessorTracker : IProcessorTracker
     {
+        string CurrentClassName { get => $"{GetType().Assembly.GetName().Name}.{GetType().Name} (v{GetType().Assembly.GetName().Version})"; }
+        string DefaultErrorMessagePrefix { get => $"{CurrentClassName} process caught an exception"; }
+
+        // Polly-related items:
+        const int MaxRetries = 10;
+        readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
+
+        bool cacheIsStale = false;
         bool isUpdating = false;
+        readonly SemaphoreSlim cacheReloadLock = new(1, 1);
 
         readonly IDateTimeHelper dateTimeHelper;
+        readonly IExceptionHelper exceptionHelper;
         readonly IGenericEntityPersister<DbOProcessorTracking> dbOProcessorTrackingEntityPersister;
-        readonly IGenericDbObjectCache<DbOProcessorTracking> dbOProcessorTrackingObjectCache;
+        readonly IGenericGenericDbObjectCache<DbOProcessorTracking, OptimizerGenericDbObjectCache<DbOProcessorTracking>> dbOProcessorTrackingObjectCache;
+
         readonly Logger logger = LogManager.GetCurrentClassLogger();
-        readonly UnitOfWorkContext context;
+        readonly IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> context;
 
         /// <inheritdoc/>
         public bool IsUpdating { get => isUpdating; }
@@ -33,15 +47,19 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <summary>
         /// Initializes a new instance of the <see cref="ProcessorTracker"/> class.
         /// </summary>
-        public ProcessorTracker(IDateTimeHelper dateTimeHelper, IGenericEntityPersister<DbOProcessorTracking> dbOProcessorTrackingEntityPersister, IGenericDbObjectCache<DbOProcessorTracking> dbOProcessorTrackingObjectCache, UnitOfWorkContext context)
+        public ProcessorTracker(IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbOProcessorTracking> dbOProcessorTrackingEntityPersister, IGenericGenericDbObjectCache<DbOProcessorTracking, OptimizerGenericDbObjectCache<DbOProcessorTracking>> dbOProcessorTrackingObjectCache, IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> context)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             this.dateTimeHelper = dateTimeHelper;
+            this.exceptionHelper = exceptionHelper;
             this.dbOProcessorTrackingEntityPersister = dbOProcessorTrackingEntityPersister;
             this.dbOProcessorTrackingObjectCache = dbOProcessorTrackingObjectCache;
             this.context = context;
+
+            // Setup a database transaction retry policy.
+            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(MaxRetries, logger);
 
             InitializeDbOProcessorTrackingListAsync().Wait();
 
@@ -49,7 +67,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         }
 
         /// <inheritdoc/>
-        public async Task<PrerequisiteProcessorOperationCheckResult> CheckOperationOfPrerequisiteProcessors(List<DataOptimizerProcessor> prerequisiteProcessors)
+        public async Task<PrerequisiteProcessorOperationCheckResult> CheckOperationOfPrerequisiteProcessorsAsync(List<DataOptimizerProcessor> prerequisiteProcessors)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -61,20 +79,20 @@ namespace MyGeotabAPIAdapter.DataOptimizer
 
             foreach (var prerequisiteProcessor in prerequisiteProcessors)
             {
-                var processorHasBeenRun = await ProcessorHasBeenRun(prerequisiteProcessor);
+                var processorHasBeenRun = await ProcessorHasBeenRunAsync(prerequisiteProcessor);
                 if (processorHasBeenRun == false)
                 {
                     processorsNeverRun.Add(prerequisiteProcessor);
                 }
 
-                var processorIsRunning = await ProcessorIsRunning(prerequisiteProcessor);
+                var processorIsRunning = await ProcessorIsRunningAsync(prerequisiteProcessor);
                 if (processorIsRunning == false)
                 {
                     allPrerequisiteProcessorsRunning = false;
                     processorsNotRunning.Add(prerequisiteProcessor);
                 }
 
-                var processorHasProcessedData = await ProcessorHasProcessedData(prerequisiteProcessor);
+                var processorHasProcessedData = await ProcessorHasProcessedDataAsync(prerequisiteProcessor);
                 if (processorHasProcessedData == false)
                 {
                     processorsWithNoDataProcessed.Add(prerequisiteProcessor);
@@ -85,8 +103,17 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             return result;
         }
 
+        /// <inheritdoc/>
+        public async Task<DbOProcessorTracking> GetBinaryDataProcessorInfoAsync()
+        {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
+            var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.BinaryDataProcessor.ToString());
+            return dbOProcessorTracking;
+        }
+
         public async Task<List<DbOProcessorTracking>> GetDbOProcessorTrackingListAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var result = await dbOProcessorTrackingObjectCache.GetObjectsAsync();
             return result;
         }
@@ -94,20 +121,15 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetDbOProcessorTrackingRecordAsync(DataOptimizerProcessor dataOptimizerProcessor)
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(dataOptimizerProcessor.ToString());
-            return dbOProcessorTracking;
-        }
-
-        /// <inheritdoc/>
-        public async Task<DbOProcessorTracking> GetBinaryDataProcessorInfoAsync()
-        {
-            var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.BinaryDataProcessor.ToString());
             return dbOProcessorTracking;
         }
 
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetDeviceProcessorInfoAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.DeviceProcessor.ToString());
             return dbOProcessorTracking;
         }
@@ -115,6 +137,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetDiagnosticProcessorInfoAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.DiagnosticProcessor.ToString());
             return dbOProcessorTracking;
         }
@@ -122,6 +145,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetDriverChangeProcessorInfoAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.DriverChangeProcessor.ToString());
             return dbOProcessorTracking;
         }
@@ -129,6 +153,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetFaultDataOptimizerInfoAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.FaultDataOptimizer.ToString());
             return dbOProcessorTracking;
         }
@@ -136,6 +161,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetFaultDataProcessorInfoAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.FaultDataProcessor.ToString());
             return dbOProcessorTracking;
         }
@@ -143,6 +169,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetLogRecordProcessorInfoAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.LogRecordProcessor.ToString());
             return dbOProcessorTracking;
         }
@@ -151,6 +178,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetStatusDataOptimizerInfoAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.StatusDataOptimizer.ToString());
             return dbOProcessorTracking;
         }
@@ -158,6 +186,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetStatusDataProcessorInfoAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.StatusDataProcessor.ToString());
             return dbOProcessorTracking;
         }
@@ -165,6 +194,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// <inheritdoc/>
         public async Task<DbOProcessorTracking> GetUserProcessorInfoAsync()
         {
+            await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
             var dbOProcessorTracking = await dbOProcessorTrackingObjectCache.GetObjectAsync(DataOptimizerProcessor.UserProcessor.ToString());
             return dbOProcessorTracking;
         }
@@ -195,13 +225,43 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                 }
             }
 
-            await PersistDbOProcessorTrackingRecordsToDatabase(dbOProcessorTrackingsToPersist);
+            if (dbOProcessorTrackingsToPersist.Any())
+            {
+                using (var cancellationTokenSource = new CancellationTokenSource())
+                {
+                    await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                    {
+                        using (var uow = context.CreateUnitOfWork(Databases.OptimizerDatabase))
+                        {
+                            try
+                            {
+                                await PersistDbOProcessorTrackingRecordsToDatabaseAsync(context, dbOProcessorTrackingsToPersist);
+
+                                // Commit transactions:
+                                await uow.CommitAsync();
+                            }
+                            catch (Exception ex)
+                            {
+                                exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                await uow.RollBackAsync();
+                                throw;
+                            }
+                        }
+                    }, new Context());
+                }
+                await ReloadDbOProcessorTrackingObjectCacheIfStaleAsync();
+            }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
-        /// <inheritdoc/>
-        public async Task PersistDbOProcessorTrackingRecordsToDatabase(List<DbOProcessorTracking> dbOProcessorTrackingsToPersist)
+        /// <summary>
+        /// Persists the <paramref name="dbOProcessorTrackingsToPersist"/> to database.
+        /// </summary>
+        /// <param name="context">The <see cref="OptimizerDatabaseUnitOfWorkContext"/> to use.</param>
+        /// <param name="dbOProcessorTrackingsToPersist">The list of <see cref="DbOProcessorTracking"/> entities to persist to database.</param>
+        /// <returns></returns>
+        async Task PersistDbOProcessorTrackingRecordsToDatabaseAsync(IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> context, List<DbOProcessorTracking> dbOProcessorTrackingsToPersist)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -212,39 +272,24 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                 {
                     await WaitIfUpdatingAsync();
                     isUpdating = true;
-                    using (var uow = context.CreateUnitOfWork(Databases.OptimizerDatabase))
-                    {
-                        try
-                        {
-                            await dbOProcessorTrackingEntityPersister.PersistEntitiesToDatabaseAsync(context, dbOProcessorTrackingsToPersist, cancellationTokenSource, Logging.LogLevel.Debug);
-
-                            // Commit transactions:
-                            await uow.CommitAsync();
-                        }
-                        catch (Exception)
-                        {
-                            await uow.RollBackAsync();
-                            throw;
-                        }
-                    }
+                    await dbOProcessorTrackingEntityPersister.PersistEntitiesToDatabaseAsync(context, dbOProcessorTrackingsToPersist, cancellationTokenSource, Logging.LogLevel.Debug);
                     isUpdating = false;
                 }
-                // Force the DbOProcessorTracking cache to be updated so that the changes are immediately available to other consumers.
-                await dbOProcessorTrackingObjectCache.UpdateAsync(true);
+                cacheIsStale = true;
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
-        public async Task<bool> ProcessorHasBeenRun(DataOptimizerProcessor dataOptimizerProcessor)
+        public async Task<bool> ProcessorHasBeenRunAsync(DataOptimizerProcessor dataOptimizerProcessor)
         {
             var dbOProcessorTracking = await GetDbOProcessorTrackingRecordAsync(dataOptimizerProcessor);
             return dbOProcessorTracking.EntitiesHaveBeenProcessed;
         }
 
         /// <inheritdoc/>
-        public async Task<bool> ProcessorHasProcessedData(DataOptimizerProcessor dataOptimizerProcessor)
+        public async Task<bool> ProcessorHasProcessedDataAsync(DataOptimizerProcessor dataOptimizerProcessor)
         {
             var dbOProcessorTracking = await GetDbOProcessorTrackingRecordAsync(dataOptimizerProcessor);
             if (dbOProcessorTracking.AdapterDbLastId != null)
@@ -255,7 +300,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         }
 
         /// <inheritdoc/>
-        public async Task<bool> ProcessorIsRunning(DataOptimizerProcessor dataOptimizerProcessor)
+        public async Task<bool> ProcessorIsRunningAsync(DataOptimizerProcessor dataOptimizerProcessor)
         {
             const int CutoffDays = 2;
             var dbOProcessorTracking = await GetDbOProcessorTrackingRecordAsync(dataOptimizerProcessor);
@@ -264,17 +309,44 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             return processorIsRunning;
         }
 
+        /// <summary>
+        /// Reloads the <see cref="dbOProcessorTrackingObjectCache"/> if it has been flagged as stale.
+        /// </summary>
+        /// <returns></returns>
+        async Task ReloadDbOProcessorTrackingObjectCacheIfStaleAsync()
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            // Abort if cache is current.
+            if (cacheIsStale == false)
+            {
+                return;
+            }
+
+            await cacheReloadLock.WaitAsync();
+            try
+            {
+                if (cacheIsStale == true)
+                {
+                    await dbOProcessorTrackingObjectCache.UpdateAsync(true);
+                    cacheIsStale = false;
+                }
+            }
+            finally
+            {
+                cacheReloadLock.Release();
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
 #nullable enable
         /// <inheritdoc/>
-        public async Task UpdateDbOProcessorTrackingRecord(UnitOfWorkContext context, DataOptimizerProcessor dataOptimizerProcessor, DateTime? entitiesLastProcessedUtc, long? adapterDbLastId = null, DateTime? adapterDbLastRecordCreationTimeUtc = null, string? adapterDbLastGeotabId = null)
+        public async Task UpdateDbOProcessorTrackingRecordAsync(IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> context, DataOptimizerProcessor dataOptimizerProcessor, DateTime? entitiesLastProcessedUtc, long? adapterDbLastId = null, DateTime? adapterDbLastRecordCreationTimeUtc = null, string? adapterDbLastGeotabId = null)
         {
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
-
             var dbOProcessorTrackingToUpdate = await GetDbOProcessorTrackingRecordAsync(dataOptimizerProcessor);
 
             if (entitiesLastProcessedUtc != null)
@@ -304,10 +376,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             {
                 dbOProcessorTrackingToUpdate
             };
-            await PersistDbOProcessorTrackingRecordsToDatabase(dbOProcessorTrackingsToUpdate);
-
-            // Force the  DbOProcessorTracking cache to be updated so that the changes are immediately available to other consumers.
-            await dbOProcessorTrackingObjectCache.UpdateAsync(true);
+            await PersistDbOProcessorTrackingRecordsToDatabaseAsync(context, dbOProcessorTrackingsToUpdate);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -315,15 +384,10 @@ namespace MyGeotabAPIAdapter.DataOptimizer
 
 #nullable enable
         /// <inheritdoc/>
-        public async Task UpdateDbOProcessorTrackingRecord(UnitOfWorkContext context, DataOptimizerProcessor dataOptimizerProcessor, string? optimizerVersion, string? optimizerMachineName)
+        public async Task UpdateDbOProcessorTrackingRecordAsync(IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> context, DataOptimizerProcessor dataOptimizerProcessor, string? optimizerVersion, string? optimizerMachineName)
         {
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
-
             var dbOProcessorTrackingToUpdate = await GetDbOProcessorTrackingRecordAsync(dataOptimizerProcessor);
 
             if (optimizerVersion != null)
@@ -343,10 +407,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             {
                 dbOProcessorTrackingToUpdate
             };
-            await PersistDbOProcessorTrackingRecordsToDatabase(dbOProcessorTrackingsToUpdate);
-
-            // Force the  DbOProcessorTracking cache to be updated so that the changes are immediately available to other consumers.
-            await dbOProcessorTrackingObjectCache.UpdateAsync(true);
+            await PersistDbOProcessorTrackingRecordsToDatabaseAsync(context, dbOProcessorTrackingsToUpdate);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }

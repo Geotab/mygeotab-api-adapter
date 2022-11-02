@@ -10,7 +10,6 @@ namespace MyGeotabAPIAdapter.Tests
     public class GetSqlForGetAllAsyncTestData : TheoryData<bool, string, string, string, string?, string, int?, DateTime?>
     {
         const string ConnectionProviderTypeNpgsql = "Npgsql";
-        const string ConnectionProviderTypeSQLite = "System.Data.SQLite";
         const string ConnectionProviderTypeMicrosoftSqlClient = "Microsoft.Data.SqlClient";
         const string ConnectionProviderTypeSystemSqlClient = "System.Data.SqlClient";
         const string ConnectionProviderTypeOracle = "Oracle.ManagedDataAccess.Client";
@@ -27,7 +26,6 @@ namespace MyGeotabAPIAdapter.Tests
             // resultsLimit null, changedSince null - all supported database types:
             expectedOutput = "select * from \"Devices\" order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeNpgsql, null, null);
-            Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeSQLite, null, null);
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeMicrosoftSqlClient, null, null);
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeSystemSqlClient, null, null);
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeOracle, null, null);
@@ -35,8 +33,6 @@ namespace MyGeotabAPIAdapter.Tests
             // resultsLimit null, changedSince specified - all supported database types:
             expectedOutput = "select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.729025' order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeNpgsql, null, changedSince);
-            expectedOutput = $"select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250{timeZoneOffset.Hours}' order by \"id\"";
-            Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeSQLite, null, changedSince);
             expectedOutput = "select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250' order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeMicrosoftSqlClient, null, changedSince);
             expectedOutput = "select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250' order by \"id\"";
@@ -47,8 +43,6 @@ namespace MyGeotabAPIAdapter.Tests
             // resultsLimit specified, changedSince null - all supported database types:
             expectedOutput = "select * from \"Devices\" order by \"id\" limit 10000";
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeNpgsql, resultsLimit, null);
-            expectedOutput = "select * from \"Devices\" order by \"id\" limit 10000";
-            Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeSQLite, resultsLimit, null);
             expectedOutput = "select top (10000) * from \"Devices\" order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeMicrosoftSqlClient, resultsLimit, null);
             expectedOutput = "select top (10000) * from \"Devices\" order by \"id\"";
@@ -59,8 +53,6 @@ namespace MyGeotabAPIAdapter.Tests
             // resultsLimit specified, changedSince specified - all supported database types:
             expectedOutput = "select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.729025' order by \"id\" limit 10000";
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeNpgsql, resultsLimit, changedSince);
-            expectedOutput = $"select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250{timeZoneOffset.Hours}' order by \"id\" limit 10000";
-            Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeSQLite, resultsLimit, changedSince);
             expectedOutput = "select top (10000) * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250' order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", "RecordLastChangedUtc", ConnectionProviderTypeMicrosoftSqlClient, resultsLimit, changedSince);
             expectedOutput = "select top (10000) * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250' order by \"id\"";
@@ -85,7 +77,6 @@ namespace MyGeotabAPIAdapter.Tests
     public class GetSqlForGetByParamAsyncTestData : TheoryData<bool, (string, DynamicParameters), string, string, dynamic, string?, string, int?, DateTime?>
     {
         const string ConnectionProviderTypeNpgsql = "Npgsql";
-        const string ConnectionProviderTypeSQLite = "System.Data.SQLite";
         const string ConnectionProviderTypeMicrosoftSqlClient = "Microsoft.Data.SqlClient";
         const string ConnectionProviderTypeSystemSqlClient = "System.Data.SqlClient";
         const string ConnectionProviderTypeOracle = "Oracle.ManagedDataAccess.Client";
@@ -96,15 +87,14 @@ namespace MyGeotabAPIAdapter.Tests
             var timeZoneOffset = TimeZoneInfo.Local.GetUtcOffset(changedSince);
             var resultsLimit = 10000;
             dynamic dynamicParams = new { Id = 88, OtherParam = "SomeValue" };
-            (string, DynamicParameters) expectedOutput = new ("", new DynamicParameters());
+            (string, DynamicParameters) expectedOutput = new("", new DynamicParameters())
+            {
+                // *** VALID TESTS ***
 
-            // *** VALID TESTS ***
-
-            // resultsLimit null, changedSince null - all supported database types:
-            expectedOutput.Item1 = "select * from \"Devices\" where  Id = @Id and OtherParam = @OtherParam order by \"id\"";
+                // resultsLimit null, changedSince null - all supported database types:
+                Item1 = "select * from \"Devices\" where  Id = @Id and OtherParam = @OtherParam order by \"id\""
+            };
             Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeNpgsql, null, null);
-            expectedOutput.Item1 = "select * from \"Devices\" where  Id = @Id and OtherParam = @OtherParam order by \"id\"";
-            Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeSQLite, null, null);
             expectedOutput.Item1 = "select * from \"Devices\" where  Id = @Id and OtherParam = @OtherParam order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeMicrosoftSqlClient, null, null);
             expectedOutput.Item1 = "select * from \"Devices\" where  Id = @Id and OtherParam = @OtherParam order by \"id\"";
@@ -115,8 +105,6 @@ namespace MyGeotabAPIAdapter.Tests
             // resultsLimit null, changedSince specified - all supported database types:
             expectedOutput.Item1 = "select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.729025' Id = @Id and OtherParam = @OtherParam order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeNpgsql, null, changedSince);
-            expectedOutput.Item1 = $"select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250{timeZoneOffset.Hours}' Id = @Id and OtherParam = @OtherParam order by \"id\"";
-            Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeSQLite, null, changedSince);
             expectedOutput.Item1 = "select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250' Id = @Id and OtherParam = @OtherParam order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeMicrosoftSqlClient, null, changedSince);
             expectedOutput.Item1 = "select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250' Id = @Id and OtherParam = @OtherParam order by \"id\"";
@@ -127,8 +115,6 @@ namespace MyGeotabAPIAdapter.Tests
             // resultsLimit specified, changedSince null - all supported database types:
             expectedOutput.Item1 = "select * from \"Devices\" where  Id = @Id and OtherParam = @OtherParam order by \"id\" limit 10000";
             Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeNpgsql, resultsLimit, null);
-            expectedOutput.Item1 = "select * from \"Devices\" where  Id = @Id and OtherParam = @OtherParam order by \"id\" limit 10000";
-            Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeSQLite, resultsLimit, null);
             expectedOutput.Item1 = "select top (10000) * from \"Devices\" where  Id = @Id and OtherParam = @OtherParam order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeMicrosoftSqlClient, resultsLimit, null);
             expectedOutput.Item1 = "select top (10000) * from \"Devices\" where  Id = @Id and OtherParam = @OtherParam order by \"id\"";
@@ -139,8 +125,6 @@ namespace MyGeotabAPIAdapter.Tests
             // resultsLimit specified, changedSince specified - all supported database types:
             expectedOutput.Item1 = "select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.729025' Id = @Id and OtherParam = @OtherParam order by \"id\" limit 10000";
             Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeNpgsql, resultsLimit, changedSince);
-            expectedOutput.Item1 = $"select * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250{timeZoneOffset.Hours}' Id = @Id and OtherParam = @OtherParam order by \"id\" limit 10000";
-            Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeSQLite, resultsLimit, changedSince);
             expectedOutput.Item1 = "select top (10000) * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250' Id = @Id and OtherParam = @OtherParam order by \"id\"";
             Add(false, expectedOutput, "Devices", "id", dynamicParams, "RecordLastChangedUtc", ConnectionProviderTypeMicrosoftSqlClient, resultsLimit, changedSince);
             expectedOutput.Item1 = "select top (10000) * from \"Devices\" where \"RecordLastChangedUtc\" > '2021-11-04 17:37:25.7290250' Id = @Id and OtherParam = @OtherParam order by \"id\"";
