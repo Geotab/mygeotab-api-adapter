@@ -59,8 +59,8 @@ namespace MyGeotabAPIAdapter
         {
             try
             {
-                // Attenpt authentication to the MyGeotab API.
-                await myGeotabAPIHelper.AuthenticateMyGeotabApiAsync(adapterConfiguration.MyGeotabUser, adapterConfiguration.MyGeotabPassword, adapterConfiguration.MyGeotabDatabase, adapterConfiguration.MyGeotabServer, adapterConfiguration.TimeoutSecondsForMyGeotabTasks);
+                // Attempt a simple call to get MyGeotab version information.
+                var versionInformation = await myGeotabAPIHelper.GetVersionInformationAsync(adapterConfiguration.TimeoutSecondsForMyGeotabTasks);
                 return true;
             }
             catch (Exception)

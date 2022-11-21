@@ -18,12 +18,11 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <summary>
         /// The maximum allowed timeout in seconds.
         /// </summary>
-        public static int MaxTimeoutSeconds { get => 1000; } // 30 minutes
+        public static int MaxTimeoutSeconds { get => 3600; } // 1 hour
 
+        // Polly context variable names:
         public static string PollyContextKeyRetryAttemptNumber { get => "RetryAttemptNumber"; }
-
         public static string PollyContextKeyRetryAttemptTimeoutTimeSpan { get => "RetryAttemptTimeoutTimeSpan"; }
-
 
         /// <summary>
         /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains "timeout".

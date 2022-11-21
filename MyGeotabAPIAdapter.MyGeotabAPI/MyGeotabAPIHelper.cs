@@ -1,10 +1,11 @@
 ﻿using Geotab.Checkmate;
 using Geotab.Checkmate.ObjectModel;
 using Geotab.Checkmate.ObjectModel.Exceptions;
-using Geotab.Checkmate.Web;
 using MyGeotabAPIAdapter.Exceptions;
 using MyGeotabAPIAdapter.Logging;
 using NLog;
+using Polly;
+using Polly.Wrap;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -28,6 +29,9 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         public const int GetFeedResultLimitRuleConst = 10000;
         public const int GetFeedResultLimitUserConst = 5000;
         public const int GetFeedResultLimitZoneConst = 10000;
+
+        // Polly-related items:
+        AsyncPolicyWrap asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap;
 
         readonly IExceptionHelper exceptionHelper;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -88,12 +92,16 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
             { 
                 requestTimeoutMilliseconds = requestTimeoutSeconds * 1000;
             }
+            SetAsyncPolicyWrapForMyGeotabAPICalls(requestTimeoutSeconds);
 
             MyGeotabAPI = new API(userName, password, null, database, server, requestTimeoutMilliseconds);
 
             try
             {
-                await MyGeotabAPI.AuthenticateAsync();
+                await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    await MyGeotabAPI.AuthenticateAsync();
+                }, new Context());
             }
             catch (Exception exception)
             {
@@ -113,16 +121,21 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         public async Task<IList<T>> GetAsync<T>(Search search = null, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
         {
             ValidateTimeoutSeconds(timeoutSeconds);
+            SetAsyncPolicyWrapForMyGeotabAPICalls(timeoutSeconds);
 
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
+
+            IList<T> result = null;
             try
             {
-                using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                 {
-                    var dataListTask = await MyGeotabAPI.CallAsync<IList<T>>("Get", typeof(T), new { search }, cancellationTokenSource.Token);
-                    return dataListTask;
-                }
+                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    {
+                        result = await MyGeotabAPI.CallAsync<IList<T>>("Get", typeof(T), new { search }, cancellationTokenSource.Token);
+                    }
+                }, new Context());
             }
             catch (OperationCanceledException exception)
             {
@@ -140,50 +153,62 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                     throw;
                 }
             }
+
+            if (result != null)
+            { 
+                return result;
+            }
+            throw new Exception($"GetAsync<T> method failed to return a result for entity type '{typeof(T).Name}'.");
         }
 
         /// <inheritdoc/>
         public async Task<FeedResult<T>> GetFeedAsync<T>(DateTime? fromDate = null, int resultsLimit = GetFeedResultLimitDefaultConst, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
         {
             ValidateTimeoutSeconds(timeoutSeconds);
+            SetAsyncPolicyWrapForMyGeotabAPICalls(timeoutSeconds);
 
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
 
+            FeedResult<T> result = null;
             try
             {
                 if (typeParameterType.Name == nameof(ExceptionEvent))
                 {
                     // Use an ExceptionEventSearch to enrure that invalidated ExceptionEvents are included in the data feed (since they are not by default).
-                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                     {
-                        var feedResultTask = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                        using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
                         {
-                            search = new ExceptionEventSearch 
+                            result = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
                             {
-                                FromDate = fromDate,
-                                IncludeInvalidated = true
-                            },
-                            resultsLimit
-                        }, cancellationTokenSource.Token);
-                        return feedResultTask;
-                    }
+                                search = new ExceptionEventSearch
+                                {
+                                    FromDate = fromDate,
+                                    IncludeInvalidated = true
+                                },
+                                resultsLimit
+                            }, cancellationTokenSource.Token);
+                        }
+                    }, new Context());
                 }
                 else
                 {
                     // Use the default search that includes FromDate only.
-                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                     {
-                        var feedResultTask = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                        using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
                         {
-                            resultsLimit,
-                            search = new
+                            result = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
                             {
-                                fromDate
-                            }
-                        }, cancellationTokenSource.Token);
-                        return feedResultTask;
-                    }
+                                resultsLimit,
+                                search = new
+                                {
+                                    fromDate
+                                }
+                            }, cancellationTokenSource.Token);
+                        }
+                    }, new Context());
                 }
             }
             catch (OperationCanceledException exception)
@@ -202,47 +227,59 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                     throw;
                 }
             }
+
+            if (result != null)
+            {
+                return result;
+            }
+            throw new Exception($"GetFeedAsync<T>(fromDate...) method failed to return a result for entity type '{typeof(T).Name}'.");
         }
 
         /// <inheritdoc/>
         public async Task<FeedResult<T>> GetFeedAsync<T>(long? fromVersion, int resultsLimit = GetFeedResultLimitDefaultConst, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
         {
             ValidateTimeoutSeconds(timeoutSeconds);
+            SetAsyncPolicyWrapForMyGeotabAPICalls(timeoutSeconds);
 
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
 
+            FeedResult<T> result = null;
             try
             {
                 if (typeParameterType.Name == nameof(ExceptionEvent))
                 {
                     // Use an ExceptionEventSearch to enrure that invalidated ExceptionEvents are included in the data feed (since they are not by default).
-                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                     {
-                        var feedResultTask = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                        using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
                         {
-                            search = new ExceptionEventSearch 
-                            { 
-                                IncludeInvalidated = true
-                            },
-                            fromVersion,
-                            resultsLimit
-                        }, cancellationTokenSource.Token);
-                        return feedResultTask;
-                    }
+                            result = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                            {
+                                search = new ExceptionEventSearch
+                                {
+                                    IncludeInvalidated = true
+                                },
+                                fromVersion,
+                                resultsLimit
+                            }, cancellationTokenSource.Token);
+                        }
+                    }, new Context());
                 }
                 else
                 {
                     // Use the default search that includes FromVersion only.
-                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                     {
-                        var feedResultTask = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                        using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
                         {
-                            fromVersion,
-                            resultsLimit
-                        }, cancellationTokenSource.Token);
-                        return feedResultTask;
-                    }
+                            result = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                            {
+                                fromVersion,
+                                resultsLimit
+                            }, cancellationTokenSource.Token);
+                        }
+                    }, new Context());
                 }
             }
             catch (OperationCanceledException exception)
@@ -261,20 +298,30 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                     throw;
                 }
             }
+
+            if (result != null)
+            {
+                return result;
+            }
+            throw new Exception($"GetFeedAsync<T>(fromVersion...) method failed to return a result for entity type '{typeof(T).Name}'.");
         }
 
         /// <inheritdoc/>
         public async Task<VersionInformation> GetVersionInformationAsync(int timeoutSeconds = DefaultTimeoutSeconds)
         {
             ValidateTimeoutSeconds(timeoutSeconds);
+            SetAsyncPolicyWrapForMyGeotabAPICalls(timeoutSeconds);
 
+            VersionInformation result = null;
             try
             {
-                using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                 {
-                    var versionInformationTask = await MyGeotabAPI.CallAsync<VersionInformation>("GetVersionInformation", null, cancellationTokenSource.Token);
-                    return versionInformationTask;
-                }
+                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    {
+                        result = await MyGeotabAPI.CallAsync<VersionInformation>("GetVersionInformation", null, cancellationTokenSource.Token);
+                    }
+                }, new Context());
             }
             catch (OperationCanceledException exception)
             {
@@ -292,23 +339,33 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                     throw;
                 }
             }
+
+            if (result != null)
+            {
+                return result;
+            }
+            throw new Exception($"GetVersionInformationAsync method failed to return a result.");
         }
 
         /// <inheritdoc/>
         public async Task<object> SetAsync<T>(T entity, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
         {
             ValidateTimeoutSeconds(timeoutSeconds);
+            SetAsyncPolicyWrapForMyGeotabAPICalls(timeoutSeconds);
 
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
 
+            object result = null;
             try
             {
-                using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                 {
-                    var setTask = await MyGeotabAPI.CallAsync<object>("Set", typeof(T), new { entity }, cancellationTokenSource.Token);
-                    return setTask;
-                }
+                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    {
+                        result = await MyGeotabAPI.CallAsync<object>("Set", typeof(T), new { entity }, cancellationTokenSource.Token);
+                    }
+                }, new Context());
             }
             catch (OperationCanceledException exception)
             {
@@ -325,6 +382,25 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                 {
                     throw;
                 }
+            }
+
+            if (result != null)
+            {
+                return result;
+            }
+            throw new Exception($"SetAsync<T> method failed to return a result for entity type '{typeof(T).Name}'.");
+        }
+
+        /// <summary>
+        /// Sets the <see cref="asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap"/> if it hasn't already been set.
+        /// </summary>
+        /// <param name="timeoutSeconds">The initial timeout, in seconds, to be applied to the first MyGeotab API call retry attempt.</param>
+        void SetAsyncPolicyWrapForMyGeotabAPICalls(int timeoutSeconds)
+        {
+            if (asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap == null)
+            {
+                // Setup a MyGeotab API call timeout and retry policy wrap.
+                asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap = MyGeotabAPIResilienceHelper.CreateAsyncPolicyWrapForMyGeotabAPICalls<Exception>(timeoutSeconds, (ExceptionHelper)exceptionHelper, logger);
             }
         }
 
