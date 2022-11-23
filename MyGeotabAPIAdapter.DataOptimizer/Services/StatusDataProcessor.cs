@@ -173,13 +173,20 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
                             foreach (var dbStatusData in dbStatusDatas)
                             {
                                 var deviceId = await dbDeviceTObjectCache.GetObjectIdAsync(dbStatusData.DeviceId);
-                                var diagnosticIdTGeotabGUID = await dbDiagnosticIdTObjectCache.GetObjectGeotabGUIDByGeotabIdAsync(dbStatusData.DiagnosticId);
-                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdByGeotabGUIDAsync(diagnosticIdTGeotabGUID);
                                 if (deviceId == null)
                                 {
                                     logger.Warn($"Could not process {nameof(DbStatusData)} '{dbStatusData.id} (GeotabId {dbStatusData.GeotabId})' because a {nameof(DbDeviceT)} with a {nameof(DbDeviceT.GeotabId)} matching the {nameof(DbStatusData.DeviceId)} could not be found.");
                                     continue;
                                 }
+
+                                var diagnosticIdTGeotabGUID = await dbDiagnosticIdTObjectCache.GetObjectGeotabGUIDByGeotabIdAsync(dbStatusData.DiagnosticId);
+                                if (diagnosticIdTGeotabGUID == null)
+                                {
+                                    logger.Warn($"Could not process {nameof(DbStatusData)} '{dbStatusData.id} (GeotabId {dbStatusData.GeotabId})' because a {nameof(DbDiagnosticIdT)} with a {nameof(DbDiagnosticIdT.GeotabId)} matching the {nameof(DbStatusData.DiagnosticId)} could not be found.");
+                                    continue;
+                                }
+
+                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdByGeotabGUIDAsync(diagnosticIdTGeotabGUID);
                                 if (diagnosticId == null)
                                 {
                                     logger.Warn($"Could not process {nameof(DbStatusData)} '{dbStatusData.id} (GeotabId {dbStatusData.GeotabId})' because a {nameof(DbDiagnosticT)} with a {nameof(DbDiagnosticT.GeotabId)} matching the {nameof(DbStatusData.DiagnosticId)} could not be found.");

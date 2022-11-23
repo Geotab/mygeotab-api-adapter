@@ -15,6 +15,7 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -148,6 +149,13 @@ namespace MyGeotabAPIAdapter.Services
                                 {
                                     // The device has not yet been added to the database. Create a DbDevice, set its properties and add it to the cache.
                                     var newDbDevice = geotabDeviceDbDeviceObjectMapper.CreateEntity(device);
+
+                                    // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
+                                    if (dbDevicesToPersist.Where(dbDevice => dbDevice.GeotabId == newDbDevice.GeotabId).Any())
+                                    {
+                                        newDbDevice.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                                    }
+
                                     dbDevicesToPersist.Add(newDbDevice);
                                 }
                             }

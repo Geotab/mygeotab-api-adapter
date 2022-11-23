@@ -15,6 +15,7 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -148,6 +149,13 @@ namespace MyGeotabAPIAdapter.Services
                                 {
                                     // The zone has not yet been added to the database. Create a DbZone, set its properties and add it to the cache.
                                     var newDbZone = geotabZoneDbZoneObjectMapper.CreateEntity(zone);
+
+                                    // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
+                                    if (dbZonesToPersist.Where(dbZone => dbZone.GeotabId == newDbZone.GeotabId).Any())
+                                    {
+                                        newDbZone.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                                    }
+
                                     dbZonesToPersist.Add(newDbZone);
                                 }
                             }

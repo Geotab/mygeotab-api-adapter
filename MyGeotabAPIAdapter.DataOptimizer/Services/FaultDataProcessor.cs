@@ -176,19 +176,27 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
                             foreach (var dbFaultData in dbFaultDatas)
                             {
                                 var deviceId = await dbDeviceTObjectCache.GetObjectIdAsync(dbFaultData.DeviceId);
-                                var diagnosticIdTGeotabGUID = await dbDiagnosticIdTObjectCache.GetObjectGeotabGUIDByGeotabIdAsync(dbFaultData.DiagnosticId);
-                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdByGeotabGUIDAsync(diagnosticIdTGeotabGUID);
-                                var dismissUserId = await dbUserTObjectCache.GetObjectIdAsync(dbFaultData.DismissUserId);
                                 if (deviceId == null)
                                 {
                                     logger.Warn($"Could not process {nameof(DbFaultData)} '{dbFaultData.id} (GeotabId {dbFaultData.GeotabId})' because a {nameof(DbDeviceT)} with a {nameof(DbDeviceT.GeotabId)} matching the {nameof(DbFaultData.DeviceId)} could not be found.");
                                     continue;
                                 }
+
+                                var diagnosticIdTGeotabGUID = await dbDiagnosticIdTObjectCache.GetObjectGeotabGUIDByGeotabIdAsync(dbFaultData.DiagnosticId);
+                                if (diagnosticIdTGeotabGUID == null)
+                                {
+                                    logger.Warn($"Could not process {nameof(DbFaultData)} '{dbFaultData.id} (GeotabId {dbFaultData.GeotabId})' because a {nameof(DbDiagnosticIdT)} with a {nameof(DbDiagnosticIdT.GeotabId)} matching the {nameof(DbFaultData.DiagnosticId)} could not be found.");
+                                    continue;
+                                }
+
+                                var diagnosticId = await dbDiagnosticTObjectCache.GetObjectIdByGeotabGUIDAsync(diagnosticIdTGeotabGUID);
                                 if (diagnosticId == null)
                                 {
                                     logger.Warn($"Could not process {nameof(DbFaultData)} '{dbFaultData.id} (GeotabId {dbFaultData.GeotabId})' because a {nameof(DbDiagnosticT)} with a {nameof(DbDiagnosticT.GeotabId)} matching the {nameof(DbFaultData.DiagnosticId)} could not be found.");
                                     continue;
                                 }
+
+                                var dismissUserId = await dbUserTObjectCache.GetObjectIdAsync(dbFaultData.DismissUserId);
                                 var dbFaultDataT = dbFaultDataDbFaultDataTEntityMapper.CreateEntity(dbFaultData, (long)deviceId, (long)diagnosticId, dismissUserId);
                                 dbFaultDataTsToPersist.Add(dbFaultDataT);
                                 dbFaultData.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Delete;

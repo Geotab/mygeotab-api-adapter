@@ -16,6 +16,7 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -183,6 +184,23 @@ namespace MyGeotabAPIAdapter.Services
                                 {
                                     // The rule has not yet been added to the database. Create a DbRule, set its properties and add it to the cache.
                                     var newDbRule = geotabRuleDbRuleObjectMapper.CreateEntity(rule);
+
+                                    // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
+                                    if (dbRulesToPersist.Where(dbRule => dbRule.GeotabId == newDbRule.GeotabId).Any())
+                                    {
+                                        newDbRule.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+
+                                        // Update all associated DbConditions so that they will be deleted from the database. A new set of DbConditions will be created to replace them.
+                                        var dbConditionsToDelete = GetAllDbConditionsAssociatedWithDbRule(dbRule);
+                                        foreach (var dbCondition in dbConditionsToDelete)
+                                        {
+                                            dbCondition.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
+                                            dbCondition.RecordLastChangedUtc = recordChangedTimestampUtc;
+                                            dbCondition.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Delete;
+                                            dbConditionsToPersist.Add(dbCondition);
+                                        }
+                                    }
+
                                     dbRulesToPersist.Add(newDbRule);
 
                                     // Create any DbConditions associated with the DbRule and add them to the cache.
