@@ -27,7 +27,7 @@
     <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
     <PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.1.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.80" />
   </ItemGroup>
