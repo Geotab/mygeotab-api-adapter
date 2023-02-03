@@ -161,9 +161,6 @@ namespace MyGeotabAPIAdapter.Services
                             }
 
                             stoppingToken.ThrowIfCancellationRequested();
-
-                            // Force the DbZoneType cache to be updated so that the changes are immediately available to other consumers.
-                            await dbZoneTypeObjectCache.UpdateAsync(true);
                         }
                         else
                         {
@@ -194,6 +191,13 @@ namespace MyGeotabAPIAdapter.Services
                                 }
                             }
                         }, new Context());
+
+                        // If there were any changes, force the DbZoneType cache to be updated so that the changes are immediately available to other consumers.
+
+                        if (dbZoneTypesToPersist.Any())
+                        {
+                            await dbZoneTypeObjectCache.UpdateAsync(true);
+                        }
                     }
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");

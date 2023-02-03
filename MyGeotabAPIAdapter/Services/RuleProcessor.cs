@@ -210,14 +210,6 @@ namespace MyGeotabAPIAdapter.Services
                             }
 
                             stoppingToken.ThrowIfCancellationRequested();
-
-                            // Force the DbRule and DbCondition caches to be updated so that the changes are immediately available to other consumers. Run the associated tasks in parallel.
-                            var dbObjectCacheUpdateTasks = new List<Task>
-                            {
-                                dbRuleObjectCache.UpdateAsync(true),
-                                dbConditionObjectCache.UpdateAsync(true)
-                            };
-                            await Task.WhenAll(dbObjectCacheUpdateTasks);
                         }
                         else
                         {
@@ -253,6 +245,17 @@ namespace MyGeotabAPIAdapter.Services
                                 }
                             }
                         }, new Context());
+
+                        // If there were any changes, force the DbRule and/or DbCondition caches to be updated so that the changes are immediately available to other consumers. Run the associated tasks in parallel.
+                        if (dbRulesToPersist.Any() || dbConditionsToPersist.Any())
+                        {
+                            var dbObjectCacheUpdateTasks = new List<Task>
+                            {
+                                dbRuleObjectCache.UpdateAsync(true),
+                                dbConditionObjectCache.UpdateAsync(true)
+                            };
+                            await Task.WhenAll(dbObjectCacheUpdateTasks);
+                        }
                     }
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");

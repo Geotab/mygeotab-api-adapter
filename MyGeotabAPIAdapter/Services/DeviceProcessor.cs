@@ -161,9 +161,6 @@ namespace MyGeotabAPIAdapter.Services
                             }
 
                             stoppingToken.ThrowIfCancellationRequested();
-
-                            // Force the DbDevice cache to be updated so that the changes are immediately available to other consumers.
-                            await dbDeviceObjectCache.UpdateAsync(true);
                         }
                         else
                         {
@@ -194,6 +191,12 @@ namespace MyGeotabAPIAdapter.Services
                                 }
                             }
                         }, new Context());
+
+                        // If there were any changes, force the DbDevice cache to be updated so that the changes are immediately available to other consumers.
+                        if (dbDevicesToPersist.Any())
+                        {
+                            await dbDeviceObjectCache.UpdateAsync(true);
+                        }
                     }
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");

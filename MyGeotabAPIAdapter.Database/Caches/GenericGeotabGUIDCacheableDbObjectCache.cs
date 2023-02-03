@@ -333,10 +333,10 @@ namespace MyGeotabAPIAdapter.Database.Caches
                                 _ = dbIdFromGeotabGuidCache.AddOrUpdate(dbEntity.GeotabGUID, dbEntity.id,
                                     (geotabGUID, existingEntityId) =>
                                     {
-                                        // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the dbIdFromGeotabGuidCache that has the same GeotabGUID, but a different Id.
+                                        // If this delegate is invoked, then the key already exists. This would be the case when a new KnownId is assigned to a Diagnostic. If this is the case, use the higher of the two Id values since the new one will have been added to the database table later than the original one and we'd logically want to have any new data (e.g. StatusData or FaultData) tied to the newer KnownId going forward.
                                         if (dbEntity.id != existingEntityId)
                                         {
-                                            throw new ArgumentException($"A {typeof(T).Name} with GeotabGUID \"{dbEntity.GeotabGUID}\" already exists in the dbObjectFromDbIdCache. Duplicates are not allowed. The existing {typeof(T).Name} has an Id of \"{existingEntityId}\". The {typeof(T).Name} with the same GeotabGUID that cannot be added to the dbObjectFromDbIdCache has an Id of \"{dbEntity.id}\".");
+                                            return dbEntity.id;
                                         }
                                         // Nothing to do here, since the Id is the only updatable property.
                                         return existingEntityId;

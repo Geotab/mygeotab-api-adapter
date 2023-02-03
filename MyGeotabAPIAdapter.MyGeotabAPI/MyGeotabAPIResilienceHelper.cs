@@ -123,6 +123,10 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                     && exception.Message.Contains(MyGeotabConnectionExceptionMessage_DbUnavailableException) == false 
                     && exception.Message.Contains(MyGeotabConnectionExceptionMessage_HttpRequestException_Connection_refused) == false 
                     && exception.Message.Contains(MyGeotabConnectionExceptionMessage_ServiceUnavailableException_Service_temporarily_unavailable) == false)
+                .Or<TException>(exception =>
+                    exception.Message.Contains(MyGeotabConnectionExceptionMessage_ServiceUnavailableException_Service_temporarily_unavailable))
+                .OrInner<TException>(exception =>
+                    exception.Message.Contains(MyGeotabConnectionExceptionMessage_ServiceUnavailableException_Service_temporarily_unavailable))
                 .WaitAndRetryAsync(
                     retryCount: MaxRetries,
                     sleepDurationProvider: (retryAttempt) => TimeSpan.FromSeconds(1),

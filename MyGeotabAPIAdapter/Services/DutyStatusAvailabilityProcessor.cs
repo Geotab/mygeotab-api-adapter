@@ -220,8 +220,11 @@ namespace MyGeotabAPIAdapter.Services
                                             }
                                         }, new Context());
 
-                                        // Force the DbDevice cache to be updated so that the changes are immediately available to other consumers.
-                                        await dbDutyStatusAvailabilityObjectCache.UpdateAsync(true);
+                                        // If there were any changes, force the DutyStatusAvailability cache to be updated so that the changes are immediately available to other consumers.
+                                        if (dbDutyStatusAvailabilityEntitiesToPersist.Any())
+                                        {
+                                            await dbDutyStatusAvailabilityObjectCache.UpdateAsync(true);
+                                        }
 
                                         // Clear calls list and reset counter.
                                         calls = new List<object>();

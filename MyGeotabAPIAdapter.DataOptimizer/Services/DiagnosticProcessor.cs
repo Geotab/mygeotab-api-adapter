@@ -42,7 +42,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         readonly IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper;
         readonly IGenericEntityPersister<DbDiagnosticIdT> dbDiagnosticIdTEntityPersister;
         readonly IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister;
-        readonly IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnostic> dbDiagnosticObjectCache;
+        readonly IGenericGenericDbObjectCache<DbDiagnostic, AdapterGenericDbObjectCache<DbDiagnostic>> dbDiagnosticObjectCache;
         readonly IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT> dbDiagnosticIdTObjectCache;
         readonly IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache;
         readonly IExceptionHelper exceptionHelper;
@@ -64,7 +64,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="DiagnosticProcessor"/> class.
         /// </summary>
-        public DiagnosticProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IStateMachine stateMachine, IDataOptimizerDatabaseConnectionInfoContainer connectionInfoContainer, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IProcessorTracker processorTracker, IDbDiagnosticDbDiagnosticIdTEntityMapper dbDiagnosticDbDiagnosticIdTEntityMapper, IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper, IGenericEntityPersister<DbDiagnosticIdT> dbDiagnosticIdTEntityPersister, IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnostic> dbDiagnosticObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT> dbDiagnosticIdTObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext, IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> optimizerContext)
+        public DiagnosticProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IStateMachine stateMachine, IDataOptimizerDatabaseConnectionInfoContainer connectionInfoContainer, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IProcessorTracker processorTracker, IDbDiagnosticDbDiagnosticIdTEntityMapper dbDiagnosticDbDiagnosticIdTEntityMapper, IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper, IGenericEntityPersister<DbDiagnosticIdT> dbDiagnosticIdTEntityPersister, IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister, IGenericGenericDbObjectCache<DbDiagnostic, AdapterGenericDbObjectCache<DbDiagnostic>> dbDiagnosticObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT> dbDiagnosticIdTObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext, IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> optimizerContext)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -237,8 +237,17 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
                                     }
                                 }, new Context());
 
-                                // Force the DbDiagnosticT cache to be updated so that the changes are immediately available to other consumers.
-                                await dbDiagnosticTObjectCache.UpdateAsync(true);
+                                // Force the Diagnostic caches to be updated so that the changes are immediately available to other consumers. Run tasks in parallel.
+                                var diagnosticCacheUpdateTasks = new List<Task>();
+                                if (dbDiagnosticTsToPersist.Any())
+                                {
+                                    diagnosticCacheUpdateTasks.Add(dbDiagnosticTObjectCache.UpdateAsync(true));
+                                }
+                                if (dbDiagnosticIdTsToPersist.Any())
+                                {
+                                    diagnosticCacheUpdateTasks.Add(dbDiagnosticIdTObjectCache.UpdateAsync(true));
+                                }
+                                await Task.WhenAll(diagnosticCacheUpdateTasks);
                             }
                             else
                             {

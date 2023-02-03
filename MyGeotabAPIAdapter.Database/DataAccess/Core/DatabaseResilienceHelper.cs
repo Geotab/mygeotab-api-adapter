@@ -13,7 +13,15 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     public static class DatabaseResilienceHelper
     {
         const string DeadlockString = "chosen as the deadlock victim";
+        const string ErrorOccurredWhileGettingOpenConnectionString = "exception occurred while attempting to get an open database connection";
+        const string SqlTransactionCompletedNoLongerUsableString = "this sqltransaction has completed; it is no longer usable";
         const string TimeoutString = "timeout";
+        const string TimeoutString2 = "time out";
+
+        /// <summary>
+        /// The maximum time to wait between retry attempts.
+        /// </summary>
+        const int MaxRetryAttemptDelaySeconds = 10;
 
         /// <summary>
         /// The maximum allowed timeout in seconds.
@@ -25,7 +33,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         public static string PollyContextKeyRetryAttemptTimeoutTimeSpan { get => "RetryAttemptTimeoutTimeSpan"; }
 
         /// <summary>
-        /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains "timeout".
+        /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains "timeout" or "time out".
         /// </summary>
         /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy. Note - only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains "timeout" will be handled.</typeparam>
         /// <param name="maxRetries">The maximum number of times an action may be retried.</param>
@@ -35,11 +43,20 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             return Policy
                 .Handle<TException>(exception =>
                     exception.Message.ToLower().Contains(TimeoutString))
+                .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(TimeoutString2))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(TimeoutString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(TimeoutString2))
                 .WaitAndRetryAsync(
                     retryCount: maxRetries,
-                    sleepDurationProvider: (retryAttempt) => TimeSpan.FromSeconds(1),
+                    sleepDurationProvider: (retryAttempt) =>
+                    {
+                        // Set the delay time before retrying based on the retry attempt number.
+                        var sleepDuration = GetSleepDurationForRetryAttempt(retryAttempt);
+                        return sleepDuration;
+                    },
                     onRetry: (exception, sleepDuration, attemptNumber, context) =>
                     {
                         var commandTimeout = (TimeSpan)context[PollyContextKeyRetryAttemptTimeoutTimeSpan];
@@ -60,11 +77,24 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             return Policy
                 .Handle<TException>(exception =>
                     exception.Message.ToLower().Contains(DeadlockString))
+                .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenConnectionString))
+                .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(DeadlockString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenConnectionString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
                 .WaitAndRetryAsync(
                     retryCount: maxRetries,
-                    sleepDurationProvider: (retryAttempt) => TimeSpan.FromSeconds(1),
+                    sleepDurationProvider: (retryAttempt) =>
+                    {
+                        // Set the delay time before retrying based on the retry attempt number.
+                        var sleepDuration = GetSleepDurationForRetryAttempt(retryAttempt);
+                        return sleepDuration;
+                    },
                     onRetry: (exception, sleepDuration, attemptNumber, context) =>
                     {
                         context[PollyContextKeyRetryAttemptNumber] = attemptNumber;
@@ -114,6 +144,30 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             var asyncRetryPolicy = CreateAsyncRetryPolicyForDatabaseCommandTimeouts<TException>(maxRetries, logger);
             var asyncTimeoutPolicy = CreateAsyncTimeoutPolicyForDatabaseCommandTimeoutsBasedOnRetryAttemptNumber(timeoutSeconds);
             return Policy.WrapAsync(asyncRetryPolicy, asyncTimeoutPolicy);
+        }
+
+        /// <summary>
+        /// Calculates a sleep duration to be used for adding a delay before a retry attempt. The calculated <see cref="TimeSpan"/> is jittered by up to 1000 milliseconds to provide for some variability which may help to reduce spikes in concurrent retry attempts.
+        /// </summary>
+        /// <param name="attemptNumber">The current retry attempt number.</param>
+        /// <returns></returns>
+        static TimeSpan GetSleepDurationForRetryAttempt(int attemptNumber)
+        {
+            if (attemptNumber < 0)
+            {
+                attemptNumber = 0;
+            }
+
+            int sleepDurationSeconds = attemptNumber + 1;
+            if (sleepDurationSeconds > MaxRetryAttemptDelaySeconds)
+            {
+                sleepDurationSeconds = MaxRetryAttemptDelaySeconds;
+            }
+
+            var jitterer = new Random();
+            int sleepDurationMilliseconds = sleepDurationSeconds * 1000 + jitterer.Next(0, 1000);
+
+            return TimeSpan.FromMilliseconds(sleepDurationMilliseconds);
         }
     }
 }

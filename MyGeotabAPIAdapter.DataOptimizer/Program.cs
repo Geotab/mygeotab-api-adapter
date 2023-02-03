@@ -75,6 +75,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         .AddTransient<DbControllerT>()
                         .AddTransient<DbDevice>()
                         .AddTransient<DbDeviceT>()
+                        .AddTransient<DbDiagnostic>()
                         .AddTransient<DbDriverChangeTypeT>()
                         .AddTransient<DbOProcessorTracking>()
                         .AddTransient<DbUser>()
@@ -146,6 +147,8 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         .AddSingleton<IGenericGenericDbObjectCache<DbDevice, AdapterGenericDbObjectCache<DbDevice>>, GenericGenericDbObjectCache<DbDevice, AdapterGenericDbObjectCache<DbDevice>>>()
                         .AddSingleton<OptimizerGenericDbObjectCache<DbDeviceT>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbDeviceT, OptimizerGenericDbObjectCache<DbDeviceT>>, GenericGenericDbObjectCache<DbDeviceT, OptimizerGenericDbObjectCache<DbDeviceT>>>()
+                        .AddSingleton<AdapterGenericDbObjectCache<DbDiagnostic>>()
+                        .AddSingleton<IGenericGenericDbObjectCache<DbDiagnostic, AdapterGenericDbObjectCache<DbDiagnostic>>, GenericGenericDbObjectCache<DbDiagnostic, AdapterGenericDbObjectCache<DbDiagnostic>>>()
                         .AddSingleton<OptimizerGenericDbObjectCache<DbDriverChangeTypeT>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbDriverChangeTypeT, OptimizerGenericDbObjectCache<DbDriverChangeTypeT>>, GenericGenericDbObjectCache<DbDriverChangeTypeT, OptimizerGenericDbObjectCache<DbDriverChangeTypeT>>>()
                         .AddSingleton<OptimizerGenericDbObjectCache<DbOProcessorTracking>>()
@@ -156,7 +159,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         .AddSingleton<IGenericGenericDbObjectCache<DbUserT, OptimizerGenericDbObjectCache<DbUserT>>, GenericGenericDbObjectCache<DbUserT, OptimizerGenericDbObjectCache<DbUserT>>>()
 
                         // Database Id and Object Caches:
-                        .AddSingleton<IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnostic>, GenericGeotabGUIDCacheableDbObjectCache<DbDiagnostic>>()
                         .AddSingleton<IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT>, GenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT>>()
                         .AddSingleton<IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT>, GenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT>>()
                         .AddTransient<IGenericIdCache<DbDeviceT>, GenericIdCache<DbDeviceT>>()
