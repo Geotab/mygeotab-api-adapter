@@ -1,6 +1,7 @@
 ﻿using Geotab.Checkmate.ObjectModel.Exceptions;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.Helpers;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
@@ -9,6 +10,13 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     /// </summary>
     public class GeotabRuleDbRuleObjectMapper : IGeotabRuleDbRuleObjectMapper
     {
+        readonly IDateTimeHelper dateTimeHelper;
+
+        public GeotabRuleDbRuleObjectMapper(IDateTimeHelper dateTimeHelper)
+        { 
+            this.dateTimeHelper = dateTimeHelper;
+        }
+
         /// <inheritdoc/>
         public DbRule CreateEntity(Rule entityToMapTo, Common.DatabaseRecordStatus entityStatus = Common.DatabaseRecordStatus.Active)
         {
@@ -43,13 +51,26 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 throw new ArgumentException($"Cannot compare {nameof(DbRule)} '{entityToEvaluate.id}' with {nameof(Rule)} '{entityToMapTo.Id}' because the IDs do not match.");
             }
 
-            DateTime entityToEvaluateActiveFromUtc = entityToEvaluate.ActiveFrom.GetValueOrDefault().ToUniversalTime();
-            DateTime entityToEvaluateActiveToUtc = entityToEvaluate.ActiveTo.GetValueOrDefault().ToUniversalTime();
-            if (entityToEvaluate.ActiveFrom != entityToMapTo.ActiveFrom && entityToEvaluateActiveFromUtc != entityToMapTo.ActiveFrom)
+            DateTime entityToEvaluateActiveFrom = entityToEvaluate.ActiveFrom.GetValueOrDefault();
+            DateTime entityToEvaluateActiveFromUtc = entityToEvaluateActiveFrom.ToUniversalTime();
+            DateTime entityToEvaluateActiveTo = entityToEvaluate.ActiveTo.GetValueOrDefault();
+            DateTime entityToEvaluateActiveToUtc = entityToEvaluateActiveTo.ToUniversalTime();
+            DateTime entityToMapToActiveFrom = entityToMapTo.ActiveFrom.GetValueOrDefault();
+            DateTime entityToMapToActiveTo = entityToMapTo.ActiveTo.GetValueOrDefault();
+
+            // Rounding to milliseconds may occur at the database level, so round accordingly such that equality operation will work as expected.
+            DateTime entityToEvaluateActiveFromRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateActiveFrom);
+            DateTime entityToEvaluateActiveFromUtcRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateActiveFromUtc);
+            DateTime entityToEvaluateActiveToRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateActiveTo);
+            DateTime entityToEvaluateActiveToUtcRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateActiveToUtc);
+            DateTime entityToMapToActiveFromRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToMapToActiveFrom);
+            DateTime entityToMapToActiveToRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToMapToActiveTo);
+
+            if (entityToEvaluateActiveFromRoundedToMilliseconds != entityToMapToActiveFromRoundedToMilliseconds && entityToEvaluateActiveFromUtcRoundedToMilliseconds != entityToMapToActiveFromRoundedToMilliseconds)
             {
                 return true;
             }
-            if (entityToEvaluate.ActiveTo != entityToMapTo.ActiveTo && entityToEvaluateActiveToUtc != entityToMapTo.ActiveTo)
+            if (entityToEvaluateActiveToRoundedToMilliseconds != entityToMapToActiveToRoundedToMilliseconds && entityToEvaluateActiveToUtcRoundedToMilliseconds != entityToMapToActiveToRoundedToMilliseconds)
             {
                 return true;
             }

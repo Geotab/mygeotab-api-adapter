@@ -59,7 +59,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             this.context = context;
 
             // Setup a database transaction retry policy.
-            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(MaxRetries, logger);
+            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
 
             InitializeDbOProcessorTrackingListAsync().Wait();
 

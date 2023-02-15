@@ -1,6 +1,7 @@
 ﻿using System;
 using Xunit;
 using MyGeotabAPIAdapter.Helpers;
+using System.Globalization;
 
 namespace MyGeotabAPIAdapter.Tests
 {
@@ -39,7 +40,7 @@ namespace MyGeotabAPIAdapter.Tests
             // Min DateTime null.
             Add(null, DateTime.Now.AddMinutes(2), false);
             // Max DateTime null.
-            Add(DateTime.Now,null, false);
+            Add(DateTime.Now, null, false);
             // Min DateTime > max DateTime.
             Add(DateTime.Now.AddMinutes(2), DateTime.Now, false);
         }
@@ -68,7 +69,7 @@ namespace MyGeotabAPIAdapter.Tests
             Add(dailyStartTimeUTC, runTimeAfterStartSeconds, expectedTimeSpan);
         }
     }
-     
+
     public class GetTimeSpanToNextDailyStartTimeUTCTestData_BadData : TheoryData<DateTime, int>
     {
         public GetTimeSpanToNextDailyStartTimeUTCTestData_BadData()
@@ -128,6 +129,31 @@ namespace MyGeotabAPIAdapter.Tests
         }
     }
 
+    public class TestData_RoundDateTimeToNearestMillisecond_AllPossibilities : TheoryData<DateTime, DateTime>
+    {
+        public TestData_RoundDateTimeToNearestMillisecond_AllPossibilities()
+        {
+            string dateTimeString, formatString;
+            formatString = "yyyy-MM-dd HH:mm:ss.fffffff";
+            CultureInfo formatProvider = CultureInfo.InvariantCulture;
+
+            dateTimeString = "2023-02-10 12:34:56.6665001";
+            DateTime inputDateTime = DateTime.ParseExact(dateTimeString, formatString, formatProvider);
+            DateTime expectedOutputDateTime = new DateTime(2023, 02, 10, 12, 34, 56, 667);
+            Add(inputDateTime, expectedOutputDateTime);
+
+            dateTimeString = "2023-02-10 12:34:56.6665000";
+            inputDateTime = DateTime.ParseExact(dateTimeString, formatString, formatProvider);
+            expectedOutputDateTime = new DateTime(2023, 02, 10, 12, 34, 56, 666);
+            Add(inputDateTime, expectedOutputDateTime);
+
+            dateTimeString = "2023-02-10 12:34:56.6664999";
+            inputDateTime = DateTime.ParseExact(dateTimeString, formatString, formatProvider);
+            expectedOutputDateTime = new DateTime(2023, 02, 10, 12, 34, 56, 666);
+            Add(inputDateTime, expectedOutputDateTime);
+        }
+    }
+
     public class DateTimeHelperTests
     {
         [Theory]
@@ -173,6 +199,15 @@ namespace MyGeotabAPIAdapter.Tests
         {
             var dateTimeHelper = new DateTimeHelper();
             Assert.Throws<ArgumentException>(() => dateTimeHelper.GetTimeSpanToNextDailyStartTimeUTC(dailyStartTimeUTC, runTimeAfterStartSeconds));
+        }
+
+        [Theory]
+        [ClassData(typeof(TestData_RoundDateTimeToNearestMillisecond_AllPossibilities))]
+        public void RoundDateTimeToNearestMillisecond_AllPossibilities(DateTime inputDateTimeUtc, DateTime expected)
+        {
+            var dateTimeHelper = new DateTimeHelper();
+            var result = dateTimeHelper.RoundDateTimeToNearestMillisecond(inputDateTimeUtc);
+            Assert.Equal(expected, result);
         }
 
         [Theory]

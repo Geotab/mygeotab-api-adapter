@@ -12,33 +12,57 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     /// </summary>
     public static class DatabaseResilienceHelper
     {
-        const string DeadlockString = "chosen as the deadlock victim";
-        const string ErrorOccurredWhileGettingOpenConnectionString = "exception occurred while attempting to get an open database connection";
-        const string SqlTransactionCompletedNoLongerUsableString = "this sqltransaction has completed; it is no longer usable";
-        const string TimeoutString = "timeout";
-        const string TimeoutString2 = "time out";
+        /// <summary>
+        /// "chosen as the deadlock victim"
+        /// </summary>
+        public static string DeadlockString { get => "chosen as the deadlock victim"; }
 
         /// <summary>
-        /// The maximum time to wait between retry attempts.
+        /// "exception occurred while attempting to get an open database connection"
         /// </summary>
-        const int MaxRetryAttemptDelaySeconds = 10;
+        public static string ErrorOccurredWhileGettingOpenConnectionString { get => "exception occurred while attempting to get an open database connection"; }
 
         /// <summary>
-        /// The maximum allowed timeout in seconds.
+        /// "this sqltransaction has completed; it is no longer usable"
         /// </summary>
-        public static int MaxTimeoutSeconds { get => 3600; } // 1 hour
+        public static string SqlTransactionCompletedNoLongerUsableString { get => "this sqltransaction has completed; it is no longer usable"; }
+
+        /// <summary>
+        /// "timeout"
+        /// </summary>
+        public static string TimeoutString { get => "timeout"; }
+
+        /// <summary>
+        /// "time out"
+        /// </summary>
+        public static string TimeoutString2 { get => "time out"; }
+
+        /// <summary>
+        /// The maximum number of seconds to wait between retry attempts for database transactions.
+        /// </summary>
+        public static int MaxTransactionRetryAttemptDelaySeconds { get => 300; }
+
+        /// <summary>
+        /// The number of seconds to add to the timeout on each successive attempt at executing a database command.
+        /// </summary>
+        public static int TimeoutSecondsToAddOnEachCommandRetryAttempt { get => 300; }
+
+    /// <summary>
+    /// The maximum allowed timeout in seconds.
+    /// </summary>
+    public static int MaxTimeoutSeconds { get => 3600; } // 1 hour
 
         // Polly context variable names:
         public static string PollyContextKeyRetryAttemptNumber { get => "RetryAttemptNumber"; }
         public static string PollyContextKeyRetryAttemptTimeoutTimeSpan { get => "RetryAttemptTimeoutTimeSpan"; }
 
         /// <summary>
-        /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains "timeout" or "time out".
+        /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains <see cref="TimeoutString"/> or <see cref="TimeoutString2"/>.
         /// </summary>
-        /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy. Note - only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains "timeout" will be handled.</typeparam>
+        /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy. Note - only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains <see cref="TimeoutString"/> or <see cref="TimeoutString2"/> will be handled.</typeparam>
         /// <param name="maxRetries">The maximum number of times an action may be retried.</param>
         /// <param name="logger">The logger to be used for logging any exception and retry-related information.</param>
-        static AsyncRetryPolicy CreateAsyncRetryPolicyForDatabaseCommandTimeouts<TException>(int maxRetries, Logger logger) where TException : Exception
+        public static AsyncRetryPolicy CreateAsyncRetryPolicyForDatabaseCommandTimeouts<TException>(int maxRetries, Logger logger) where TException : Exception
         {
             return Policy
                 .Handle<TException>(exception =>
@@ -54,25 +78,30 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     sleepDurationProvider: (retryAttempt) =>
                     {
                         // Set the delay time before retrying based on the retry attempt number.
-                        var sleepDuration = GetSleepDurationForRetryAttempt(retryAttempt);
+                        int sleepDurationSeconds = 1;
+                        var jitterer = new Random();
+                        int sleepDurationMilliseconds = sleepDurationSeconds * 1000 + jitterer.Next(0, 3000);
+                        var sleepDuration = TimeSpan.FromMilliseconds(sleepDurationMilliseconds);
                         return sleepDuration;
+
                     },
                     onRetry: (exception, sleepDuration, attemptNumber, context) =>
                     {
                         var commandTimeout = (TimeSpan)context[PollyContextKeyRetryAttemptTimeoutTimeSpan];
                         context[PollyContextKeyRetryAttemptNumber] = attemptNumber;
-                        logger.Warn($"Transient exception of type \'{exception.GetType().Name}\' with message \'{exception.Message}\' detected. Command timeout was {commandTimeout}. Retrying in {sleepDuration} (attempt {attemptNumber} of {maxRetries}).");
+                        logger.Warn($"Transient exception of type \'{exception.GetType().Name}\' with message \'{exception.Message}\' detected. Command timeout was {commandTimeout}. Retrying command in {sleepDuration} (attempt {attemptNumber} of {maxRetries}).");
                     }
                  );
         }
 
         /// <summary>
-        /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains "timeout".
+        /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains:
+        /// <see cref="DeadlockString"/>, <see cref="ErrorOccurredWhileGettingOpenConnectionString"/>, <see cref="SqlTransactionCompletedNoLongerUsableString"/>, <see cref="TimeoutString"/>, or <see cref="TimeoutString2"/>.
         /// </summary>
-        /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy. Note - only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains "chosen as the deadlock victim" will be handled.</typeparam>
-        /// <param name="maxRetries">The maximum number of times an action may be retried.</param>
+        /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy. Note - only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains one of the strings noted in the summary will be handled.</typeparam>
         /// <param name="logger">The logger to be used for logging any exception and retry-related information.</param>
-        public static AsyncRetryPolicy CreateAsyncRetryPolicyForDatabaseTransactions<TException>(int maxRetries, Logger logger) where TException : Exception
+        /// <param name="maxRetries">OPTIONAL: The maximum number of times an action may be retried. If not specified, the maximum is effectively unlimited.</param>
+        public static AsyncRetryPolicy CreateAsyncRetryPolicyForDatabaseTransactions<TException>(Logger logger, int maxRetries = 1000000) where TException : Exception
         {
             return Policy
                 .Handle<TException>(exception =>
@@ -81,33 +110,48 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenConnectionString))
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
+                .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(TimeoutString))
+                .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(TimeoutString2))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(DeadlockString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenConnectionString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(TimeoutString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(TimeoutString2))
                 .WaitAndRetryAsync(
                     retryCount: maxRetries,
                     sleepDurationProvider: (retryAttempt) =>
                     {
                         // Set the delay time before retrying based on the retry attempt number.
-                        var sleepDuration = GetSleepDurationForRetryAttempt(retryAttempt);
+                        int sleepDurationSeconds = retryAttempt + 1;
+                        if (sleepDurationSeconds > MaxTransactionRetryAttemptDelaySeconds)
+                        {
+                            sleepDurationSeconds = MaxTransactionRetryAttemptDelaySeconds;
+                        }
+                        var jitterer = new Random();
+                        int sleepDurationMilliseconds = sleepDurationSeconds * 1000 + jitterer.Next(0, 3000);
+                        var sleepDuration = TimeSpan.FromMilliseconds(sleepDurationMilliseconds);
                         return sleepDuration;
                     },
                     onRetry: (exception, sleepDuration, attemptNumber, context) =>
                     {
                         context[PollyContextKeyRetryAttemptNumber] = attemptNumber;
-                        logger.Warn($"Transient exception of type \'{exception.GetType().Name}\' with message \'{exception.Message}\' detected. Retrying in {sleepDuration} (attempt {attemptNumber} of {maxRetries}).");
+                        logger.Warn($"Transient exception of type \'{exception.GetType().Name}\' with message \'{exception.Message}\' detected within a transaction. Retrying transaction in {sleepDuration} (attempt {attemptNumber} of {maxRetries}).");
                     }
                  );
         }
 
         /// <summary>
-        /// Creates an <see cref="AsyncTimeoutPolicy"/> wherein the timeout increases with every attempt up to a maximum of <see cref="MaxTimeoutSeconds"/>. Once this maximum is reached, any subsequent attempts will have the timeout value set to this maximum. With an initial <paramref name="initialTimeoutSeconds"/> value of 30, the timeout values of 10 successive attempts (in seconds) would be: 30, 90, 150, 210, 270, 330, 390, 450, 510 and 570.
+        /// Creates an <see cref="AsyncTimeoutPolicy"/> wherein the timeout increases by <see cref="TimeoutSecondsToAddOnEachCommandRetryAttempt"/> with every attempt up to a maximum of <see cref="MaxTimeoutSeconds"/>. Once this maximum is reached, any subsequent attempts will have the timeout value set to this maximum. With an initial <paramref name="initialTimeoutSeconds"/> value of 30, the timeout values of 5 successive attempts (in seconds) would be: 30, 330, 630, 930, 1230.
         /// </summary>
         /// <param name="initialTimeoutSeconds">The initial timeout in seconds to be applied to the first attempt of the async delegate.</param>
-        static AsyncTimeoutPolicy CreateAsyncTimeoutPolicyForDatabaseCommandTimeoutsBasedOnRetryAttemptNumber(int initialTimeoutSeconds)
+        public static AsyncTimeoutPolicy CreateAsyncTimeoutPolicyForDatabaseCommandTimeoutsBasedOnRetryAttemptNumber(int initialTimeoutSeconds)
         {
             return Policy.TimeoutAsync(context => {
                 int attemptNumber = 0;
@@ -116,11 +160,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     attemptNumber = (int)context[PollyContextKeyRetryAttemptNumber];
                 }
 
-                int timeoutSeconds = initialTimeoutSeconds * (attemptNumber + 1);
-                if (attemptNumber > 0)
-                {
-                    timeoutSeconds += (initialTimeoutSeconds * attemptNumber);
-                }
+                int timeoutSeconds = initialTimeoutSeconds + (TimeoutSecondsToAddOnEachCommandRetryAttempt * (attemptNumber));
                 if (timeoutSeconds > MaxTimeoutSeconds)
                 {
                     timeoutSeconds = MaxTimeoutSeconds;
@@ -133,9 +173,9 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <summary>
-        /// Creates an <see cref="AsyncPolicyWrap"/> that includes an <see cref="AsyncRetryPolicy"/> combined with a <see cref="AsyncTimeoutPolicy"/>. Designed specifically to facilitate timeouts and retries when executing database commands. The timeout increases with every attempt - from <paramref name="timeoutSeconds"/> up to a maximum of <see cref="MaxTimeoutSeconds"/>. Once this maximum is reached, any subsequent attempts will have the timeout value set to this maximum. With an initial <paramref name="timeoutSeconds"/> value of 30, the timeout values of 10 successive attempts (in seconds) would be: 30, 90, 150, 210, 270, 330, 390, 450, 510 and 570.
+        /// Creates an <see cref="AsyncPolicyWrap"/> that includes an <see cref="AsyncRetryPolicy"/> (<see cref="CreateAsyncRetryPolicyForDatabaseCommandTimeouts{TException}(int, Logger)"/>) combined with a <see cref="AsyncTimeoutPolicy"/> (<see cref="CreateAsyncTimeoutPolicyForDatabaseCommandTimeoutsBasedOnRetryAttemptNumber(int)"/>). Designed specifically to facilitate timeouts and retries when executing database commands. 
         /// </summary>
-        /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy. Note - only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains "timeout" will be handled.</typeparam>
+        /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy.</typeparam>
         /// <param name="timeoutSeconds">The initial timeout in seconds to be applied to the first attempt of the async delegate (i.e. the first database command execution attempt).</param>
         /// <param name="maxRetries">The maximum number of times an action may be retried (i.e. the maximum number of attempts for the database command before allowing the timeout exception to bubble-up).</param>
         /// <param name="logger">The logger to be used for logging any exception and retry-related information.</param>
@@ -144,30 +184,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             var asyncRetryPolicy = CreateAsyncRetryPolicyForDatabaseCommandTimeouts<TException>(maxRetries, logger);
             var asyncTimeoutPolicy = CreateAsyncTimeoutPolicyForDatabaseCommandTimeoutsBasedOnRetryAttemptNumber(timeoutSeconds);
             return Policy.WrapAsync(asyncRetryPolicy, asyncTimeoutPolicy);
-        }
-
-        /// <summary>
-        /// Calculates a sleep duration to be used for adding a delay before a retry attempt. The calculated <see cref="TimeSpan"/> is jittered by up to 1000 milliseconds to provide for some variability which may help to reduce spikes in concurrent retry attempts.
-        /// </summary>
-        /// <param name="attemptNumber">The current retry attempt number.</param>
-        /// <returns></returns>
-        static TimeSpan GetSleepDurationForRetryAttempt(int attemptNumber)
-        {
-            if (attemptNumber < 0)
-            {
-                attemptNumber = 0;
-            }
-
-            int sleepDurationSeconds = attemptNumber + 1;
-            if (sleepDurationSeconds > MaxRetryAttemptDelaySeconds)
-            {
-                sleepDurationSeconds = MaxRetryAttemptDelaySeconds;
-            }
-
-            var jitterer = new Random();
-            int sleepDurationMilliseconds = sleepDurationSeconds * 1000 + jitterer.Next(0, 1000);
-
-            return TimeSpan.FromMilliseconds(sleepDurationMilliseconds);
         }
     }
 }

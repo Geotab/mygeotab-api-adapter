@@ -1,6 +1,7 @@
 ﻿using Geotab.Checkmate.ObjectModel;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.Helpers;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
@@ -9,6 +10,13 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     /// </summary>
     public class GeotabUserDbUserObjectMapper : IGeotabUserDbUserObjectMapper
     {
+        readonly IDateTimeHelper dateTimeHelper;
+
+        public GeotabUserDbUserObjectMapper(IDateTimeHelper dateTimeHelper)
+        {
+            this.dateTimeHelper = dateTimeHelper;
+        }
+
         /// <inheritdoc/>
         public DbUser CreateEntity(User entityToMapTo, Common.DatabaseRecordStatus entityStatus = Common.DatabaseRecordStatus.Active)
         {
@@ -42,14 +50,32 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 throw new ArgumentException($"Cannot compare {nameof(DbUser)} '{entityToEvaluate.id}' with {nameof(User)} '{entityToMapTo.Id}' because the IDs do not match.");
             }
 
-            DateTime entityToEvaluateActiveFromUtc = entityToEvaluate.ActiveFrom.GetValueOrDefault().ToUniversalTime();
-            DateTime entityToEvaluateActiveToUtc = entityToEvaluate.ActiveTo.GetValueOrDefault().ToUniversalTime();
-            DateTime entityToEvaluateLastAccessDateUtc = entityToEvaluate.LastAccessDate.GetValueOrDefault().ToUniversalTime();
-            if (entityToEvaluate.ActiveFrom != entityToMapTo.ActiveFrom && entityToEvaluateActiveFromUtc != entityToMapTo.ActiveFrom)
+            DateTime entityToEvaluateActiveFrom = entityToEvaluate.ActiveFrom.GetValueOrDefault();
+            DateTime entityToEvaluateActiveFromUtc = entityToEvaluateActiveFrom.ToUniversalTime();
+            DateTime entityToEvaluateActiveTo = entityToEvaluate.ActiveTo.GetValueOrDefault();
+            DateTime entityToEvaluateActiveToUtc = entityToEvaluateActiveTo.ToUniversalTime();
+            DateTime entityToEvaluateLastAccessDate = entityToEvaluate.LastAccessDate.GetValueOrDefault();
+            DateTime entityToEvaluateLastAccessDateUtc = entityToEvaluateLastAccessDate.ToUniversalTime();
+            DateTime entityToMapToActiveFrom = entityToMapTo.ActiveFrom.GetValueOrDefault();
+            DateTime entityToMapToActiveTo = entityToMapTo.ActiveTo.GetValueOrDefault();
+            DateTime entityToMapToLastAccessDate = entityToMapTo.LastAccessDate.GetValueOrDefault();
+
+            // Rounding to milliseconds may occur at the database level, so round accordingly such that equality operation will work as expected.
+            DateTime entityToEvaluateActiveFromRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateActiveFrom);
+            DateTime entityToEvaluateActiveFromUtcRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateActiveFromUtc);
+            DateTime entityToEvaluateActiveToRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateActiveTo);
+            DateTime entityToEvaluateActiveToUtcRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateActiveToUtc);
+            DateTime entityToEvaluateLastAccessDateRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateLastAccessDate);
+            DateTime entityToEvaluateLastAccessDateUtcRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateLastAccessDateUtc);
+            DateTime entityToMapToActiveFromRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToMapToActiveFrom);
+            DateTime entityToMapToActiveToRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToMapToActiveTo);
+            DateTime entityToMapToLastAccessDateRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToMapToLastAccessDate);
+
+            if (entityToEvaluateActiveFromRoundedToMilliseconds != entityToMapToActiveFromRoundedToMilliseconds && entityToEvaluateActiveFromUtcRoundedToMilliseconds != entityToMapToActiveFromRoundedToMilliseconds)
             {
                 return true;
             }
-            if (entityToEvaluate.ActiveTo != entityToMapTo.ActiveTo && entityToEvaluateActiveToUtc != entityToMapTo.ActiveTo)
+            if (entityToEvaluateActiveToRoundedToMilliseconds != entityToMapToActiveToRoundedToMilliseconds && entityToEvaluateActiveToUtcRoundedToMilliseconds != entityToMapToActiveToRoundedToMilliseconds)
             {
                 return true;
             }
@@ -69,7 +95,7 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 return true;
             }
-            if ((entityToEvaluate.LastAccessDate != entityToMapTo.LastAccessDate) && entityToEvaluateLastAccessDateUtc != entityToMapTo.LastAccessDate)
+            if ((entityToEvaluateLastAccessDateRoundedToMilliseconds != entityToMapToLastAccessDateRoundedToMilliseconds) && entityToEvaluateLastAccessDateUtcRoundedToMilliseconds != entityToMapToLastAccessDateRoundedToMilliseconds)
             {
                 return true;
             }

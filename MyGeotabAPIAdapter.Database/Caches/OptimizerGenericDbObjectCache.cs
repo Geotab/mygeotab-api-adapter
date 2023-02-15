@@ -100,7 +100,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Debug($"{nameof(IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext>)} [Id: {context.Id}] associated with {CurrentClassName}.");
 
             // Setup a database transaction retry policy.
-            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(MaxRetries, logger);
+            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }

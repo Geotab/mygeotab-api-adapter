@@ -11,7 +11,7 @@
     <PackageReference Include="FastMember" Version="1.5.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.0" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.2.1" />
-    <PackageReference Include="Npgsql" Version="7.0.1" />
+    <PackageReference Include="Npgsql" Version="7.0.2" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.90" />
     <PackageReference Include="Polly" Version="7.2.3" />
   </ItemGroup>

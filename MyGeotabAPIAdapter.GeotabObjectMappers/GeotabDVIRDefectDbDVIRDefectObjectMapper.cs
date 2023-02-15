@@ -1,7 +1,7 @@
 ﻿using Geotab.Checkmate.ObjectModel;
-using Microsoft.CSharp.RuntimeBinder;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.Helpers;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
@@ -10,6 +10,13 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     /// </summary>
     public class GeotabDVIRDefectDbDVIRDefectObjectMapper : IGeotabDVIRDefectDbDVIRDefectObjectMapper
     {
+        readonly IDateTimeHelper dateTimeHelper;
+
+        public GeotabDVIRDefectDbDVIRDefectObjectMapper(IDateTimeHelper dateTimeHelper)
+        {
+            this.dateTimeHelper = dateTimeHelper;
+        }
+
         /// <inheritdoc/>
         public DbDVIRDefect CreateEntity(DVIRLog dvirLog, DVIRDefect dvirDefect, Defect defect, DefectListPartDefect defectListPartDefect, Common.DatabaseRecordStatus entityStatus = Common.DatabaseRecordStatus.Active)
         {
@@ -54,8 +61,16 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 throw new ArgumentException($"Cannot compare {nameof(DbDVIRDefect)} '{dbDVIRDefect.id}' with {nameof(DVIRDefect)} '{dvirDefect.Id}' because the IDs do not match.");
             }
 
-            DateTime entityToEvaluateRepairDateTimeUtc = dbDVIRDefect.RepairDateTime.GetValueOrDefault().ToUniversalTime();
-            if (dbDVIRDefect.RepairDateTime != dvirDefect.RepairDateTime && entityToEvaluateRepairDateTimeUtc != dvirDefect.RepairDateTime)
+            DateTime entityToEvaluateRepairDateTime = dbDVIRDefect.RepairDateTime.GetValueOrDefault();
+            DateTime entityToEvaluateRepairDateTimeUtc = entityToEvaluateRepairDateTime.ToUniversalTime();
+            DateTime entityToMapToRepairDateTime = dvirDefect.RepairDateTime.GetValueOrDefault();
+
+            // Rounding to milliseconds may occur at the database level, so round accordingly such that equality operation will work as expected.
+            DateTime entityToEvaluateRepairDateTimeRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateRepairDateTime);
+            DateTime entityToEvaluateRepairDateTimeUtcRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToEvaluateRepairDateTimeUtc);
+            DateTime entityToMapToRepairDateTimeRoundedToMilliseconds = dateTimeHelper.RoundDateTimeToNearestMillisecond(entityToMapToRepairDateTime);
+
+            if (entityToEvaluateRepairDateTimeRoundedToMilliseconds != entityToMapToRepairDateTimeRoundedToMilliseconds && entityToEvaluateRepairDateTimeUtcRoundedToMilliseconds != entityToMapToRepairDateTimeRoundedToMilliseconds)
             {
                 return true;
             }

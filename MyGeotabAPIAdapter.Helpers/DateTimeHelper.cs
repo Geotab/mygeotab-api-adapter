@@ -142,6 +142,20 @@ namespace MyGeotabAPIAdapter.Helpers
         }
 
         /// <inheritdoc/>
+        public DateTime RoundDateTimeToNearestMillisecond(DateTime dateTime)
+        {
+            long ticks = dateTime.Ticks;
+            long wholeSecondPortion = (ticks / TimeSpan.TicksPerSecond) * TimeSpan.TicksPerSecond;
+            long subSecondPortion = ticks - wholeSecondPortion;
+            double subSeconds = subSecondPortion / (double)TimeSpan.TicksPerSecond;
+            double subSecondsRoundedToMilliseconds = Math.Round(subSeconds, 3) * (double)TimeSpan.TicksPerSecond;
+
+            long ticksRoundedToMilliseconds = wholeSecondPortion + (long)subSecondsRoundedToMilliseconds;
+            DateTime dateTimeRoundedToMilliseconds = new DateTime(ticksRoundedToMilliseconds);
+            return dateTimeRoundedToMilliseconds;
+        }
+
+        /// <inheritdoc/>
         public bool TimeIntervalHasElapsed(DateTime startTimeUtc, DateTimeIntervalType dateTimeIntervalType, int interval)
         {
             DateTime endTime = DateTime.MinValue;

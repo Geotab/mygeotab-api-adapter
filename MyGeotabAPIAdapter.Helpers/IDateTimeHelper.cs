@@ -78,6 +78,13 @@ namespace MyGeotabAPIAdapter.Helpers
         TimeSpan GetTimeSpanToNextDailyStartTimeUTC(DateTime dailyStartTimeUTC, int runTimeAfterStartSeconds);
 
         /// <summary>
+        /// Rounds the <paramref name="dateTime"/> to the nearest millisecond and returns the rounded value.
+        /// </summary>
+        /// <param name="dateTime">The <see cref="DateTime"/> to be rounded to the nearest millisecond.</param>
+        /// <returns></returns>
+        DateTime RoundDateTimeToNearestMillisecond(DateTime dateTime);
+
+        /// <summary>
         /// Returns a boolean indicating whether the time interval defined by adding <paramref name="interval"/> to <paramref name="startTimeUtc"/> has elapsed.
         /// </summary>
         /// <param name="startTimeUtc">The interval start time.</param>

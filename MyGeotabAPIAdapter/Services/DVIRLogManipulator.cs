@@ -83,7 +83,7 @@ namespace MyGeotabAPIAdapter
             commandTimeout = adapterConfiguration.TimeoutSecondsForDatabaseTasks * 2;
 
             // Setup a database transaction retry policy.
-            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(MaxRetries, logger);
+            asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
