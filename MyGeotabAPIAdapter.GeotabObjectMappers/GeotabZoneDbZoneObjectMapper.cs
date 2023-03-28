@@ -13,10 +13,12 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     public class GeotabZoneDbZoneObjectMapper : IGeotabZoneDbZoneObjectMapper
     {
         readonly IDateTimeHelper dateTimeHelper;
+        readonly IStringHelper stringHelper;
 
-        public GeotabZoneDbZoneObjectMapper(IDateTimeHelper dateTimeHelper)
+        public GeotabZoneDbZoneObjectMapper(IDateTimeHelper dateTimeHelper, IStringHelper stringHelper)
         { 
             this.dateTimeHelper = dateTimeHelper;
+            this.stringHelper = stringHelper;
         }
 
         /// <inheritdoc/>
@@ -106,15 +108,15 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 return true;
             }
-            if ((entityToEvaluate.Comment != entityToMapTo.Comment) && (entityToEvaluate.Comment != null && entityToMapTo.Comment != ""))
+            if (stringHelper.AreEqual(entityToEvaluate.Comment, entityToMapTo.Comment) == false)
             {
                 return true;
             }
-            if ((entityToEvaluate.ExternalReference != entityToMapTo.ExternalReference) && (entityToEvaluate.ExternalReference != null && entityToMapTo.ExternalReference != ""))
+            if (stringHelper.AreEqual(entityToEvaluate.ExternalReference, entityToMapTo.ExternalReference) == false)
             {
                 return true;
             }
-            if ((entityToEvaluate.Name != entityToMapTo.Name) && (entityToEvaluate.Name != null && entityToMapTo.Name != ""))
+            if (stringHelper.AreEqual(entityToEvaluate.Name, entityToMapTo.Name) == false)
             {
                 return true;
             }

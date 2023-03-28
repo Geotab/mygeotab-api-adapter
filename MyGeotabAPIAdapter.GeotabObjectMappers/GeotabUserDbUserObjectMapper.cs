@@ -11,10 +11,12 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     public class GeotabUserDbUserObjectMapper : IGeotabUserDbUserObjectMapper
     {
         readonly IDateTimeHelper dateTimeHelper;
+        readonly IStringHelper stringHelper;
 
-        public GeotabUserDbUserObjectMapper(IDateTimeHelper dateTimeHelper)
+        public GeotabUserDbUserObjectMapper(IDateTimeHelper dateTimeHelper, IStringHelper stringHelper)
         {
             this.dateTimeHelper = dateTimeHelper;
+            this.stringHelper = stringHelper;
         }
 
         /// <inheritdoc/>
@@ -83,7 +85,7 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 entityToMapTo.IsDriver = false;
             }
-            if (entityToEvaluate.FirstName != entityToMapTo.FirstName || entityToEvaluate.IsDriver != entityToMapTo.IsDriver || entityToEvaluate.LastName != entityToMapTo.LastName || entityToEvaluate.Name != entityToMapTo.Name)
+            if (stringHelper.AreEqual(entityToEvaluate.FirstName, entityToMapTo.FirstName) == false || entityToEvaluate.IsDriver != entityToMapTo.IsDriver || stringHelper.AreEqual(entityToEvaluate.LastName, entityToMapTo.LastName) == false || stringHelper.AreEqual(entityToEvaluate.Name, entityToMapTo.Name) == false)
             {
                 return true;
             }

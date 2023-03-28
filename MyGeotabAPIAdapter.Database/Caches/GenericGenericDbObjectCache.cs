@@ -14,6 +14,8 @@ namespace MyGeotabAPIAdapter.Database.Caches
 
         public int CacheUpdateIntervalMinutes { get => implementation.CacheUpdateIntervalMinutes; set => implementation.CacheUpdateIntervalMinutes = value; }
 
+        public int Count => implementation.Count;
+
         public DateTime DefaultDateTime => implementation.DefaultDateTime;
 
         /// <inheritdoc/>
@@ -65,9 +67,9 @@ namespace MyGeotabAPIAdapter.Database.Caches
             await implementation.InitializeAsync(database);
         }
 
-        public async Task UpdateAsync(bool ForceUpdate)
+        public async Task UpdateAsync(bool forceUpdate, IList<T1> deletedItemsToRemoveFromCache = null)
         {
-            await implementation?.UpdateAsync(ForceUpdate);
+            await implementation?.UpdateAsync(forceUpdate, deletedItemsToRemoveFromCache);
         }
 
         public async Task WaitIfUpdatingAsync()

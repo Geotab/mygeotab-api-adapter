@@ -117,7 +117,9 @@ namespace MyGeotabAPIAdapter.Services
                         await InitializeOrUpdateCachesAsync(cancellationTokenSource);
 
                         var dbRulesToPersist = new List<DbRule>();
+                        var newDbRulesToPersistDictionary = new Dictionary<string, Common.DatabaseWriteOperationType>();
                         var dbConditionsToPersist = new List<DbCondition>();
+                        var dbConditionsToRemoveFromCache = new List<DbCondition>();
                         // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
                         if (ruleGeotabObjectCacher.LastUpdatedTimeUTC > ruleGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
                         {
@@ -168,6 +170,7 @@ namespace MyGeotabAPIAdapter.Services
 
                                         // Update all associated DbConditions so that they will be deleted from the database. A new set of DbConditions will be created to replace them.
                                         var dbConditionsToDelete = GetAllDbConditionsAssociatedWithDbRule(dbRule);
+                                        dbConditionsToRemoveFromCache.AddRange(dbConditionsToDelete);
                                         foreach (var dbCondition in dbConditionsToDelete)
                                         {
                                             dbCondition.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
@@ -186,12 +189,13 @@ namespace MyGeotabAPIAdapter.Services
                                     var newDbRule = geotabRuleDbRuleObjectMapper.CreateEntity(rule);
 
                                     // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (dbRulesToPersist.Where(dbRule => dbRule.GeotabId == newDbRule.GeotabId).Any())
+                                    if (newDbRulesToPersistDictionary.ContainsKey(newDbRule.GeotabId))
                                     {
                                         newDbRule.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
 
                                         // Update all associated DbConditions so that they will be deleted from the database. A new set of DbConditions will be created to replace them.
                                         var dbConditionsToDelete = GetAllDbConditionsAssociatedWithDbRule(dbRule);
+                                        dbConditionsToRemoveFromCache.AddRange(dbConditionsToDelete);
                                         foreach (var dbCondition in dbConditionsToDelete)
                                         {
                                             dbCondition.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
@@ -200,8 +204,11 @@ namespace MyGeotabAPIAdapter.Services
                                             dbConditionsToPersist.Add(dbCondition);
                                         }
                                     }
-
                                     dbRulesToPersist.Add(newDbRule);
+                                    if (newDbRule.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
+                                    {
+                                        newDbRulesToPersistDictionary.Add(newDbRule.GeotabId, newDbRule.DatabaseWriteOperationType);
+                                    }
 
                                     // Create any DbConditions associated with the DbRule and add them to the cache.
                                     var newDbConditions = geotabConditionDbConditionObjectMapper.CreateDbConditionEntitiesForRule(rule);
@@ -252,7 +259,7 @@ namespace MyGeotabAPIAdapter.Services
                             var dbObjectCacheUpdateTasks = new List<Task>
                             {
                                 dbRuleObjectCache.UpdateAsync(true),
-                                dbConditionObjectCache.UpdateAsync(true)
+                                dbConditionObjectCache.UpdateAsync(true, dbConditionsToRemoveFromCache)
                             };
                             await Task.WhenAll(dbObjectCacheUpdateTasks);
                         }
@@ -407,9 +414,7 @@ namespace MyGeotabAPIAdapter.Services
             {
                 logger.Warn($"******** WARNING - SERVICE DISABLED: The {CurrentClassName} service has not been enabled and will NOT be started.");
             }
-        }
-
-        
+        }        
 
         /// <summary>
         /// Stops the current <see cref="RuleProcessor"/> instance.

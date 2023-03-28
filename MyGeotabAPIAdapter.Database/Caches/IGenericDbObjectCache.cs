@@ -18,6 +18,11 @@ namespace MyGeotabAPIAdapter.Database.Caches
         int CacheUpdateIntervalMinutes { get; set; }
 
         /// <summary>
+        /// Returns the current count of objects in the cache.
+        /// </summary>
+        int Count { get; }
+
+        /// <summary>
         /// The default <see cref="DateTime"/> value to use in place of a null value.
         /// </summary>
         DateTime DefaultDateTime { get; }
@@ -85,11 +90,12 @@ namespace MyGeotabAPIAdapter.Database.Caches
         Task InitializeAsync(Databases database);
 
         /// <summary>
-        /// If the <see cref="CacheUpdateIntervalMinutes"/> has elapsed since <see cref="LastUpdated"/>, updates the current <see cref="IGenericDbObjectCache<T>"/> by adding any new dbEntities that were added to the database since the last time this method was called. Additionally, any entities that were changed in the database will be updated. If this is the first time this method has been called since application startup, all dbEntities will be loaded into the cache.
+        /// If the <see cref="CacheUpdateIntervalMinutes"/> has elapsed since <see cref="LastUpdated"/>, updates the current <see cref="IGenericDbObjectCache<T>"/> by adding any new dbEntities that were added to the database since the last time this method was called. Additionally, any entities that were changed in the database will be updated. If this is the first time this method has been called since application startup, all dbEntities will be loaded into the cache. If <paramref name="deletedItemsToRemoveFromCache"/> is supplied, any items in the list that are found in the cache will be removed, regardless of whether a cache update is required and regardless of the <paramref name="forceUpdate"/> value.
         /// </summary>
-        /// <param name="ForceUpdate">If set to <c>true</c>, the cache will be updated regardless of whether the <see cref="CacheUpdateIntervalMinutes"/> has elapsed since <see cref="LastUpdated"/>.</param>
+        /// <param name="forceUpdate">If set to <c>true</c>, the cache will be updated regardless of whether the <see cref="CacheUpdateIntervalMinutes"/> has elapsed since <see cref="LastUpdated"/>.</param>
+        /// <param name="deletedItemsToRemoveFromCache">A list of any entities that should be removed from the cache (presumably because they have been deleted from the database and will not otherwise be removed since they won't be pulled from the database on an update).</param>
         /// <returns></returns>
-        Task UpdateAsync(bool ForceUpdate);
+        Task UpdateAsync(bool forceUpdate, IList<T> deletedItemsToRemoveFromCache = null);
 
         /// <summary>
         /// Waits until <see cref="IsUpdating"/> is <c>false</c>. Intended for use by methods that enumerate and retrieve cached objects.

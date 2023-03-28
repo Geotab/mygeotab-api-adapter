@@ -15,6 +15,9 @@
         public string DbConfigFeedVersionsTableName => "ConfigFeedVersions";
 
         /// <inheritdoc/>
+        public string DbDebugDataTableName => "DebugData";
+
+        /// <inheritdoc/>
         public string DbDeviceTableName => "Devices";
 
         /// <inheritdoc/>

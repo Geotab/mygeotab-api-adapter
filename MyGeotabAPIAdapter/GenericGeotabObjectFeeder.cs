@@ -116,6 +116,7 @@ namespace MyGeotabAPIAdapter
 
             if (typeParameterType == typeof(Geotab.Checkmate.ObjectModel.BinaryData)) { return AdapterService.BinaryDataProcessor; }
             if (typeParameterType == typeof(Controller)) { return AdapterService.ControllerProcessor; }
+            if (typeParameterType == typeof(DebugData)) { return AdapterService.DebugDataProcessor; }
             if (typeParameterType == typeof(Device)) { return AdapterService.DeviceProcessor; }
             if (typeParameterType == typeof(DeviceStatusInfo)) { return AdapterService.DeviceStatusInfoProcessor; }
             if (typeParameterType == typeof(Diagnostic)) { return AdapterService.DiagnosticProcessor; }

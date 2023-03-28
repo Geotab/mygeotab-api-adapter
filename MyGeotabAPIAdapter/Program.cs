@@ -78,6 +78,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IHttpHelper, HttpHelper>()
                         .AddTransient<IMessageLogger, MessageLogger>()
                         .AddSingleton<IMyGeotabAPIHelper, MyGeotabAPIHelper>()
+                        .AddTransient<IStringHelper, StringHelper>()
                         .AddSingleton<IUnmappedDiagnosticManager, UnmappedDiagnosticManager>()
                         .AddTransient<IVSSObjectMapper, VSSObjectMapper>()
 
@@ -117,6 +118,7 @@ namespace MyGeotabAPIAdapter
 
                         // Geotab Object to Database Entity Mappers:
                         .AddTransient<IGeotabBinaryDataDbBinaryDataObjectMapper, GeotabBinaryDataDbBinaryDataObjectMapper>()
+                        .AddTransient<IGeotabDebugDataDbDebugDataObjectMapper, GeotabDebugDataDbDebugDataObjectMapper>()
                         .AddTransient<IGeotabConditionDbConditionObjectMapper, GeotabConditionDbConditionObjectMapper>()
                         .AddTransient<IGeotabDeviceDbDeviceObjectMapper, GeotabDeviceDbDeviceObjectMapper>()
                         .AddTransient<IGeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper, GeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper>()
@@ -139,6 +141,7 @@ namespace MyGeotabAPIAdapter
                         // Database Entity Persisters:
                         .AddTransient<IGenericEntityPersister<DbBinaryData>, GenericEntityPersister<DbBinaryData>>()
                         .AddTransient<IGenericEntityPersister<DbCondition>, GenericEntityPersister<DbCondition>>()
+                        .AddTransient<IGenericEntityPersister<DbDebugData>, GenericEntityPersister<DbDebugData>>()
                         .AddTransient<IGenericEntityPersister<DbDevice>, GenericEntityPersister<DbDevice>>()
                         .AddTransient<IGenericEntityPersister<DbDeviceStatusInfo>, GenericEntityPersister<DbDeviceStatusInfo>>()
                         .AddTransient<IGenericEntityPersister<DbDiagnostic>, GenericEntityPersister<DbDiagnostic>>()
@@ -199,6 +202,7 @@ namespace MyGeotabAPIAdapter
 
                         // Geotab Object Feeders:
                         .AddSingleton<IGenericGeotabObjectFeeder<Geotab.Checkmate.ObjectModel.BinaryData>, GenericGeotabObjectFeeder<Geotab.Checkmate.ObjectModel.BinaryData>>()
+                        .AddSingleton<IGenericGeotabObjectFeeder<DebugData>, GenericGeotabObjectFeeder<DebugData>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<DeviceStatusInfo>, GenericGeotabObjectFeeder<DeviceStatusInfo>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<DriverChange>, GenericGeotabObjectFeeder<DriverChange>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<DVIRLog>, GenericGeotabObjectFeeder<DVIRLog>>()
@@ -224,6 +228,7 @@ namespace MyGeotabAPIAdapter
                         .AddHostedService<Orchestrator>()
                         .AddHostedService<BinaryDataProcessor>()
                         .AddHostedService<ControllerProcessor>()
+                        .AddHostedService<DebugDataProcessor>()
                         .AddHostedService<DeviceProcessor>()
                         .AddHostedService<DeviceStatusInfoProcessor>()
                         .AddHostedService<DiagnosticProcessor>()

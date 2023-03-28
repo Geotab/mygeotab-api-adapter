@@ -57,6 +57,9 @@ namespace MyGeotabAPIAdapter.Database.Caches
         }
 
         /// <inheritdoc/>
+        public int Count { get => objectCache.Count; }
+
+        /// <inheritdoc/>
         public DateTime DefaultDateTime { get => defaultDateTime; }
 
         /// <inheritdoc/>
@@ -228,13 +231,40 @@ namespace MyGeotabAPIAdapter.Database.Caches
         }
 
         /// <inheritdoc/>
-        public async Task UpdateAsync(bool ForceUpdate = false)
+        public async Task UpdateAsync(bool forceUpdate = false, IList<T> deletedItemsToRemoveFromCache = null)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
+            // Remove any items from the cache, if necessary.
+            if (deletedItemsToRemoveFromCache != null && deletedItemsToRemoveFromCache.Any())
+            {
+                await updateLock.WaitAsync();
+                try
+                {
+                    var removedObjectCacheItemsCount = 0;
+                    var removedGeotabIdCacheItemsCount = 0;
+                    foreach (var itemToRemove in deletedItemsToRemoveFromCache)
+                    {
+                        if (objectCache.TryRemove(itemToRemove.id, out T retrievedObject))
+                        {
+                            removedObjectCacheItemsCount++;
+                        }
+                        if (geotabIdCache.TryRemove(itemToRemove.GeotabId, out long retrievedGeotabId))
+                        {
+                            removedGeotabIdCacheItemsCount++;
+                        }
+                    }
+                    logger.Info($"{CurrentClassName} removed {removedObjectCacheItemsCount} item(s) from its object cache and {removedGeotabIdCacheItemsCount} item(s) from its GeotabId cache.");
+                }
+                finally
+                {
+                    updateLock.Release();
+                }
+            }
+
             // Abort if the configured execution interval has not elapsed since the last time this method was executed AND ForceUpdate is false.
-            if (!dateTimeHelper.TimeIntervalHasElapsed(lastUpdated, DateTimeIntervalType.Minutes, cacheUpdateIntervalMinutes) && !ForceUpdate)
+            if (!dateTimeHelper.TimeIntervalHasElapsed(lastUpdated, DateTimeIntervalType.Minutes, cacheUpdateIntervalMinutes) && !forceUpdate)
             {
                 return;
             }

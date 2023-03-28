@@ -48,6 +48,11 @@ namespace MyGeotabAPIAdapter
         Task<DbOServiceTracking> GetDbOServiceTrackingRecordAsync(AdapterService adapterService);
 
         /// <summary>
+        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DebugDataService"/>.
+        /// </summary>
+        Task<DbOServiceTracking> GetDebugDataServiceInfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DeviceService"/>.
         /// </summary>
         Task<DbOServiceTracking> GetDeviceServiceInfoAsync();

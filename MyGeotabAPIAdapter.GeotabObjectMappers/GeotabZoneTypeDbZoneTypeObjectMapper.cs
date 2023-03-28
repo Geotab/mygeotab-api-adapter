@@ -1,6 +1,7 @@
 ﻿using Geotab.Checkmate.ObjectModel;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.Helpers;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
@@ -9,6 +10,13 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     /// </summary>
     public class GeotabZoneTypeDbZoneTypeObjectMapper : IGeotabZoneTypeDbZoneTypeObjectMapper
     {
+        readonly IStringHelper stringHelper;
+
+        public GeotabZoneTypeDbZoneTypeObjectMapper(IStringHelper stringHelper)
+        { 
+            this.stringHelper = stringHelper;
+        }
+
         /// <inheritdoc/>
         public DbZoneType CreateEntity(ZoneType entityToMapTo, Common.DatabaseRecordStatus entityStatus = Common.DatabaseRecordStatus.Active)
         {
@@ -35,11 +43,11 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 throw new ArgumentException($"Cannot compare {nameof(DbZoneType)} '{entityToEvaluate.id}' with {nameof(ZoneType)} '{entityToMapTo.Id}' because the IDs do not match.");
             }
 
-            if ((entityToEvaluate.Comment != entityToMapTo.Comment) && (entityToEvaluate.Comment != null && entityToMapTo.Comment != ""))
+            if (stringHelper.AreEqual(entityToEvaluate.Comment, entityToMapTo.Comment) == false)
             {
                 return true;
             }
-            if ((entityToEvaluate.Name != entityToMapTo.Name) && (entityToEvaluate.Name != null && entityToMapTo.Name != ""))
+            if (stringHelper.AreEqual(entityToEvaluate.Name, entityToMapTo.Name) == false)
             {
                 return true;
             }

@@ -1,5 +1,5 @@
 --------------------------------------------------------
---  File created - Monday-October-24-2022   
+--  File created - Wednesday-March-22-2023   
 --------------------------------------------------------
 --------------------------------------------------------
 --  DDL for Table BinaryData
@@ -110,6 +110,21 @@
 	"TrailerId" NVARCHAR2(50), 
 	"TrailerName" NVARCHAR2(255), 
 	"Version" NUMBER(20,0), 
+	"RecordCreationTimeUtc" TIMESTAMP (7)
+   ) ;
+--------------------------------------------------------
+--  DDL for Table DebugData
+--------------------------------------------------------
+
+  CREATE TABLE "DebugData" 
+   (	"id" NUMBER(20,0) GENERATED ALWAYS AS IDENTITY MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE , 
+	"GeotabId" NVARCHAR2(50), 
+	"Data" NCLOB, 
+	"DateTime" TIMESTAMP (7), 
+	"DebugReasonId" NUMBER(20,0), 
+	"DebugReasonName" NVARCHAR2(255), 
+	"DeviceId" NVARCHAR2(50), 
+	"DriverId" NVARCHAR2(50), 
 	"RecordCreationTimeUtc" TIMESTAMP (7)
    ) ;
 --------------------------------------------------------
@@ -491,6 +506,12 @@
   CREATE INDEX "IX_DVIRLogs_DateTime" ON "DVIRLogs" ("DateTime") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_DebugData_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DebugData_DateTime" ON "DebugData" ("DateTime") 
+  ;
+--------------------------------------------------------
 --  DDL for Index IX_DeviceStatusInfo_RecordLastChangedUtc
 --------------------------------------------------------
 
@@ -653,6 +674,12 @@
   CREATE UNIQUE INDEX "PK_DVIRLOGS" ON "DVIRLogs" ("id") 
   ;
 --------------------------------------------------------
+--  DDL for Index PK_DebugData
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "PK_DebugData" ON "DebugData" ("id") 
+  ;
+--------------------------------------------------------
 --  DDL for Index PK_EXCEPTIONEVENTS
 --------------------------------------------------------
 
@@ -807,6 +834,18 @@
 --------------------------------------------------------
 
   CREATE INDEX "IX_DVIRLogs_DateTime" ON "DVIRLogs" ("DateTime") 
+  ;
+--------------------------------------------------------
+--  DDL for Index PK_DebugData
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "PK_DebugData" ON "DebugData" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DebugData_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DebugData_DateTime" ON "DebugData" ("DateTime") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_DEVICESTATUSINFO
@@ -1084,6 +1123,16 @@
   ALTER TABLE "DVIRLogs" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "DVIRLogs" ADD CONSTRAINT "PK_DVIRLOGS" PRIMARY KEY ("id")
   USING INDEX "PK_DVIRLOGS"  ENABLE;
+--------------------------------------------------------
+--  Constraints for Table DebugData
+--------------------------------------------------------
+
+  ALTER TABLE "DebugData" MODIFY ("id" NOT NULL ENABLE);
+  ALTER TABLE "DebugData" MODIFY ("GeotabId" NOT NULL ENABLE);
+  ALTER TABLE "DebugData" MODIFY ("Data" NOT NULL ENABLE);
+  ALTER TABLE "DebugData" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
+  ALTER TABLE "DebugData" ADD CONSTRAINT "PK_DebugData" PRIMARY KEY ("id")
+  USING INDEX "PK_DebugData"  ENABLE;
 --------------------------------------------------------
 --  Constraints for Table DeviceStatusInfo
 --------------------------------------------------------

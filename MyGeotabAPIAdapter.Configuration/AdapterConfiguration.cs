@@ -81,6 +81,9 @@ namespace MyGeotabAPIAdapter.Configuration
         // > AppSettings:Feeds:BinaryData
         const string ArgNameEnableBinaryDataFeed = "AppSettings:Feeds:BinaryData:EnableBinaryDataFeed";
         const string ArgNameBinaryDataFeedIntervalSeconds = "AppSettings:Feeds:BinaryData:BinaryDataFeedIntervalSeconds";
+        // > AppSettings:Feeds:DebugData
+        const string ArgNameEnableDebugDataFeed = "AppSettings:Feeds:DebugData:EnableDebugDataFeed";
+        const string ArgNameDebugDataFeedIntervalSeconds = "AppSettings:Feeds:DebugData:DebugDataFeedIntervalSeconds";
         // > AppSettings:Feeds:DeviceStatusInfo
         const string ArgNameEnableDeviceStatusInfoFeed = "AppSettings:Feeds:DeviceStatusInfo:EnableDeviceStatusInfoFeed";
         const string ArgNameDeviceStatusInfoFeedIntervalSeconds = "AppSettings:Feeds:DeviceStatusInfo:DeviceStatusInfoFeedIntervalSeconds";
@@ -134,7 +137,7 @@ namespace MyGeotabAPIAdapter.Configuration
         // Arbitrary timeout limits:
         const int DefaultTimeoutSeconds = 30;
         const int MinTimeoutSeconds = 10;
-        const int MaxTimeoutSeconds = 3600;
+        const int MaxTimeoutSeconds = 10800;
         
         /// <inheritdoc/>
         public int BinaryDataFeedIntervalSeconds { get; private set; }
@@ -153,6 +156,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public string DatabaseProviderType { get; private set; }
+
+        /// <inheritdoc/>
+        public int DebugDataFeedIntervalSeconds { get; private set; }
 
         /// <inheritdoc/>
         public DateTime DeviceCacheIntervalDailyReferenceStartTimeUTC { get; private set; }
@@ -207,6 +213,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public bool EnableControllerCache { get; private set; }
+
+        /// <inheritdoc/>
+        public bool EnableDebugDataFeed { get; private set; }
 
         /// <inheritdoc/>
         public bool EnableDeviceCache { get; private set; }
@@ -516,6 +525,10 @@ namespace MyGeotabAPIAdapter.Configuration
             // AppSettings:Feeds:BinaryData:
             EnableBinaryDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableBinaryDataFeed);
             BinaryDataFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameBinaryDataFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+
+            // AppSettings:Feeds:DebugData:
+            EnableDebugDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableDebugDataFeed);
+            DebugDataFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameDebugDataFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
             // AppSettings:Feeds:DeviceStatusInfo:
             EnableDeviceStatusInfoFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableDeviceStatusInfoFeed);

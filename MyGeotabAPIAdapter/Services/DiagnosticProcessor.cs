@@ -109,6 +109,7 @@ namespace MyGeotabAPIAdapter.Services
                         await InitializeOrUpdateCachesAsync(cancellationTokenSource);
 
                         var dbDiagnosticsToPersist = new List<DbDiagnostic>();
+                        var newDbDiagnosticsToPersistDictionary = new Dictionary<string, Common.DatabaseWriteOperationType>();
                         // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
                         if (diagnosticGeotabObjectCacher.LastUpdatedTimeUTC > diagnosticGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
                         {
@@ -152,12 +153,16 @@ namespace MyGeotabAPIAdapter.Services
                                     var newDbDiagnostic = geotabDiagnosticDbDiagnosticObjectMapper.CreateEntity(diagnostic);
 
                                     // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (dbDiagnosticsToPersist.Where(dbDiagnostic => dbDiagnostic.GeotabId == newDbDiagnostic.GeotabId).Any())
+                                    if (newDbDiagnosticsToPersistDictionary.ContainsKey(newDbDiagnostic.GeotabId))
                                     {
                                         newDbDiagnostic.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                                     }
 
                                     dbDiagnosticsToPersist.Add(newDbDiagnostic);
+                                    if (newDbDiagnostic.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
+                                    {
+                                        newDbDiagnosticsToPersistDictionary.Add(newDbDiagnostic.GeotabId, newDbDiagnostic.DatabaseWriteOperationType);
+                                    }
                                 }
                             }
 

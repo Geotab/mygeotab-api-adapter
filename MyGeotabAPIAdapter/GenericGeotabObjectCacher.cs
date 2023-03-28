@@ -333,6 +333,14 @@ namespace MyGeotabAPIAdapter
                             {
                                 keepGoing = false;
                             }
+                            else 
+                            {
+                                // Provide a status update. For large caches to provide some indication that the application is still running.
+                                if (cacheRecordsAdded % 10000 == 0)
+                                {
+                                    logger.Info($"{CurrentClassName}> processing with {cacheRecordsAdded} records added to the {typeParameterType.Name} cache so far...");
+                                }
+                            }
                         }
                     }
                     DateTime currentDateTime = DateTime.UtcNow;

@@ -12,10 +12,12 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     public class GeotabDeviceDbDeviceObjectMapper : IGeotabDeviceDbDeviceObjectMapper
     {
         readonly IDateTimeHelper dateTimeHelper;
+        readonly IStringHelper stringHelper;
 
-        public GeotabDeviceDbDeviceObjectMapper(IDateTimeHelper dateTimeHelper)
+        public GeotabDeviceDbDeviceObjectMapper(IDateTimeHelper dateTimeHelper, IStringHelper stringHelper)
         { 
             this.dateTimeHelper = dateTimeHelper;
+            this.stringHelper = stringHelper;
         }
 
         /// <inheritdoc/>
@@ -126,7 +128,7 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 return true;
             }
             string entityToMapToDeviceType = entityToMapTo.DeviceType.ToString();
-            if (entityToEvaluate.DeviceType != entityToMapToDeviceType || entityToEvaluate.Name != entityToMapTo.Name || entityToEvaluate.SerialNumber != entityToMapTo.SerialNumber || entityToEvaluate.Comment != entityToMapTo.Comment)
+            if (entityToEvaluate.DeviceType != entityToMapToDeviceType || stringHelper.AreEqual(entityToEvaluate.Name, entityToMapTo.Name) == false || stringHelper.AreEqual(entityToEvaluate.SerialNumber, entityToMapTo.SerialNumber) == false || stringHelper.AreEqual(entityToEvaluate.Comment, entityToMapTo.Comment) == false)
             {
                 return true;
             }

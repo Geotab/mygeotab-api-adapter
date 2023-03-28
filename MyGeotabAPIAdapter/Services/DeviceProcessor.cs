@@ -108,6 +108,7 @@ namespace MyGeotabAPIAdapter.Services
                         await InitializeOrUpdateCachesAsync(cancellationTokenSource);
 
                         var dbDevicesToPersist = new List<DbDevice>();
+                        var newDbDevicesToPersistDictionary = new Dictionary<string, Common.DatabaseWriteOperationType>();
                         // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
                         if (deviceGeotabObjectCacher.LastUpdatedTimeUTC > deviceGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
                         {
@@ -151,12 +152,16 @@ namespace MyGeotabAPIAdapter.Services
                                     var newDbDevice = geotabDeviceDbDeviceObjectMapper.CreateEntity(device);
 
                                     // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (dbDevicesToPersist.Where(dbDevice => dbDevice.GeotabId == newDbDevice.GeotabId).Any())
+                                    if (newDbDevicesToPersistDictionary.ContainsKey(newDbDevice.GeotabId))
                                     {
                                         newDbDevice.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                                     }
 
                                     dbDevicesToPersist.Add(newDbDevice);
+                                    if (newDbDevice.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
+                                    {
+                                        newDbDevicesToPersistDictionary.Add(newDbDevice.GeotabId, newDbDevice.DatabaseWriteOperationType);
+                                    }
                                 }
                             }
 

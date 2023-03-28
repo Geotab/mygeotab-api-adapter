@@ -304,6 +304,39 @@ ALTER SEQUENCE public."DVIRLogs_id_seq" OWNED BY public."DVIRLogs".id;
 
 
 --
+-- Name: DebugData_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."DebugData_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public."DebugData_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- Name: DebugData; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."DebugData" (
+    id bigint DEFAULT nextval('public."DebugData_id_seq"'::regclass) NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "Data" text NOT NULL,
+    "DateTime" timestamp without time zone,
+    "DebugReasonId" bigint,
+    "DebugReasonName" character varying(255),
+    "DeviceId" character varying(50),
+    "DriverId" character varying(50),
+    "RecordCreationTimeUtc" timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE public."DebugData" OWNER TO geotabadapter_owner;
+
+--
 -- Name: DeviceStatusInfo; Type: TABLE; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1287,6 +1320,14 @@ ALTER TABLE ONLY public."DVIRLogs"
 
 
 --
+-- Name: DebugData DebugData_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DebugData"
+    ADD CONSTRAINT "DebugData_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: DeviceStatusInfo DeviceStatusInfo_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1462,6 +1503,13 @@ CREATE INDEX "IX_DVIRDefects_RecordLastChangedUtc" ON public."DVIRDefects" USING
 --
 
 CREATE INDEX "IX_DVIRLogs_DateTime" ON public."DVIRLogs" USING btree ("DateTime");
+
+
+--
+-- Name: IX_DebugData_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_DebugData_DateTime" ON public."DebugData" USING btree ("DateTime");
 
 
 --
@@ -1652,6 +1700,20 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DVIRLogs" TO geotabadapter_cl
 --
 
 GRANT ALL ON SEQUENCE public."DVIRLogs_id_seq" TO geotabadapter_client;
+
+
+--
+-- Name: SEQUENCE "DebugData_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."DebugData_id_seq" TO geotabadapter_client;
+
+
+--
+-- Name: TABLE "DebugData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DebugData" TO geotabadapter_client;
 
 
 --

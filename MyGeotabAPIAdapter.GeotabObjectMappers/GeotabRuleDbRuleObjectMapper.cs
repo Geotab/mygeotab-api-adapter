@@ -11,10 +11,12 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     public class GeotabRuleDbRuleObjectMapper : IGeotabRuleDbRuleObjectMapper
     {
         readonly IDateTimeHelper dateTimeHelper;
+        readonly IStringHelper stringHelper;
 
-        public GeotabRuleDbRuleObjectMapper(IDateTimeHelper dateTimeHelper)
+        public GeotabRuleDbRuleObjectMapper(IDateTimeHelper dateTimeHelper, IStringHelper stringHelper)
         { 
             this.dateTimeHelper = dateTimeHelper;
+            this.stringHelper = stringHelper;
         }
 
         /// <inheritdoc/>
@@ -74,8 +76,9 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 return true;
             }
+
             string entityToMapToBaseType = entityToMapTo.BaseType.ToString();
-            if (entityToEvaluate.BaseType != entityToMapToBaseType || entityToEvaluate.Comment != entityToMapTo.Comment || entityToEvaluate.Name != entityToMapTo.Name || entityToEvaluate.Version != entityToMapTo.Version)
+            if (entityToEvaluate.BaseType != entityToMapToBaseType || stringHelper.AreEqual(entityToEvaluate.Comment, entityToMapTo.Comment) == false || stringHelper.AreEqual(entityToEvaluate.Name, entityToMapTo.Name) == false || entityToEvaluate.Version != entityToMapTo.Version)
             {
                 return true;
             }

@@ -108,6 +108,7 @@ namespace MyGeotabAPIAdapter.Services
                         await InitializeOrUpdateCachesAsync(cancellationTokenSource);
 
                         var dbZonesToPersist = new List<DbZone>();
+                        var newDbZonesToPersistDictionary = new Dictionary<string, Common.DatabaseWriteOperationType>();
                         // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
                         if (zoneGeotabObjectCacher.LastUpdatedTimeUTC > zoneGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
                         {
@@ -151,12 +152,16 @@ namespace MyGeotabAPIAdapter.Services
                                     var newDbZone = geotabZoneDbZoneObjectMapper.CreateEntity(zone);
 
                                     // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (dbZonesToPersist.Where(dbZone => dbZone.GeotabId == newDbZone.GeotabId).Any())
+                                    if (newDbZonesToPersistDictionary.ContainsKey(newDbZone.GeotabId))
                                     {
                                         newDbZone.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
                                     }
 
                                     dbZonesToPersist.Add(newDbZone);
+                                    if (newDbZone.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
+                                    {
+                                        newDbZonesToPersistDictionary.Add(newDbZone.GeotabId, newDbZone.DatabaseWriteOperationType);
+                                    }
                                 }
                             }
 

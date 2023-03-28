@@ -69,6 +69,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                         .AddTransient<IGeospatialHelper, GeospatialHelper>()
                         .AddTransient<ILongitudeLatitudeInterpolator, LongitudeLatitudeInterpolator>()
                         .AddTransient<IMessageLogger, MessageLogger>()
+                        .AddTransient<IStringHelper, StringHelper>()
 
                         // Models for Dependency Injection:
                         .AddTransient<DbBinaryTypeT>()

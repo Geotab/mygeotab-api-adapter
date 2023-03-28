@@ -1,6 +1,7 @@
 /* Clean Database */ 
 -- delete from public."BinaryData";
 -- delete from public."Conditions";
+-- delete from public."DebugData";
 -- delete from public."Devices";
 -- delete from public."DeviceStatusInfo";
 -- delete from public."Diagnostics";
@@ -26,6 +27,7 @@
 -- delete from public."ZoneTypes";
 -- ALTER SEQUENCE public."BinaryData_id_seq" RESTART;
 -- ALTER SEQUENCE public."Conditions_id_seq" RESTART;
+-- ALTER SEQUENCE public."DebugData_id_seq" RESTART;
 -- ALTER SEQUENCE public."Devices_id_seq" RESTART;
 -- ALTER SEQUENCE public."DeviceStatusInfo_id_seq" RESTART;
 -- ALTER SEQUENCE public."Diagnostics_id_seq" RESTART;
@@ -52,7 +54,9 @@
 /* Check counts */
 select 'BinaryData' as "TableName", count(0) as "RecordCount" from public."BinaryData"
 union all
-select 'Conditions' as "TableName", count(0) as "RecordCount" from public."Conditions"
+select 'Conditions', count(0) from public."Conditions"
+union all
+select 'DebugData', count(0) from public."DebugData"
 union all
 select 'Devices', count(0) from public."Devices"
 union all

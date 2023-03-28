@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
-using MyGeotabAPIAdapter.Database.Caches;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
 using MyGeotabAPIAdapter.Database.Models;
@@ -15,7 +14,6 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,10 +21,12 @@ using System.Threading.Tasks;
 namespace MyGeotabAPIAdapter.Services
 {
     /// <summary>
-    /// A <see cref="BackgroundService"/> that extracts <see cref="User"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database. 
+    /// A <see cref="BackgroundService"/> that extracts <see cref="DebugData"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database. 
     /// </summary>
-    class UserProcessor : BackgroundService
+    class DebugDataProcessor : BackgroundService
     {
+        bool feedVersionRollbackRequired = false;
+
         string CurrentClassName { get => $"{GetType().Assembly.GetName().Name}.{GetType().Name} (v{GetType().Assembly.GetName().Version})"; }
         string DefaultErrorMessagePrefix { get => $"{CurrentClassName} process caught an exception"; }
 
@@ -37,10 +37,10 @@ namespace MyGeotabAPIAdapter.Services
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IAdapterEnvironment adapterEnvironment;
         readonly IExceptionHelper exceptionHelper;
-        readonly IGenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>> dbUserObjectCache;
-        readonly IGenericEntityPersister<DbUser> dbUserEntityPersister;
-        readonly IGenericGeotabObjectCacher<User> userGeotabObjectCacher;
-        readonly IGeotabUserDbUserObjectMapper geotabUserDbUserObjectMapper;
+        readonly IGenericEntityPersister<DbDebugData> dbDebugDataEntityPersister;
+        readonly IGenericGeotabObjectFeeder<DebugData> debugDataGeotabObjectFeeder;
+        readonly IGeotabDeviceFilterer geotabDeviceFilterer;
+        readonly IGeotabDebugDataDbDebugDataObjectMapper geotabDebugDataDbDebugDataObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IPrerequisiteServiceChecker prerequisiteServiceChecker;
         readonly IServiceTracker serviceTracker;
@@ -50,9 +50,9 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="UserProcessor"/> class.
+        /// Initializes a new instance of the <see cref="DebugDataProcessor"/> class.
         /// </summary>
-        public UserProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>> dbUserObjectCache, IGenericEntityPersister<DbUser> dbUserEntityPersister, IGeotabUserDbUserObjectMapper geotabUserDbUserObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IGenericGeotabObjectCacher<User> userGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DebugDataProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbDebugData> dbDebugDataEntityPersister, IGenericGeotabObjectFeeder<DebugData> debugDataGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDebugDataDbDebugDataObjectMapper geotabDebugDataDbDebugDataObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -60,14 +60,14 @@ namespace MyGeotabAPIAdapter.Services
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
             this.exceptionHelper = exceptionHelper;
-            this.dbUserObjectCache = dbUserObjectCache;
-            this.dbUserEntityPersister = dbUserEntityPersister;
-            this.geotabUserDbUserObjectMapper = geotabUserDbUserObjectMapper;
+            this.dbDebugDataEntityPersister = dbDebugDataEntityPersister;
+            this.debugDataGeotabObjectFeeder = debugDataGeotabObjectFeeder;
+            this.geotabDeviceFilterer = geotabDeviceFilterer;
+            this.geotabDebugDataDbDebugDataObjectMapper = geotabDebugDataDbDebugDataObjectMapper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.prerequisiteServiceChecker = prerequisiteServiceChecker;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
-            this.userGeotabObjectCacher = userGeotabObjectCacher;
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -95,6 +95,7 @@ namespace MyGeotabAPIAdapter.Services
                 // Abort if waiting for connectivity restoration.
                 if (stateMachine.CurrentState == State.Waiting)
                 {
+                    feedVersionRollbackRequired = true;
                     await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                     continue;
                 }
@@ -105,71 +106,38 @@ namespace MyGeotabAPIAdapter.Services
 
                     using (var cancellationTokenSource = new CancellationTokenSource())
                     {
-                        await InitializeOrUpdateCachesAsync(cancellationTokenSource);
+                        var dbOServiceTracking = await serviceTracker.GetDebugDataServiceInfoAsync();
 
-                        var dbUsersToPersist = new List<DbUser>();
-                        var newDbUsersToPersistDictionary = new Dictionary<string, Common.DatabaseWriteOperationType>();
-                        // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
-                        if (userGeotabObjectCacher.LastUpdatedTimeUTC > userGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
+                        // Initialize the Geotab object feeder.
+                        if (debugDataGeotabObjectFeeder.IsInitialized == false)
                         {
-                            DateTime recordChangedTimestampUtc = DateTime.UtcNow;
+                            await debugDataGeotabObjectFeeder.InitializeAsync(cancellationTokenSource, adapterConfiguration.DebugDataFeedIntervalSeconds, myGeotabAPIHelper.GetFeedResultLimitDefault, dbOServiceTracking.LastProcessedFeedVersion);
+                        }
 
-                            // Find any users that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
-                            var dbUsers = await dbUserObjectCache.GetObjectsAsync();
-                            foreach (var dbUser in dbUsers)
-                            {
-                                if (dbUser.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
-                                {
-                                    bool userExistsInCache = userGeotabObjectCacher.GeotabObjectCache.ContainsKey(Id.Create(dbUser.GeotabId));
-                                    if (!userExistsInCache)
-                                    {
-                                        logger.Debug($"User '{dbUser.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
-                                        dbUser.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
-                                        dbUser.RecordLastChangedUtc = recordChangedTimestampUtc;
-                                        dbUser.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                        dbUsersToPersist.Add(dbUser);
-                                    }
-                                }
-                            }
+                        // If this is the first iteration after a connectivity disruption, roll-back the LastFeedVersion of the GeotabObjectFeeder to the last processed feed version that was committed to the database and set the LastFeedRetrievalTimeUtc to DateTime.MinValue to start processing without further delay.
+                        if (feedVersionRollbackRequired == true)
+                        {
+                            debugDataGeotabObjectFeeder.LastFeedVersion = dbOServiceTracking.LastProcessedFeedVersion;
+                            debugDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc = DateTime.MinValue;
+                            feedVersionRollbackRequired = false;
+                        }
 
-                            // Iterate through the in-memory cache of Geotab User objects.
-                            foreach (var user in userGeotabObjectCacher.GeotabObjectCache.Values)
-                            {
-                                // Try to find the existing database record for the cached user.
-                                var dbUser = await dbUserObjectCache.GetObjectAsync(user.Id.ToString());
-                                if (dbUser != null)
-                                {
-                                    // The user has already been added to the database.
-                                    if (geotabUserDbUserObjectMapper.EntityRequiresUpdate(dbUser, user))
-                                    {
-                                        DbUser updatedDbUser = geotabUserDbUserObjectMapper.UpdateEntity(dbUser, user);
-                                        dbUsersToPersist.Add(updatedDbUser);
-                                    }
-                                }
-                                else 
-                                {
-                                    // The user has not yet been added to the database. Create a DbUser, set its properties and add it to the cache.
-                                    var newDbUser = geotabUserDbUserObjectMapper.CreateEntity(user);
+                        // Get a batch of DebugData objects from Geotab.
+                        await debugDataGeotabObjectFeeder.GetFeedDataBatchAsync(cancellationTokenSource);
+                        stoppingToken.ThrowIfCancellationRequested();
 
-                                    // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (newDbUsersToPersistDictionary.ContainsKey(newDbUser.GeotabId))
-                                    {
-                                        newDbUser.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                    }
+                        // Process any returned DebugDatas.
+                        var debugDatas = debugDataGeotabObjectFeeder.GetFeedResultDataValuesList();
+                        var dbDebugDatasToPersist = new List<DbDebugData>();
+                        if (debugDatas.Count > 0)
+                        {
+                            // Apply tracked device filter (if configured in appsettings.json).
+                            var filteredDebugDatas = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, debugDatas);
 
-                                    dbUsersToPersist.Add(newDbUser);
-                                    if (newDbUser.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
-                                    {
-                                        newDbUsersToPersistDictionary.Add(newDbUser.GeotabId, newDbUser.DatabaseWriteOperationType);
-                                    }
-                                }
-                            }
+                            // Map the DebugData objects to DbDebugData entities.
+                            dbDebugDatasToPersist = geotabDebugDataDbDebugDataObjectMapper.CreateEntities(filteredDebugDatas);
 
                             stoppingToken.ThrowIfCancellationRequested();
-                        }
-                        else
-                        {
-                            logger.Debug($"User cache in database is up-to-date.");
                         }
 
                         // Persist changes to database.
@@ -179,11 +147,19 @@ namespace MyGeotabAPIAdapter.Services
                             {
                                 try
                                 {
-                                    // DbUser:
-                                    await dbUserEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbUsersToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                    // DbDebugData:
+                                    await dbDebugDataEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDebugDatasToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.UserProcessor, DateTime.UtcNow);
+                                    if (dbDebugDatasToPersist.Count > 0)
+                                    {
+                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DebugDataProcessor, debugDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc, debugDataGeotabObjectFeeder.LastFeedVersion);
+                                    }
+                                    else
+                                    {
+                                        // No DebugDatas were returned, but the OServiceTracking record for this service still needs to be updated to show that the service is operating.
+                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DebugDataProcessor, DateTime.UtcNow);
+                                    }
 
                                     // Commit transactions:
                                     await adapterUOW.CommitAsync();
@@ -197,11 +173,8 @@ namespace MyGeotabAPIAdapter.Services
                             }
                         }, new Context());
 
-                        // If there were any changes, force the DbUser cache to be updated so that the changes are immediately available to other consumers.
-                        if (dbUsersToPersist.Any())
-                        {
-                            await dbUserObjectCache.UpdateAsync(true);
-                        }
+                        // Clear FeedResultData.
+                        debugDataGeotabObjectFeeder.FeedResultData.Clear();
                     }
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -226,10 +199,13 @@ namespace MyGeotabAPIAdapter.Services
                     HandleException(ex, NLogLogLevelName.Fatal, DefaultErrorMessagePrefix);
                 }
 
-                // Add a delay equivalent to the configured update interval.
-                var delayTimeSpan = TimeSpan.FromMinutes(adapterConfiguration.UserCacheUpdateIntervalMinutes);
-                logger.Info($"{CurrentClassName} pausing for the configured update interval ({delayTimeSpan}).");
-                await Task.Delay(delayTimeSpan, stoppingToken);
+                // If the feed is up-to-date, add a delay equivalent to the configured update interval.
+                if (debugDataGeotabObjectFeeder.FeedCurrent == true)
+                {
+                    var delayTimeSpan = TimeSpan.FromSeconds(adapterConfiguration.DebugDataFeedIntervalSeconds);
+                    logger.Info($"{CurrentClassName} pausing for the configured feed interval ({delayTimeSpan}).");
+                    await Task.Delay(delayTimeSpan, stoppingToken);
+                }
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -261,39 +237,7 @@ namespace MyGeotabAPIAdapter.Services
         }
 
         /// <summary>
-        /// Initializes and/or updates any caches used by this class.
-        /// </summary>
-        /// <returns></returns>
-        async Task InitializeOrUpdateCachesAsync(CancellationTokenSource cancellationTokenSource)
-        {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            var dbObjectCacheInitializationAndUpdateTasks = new List<Task>();
-
-            // Update the in-memory cache of Geotab objects obtained via API from the MyGeotab database.
-            if (userGeotabObjectCacher.IsInitialized == false)
-            {
-                dbObjectCacheInitializationAndUpdateTasks.Add(userGeotabObjectCacher.InitializeAsync(cancellationTokenSource, adapterConfiguration.UserCacheIntervalDailyReferenceStartTimeUTC, adapterConfiguration.UserCacheUpdateIntervalMinutes, adapterConfiguration.UserCacheRefreshIntervalMinutes, myGeotabAPIHelper.GetFeedResultLimitUser, true));
-            }
-            else
-            {
-                dbObjectCacheInitializationAndUpdateTasks.Add(userGeotabObjectCacher.UpdateGeotabObjectCacheAsync(cancellationTokenSource));
-            }
-
-            // Update the in-memory cache of database objects that correspond with Geotab objects.
-            if (dbUserObjectCache.IsInitialized == false)
-            {
-                dbObjectCacheInitializationAndUpdateTasks.Add(dbUserObjectCache.InitializeAsync(Databases.AdapterDatabase));
-            }
-
-            await Task.WhenAll(dbObjectCacheInitializationAndUpdateTasks);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
-        }
-
-        /// <summary>
-        /// Starts the current <see cref="UserProcessor"/> instance.
+        /// Starts the current <see cref="DebugDataProcessor"/> instance.
         /// </summary>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
         /// <returns></returns>
@@ -303,14 +247,14 @@ namespace MyGeotabAPIAdapter.Services
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
-            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.UserProcessor);
+            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.DebugDataProcessor);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
             {
                 using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                 {
                     try
                     {
-                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.UserProcessor, adapterEnvironment.AdapterVersion.ToString(), adapterEnvironment.AdapterMachineName);
+                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DebugDataProcessor, adapterEnvironment.AdapterVersion.ToString(), adapterEnvironment.AdapterMachineName);
                         await adapterUOW.CommitAsync();
                     }
                     catch (Exception ex)
@@ -323,7 +267,7 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.EnableUserCache == true)
+            if (adapterConfiguration.EnableDebugDataFeed == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -335,7 +279,7 @@ namespace MyGeotabAPIAdapter.Services
         }
 
         /// <summary>
-        /// Stops the current <see cref="UserProcessor"/> instance.
+        /// Stops the current <see cref="DebugDataProcessor"/> instance.
         /// </summary>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
         /// <returns></returns>
@@ -360,6 +304,8 @@ namespace MyGeotabAPIAdapter.Services
 
             var prerequisiteServices = new List<AdapterService>
             {
+                AdapterService.DeviceProcessor,
+                AdapterService.UserProcessor
             };
 
             await prerequisiteServiceChecker.WaitForPrerequisiteServicesIfNeededAsync(CurrentClassName, prerequisiteServices, cancellationToken);

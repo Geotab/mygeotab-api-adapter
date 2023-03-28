@@ -135,6 +135,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
+        public async Task<DbOServiceTracking> GetDebugDataServiceInfoAsync()
+        {
+            await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
+            var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.DebugDataProcessor.ToString());
+            return dbOServiceTracking;
+        }
+
+        /// <inheritdoc/>
         public async Task<DbOServiceTracking> GetDeviceServiceInfoAsync()
         {
             await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();

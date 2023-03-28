@@ -2,6 +2,7 @@
 using Geotab.Checkmate.ObjectModel.Engine;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.Helpers;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
@@ -10,6 +11,13 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     /// </summary>
     public class GeotabDiagnosticDbDiagnosticObjectMapper : IGeotabDiagnosticDbDiagnosticObjectMapper
     {
+        readonly IStringHelper stringHelper;
+
+        public GeotabDiagnosticDbDiagnosticObjectMapper(IStringHelper stringHelper)
+        { 
+            this.stringHelper = stringHelper;
+        }
+
         // OBD-II DTC prefixes associated with Controller Ids.
         const string OBD2DTCPrefixBody = "B";
         const string OBD2DTCPrefixChassis = "C";
@@ -130,7 +138,7 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
 
             Source diagnosticSource = entityToMapTo.Source;
             UnitOfMeasure diagnosticUnitOfMeasure = entityToMapTo.UnitOfMeasure;
-            if (entityToEvaluate.DiagnosticCode != entityToMapTo.Code || entityToEvaluate.DiagnosticName != entityToMapTo.Name || entityToEvaluate.DiagnosticSourceId != diagnosticSource.Id.ToString() || entityToEvaluate.DiagnosticSourceName != diagnosticSource.Name || entityToEvaluate.DiagnosticUnitOfMeasureId != diagnosticUnitOfMeasure.Id.ToString() || entityToEvaluate.DiagnosticUnitOfMeasureName != diagnosticUnitOfMeasure.Name)
+            if (entityToEvaluate.DiagnosticCode != entityToMapTo.Code || stringHelper.AreEqual(entityToEvaluate.DiagnosticName, entityToMapTo.Name) == false || entityToEvaluate.DiagnosticSourceId != diagnosticSource.Id.ToString() || stringHelper.AreEqual(entityToEvaluate.DiagnosticSourceName, diagnosticSource.Name) == false || entityToEvaluate.DiagnosticUnitOfMeasureId != diagnosticUnitOfMeasure.Id.ToString() || stringHelper.AreEqual(entityToEvaluate.DiagnosticUnitOfMeasureName, diagnosticUnitOfMeasure.Name) == false)
             {
                 return true;
             }
