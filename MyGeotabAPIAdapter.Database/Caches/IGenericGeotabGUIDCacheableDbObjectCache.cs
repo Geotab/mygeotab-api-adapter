@@ -106,11 +106,5 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <param name="ForceUpdate">If set to <c>true</c>, the cache will be updated regardless of whether the <see cref="CacheUpdateIntervalMinutes"/> has elapsed since <see cref="LastUpdated"/>.</param>
         /// <returns></returns>
         Task UpdateAsync(bool ForceUpdate);
-
-        /// <summary>
-        /// Waits until <see cref="IsUpdating"/> is <c>false</c>. Intended for use by methods that enumerate and retrieve cached objects.
-        /// </summary>
-        /// <returns></returns>
-        Task WaitIfUpdatingAsync();
     }
 }

@@ -1,5 +1,4 @@
-﻿using MyGeotabAPIAdapter.Database.DataAccess;
-using MyGeotabAPIAdapter.Database.Models;
+﻿using MyGeotabAPIAdapter.Database.Models;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -46,10 +45,13 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
-        public void ValidateAdapterEnvironment(List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService)
+        public void ValidateAdapterEnvironment(List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool disableMachineNameValidation)
         {
             adapterEnvironmentValidator.ValidateAdapterVersion(this, dbOServiceTrackings, adapterService);
-            adapterEnvironmentValidator.ValidateAdapterMachineName(this, dbOServiceTrackings,adapterService);
+            if (disableMachineNameValidation == false)
+            {
+                adapterEnvironmentValidator.ValidateAdapterMachineName(this, dbOServiceTrackings, adapterService);
+            }
         }
     }
 }

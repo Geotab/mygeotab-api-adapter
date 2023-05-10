@@ -1,4 +1,5 @@
-﻿using MyGeotabAPIAdapter.Database.DataAccess;
+﻿using Microsoft.VisualStudio.Threading;
+using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Helpers;
 using NLog;
@@ -43,7 +44,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         bool isInternalUpdate;
         bool isUpdating = false;
         DateTime lastUpdated;
-        readonly SemaphoreSlim updateLock = new(1, 1);
+        readonly AsyncReaderWriterLock asyncReaderWriterLock = new(null);
 
         readonly IDateTimeHelper dateTimeHelper;
         readonly IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> context;
@@ -128,23 +129,24 @@ namespace MyGeotabAPIAdapter.Database.Caches
         }
 
         /// <inheritdoc/>
-        public async Task<T> GetObjectAsync(long id)
+        public async Task<T?> GetObjectAsync(long id)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            if (objectCache.TryGetValue(id, out T obj))
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                return obj;
+                if (objectCache.TryGetValue(id, out T obj))
+                {
+                    return obj;
+                }
             }
             return default;
         }
 
         /// <inheritdoc/>
-        public async Task<T> GetObjectAsync(string geotabId)
+        public async Task<T?> GetObjectAsync(string geotabId)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -165,11 +167,12 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            if (geotabIdCache.TryGetValue(geotabId, out long id))
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                return id;
+                if (geotabIdCache.TryGetValue(geotabId, out long id))
+                {
+                    return id;
+                }
             }
             return default;
         }
@@ -181,9 +184,10 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            return objectCacheCurrentValuesList;
+            using (await asyncReaderWriterLock.ReadLockAsync())
+            {
+                return objectCacheCurrentValuesList;
+            }
         }
 
         /// <inheritdoc/>
@@ -193,11 +197,11 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            var results = objectCacheCurrentValuesList.Where(cachedObject => cachedObject.LastUpsertedUtc > changedSince).ToList();
-
-            return results;
+            using (await asyncReaderWriterLock.ReadLockAsync())
+            {
+                var results = objectCacheCurrentValuesList.Where(cachedObject => cachedObject.LastUpsertedUtc > changedSince).ToList();
+                return results;
+            }
         }
 
         /// <inheritdoc/>
@@ -236,11 +240,10 @@ namespace MyGeotabAPIAdapter.Database.Caches
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            // Remove any items from the cache, if necessary.
-            if (deletedItemsToRemoveFromCache != null && deletedItemsToRemoveFromCache.Any())
+            using (await asyncReaderWriterLock.WriteLockAsync())
             {
-                await updateLock.WaitAsync();
-                try
+                // Remove any items from the cache, if necessary.
+                if (deletedItemsToRemoveFromCache != null && deletedItemsToRemoveFromCache.Any())
                 {
                     var removedObjectCacheItemsCount = 0;
                     var removedGeotabIdCacheItemsCount = 0;
@@ -257,10 +260,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
                     }
                     logger.Info($"{CurrentClassName} removed {removedObjectCacheItemsCount} item(s) from its object cache and {removedGeotabIdCacheItemsCount} item(s) from its GeotabId cache.");
                 }
-                finally
-                {
-                    updateLock.Release();
-                }
             }
 
             // Abort if the configured execution interval has not elapsed since the last time this method was executed AND ForceUpdate is false.
@@ -269,83 +268,97 @@ namespace MyGeotabAPIAdapter.Database.Caches
                 return;
             }
 
-            await updateLock.WaitAsync();
-            try
-            {
-                ValidateInitialized();
+            ValidateInitialized();
 
-                using (var cancellationTokenSource = new CancellationTokenSource())
+            // Abort if this UpdateAsync method is already in the process of being executed (e.g. called via one of the Get methods).
+            if (isUpdating)
+            {
+                return;
+            }
+
+            isUpdating = true;
+
+            // Perform cache update using database entity repository.
+            var objectCacheUpdated = false;
+            IEnumerable<T>? dbEntities = null;
+
+            // First query the database for any updated entities.
+            using (var cancellationTokenSource = new CancellationTokenSource())
+            {
+                if (dbEntityRepo == null)
                 {
-                    if (dbEntityRepo == null)
+                    dbEntityRepo = new BaseRepository<T>(context);
+                }
+
+                await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                {
+                    using (var uow = context.CreateUnitOfWork(database))
                     {
-                        dbEntityRepo = new BaseRepository<T>(context);
+                        // Get any dbEntities that have been updated since the last time this GenericDbObjectCache was updated. If this is the first time this method has been called since application startup, all dbEntities will be loaded into the cache.
+                        dbEntities = await dbEntityRepo.GetAllAsync(cancellationTokenSource, null, lastUpdated);
+                    }
+                }, new Context());
+            }
+
+            // If no updated entities were found in the database, don't continue.
+            if (dbEntities == null || dbEntities.Any() == false)
+            {
+                isUpdating = false;
+                return;
+            }
+
+            // Updated entities were found in the database. Update the objectCache with them.
+            using (await asyncReaderWriterLock.WriteLockAsync())
+            {
+                foreach (var dbEntity in dbEntities)
+                {
+                    // If the dbEntity is already in the objectCache, remove it so that it can be replaced with the new one.
+                    if (objectCache.ContainsKey(dbEntity.id))
+                    {
+                        if (!objectCache.TryRemove(dbEntity.id, out T retrievedValue))
+                        {
+                            throw new Exception($"Unable to remove {typeParameterType.Name} with id \"{dbEntity.id}\" from objectCache.");
+                        }
                     }
 
-                    isUpdating = true;
-                    await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                    // Add the dbEntity to the objectCache.
+                    if (!objectCache.TryAdd(dbEntity.id, dbEntity))
                     {
-                        using (var uow = context.CreateUnitOfWork(database))
+                        throw new Exception($"Unable to add {typeParameterType.Name} with id \"{dbEntity.id}\" to objectCache.");
+                    }
+
+                    // Add or update the geotabIdCache.
+                    _ = geotabIdCache.AddOrUpdate(dbEntity.GeotabId, dbEntity.id,
+                        (geotabId, existingEntityId) =>
                         {
-                            // Get any dbEntities that have been updated since the last time this GenericDbObjectCache was updated. If this is the first time this method has been called since application startup, all dbEntities will be loaded into the cache.
-                            var dbEntities = await dbEntityRepo.GetAllAsync(cancellationTokenSource, null, lastUpdated);
-                            var objectCacheUpdated = false;
-
-                            foreach (var dbEntity in dbEntities)
+                            // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the geotabIdCache that has the same GeotabId, but a different Id.
+                            if (dbEntity.id != existingEntityId)
                             {
-                                objectCacheUpdated = true;
-
-                                // If the dbEntity is already in the objectCache, remove it so that it can be replaced with the new one.
-                                if (objectCache.ContainsKey(dbEntity.id))
-                                {
-                                    if (!objectCache.TryRemove(dbEntity.id, out T retrievedValue))
-                                    {
-                                        throw new Exception($"Unable to remove {typeParameterType.Name} with id \"{dbEntity.id}\" from objectCache.");
-                                    }
-                                }
-
-                                // Add the dbEntity to the objectCache.
-                                if (!objectCache.TryAdd(dbEntity.id, dbEntity))
-                                {
-                                    throw new Exception($"Unable to add {typeParameterType.Name} with id \"{dbEntity.id}\" to objectCache.");
-                                }
-
-                                // Add or update the geotabIdCache.
-                                _ = geotabIdCache.AddOrUpdate(dbEntity.GeotabId, dbEntity.id,
-                                    (geotabId, existingEntityId) =>
-                                    {
-                                        // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the geotabIdCache that has the same GeotabId, but a different Id.
-                                        if (dbEntity.id != existingEntityId)
-                                        {
-                                            throw new ArgumentException($"A {typeParameterType.Name} with GeotabId \"{dbEntity.GeotabId}\" already exists objectCache. Duplicates are not allowed. The existing {typeParameterType.Name} has an Id of \"{existingEntityId}\". The {typeParameterType.Name} with the same GeotabId that cannot be added to the objectCache has an Id of \"{dbEntity.id}\".");
-                                        }
-                                        // Nothing to do here, since the Id is the only updatable property.
-                                        return existingEntityId;
-                                    });
+                                throw new ArgumentException($"A {typeParameterType.Name} with GeotabId \"{dbEntity.GeotabId}\" already exists objectCache. Duplicates are not allowed. The existing {typeParameterType.Name} has an Id of \"{existingEntityId}\". The {typeParameterType.Name} with the same GeotabId that cannot be added to the objectCache has an Id of \"{dbEntity.id}\".");
                             }
-
-                            // If there were any updates, build the objectCacheCurrentValuesList so that it doesn't need to be built unnecessarily every time the GetObjectsAsync() method is executed.
-                            if (objectCacheUpdated == true)
-                            {
-                                objectCacheCurrentValuesList = new List<T>();
-                                var objectEnumerator = objectCache.GetEnumerator();
-                                objectEnumerator.Reset();
-                                while (objectEnumerator.MoveNext())
-                                {
-                                    var currentKVP = objectEnumerator.Current;
-                                    var currentObject = currentKVP.Value;
-                                    objectCacheCurrentValuesList.Add(currentObject);
-                                }
-                            }
-                        }
-                    }, new Context());
-                    isUpdating = false;
+                            // Nothing to do here, since the Id is the only updatable property.
+                            return existingEntityId;
+                        });
                 }
-                lastUpdated = DateTime.UtcNow;
+                objectCacheUpdated = true;
+
+                // If there were any updates, build the objectCacheCurrentValuesList so that it doesn't need to be built unnecessarily every time the GetObjectsAsync() method is executed.
+                if (objectCacheUpdated == true)
+                {
+                    objectCacheCurrentValuesList = new List<T>();
+                    var objectEnumerator = objectCache.GetEnumerator();
+                    objectEnumerator.Reset();
+                    while (objectEnumerator.MoveNext())
+                    {
+                        var currentKVP = objectEnumerator.Current;
+                        var currentObject = currentKVP.Value;
+                        objectCacheCurrentValuesList.Add(currentObject);
+                    }
+                }
             }
-            finally
-            {
-                updateLock.Release();
-            }
+
+            lastUpdated = DateTime.UtcNow;
+            isUpdating = false;
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -364,15 +377,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
-        }
-
-        /// <inheritdoc/>
-        public async Task WaitIfUpdatingAsync()
-        {
-            while (isUpdating)
-            {
-                await Task.Delay(25);
-            }
         }
     }
 }

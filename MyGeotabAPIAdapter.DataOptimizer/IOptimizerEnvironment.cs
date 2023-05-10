@@ -37,6 +37,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// </summary>
         /// <param name="dbOProcessorTrackings">A list of <see cref="DbOProcessorTracking"/> objects to validate the <paramref name="optimizerEnvironment"/> against.</param>
         /// <param name="dataOptimizerProcessor">The specific <see cref="DataOptimizerProcessor"/> in the <paramref name="dbOProcessorTrackings"/> to be validated against.</param>
-        void ValidateOptimizerEnvironment(List<DbOProcessorTracking> dbOProcessorTrackings, DataOptimizerProcessor dataOptimizerProcessor);
+        /// <param name="disableMachineNameValidation">Indicates whether machine name validation should be disabled. NOTE: This should always be set to <c>false</c> except in scenarios where machine names in hosted environments are not static. WARNING: Improper use of this setting could result in application instability and data integrity issues.</param>
+        void ValidateOptimizerEnvironment(List<DbOProcessorTracking> dbOProcessorTrackings, DataOptimizerProcessor dataOptimizerProcessor, bool disableMachineNameValidation);
     }
 }

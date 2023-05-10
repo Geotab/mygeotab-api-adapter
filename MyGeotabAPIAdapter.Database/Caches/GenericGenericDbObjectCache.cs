@@ -37,12 +37,12 @@ namespace MyGeotabAPIAdapter.Database.Caches
             return implementation.Any();
         }
 
-        public async Task<T1> GetObjectAsync(long id)
+        public async Task<T1?> GetObjectAsync(long id)
         {
             return await implementation.GetObjectAsync(id);
         }
 
-        public async Task<T1> GetObjectAsync(string geotabId)
+        public async Task<T1?> GetObjectAsync(string geotabId)
         {
             return await implementation.GetObjectAsync(geotabId);
         }
@@ -70,11 +70,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         public async Task UpdateAsync(bool forceUpdate, IList<T1> deletedItemsToRemoveFromCache = null)
         {
             await implementation?.UpdateAsync(forceUpdate, deletedItemsToRemoveFromCache);
-        }
-
-        public async Task WaitIfUpdatingAsync()
-        {
-            await implementation.WaitIfUpdatingAsync();
         }
     }
 }

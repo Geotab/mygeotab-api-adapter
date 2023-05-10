@@ -83,6 +83,11 @@ namespace MyGeotabAPIAdapter.Configuration
         OperationMode DiagnosticProcessorOperationMode { get; }
 
         /// <summary>
+        /// Indicates whether machine name validation should be disabled. 
+        /// </summary>
+        bool DisableMachineNameValidation { get; }
+
+        /// <summary>
         /// The number of records to process per batch when loading DriverChanges from the Adapter database into the Optimizer database.
         /// </summary>
         int DriverChangeProcessorBatchSize { get; }

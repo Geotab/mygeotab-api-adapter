@@ -40,10 +40,13 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         }
 
         /// <inheritdoc/>
-        public void ValidateOptimizerEnvironment(List<DbOProcessorTracking> dbOProcessorTrackings, DataOptimizerProcessor dataOptimizerProcessor)
+        public void ValidateOptimizerEnvironment(List<DbOProcessorTracking> dbOProcessorTrackings, DataOptimizerProcessor dataOptimizerProcessor, bool disableMachineNameValidation)
         {
             optimizerEnvironmentValidator.ValidateOptimizerVersion(this, dbOProcessorTrackings, dataOptimizerProcessor);
-            optimizerEnvironmentValidator.ValidateOptimizerMachineName(this, dbOProcessorTrackings, dataOptimizerProcessor);
+            if (disableMachineNameValidation == false)
+            {
+                optimizerEnvironmentValidator.ValidateOptimizerMachineName(this, dbOProcessorTrackings, dataOptimizerProcessor);
+            }
         }
     }
 }

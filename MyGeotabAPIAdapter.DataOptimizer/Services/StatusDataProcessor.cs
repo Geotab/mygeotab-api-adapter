@@ -363,7 +363,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
 
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
             {
-                optimizerEnvironment.ValidateOptimizerEnvironment(dbOProcessorTrackings, DataOptimizerProcessor.StatusDataProcessor);
+                optimizerEnvironment.ValidateOptimizerEnvironment(dbOProcessorTrackings, DataOptimizerProcessor.StatusDataProcessor, dataOptimizerConfiguration.DisableMachineNameValidation);
                 using (var optimizerUOW = optimizerContext.CreateUnitOfWork(Databases.OptimizerDatabase))
                 {
                     try

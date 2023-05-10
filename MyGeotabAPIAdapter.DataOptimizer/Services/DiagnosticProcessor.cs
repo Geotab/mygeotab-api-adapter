@@ -382,7 +382,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             var dbOProcessorTrackings = await processorTracker.GetDbOProcessorTrackingListAsync();
-            optimizerEnvironment.ValidateOptimizerEnvironment(dbOProcessorTrackings, DataOptimizerProcessor.DiagnosticProcessor);
+            optimizerEnvironment.ValidateOptimizerEnvironment(dbOProcessorTrackings, DataOptimizerProcessor.DiagnosticProcessor, dataOptimizerConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
             {
                 using (var optimizerUOW = optimizerContext.CreateUnitOfWork(Databases.OptimizerDatabase))

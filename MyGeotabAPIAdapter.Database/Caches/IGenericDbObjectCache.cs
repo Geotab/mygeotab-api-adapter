@@ -53,14 +53,14 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// </summary>
         /// <param name="id">The <see cref="IIdCacheableDbEntity.id"/> of the object to retrieve from the cache.</param>
         /// <returns></returns>
-        Task<T> GetObjectAsync(long id);
+        Task<T?> GetObjectAsync(long id);
 
         /// <summary>
         /// Retrieves an object from the cache. If not found, returns <c>null</c>.
         /// </summary>
         /// <param name="geotabId">The <see cref="IIdCacheableDbEntity.GeotabId"/> of the object to retrieve from the cache.</param>
         /// <returns></returns>
-        Task<T> GetObjectAsync(string geotabId);
+        Task<T?> GetObjectAsync(string geotabId);
 
         /// <summary>
         /// Retrieves the <see cref="IIdCacheableDbEntity.id"/> of an object in the cache. If not found, returns <c>null</c>.
@@ -96,11 +96,5 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <param name="deletedItemsToRemoveFromCache">A list of any entities that should be removed from the cache (presumably because they have been deleted from the database and will not otherwise be removed since they won't be pulled from the database on an update).</param>
         /// <returns></returns>
         Task UpdateAsync(bool forceUpdate, IList<T> deletedItemsToRemoveFromCache = null);
-
-        /// <summary>
-        /// Waits until <see cref="IsUpdating"/> is <c>false</c>. Intended for use by methods that enumerate and retrieve cached objects.
-        /// </summary>
-        /// <returns></returns>
-        Task WaitIfUpdatingAsync();
     }
 }

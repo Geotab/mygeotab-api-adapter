@@ -373,7 +373,7 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
-            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.OVDSClientWorker);
+            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.OVDSClientWorker, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
             {
                 using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))

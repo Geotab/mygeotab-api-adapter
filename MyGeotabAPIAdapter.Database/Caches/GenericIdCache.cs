@@ -1,4 +1,5 @@
-﻿using MyGeotabAPIAdapter.Database.DataAccess;
+﻿using Microsoft.VisualStudio.Threading;
+using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Helpers;
 using NLog;
@@ -34,7 +35,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         readonly SemaphoreSlim initializationLock = new(1, 1);
         bool isInitialized;
         DateTime lastRefreshed = DateTime.MinValue;
-        readonly SemaphoreSlim updateLock = new(1, 1);
+        readonly AsyncReaderWriterLock asyncReaderWriterLock = new(null);
 
         readonly IDateTimeHelper dateTimeHelper;
         readonly OptimizerDatabaseUnitOfWorkContext context;
@@ -88,24 +89,27 @@ namespace MyGeotabAPIAdapter.Database.Caches
         public async Task<string> GetGeotabIdAsync(long id)
         {
             await RefreshIfRequiredAsync();
-            if (cache.TryGetValue(id, out string geotabId))
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                return geotabId;
+                if (cache.TryGetValue(id, out string geotabId))
+                {
+                    return geotabId;
+                }
             }
-            else
-            {
-                return string.Empty;
-            }
+            return string.Empty;
         }
 
         /// <inheritdoc/>
         public async Task<long?> GetIdAsync(string geotabId)
         {
             await RefreshIfRequiredAsync();
-            var id = cache.FirstOrDefault(item => item.Value.Contains(geotabId)).Key;
-            if (id != 0)
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                return id;
+                var id = cache.FirstOrDefault(item => item.Value.Contains(geotabId)).Key;
+                if (id != 0)
+                {
+                    return id;
+                }
             }
             return null;
         }
@@ -144,8 +148,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            await updateLock.WaitAsync();
-            try
+            using (await asyncReaderWriterLock.WriteLockAsync())
             {
                 if (isInitialized == false)
                 {
@@ -169,10 +172,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
                     }, new Context());
                 }
                 lastRefreshed = DateTime.UtcNow;
-            }
-            finally
-            {
-                updateLock.Release();
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");

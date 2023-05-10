@@ -42,6 +42,7 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         /// <param name="dbOServiceTrackings">A list of <see cref="DbOServiceTracking"/> objects to validate the <see cref="AdapterEnvironment"/> against.</param>
         /// <param name="adapterService">The specific <see cref="AdapterService"/> in the <paramref name="dbOServiceTrackings"/> to be validated against.</param>
-        void ValidateAdapterEnvironment(List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService);
+        /// <param name="disableMachineNameValidation">Indicates whether machine name validation should be disabled. NOTE: This should always be set to <c>false</c> except in scenarios where machine names in hosted environments are not static. WARNING: Improper use of this setting could result in application instability and data integrity issues.</param>
+        void ValidateAdapterEnvironment(List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool disableMachineNameValidation);
     }
 }

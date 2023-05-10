@@ -37,7 +37,7 @@ namespace MyGeotabAPIAdapter.Tests
         /// <summary>
         /// This method doesn't do anything in this <see cref="TestAdapterEnvironment"/> testing class and is only here due to interface requirement.
         /// </summary>
-        public void ValidateAdapterEnvironment(List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService)
+        public void ValidateAdapterEnvironment(List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool disableMachineNameValidation)
         {
             throw new NotImplementedException();
         }

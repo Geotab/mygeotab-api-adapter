@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Microsoft.VisualStudio.Threading;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Helpers;
@@ -9,6 +10,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +41,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         bool isInitialized;
         bool isUpdating = false;
         DateTime lastUpdated;
-        readonly SemaphoreSlim updateLock = new(1, 1);
+        readonly AsyncReaderWriterLock asyncReaderWriterLock = new(null);
 
         readonly IDateTimeHelper dateTimeHelper;
         readonly OptimizerDatabaseUnitOfWorkContext context;
@@ -127,11 +129,12 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            if (dbObjectFromDbIdCache.TryGetValue(id, out T obj))
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                return obj;
+                if (dbObjectFromDbIdCache.TryGetValue(id, out T obj))
+                {
+                    return obj;
+                }
             }
             return default;
         }
@@ -158,11 +161,12 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            if (geotabGuidFromGeotabIdCache.TryGetValue(geotabId, out string geotabGUID))
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                return geotabGUID;
+                if (geotabGuidFromGeotabIdCache.TryGetValue(geotabId, out string geotabGUID))
+                {
+                    return geotabGUID;
+                }
             }
             return default;
         }
@@ -174,11 +178,12 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            if (dbIdFromGeotabGuidCache.TryGetValue(geotabGUID, out long id))
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                return id;
+                if (dbIdFromGeotabGuidCache.TryGetValue(geotabGUID, out long id))
+                {
+                    return id;
+                }
             }
             return default;
         }
@@ -190,18 +195,19 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            var results = new List<T>();
-            var objectEnumerator = dbObjectFromDbIdCache.GetEnumerator();
-            objectEnumerator.Reset();
-            while (objectEnumerator.MoveNext())
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                var currentKVP = objectEnumerator.Current;
-                var currentObject = currentKVP.Value;
-                results.Add(currentObject);
+                var results = new List<T>();
+                var objectEnumerator = dbObjectFromDbIdCache.GetEnumerator();
+                objectEnumerator.Reset();
+                while (objectEnumerator.MoveNext())
+                {
+                    var currentKVP = objectEnumerator.Current;
+                    var currentObject = currentKVP.Value;
+                    results.Add(currentObject);
+                }
+                return results;
             }
-            return results;
         }
 
         /// <inheritdoc/>
@@ -211,21 +217,22 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            var results = new List<T>();
-            var objectEnumerator = dbObjectFromDbIdCache.GetEnumerator();
-            objectEnumerator.Reset();
-            while (objectEnumerator.MoveNext())
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                var currentKVP = objectEnumerator.Current;
-                var currentObject = currentKVP.Value;
-                if (currentObject.LastUpsertedUtc >= changedSince)
+                var results = new List<T>();
+                var objectEnumerator = dbObjectFromDbIdCache.GetEnumerator();
+                objectEnumerator.Reset();
+                while (objectEnumerator.MoveNext())
                 {
-                    results.Add(currentObject);
+                    var currentKVP = objectEnumerator.Current;
+                    var currentObject = currentKVP.Value;
+                    if (currentObject.LastUpsertedUtc >= changedSince)
+                    {
+                        results.Add(currentObject);
+                    }
                 }
+                return results;
             }
-            return results;
         }
 
         /// <inheritdoc/>
@@ -235,21 +242,22 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             await UpdateAsync();
-            await WaitIfUpdatingAsync();
-
-            var results = new List<T>();
-            var objectEnumerator = dbObjectFromDbIdCache.GetEnumerator();
-            objectEnumerator.Reset();
-            while (objectEnumerator.MoveNext())
+            using (await asyncReaderWriterLock.ReadLockAsync())
             {
-                var currentKVP = objectEnumerator.Current;
-                var currentObject = currentKVP.Value;
-                if (currentObject.GeotabGUID == geotabGUID && currentObject.GeotabId == geotabId)
+                var results = new List<T>();
+                var objectEnumerator = dbObjectFromDbIdCache.GetEnumerator();
+                objectEnumerator.Reset();
+                while (objectEnumerator.MoveNext())
                 {
-                    results.Add(currentObject);
+                    var currentKVP = objectEnumerator.Current;
+                    var currentObject = currentKVP.Value;
+                    if (currentObject.GeotabGUID == geotabGUID && currentObject.GeotabId == geotabId)
+                    {
+                        results.Add(currentObject);
+                    }
                 }
+                return results;
             }
-            return results;
         }
 
         /// <inheritdoc/>
@@ -286,85 +294,100 @@ namespace MyGeotabAPIAdapter.Database.Caches
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
-            await updateLock.WaitAsync();
-            try
+            // Abort if the configured execution interval has not elapsed since the last time this method was executed AND ForceUpdate is false.
+            if (!dateTimeHelper.TimeIntervalHasElapsed(lastUpdated, DateTimeIntervalType.Minutes, cacheUpdateIntervalMinutes) && !ForceUpdate)
             {
-                // Abort if the configured execution interval has not elapsed since the last time this method was executed AND ForceUpdate is false.
-                if (!dateTimeHelper.TimeIntervalHasElapsed(lastUpdated, DateTimeIntervalType.Minutes, cacheUpdateIntervalMinutes) && !ForceUpdate)
+                return;
+            }
+
+            ValidateInitialized();
+
+            // Abort if this UpdateAsync method is already in the process of being executed (e.g. called via one of the Get methods).
+            if (isUpdating)
+            {
+                return;
+            }
+
+            isUpdating = true;
+
+            // Perform cache update using database entity repository.
+            IEnumerable<T>? dbEntities = null;
+
+            // First query the database for any updated entities.
+            using (var cancellationTokenSource = new CancellationTokenSource())
+            {
+                if (dbEntityRepo == null)
                 {
-                    return;
+                    dbEntityRepo = new BaseRepository<T>(context);
                 }
 
-                ValidateInitialized();
-
-                using (var cancellationTokenSource = new CancellationTokenSource())
+                await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                 {
-                    if (dbEntityRepo == null)
+                    using (var uow = context.CreateUnitOfWork(database))
                     {
-                        dbEntityRepo = new BaseRepository<T>(context);
+                        // Get any dbEntities that have been updated since the last time this GenericGeotabGUIDCacheableDbObjectCache was updated. If this is the first time this method has been called since application startup, all dbEntities will be loaded into the cache.
+                        dbEntities = await dbEntityRepo.GetAllAsync(cancellationTokenSource, null, lastUpdated);
+                    }
+                }, new Context());
+            }
+
+            // If no updated entities were found in the database, don't continue.
+            if (dbEntities == null || dbEntities.Any() == false)
+            {
+                isUpdating = false;
+                return;
+            }
+
+            // Updated entities were found in the database. Update the objectCache with them.
+            using (await asyncReaderWriterLock.WriteLockAsync())
+            {
+                foreach (var dbEntity in dbEntities)
+                {
+                    // If the dbEntity is already in the dbObjectFromDbIdCache, remove it so that it can be replaced with the new one.
+                    if (dbObjectFromDbIdCache.ContainsKey(dbEntity.id))
+                    {
+                        if (!dbObjectFromDbIdCache.TryRemove(dbEntity.id, out T retrievedValue))
+                        {
+                            throw new Exception($"Unable to remove {typeof(T).Name} with id \"{dbEntity.id}\" from dbObjectFromDbIdCache.");
+                        }
                     }
 
-                    isUpdating = true;
-                    await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                    // Add the dbEntity to the dbObjectFromDbIdCache.
+                    if (!dbObjectFromDbIdCache.TryAdd(dbEntity.id, dbEntity))
                     {
-                        using (var uow = context.CreateUnitOfWork(database))
+                        throw new Exception($"Unable to add {typeof(T).Name} with id \"{dbEntity.id}\" to dbObjectFromDbIdCache.");
+                    }
+
+                    // Add or update the dbIdFromGeotabGuidCache.
+                    _ = dbIdFromGeotabGuidCache.AddOrUpdate(dbEntity.GeotabGUID, dbEntity.id,
+                        (geotabGUID, existingEntityId) =>
                         {
-                            // Get any dbEntities that have been updated since the last time this GenericGeotabGUIDCacheableDbObjectCache was updated. If this is the first time this method has been called since application startup, all dbEntities will be loaded into the cache.
-                            var dbEntities = await dbEntityRepo.GetAllAsync(cancellationTokenSource, null, lastUpdated);
-
-                            foreach (var dbEntity in dbEntities)
+                            // If this delegate is invoked, then the key already exists. This would be the case when a new KnownId is assigned to a Diagnostic. If this is the case, use the higher of the two Id values since the new one will have been added to the database table later than the original one and we'd logically want to have any new data (e.g. StatusData or FaultData) tied to the newer KnownId going forward.
+                            if (dbEntity.id != existingEntityId)
                             {
-                                // If the dbEntity is already in the dbObjectFromDbIdCache, remove it so that it can be replaced with the new one.
-                                if (dbObjectFromDbIdCache.ContainsKey(dbEntity.id))
-                                {
-                                    if (!dbObjectFromDbIdCache.TryRemove(dbEntity.id, out T retrievedValue))
-                                    {
-                                        throw new Exception($"Unable to remove {typeof(T).Name} with id \"{dbEntity.id}\" from dbObjectFromDbIdCache.");
-                                    }
-                                }
-
-                                // Add the dbEntity to the dbObjectFromDbIdCache.
-                                if (!dbObjectFromDbIdCache.TryAdd(dbEntity.id, dbEntity))
-                                {
-                                    throw new Exception($"Unable to add {typeof(T).Name} with id \"{dbEntity.id}\" to dbObjectFromDbIdCache.");
-                                }
-
-                                // Add or update the dbIdFromGeotabGuidCache.
-                                _ = dbIdFromGeotabGuidCache.AddOrUpdate(dbEntity.GeotabGUID, dbEntity.id,
-                                    (geotabGUID, existingEntityId) =>
-                                    {
-                                        // If this delegate is invoked, then the key already exists. This would be the case when a new KnownId is assigned to a Diagnostic. If this is the case, use the higher of the two Id values since the new one will have been added to the database table later than the original one and we'd logically want to have any new data (e.g. StatusData or FaultData) tied to the newer KnownId going forward.
-                                        if (dbEntity.id != existingEntityId)
-                                        {
-                                            return dbEntity.id;
-                                        }
-                                        // Nothing to do here, since the Id is the only updatable property.
-                                        return existingEntityId;
-                                    });
-
-                                // Add or update to geotabGuidFromGeotabIdCache.
-                                _ = geotabGuidFromGeotabIdCache.AddOrUpdate(dbEntity.GeotabId, dbEntity.GeotabGUID,
-                                    (geotabID, existingEntityGeotabGUID) =>
-                                    {
-                                        // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the geotabGuidFromGeotabIdCache that has the same GeotabId, but a different GeotabGUID.
-                                        if (dbEntity.GeotabGUID != existingEntityGeotabGUID)
-                                        {
-                                            throw new ArgumentException($"A {typeof(T).Name} with GeotabId \"{dbEntity.GeotabId}\" already exists in the geotabGuidFromGeotabIdCache. Duplicates are not allowed. The existing {typeof(T).Name} has a GeotabGUID of \"{existingEntityGeotabGUID}\". The {typeof(T).Name} with the same GeotabId that cannot be added to the geotabGuidFromGeotabIdCache has a GeotabGUID of \"{dbEntity.GeotabGUID}\".");
-                                        }
-                                        // Nothing to do here, since the GeotabGUID is the only updatable property.
-                                        return existingEntityGeotabGUID;
-                                    });
+                                return dbEntity.id;
                             }
-                        }
-                    }, new Context());
-                    isUpdating = false;
+                            // Nothing to do here, since the Id is the only updatable property.
+                            return existingEntityId;
+                        });
+
+                    // Add or update to geotabGuidFromGeotabIdCache.
+                    _ = geotabGuidFromGeotabIdCache.AddOrUpdate(dbEntity.GeotabId, dbEntity.GeotabGUID,
+                        (geotabID, existingEntityGeotabGUID) =>
+                        {
+                            // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the geotabGuidFromGeotabIdCache that has the same GeotabId, but a different GeotabGUID.
+                            if (dbEntity.GeotabGUID != existingEntityGeotabGUID)
+                            {
+                                throw new ArgumentException($"A {typeof(T).Name} with GeotabId \"{dbEntity.GeotabId}\" already exists in the geotabGuidFromGeotabIdCache. Duplicates are not allowed. The existing {typeof(T).Name} has a GeotabGUID of \"{existingEntityGeotabGUID}\". The {typeof(T).Name} with the same GeotabId that cannot be added to the geotabGuidFromGeotabIdCache has a GeotabGUID of \"{dbEntity.GeotabGUID}\".");
+                            }
+                            // Nothing to do here, since the GeotabGUID is the only updatable property.
+                            return existingEntityGeotabGUID;
+                        });
                 }
-                lastUpdated = DateTime.UtcNow;
             }
-            finally
-            {
-                updateLock.Release();
-            }
+
+            lastUpdated = DateTime.UtcNow;
+            isUpdating = false;
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -383,15 +406,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
-        }
-
-        /// <inheritdoc/>
-        public async Task WaitIfUpdatingAsync()
-        {
-            while (isUpdating)
-            {
-                await Task.Delay(25);
-            }
         }
     }
 }

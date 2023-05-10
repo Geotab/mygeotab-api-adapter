@@ -88,6 +88,11 @@ namespace MyGeotabAPIAdapter.Configuration
         string DiagnosticsToTrackList { get; }
 
         /// <summary>
+        /// Indicates whether machine name validation should be disabled. 
+        /// </summary>
+        bool DisableMachineNameValidation { get; }
+
+        /// <summary>
         /// The minimum number of seconds to wait between GetFeed() calls for <see cref="DriverChange"/> objects.
         /// </summary>
         int DriverChangeFeedIntervalSeconds { get; }

@@ -35,7 +35,7 @@ namespace MyGeotabAPIAdapter.Tests
         /// <summary>
         /// This method doesn't do anything in this <see cref="TestOptimizerEnvironment"/> testing class and is only here due to interface requirement.
         /// </summary>
-        public void ValidateOptimizerEnvironment(List<DbOProcessorTracking> dbOProcessorTrackings, DataOptimizerProcessor dataOptimizerProcessor)
+        public void ValidateOptimizerEnvironment(List<DbOProcessorTracking> dbOProcessorTrackings, DataOptimizerProcessor dataOptimizerProcessor, bool disableMachineNameValidation)
         {
             throw new NotImplementedException();
         }

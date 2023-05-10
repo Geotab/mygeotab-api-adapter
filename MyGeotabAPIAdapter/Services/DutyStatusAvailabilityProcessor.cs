@@ -356,7 +356,7 @@ namespace MyGeotabAPIAdapter.Services
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
-            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.DutyStatusAvailabilityProcessor);
+            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.DutyStatusAvailabilityProcessor, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
             {
                 using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))

@@ -10,6 +10,8 @@ namespace MyGeotabAPIAdapter.Configuration
     public class AdapterConfiguration : IAdapterConfiguration
     {
         // Argument Names for appsettings:
+        // > OverrideSetings
+        const string ArgNameDisableMachineNameValidation = "OverrideSetings:DisableMachineNameValidation";
         // > DatabaseSettings
         const string ArgNameDatabaseProviderType = "DatabaseSettings:DatabaseProviderType";
         const string ArgNameDatabaseConnectionString = "DatabaseSettings:DatabaseConnectionString";
@@ -186,6 +188,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public string DiagnosticsToTrackList { get; private set; }
+
+        /// <inheritdoc/>
+        public bool DisableMachineNameValidation { get; private set; }
 
         /// <inheritdoc/>
         public int DriverChangeFeedIntervalSeconds { get; private set; }
@@ -410,6 +415,13 @@ namespace MyGeotabAPIAdapter.Configuration
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
             logger.Info($"Processing configuration items.");
+
+            // OverrideSetings:
+            DisableMachineNameValidation = configurationHelper.GetConfigKeyValueBoolean(ArgNameDisableMachineNameValidation);
+            if (DisableMachineNameValidation == true)
+            {
+                logger.Warn($"WARNING: Machine name validation has been disabled. This should only be done in cases where the application is installed in hosted environments where machine names are not static. Improper use of this setting may lead to application instability and data integrity issues.");
+            }
 
             // DatabaseSettings:AdapterDatabase:
             DatabaseConnectionString = configurationHelper.GetConfigKeyValueString(ArgNameDatabaseConnectionString, null, true, true);
