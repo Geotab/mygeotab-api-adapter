@@ -9,8 +9,8 @@
     <Product>MyGeotab API Adapter</Product>
     <Description>A .NET Core (C#) Worker Service designed to use the MyGeotab .NET API and serve as a broker between a MyGeotab database and an associated "Virtual Geotab Database". Intended for use when direct utilization of the MyGeotab SDK is not an option. Modify as required to meet individual solution objectives.</Description>
     <Copyright></Copyright>
-    <Version>2.0.10</Version>
-    <InformationalVersion>2.0.10</InformationalVersion>
+    <Version>2.0.10.2</Version>
+    <InformationalVersion>2.0.10.2</InformationalVersion>
     <RuntimeIdentifiers>win-x64;ubuntu.20.04-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
@@ -30,10 +30,10 @@
   <ItemGroup>
     <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="11.0.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
-    <PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.2" />
+    <PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="5.2.3" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.100" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.2" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.110" />
   </ItemGroup>
 
   <ItemGroup>

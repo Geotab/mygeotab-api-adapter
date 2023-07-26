@@ -6,8 +6,8 @@
     <Authors>Geotab Inc.</Authors>
     <Company>Geotab Inc.</Company>
     <Product>MyGeotab API Adapter - DataOptimizer</Product>
-    <AssemblyVersion>2.0.10</AssemblyVersion>
-    <FileVersion>2.0.10</FileVersion>
+    <AssemblyVersion>2.0.10.2</AssemblyVersion>
+    <FileVersion>2.0.10.2</FileVersion>
     <RuntimeIdentifiers>win-x64;ubuntu.20.04-x64</RuntimeIdentifiers>
     <Description>A worker service designed to migrate data from the MyGeotab API Adapter database into another set of tables that are optimized for use by applications and data analysis tools. Additional columns are added to some of the tables and these are populated via interpolation or other query-based procedues.</Description>
   </PropertyGroup>
@@ -22,9 +22,9 @@
   
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
-    <PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.2" />
+    <PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="5.2.3" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.2" />
   </ItemGroup>
 
   <ItemGroup>

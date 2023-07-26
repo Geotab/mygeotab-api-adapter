@@ -132,6 +132,40 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 return true;
             }
+
+            // Add any additional checks for properties that are only available on certain types of Device.
+            dynamic convertedDevice = Convert.ChangeType(entityToMapTo, entityToMapTo.GetType());
+            // LicensePlate:
+            try
+            {
+                string rawDeviceLicensePlate = convertedDevice.LicensePlate;
+                string deviceLicensePlate = rawDeviceLicensePlate.Trim().ToUpper();
+                string entityToEvaluateLicensePlate = entityToEvaluate.LicensePlate.Trim().ToUpper();
+                if (stringHelper.AreEqual(entityToEvaluateLicensePlate, deviceLicensePlate) == false)
+                {
+                    return true;
+                }
+            }
+            catch (RuntimeBinderException)
+            {
+                // Property does not exist for the subject Device type.
+            }
+            // VIN:
+            try
+            {
+                string rawDeviceVIN = convertedDevice.VehicleIdentificationNumber;
+                string deviceVIN = rawDeviceVIN.Trim().ToUpper();
+                string entityToEvaluateVIN = entityToEvaluate.VIN.Trim().ToUpper();
+                if (stringHelper.AreEqual(entityToEvaluateVIN, deviceVIN) == false)
+                {
+                    return true;
+                }
+            }
+            catch (RuntimeBinderException)
+            {
+                // Property does not exist for the subject Device type.
+            }
+
             return false;
         }
 
