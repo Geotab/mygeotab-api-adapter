@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
+using Npgsql;
 using System;
 using System.Data.Common;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         DbConnection connection;
         readonly string connectionString;
         readonly DbProviderFactory factory;
+        NpgsqlConnection npgsqlConnection;
         SqlConnection sqlConnection;
 
         /// <summary>
@@ -51,6 +53,26 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             }
 
             return connection;
+        }
+
+        /// <summary>
+        /// Creates, opens and returns a new <see cref="NpgsqlConnection"/>. Intended for use with PostgreSQL bulk operations.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<NpgsqlConnection> GetOpenNpgsqlConnectionAsync()
+        {
+            npgsqlConnection = (NpgsqlConnection)factory.CreateConnection();
+            npgsqlConnection.ConnectionString = this.connectionString;
+            try
+            {
+                await npgsqlConnection.OpenAsync();
+            }
+            catch (Exception e)
+            {
+                throw new DatabaseConnectionException("An exception occurred while attempting to get an open PostgreSQL database connection.", e);
+            }
+
+            return npgsqlConnection;
         }
 
         /// <summary>

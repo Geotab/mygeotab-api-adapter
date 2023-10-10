@@ -4,6 +4,8 @@ using Microsoft.Data.SqlClient;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.Models;
 using NLog;
+using Npgsql;
+using NpgsqlTypes;
 using Polly;
 using Polly.Wrap;
 using System;
@@ -27,7 +29,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
 
         const int MinimumEntityCountForBulkOperations = 2;
         const string EntityIdFieldName = "id";
-        const int SqlBulkCopyBatchSize = 10000;
+        const int BulkOperationBatchSize = 10000;
 
         // Polly-related items:
         const int MaxRetries = 10;
@@ -48,6 +50,85 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             this.entityPersistenceLogger = entityPersistenceLogger;
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Bulk deletes entities from s PostgreSQL database table.
+        /// </summary>
+        /// <param name="pgContext">The <see cref="IDatabaseUnitOfWorkContext"/> to use.</param>
+        /// <param name="entitiesToDelete">The list of entities to be bulk deleted.</param>
+        /// <param name="destinationTableName">The name of the database table from which the <paramref name="entitiesToDelete"/> are to be bulk deleted.</param>
+        /// <returns></returns>
+        async Task BulkDeletePostgreSQLAsync(IDatabaseUnitOfWorkContext pgContext, IEnumerable<T> entitiesToDelete, string destinationTableName)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            var tempTableName = $"_MyGeotabAPIAdapter_BulkDelete_{destinationTableName}";
+            var npgSqlConnection = pgContext.GetNpgsqlConnection();
+            var npgSqlTransaction = pgContext.GetNpgsqlTransaction();
+            string sql = "";
+            var deletedRecordCount = 0;
+
+            // Setup command timeout and retry policies.
+            if (bulkDeleteAsyncDatabaseCommandTimeoutAndRetryPolicyWrap == null)
+            {
+                bulkDeleteAsyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(pgContext.TimeoutSecondsForDatabaseTasks, MaxRetries, logger);
+            }
+
+            // Create a temporary table with just the key field.
+            await bulkDeleteAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                sql = $"CREATE TEMP TABLE \"{tempTableName}\" AS SELECT \"{EntityIdFieldName}\" FROM \"{destinationTableName}\" WHERE FALSE;";
+                _ = await npgSqlConnection.ExecuteAsync(sql, null, npgSqlTransaction, timeoutSeconds);
+            }, new Context());
+
+            // Write records to be deleted into the temporary table.
+            await bulkDeleteAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                using var writer = npgSqlConnection.BeginBinaryImport($"COPY \"{tempTableName}\" (\"{EntityIdFieldName}\") FROM STDIN (FORMAT BINARY)");
+                foreach (var entity in entitiesToDelete)
+                {
+                    writer.StartRow();
+                    var entityIdValue = entity.GetType().GetProperty(EntityIdFieldName).GetValue(entity);
+                    writer.Write(entityIdValue);
+                }
+                writer.Complete();
+            }, new Context());
+
+            // Perform the actual deletion of records from the destination table.
+            await bulkDeleteAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                sql = $"DELETE FROM \"{destinationTableName}\" D USING \"{tempTableName}\" T WHERE T.\"{EntityIdFieldName}\" = D.\"{EntityIdFieldName}\";";
+                deletedRecordCount = await npgSqlConnection.ExecuteAsync(sql, null, npgSqlTransaction, timeoutSeconds);
+            }, new Context());
+
+            // Drop the temporary table.
+            await bulkDeleteAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                sql = $"DROP TABLE \"{tempTableName}\";";
+                _ = await npgSqlConnection.ExecuteAsync(sql, null, npgSqlTransaction, timeoutSeconds);
+            }, new Context());
+
+            // Verify that all records were deleted or throw an exception.
+            if (deletedRecordCount != entitiesToDelete.Count())
+            {
+                throw new Exception($"Only {deletedRecordCount} of the {entitiesToDelete.Count()} target records were bulk-deleted from the {destinationTableName} table. Database transaction will be rolled back.");
+            }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
@@ -95,7 +176,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
 
                 using var sqlBulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.KeepIdentity, sqlTransaction);
                 sqlBulkCopy.DestinationTableName = tempTableName;
-                sqlBulkCopy.BatchSize = SqlBulkCopyBatchSize;
+                sqlBulkCopy.BatchSize = BulkOperationBatchSize;
                 sqlBulkCopy.BulkCopyTimeout = timeoutSeconds;
                 sqlBulkCopy.ColumnMappings.Add(EntityIdFieldName, EntityIdFieldName);
                 var insertableProperties = new string[] { EntityIdFieldName };
@@ -143,6 +224,69 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         }
 
         /// <summary>
+        /// Bulk inserts entities into a PostgreSQL database table using <see cref="NpgsqlConnection.BeginBinaryImport(string)"/>.
+        /// </summary>
+        /// <param name="pgContext">The <see cref="IDatabaseUnitOfWorkContext"/> to use.</param>
+        /// <param name="entitiesToInsert">The list of entities to be bulk inserted.</param>
+        /// <param name="destinationTableName">The name of the database table into which the <paramref name="entitiesToInsert"/> are to be bulk inserted.</param>
+        /// <returns></returns>
+        async Task BulkInsertPostgreSQLAsync(IDatabaseUnitOfWorkContext pgContext, IEnumerable<T> entitiesToInsert, string destinationTableName)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            // Setup a database command timeout and retry policy wrap.
+            if (bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap == null)
+            {
+                bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(pgContext.TimeoutSecondsForDatabaseTasks, MaxRetries, logger);
+            }
+            await bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                var insertableProperties = PropertyHelper.GetInsertablePropertyNames(typeof(T));
+                var npgSqlConnection = pgContext.GetNpgsqlConnection();
+                using var writer = npgSqlConnection.BeginBinaryImport($"COPY \"{destinationTableName}\" ({string.Join(", ", insertableProperties.Select(p => $"\"{p}\""))}) FROM STDIN (FORMAT BINARY)");
+                foreach (var entity in entitiesToInsert)
+                {
+                    writer.StartRow();
+                    foreach (var insertableProperty in insertableProperties)
+                    {
+                        var propertyValue = entity.GetType().GetProperty(insertableProperty)?.GetValue(entity);
+                        if (propertyValue != null)
+                        {
+                            if (propertyValue is DateTime dateTimeValue)
+                            {
+                                if (dateTimeValue.Kind == DateTimeKind.Unspecified)
+                                {
+                                    // Convert DateTimeKind.Unspecified to DateTimeKind.Utc
+                                    dateTimeValue = DateTime.SpecifyKind(dateTimeValue, DateTimeKind.Utc);
+                                }
+
+                                // Specify NpgsqlDbType as TimestampTz to ensure correct mapping
+                                writer.Write(dateTimeValue, NpgsqlDbType.TimestampTz);
+                            }
+                            else
+                            {
+                                // For properties of other types, use the GetNpgsqlDbType method.
+                                var npgDbType = GetNpgsqlDbType(propertyValue.GetType());
+                                writer.Write(propertyValue, npgDbType);
+                            }
+                        }
+                        else
+                        {
+                            writer.WriteNull();
+                        }
+                    }
+                }
+                writer.Complete();
+            }, new Context());
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
         /// Bulk inserts entities into a SQL Server database table using <see cref="SqlBulkCopy"/>.
         /// </summary>
         /// <param name="sqlContext">The <see cref="IDatabaseUnitOfWorkContext"/> to use.</param>
@@ -168,7 +312,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                 var sqlTransaction = sqlContext.GetSqlTransaction();
                 using var sqlBulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, sqlTransaction);
                 sqlBulkCopy.DestinationTableName = destinationTableName;
-                sqlBulkCopy.BatchSize = SqlBulkCopyBatchSize;
+                sqlBulkCopy.BatchSize = BulkOperationBatchSize;
                 sqlBulkCopy.BulkCopyTimeout = timeoutSeconds;
                 var insertableProperties = PropertyHelper.GetInsertablePropertyNames(typeof(T));
                 foreach (var insertableProperty in insertableProperties)
@@ -183,7 +327,159 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         }
 
         /// <summary>
-        /// Bulk updates entities in s SQL Server database table.
+        /// Bulk updates entities in a PostgreSQL database table.
+        /// </summary>
+        /// <param name="pgContext">The <see cref="IDatabaseUnitOfWorkContext"/> to use.</param>
+        /// <param name="entitiesToUpdate">The list of entities to be bulk updated.</param>
+        /// <param name="destinationTableName">The name of the database table to be updated with the <paramref name="entitiesToUpdate"/>.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public async Task BulkUpdatePostgreSQLAsync(IDatabaseUnitOfWorkContext pgContext, IEnumerable<T> entitiesToUpdate, string destinationTableName)
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            var tempTableName = $"temp_{destinationTableName}";
+            var indexName = $"ix_{tempTableName}";
+            var npgSqlConnection = pgContext.GetNpgsqlConnection();
+            var npgSqlTransaction = pgContext.GetNpgsqlTransaction();
+            string sql = "";
+            var updatedRecordCount = 0;
+
+            // Setup command timeout and retry policies.
+            if (bulkUpdateAsyncDatabaseCommandTimeoutAndRetryPolicyWrap == null)
+            {
+                bulkUpdateAsyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(pgContext.TimeoutSecondsForDatabaseTasks, MaxRetries, logger);
+            }
+
+            // Build SQL statement required for creating a temporary table with the selected columns from the destination table.
+            var allProperties = PropertyHelper.GetAllWriteablePropertyNames(typeof(T));
+            var insertableProperties = PropertyHelper.GetInsertablePropertyNames(typeof(T));
+            var keyAndUpdatableProperties = PropertyHelper.GetKeyAndUpdatablePropertyNames(typeof(T));
+            var sqlBuilder = new StringBuilder();
+            sqlBuilder.Append($"CREATE TEMP TABLE \"{tempTableName}\" AS ");
+            sqlBuilder.Append($"SELECT \"{EntityIdFieldName}\"");
+
+            foreach (var property in insertableProperties)
+            {
+                sqlBuilder.Append($", \"{property}\"");
+            }
+
+            sqlBuilder.Append($" FROM \"{destinationTableName}\" WHERE false;");
+            string sqlForTempTableCreate = sqlBuilder.ToString();
+
+            // Build SQL statement required for update of the entitiesToUpdate in the destination table using the entities that will be bulk inserted into the temporary table.
+            sqlBuilder = new StringBuilder();
+            sqlBuilder.Append($"UPDATE \"{destinationTableName}\" AS D ");
+            sqlBuilder.Append($"SET ");
+            var firstPropertyAddedToSql = false;
+            foreach (var insertableProperty in insertableProperties)
+            {
+                if (firstPropertyAddedToSql)
+                {
+                    sqlBuilder.Append($", \"{insertableProperty}\" = T.\"{insertableProperty}\"");
+                }
+                else
+                {
+                    sqlBuilder.Append($"\"{insertableProperty}\" = T.\"{insertableProperty}\"");
+                    firstPropertyAddedToSql = true;
+                }
+            }
+            sqlBuilder.Append($" FROM \"{tempTableName}\" AS T ");
+            sqlBuilder.Append($"WHERE T.\"{EntityIdFieldName}\" = D.\"{EntityIdFieldName}\";");
+            var sqlForDestinationTableUpdate = sqlBuilder.ToString();
+
+            // Create a temporary table.
+            await bulkUpdateAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                _ = await npgSqlConnection.ExecuteAsync(sqlForTempTableCreate, null, npgSqlTransaction, timeoutSeconds);
+            }, new Context());
+
+            // Write records to be updated into the temporary table using NpgsqlBinaryImport.
+            await bulkUpdateAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+                
+                using var writer = npgSqlConnection.BeginBinaryImport($"COPY \"{tempTableName}\" ({string.Join(", ", keyAndUpdatableProperties.Select(p => $"\"{p}\""))}) FROM STDIN (FORMAT BINARY)");
+                foreach (var entity in entitiesToUpdate)
+                {
+                    writer.StartRow();
+                    foreach (var property in keyAndUpdatableProperties)
+                    {
+                        var propertyValue = entity.GetType().GetProperty(property)?.GetValue(entity);
+                        if (propertyValue != null)
+                        {
+                            if (propertyValue is DateTime dateTimeValue)
+                            {
+                                if (dateTimeValue.Kind == DateTimeKind.Unspecified)
+                                {
+                                    // Convert DateTimeKind.Unspecified to DateTimeKind.Utc
+                                    dateTimeValue = DateTime.SpecifyKind(dateTimeValue, DateTimeKind.Utc);
+                                }
+
+                                // Specify NpgsqlDbType as TimestampTz to ensure correct mapping
+                                writer.Write(dateTimeValue, NpgsqlDbType.TimestampTz);
+                            }
+                            else
+                            {
+                                // For properties of other types, use the GetNpgsqlDbType method.
+                                var npgDbType = GetNpgsqlDbType(propertyValue.GetType());
+                                writer.Write(propertyValue, npgDbType);
+                            }
+                        }
+                        else
+                        {
+                            writer.WriteNull();
+                        }
+                    }
+                }
+                writer.Complete();
+            }, new Context());
+
+            // Create an index on the temporary table.
+            await bulkUpdateAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                sql = $"CREATE INDEX \"{indexName}\" ON \"{tempTableName}\" (\"{EntityIdFieldName}\");";
+                _ = await npgSqlConnection.ExecuteAsync(sql, null, npgSqlTransaction, timeoutSeconds);
+            }, new Context());
+
+            // Perform the actual update of records in the destination table.
+            await bulkUpdateAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                updatedRecordCount = await npgSqlConnection.ExecuteAsync(sqlForDestinationTableUpdate, null, npgSqlTransaction, timeoutSeconds);
+            }, new Context());
+
+            // Drop the temporary table.
+            await bulkUpdateAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            {
+                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                sql = $"DROP TABLE \"{tempTableName}\";";
+                _ = await npgSqlConnection.ExecuteAsync(sql, null, npgSqlTransaction, timeoutSeconds);
+            }, new Context());
+
+            // Verify that all records were updated or throw an exception.
+            if (updatedRecordCount != entitiesToUpdate.Count())
+            {
+                throw new Exception($"Only {updatedRecordCount} of the {entitiesToUpdate.Count()} target records were bulk-updated in the {destinationTableName} table. Database transaction will be rolled-back.");
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Bulk updates entities in a SQL Server database table.
         /// </summary>
         /// <param name="sqlContext">The <see cref="IDatabaseUnitOfWorkContext"/> to use.</param>
         /// <param name="entitiesToUpdate">The list of entities to be bulk updated.</param>
@@ -261,7 +557,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
 
                 using var sqlBulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.KeepIdentity, sqlTransaction);
                 sqlBulkCopy.DestinationTableName = tempTableName;
-                sqlBulkCopy.BatchSize = SqlBulkCopyBatchSize;
+                sqlBulkCopy.BatchSize = BulkOperationBatchSize;
                 sqlBulkCopy.BulkCopyTimeout = timeoutSeconds;
                 foreach (var property in keyAndUpdatableProperties)
                 {
@@ -309,6 +605,79 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
             }
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Returns the <see cref="NpgsqlDbType"/> associated with the specified <paramref name="type"/>.
+        /// </summary>
+        /// <param name="type">The .NET <see cref="Type"/> for which the mapped <see cref="NpgsqlDbType"/> is to be returned.</param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException">Thrown if no mapping has been defined for the <paramref name="type"/>.</exception>
+        private NpgsqlDbType GetNpgsqlDbType(Type type)
+        {
+            Type underlyingType = Nullable.GetUnderlyingType(type);
+            if (underlyingType != null)
+            {
+                // If it's a nullable type, get the underlying type
+                type = underlyingType;
+            }
+
+            if (type == typeof(int))
+            {
+                return NpgsqlDbType.Integer;
+            }
+            else if (type == typeof(short))
+            {
+                return NpgsqlDbType.Smallint;
+            }
+            else if (type == typeof(long))
+            {
+                return NpgsqlDbType.Bigint;
+            }
+            else if (type == typeof(decimal))
+            {
+                return NpgsqlDbType.Numeric;
+            }
+            else if (type == typeof(float))
+            {
+                // Map float to Real for PostgreSQL.
+                return NpgsqlDbType.Real; 
+            }
+            else if (type == typeof(double))
+            {
+                return NpgsqlDbType.Double;
+            }
+            else if (type == typeof(string))
+            {
+                return NpgsqlDbType.Text;
+            }
+            else if (type == typeof(char))
+            {
+                return NpgsqlDbType.Char;
+            }
+            else if (type == typeof(bool))
+            {
+                return NpgsqlDbType.Boolean;
+            }
+            else if (type == typeof(byte))
+            {
+                return NpgsqlDbType.Smallint;
+            }
+            else if (type == typeof(byte[]))
+            {
+                return NpgsqlDbType.Bytea;
+            }
+            else if (type == typeof(DateTime))
+            {
+                return NpgsqlDbType.Timestamp;
+            }
+            else if (type == typeof(TimeSpan))
+            {
+                return NpgsqlDbType.Interval;
+            }
+            // Add more type mappings as needed.
+
+            throw new NotSupportedException($"No {nameof(NpgsqlDbType)} mapping was found for .NET {nameof(Type)} {type.Name}.");
         }
 
         /// <inheritdoc/>
@@ -384,8 +753,86 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                         providerType = optimizerContext.ProviderType;
                     }
 
-                    // If SQL Server is the database type and the minimum number of entities for bulk operations is met, re-route any inserts to the bulk insert method and process everything else (i.e. updates and deletes_ normally. For all other database types or if the entity count threshold is not met, process everything normally. Note: DbDiagnosticT and DbDiagnosticIdT run into an issue with bulk update. This can be investigated and remedied later, but for now just use regular CRUD operations for these. OProcessorTracking, OServiceTracking and DutyStatusAvailability must also use regular CRUD operations since they have no actual GeotabId column and bulk update logic uses GeotabId.
-                    if (providerType == ConnectionInfo.DataAccessProviderType.SQLServer && entitiesToPersist.Count() >= MinimumEntityCountForBulkOperations && typeParameterType != typeof(DbDiagnosticT) && typeParameterType != typeof(DbDiagnosticIdT) && typeParameterType != typeof(DbOProcessorTracking) && typeParameterType != typeof(DbOServiceTracking) && typeParameterType != typeof(DbDutyStatusAvailability))
+                    // If PostgreSQL is the database type and the minimum number of entities for bulk operations is met, re-route to the bulk insert/update/delete method. For all other database types or if the entity count threshold is not met, process everything normally. Note: DbDiagnosticT and DbDiagnosticIdT run into an issue with bulk update. This can be investigated and remedied later, but for now just use regular CRUD operations for these. OProcessorTracking, OServiceTracking and DutyStatusAvailability must also use regular CRUD operations since they have no actual GeotabId column and bulk update logic uses GeotabId.
+                    if (providerType == ConnectionInfo.DataAccessProviderType.PostgreSQL && entitiesToPersist.Count() >= MinimumEntityCountForBulkOperations && typeParameterType != typeof(DbDiagnosticT) && typeParameterType != typeof(DbDiagnosticIdT) && typeParameterType != typeof(DbOProcessorTracking) && typeParameterType != typeof(DbOServiceTracking) && typeParameterType != typeof(DbDutyStatusAvailability))
+                    {
+                        var entitiesToBulkDelete = new List<T>();
+                        var entitiesToBulkInsert = new List<T>();
+                        var entitiesToBulkUpdate = new List<T>();
+                        foreach (var entityToPersist in entitiesToPersist)
+                        {
+                            switch (entityToPersist.DatabaseWriteOperationType)
+                            {
+                                case Common.DatabaseWriteOperationType.None:
+                                    // Nothing to do with this entity.
+                                    break;
+                                case Common.DatabaseWriteOperationType.Insert:
+                                    entitiesToBulkInsert.Add(entityToPersist);
+                                    break;
+                                case Common.DatabaseWriteOperationType.Update:
+                                    entitiesToBulkUpdate.Add(entityToPersist);
+                                    break;
+                                case Common.DatabaseWriteOperationType.Delete:
+                                    entitiesToBulkDelete.Add(entityToPersist);
+                                    break;
+                                default:
+                                    throw new NotSupportedException($"The {entityToPersist.DatabaseWriteOperationType} DatabaseWriteOperationType is not supported by this method.");
+                            }
+                        }
+
+                        // Bulk Insert.
+                        bulkInsertedEntityCount = entitiesToBulkInsert.Count;
+                        if (entitiesToBulkInsert.Count > 0)
+                        {
+                            startTimeUTC = DateTime.UtcNow;
+                            if (adapterContext != null)
+                            {
+                                await BulkInsertPostgreSQLAsync(adapterContext, entitiesToBulkInsert, databaseTableName);
+                            }
+                            else
+                            {
+                                await BulkInsertPostgreSQLAsync(optimizerContext, entitiesToBulkInsert, databaseTableName);
+                            }
+                            endTimeUTC = DateTime.UtcNow;
+                            totalTimeForBulkInserts = endTimeUTC.Subtract(startTimeUTC);
+                        }
+
+                        // Bulk Update.
+                        bulkUpdatedEntityCount = entitiesToBulkUpdate.Count;
+                        if (entitiesToBulkUpdate.Count > 0)
+                        {
+                            startTimeUTC = DateTime.UtcNow;
+                            if (adapterContext != null)
+                            {
+                                await BulkUpdatePostgreSQLAsync(adapterContext, entitiesToBulkUpdate, databaseTableName);
+                            }
+                            else
+                            {
+                                await BulkUpdatePostgreSQLAsync(optimizerContext, entitiesToBulkUpdate, databaseTableName);
+                            }
+                            endTimeUTC = DateTime.UtcNow;
+                            totalTimeForBulkUpdates = endTimeUTC.Subtract(startTimeUTC);
+                        }
+
+                        // Bulk Delete.
+                        bulkDeletedEntityCount = entitiesToBulkDelete.Count;
+                        if (entitiesToBulkDelete.Count > 0)
+                        {
+                            startTimeUTC = DateTime.UtcNow;
+                            if (adapterContext != null)
+                            {
+                                await BulkDeletePostgreSQLAsync(adapterContext, entitiesToBulkDelete, databaseTableName);
+                            }
+                            else
+                            {
+                                await BulkDeletePostgreSQLAsync(optimizerContext, entitiesToBulkDelete, databaseTableName);
+                            }
+                            endTimeUTC = DateTime.UtcNow;
+                            totalTimeForBulkDeletes = endTimeUTC.Subtract(startTimeUTC);
+                        }
+                    }
+                    // If SQL Server is the database type and the minimum number of entities for bulk operations is met, re-route to the bulk insert/update/delete method. For all other database types or if the entity count threshold is not met, process everything normally. Note: DbDiagnosticT and DbDiagnosticIdT run into an issue with bulk update. This can be investigated and remedied later, but for now just use regular CRUD operations for these. OProcessorTracking, OServiceTracking and DutyStatusAvailability must also use regular CRUD operations since they have no actual GeotabId column and bulk update logic uses GeotabId.
+                    else if (providerType == ConnectionInfo.DataAccessProviderType.SQLServer && entitiesToPersist.Count() >= MinimumEntityCountForBulkOperations && typeParameterType != typeof(DbDiagnosticT) && typeParameterType != typeof(DbDiagnosticIdT) && typeParameterType != typeof(DbOProcessorTracking) && typeParameterType != typeof(DbOServiceTracking) && typeParameterType != typeof(DbDutyStatusAvailability))
                     {
                         var entitiesToBulkDelete = new List<T>();
                         var entitiesToBulkInsert = new List<T>();

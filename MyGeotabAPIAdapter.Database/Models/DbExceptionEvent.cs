@@ -37,7 +37,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public long? DurationTicks { get; set; }
         public DateTime LastModifiedDateTime { get; set; }
         public string RuleId { get; set; }
-        public short State { get; set; }
+        public int State { get; set; }
         public long? Version { get; set; }
         [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }

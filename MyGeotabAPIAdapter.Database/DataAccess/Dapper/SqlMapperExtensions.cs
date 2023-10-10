@@ -507,7 +507,7 @@ namespace Dapper.Contrib.Extensions
             {
                 if (!type.IsInterface) return await connection.QueryAsync<T>(sql, null, transaction, commandTimeout: commandTimeout);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 throw;
             }

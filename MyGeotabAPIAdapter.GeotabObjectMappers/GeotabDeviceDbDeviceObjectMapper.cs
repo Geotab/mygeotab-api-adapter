@@ -138,9 +138,9 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             // LicensePlate:
             try
             {
-                string rawDeviceLicensePlate = convertedDevice.LicensePlate;
-                string deviceLicensePlate = rawDeviceLicensePlate.Trim().ToUpper();
-                string entityToEvaluateLicensePlate = entityToEvaluate.LicensePlate.Trim().ToUpper();
+                string rawDeviceLicensePlate = convertedDevice?.LicensePlate;
+                string deviceLicensePlate = (rawDeviceLicensePlate ?? "").Trim().ToUpper();
+                string entityToEvaluateLicensePlate = (entityToEvaluate.LicensePlate ?? "").Trim().ToUpper();
                 if (stringHelper.AreEqual(entityToEvaluateLicensePlate, deviceLicensePlate) == false)
                 {
                     return true;
@@ -153,9 +153,9 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             // VIN:
             try
             {
-                string rawDeviceVIN = convertedDevice.VehicleIdentificationNumber;
-                string deviceVIN = rawDeviceVIN.Trim().ToUpper();
-                string entityToEvaluateVIN = entityToEvaluate.VIN.Trim().ToUpper();
+                string rawDeviceVIN = convertedDevice?.VehicleIdentificationNumber;
+                string deviceVIN = (rawDeviceVIN ?? "").Trim().ToUpper();
+                string entityToEvaluateVIN = (entityToEvaluate.VIN ?? "").Trim().ToUpper();
                 if (stringHelper.AreEqual(entityToEvaluateVIN, deviceVIN) == false)
                 {
                     return true;

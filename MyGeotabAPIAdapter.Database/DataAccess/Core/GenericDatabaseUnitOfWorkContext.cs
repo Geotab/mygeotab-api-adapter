@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
+using Npgsql;
 using System.Data.Common;
 
 namespace MyGeotabAPIAdapter.Database.DataAccess
@@ -36,6 +37,16 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         public SqlConnection GetSqlConnection()
         {
             return implementation.GetSqlConnection();
+        }
+
+        public NpgsqlConnection GetNpgsqlConnection()
+        {
+            return implementation.GetNpgsqlConnection();
+        }
+
+        public NpgsqlTransaction GetNpgsqlTransaction()
+        {
+            return implementation.GetNpgsqlTransaction();
         }
 
         public SqlTransaction GetSqlTransaction()

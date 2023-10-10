@@ -3,7 +3,7 @@
     /// <summary>
     /// A composite of <see cref="IUnitOfWorkContext"/> and <see cref="IConnectionContext"/>.
     /// </summary>
-    public interface IDatabaseUnitOfWorkContext : IUnitOfWorkContext, IConnectionContext, ISqlConnectionContext
+    public interface IDatabaseUnitOfWorkContext : IUnitOfWorkContext, IConnectionContext, INpgsqlConnectionContext, ISqlConnectionContext
     {
     }
 }

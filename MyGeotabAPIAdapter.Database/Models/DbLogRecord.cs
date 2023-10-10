@@ -21,7 +21,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string DeviceId { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public double Speed { get; set; }
+        public float Speed { get; set; }
         [ChangeTracker]
         public DateTime RecordCreationTimeUtc { get; set; }
     }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using NLog;
+using Npgsql;
 using System;
 using System.Data.Common;
 using System.Reflection;
@@ -13,6 +14,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     public class UnitOfWork : IDisposable
     {
         readonly Logger logger = LogManager.GetCurrentClassLogger();
+        NpgsqlConnection npgsqlConnection;
         SqlConnection sqlConnection;
 
         /// <summary>
@@ -29,6 +31,28 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// Indicates whether the <see cref="UnitOfWork"/> instance has been disposed.
         /// </summary>
         public bool IsDisposed { get; private set; } = false;
+
+        /// <summary>
+        /// The <see cref="Npgsql.NpgsqlConnection"/> associated with the <see cref="UnitOfWork"/> instance. Intended for use with PostgreSQL bulk operations.
+        /// </summary>
+        public NpgsqlConnection NpgsqlConnection
+        {
+            get => npgsqlConnection;
+            internal set
+            {
+                if (npgsqlConnection != null)
+                {
+                    throw new InvalidOperationException("Cannot set the NpgsqlConnection because it has already been set.");
+                }
+                npgsqlConnection = value;
+                NpgsqlTransaction = npgsqlConnection.BeginTransaction();
+            }
+        }
+
+        /// <summary>
+        /// The <see cref="Npgsql.NpgsqlTransaction"/> associated with the <see cref="UnitOfWork"/> instance. Intended for use with PostgreSQL bulk operations.
+        /// </summary>
+        public NpgsqlTransaction NpgsqlTransaction { get; private set; }
 
         /// <summary>
         /// The <see cref="Microsoft.Data.SqlClient.SqlConnection"/> associated with the <see cref="UnitOfWork"/> instance. Intended for use with SQL Server bulk operations.
@@ -53,7 +77,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         public SqlTransaction SqlTransaction { get; private set; }
 
         /// <summary>
-        /// The maximum number of seconds that a database <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> should be thrown.
+        /// The maximum number of seconds that a database <see cref="Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> should be thrown.
         /// </summary>
         public int TimeoutSecondsForDatabaseTasks { get; }
 
@@ -112,6 +136,18 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     Connection.Dispose();
                 }
 
+                if (NpgsqlTransaction != null)
+                { 
+                    NpgsqlTransaction.Dispose();
+                    logger.Trace($"{nameof(UnitOfWork)} [Id: {Id}] PostgreSQL database transaction disposed.");
+                }
+
+                if (NpgsqlConnection != null && NpgsqlConnection.State == System.Data.ConnectionState.Open)
+                {
+                    NpgsqlConnection.Close();
+                    Connection.Dispose();
+                }
+
                 if (SqlTransaction != null)
                 { 
                     SqlTransaction.Dispose();
@@ -146,6 +182,12 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] database transaction committed.");
             }
 
+            if (NpgsqlTransaction != null)
+            { 
+                await NpgsqlTransaction.CommitAsync();
+                logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] PostgreSQL database transaction committed.");
+            }
+
             if (SqlTransaction != null)
             { 
                 await SqlTransaction.CommitAsync();
@@ -168,6 +210,12 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             {
                 await Transaction.RollbackAsync();
                 logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] database transaction rolled back.");
+            }
+
+            if (NpgsqlTransaction != null)
+            {
+                await NpgsqlTransaction.RollbackAsync();
+                logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] PostgreSQL database transaction rolled back.");
             }
 
             if (SqlTransaction != null)

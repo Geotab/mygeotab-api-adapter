@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using NLog;
+using Npgsql;
 using System;
 using System.Data.Common;
 using System.Reflection;
@@ -16,6 +17,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         readonly IAdapterDatabaseConnectionInfoContainer connectionInfoContainer;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         DbConnection connection;
+        NpgsqlConnection npgsqlConnection;
         SqlConnection sqlConnection;
         [ThreadStatic] UnitOfWork unitOfWork;
 
@@ -99,7 +101,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
             Database = database;
 
-            // Use standard DbConnection by default. If bulk operations are required as part of the UOW, an additional SqlConection can be created.
+            // Use standard DbConnection by default. If bulk operations are required as part of the UOW, an additional SqlConection or NpgsqlConnection can be created.
             InitializeDbConnectionAsync().Wait();
             unitOfWork = new UnitOfWork(connection, this.TimeoutSecondsForDatabaseTasks);
 
@@ -122,6 +124,45 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return unitOfWork.Connection;
+        }
+
+        /// <inheritdoc/>
+        public NpgsqlConnection GetNpgsqlConnection()
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            if (!IsUnitOfWorkOpen)
+            {
+                throw new InvalidOperationException(
+                    $"There is no {nameof(UnitOfWork)} currently associated with this {nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {Id}]. The {nameof(CreateUnitOfWork)} method must be called to create a new {nameof(UnitOfWork)} before calling the {nameof(GetNpgsqlConnection)} method.");
+            }
+
+            // Open a NpgsqlConnection if one has not yet been opened. 
+            if (unitOfWork.NpgsqlConnection == null)
+            {
+                InitializeNpgsqlConnectionAsync().Wait();
+                unitOfWork.NpgsqlConnection = npgsqlConnection;
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            return unitOfWork.NpgsqlConnection;
+        }
+
+        /// <inheritdoc/>
+        public NpgsqlTransaction GetNpgsqlTransaction()
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            if (!IsUnitOfWorkOpen)
+            {
+                throw new InvalidOperationException(
+                    $"There is no {nameof(UnitOfWork)} currently associated with this {nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {Id}]. The {nameof(CreateUnitOfWork)} method must be called to create a new {nameof(UnitOfWork)} before calling the {nameof(GetNpgsqlTransaction)} method.");
+            }
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            return unitOfWork.NpgsqlTransaction;
         }
 
         /// <inheritdoc/>
@@ -196,7 +237,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <summary>
-        /// Creates and opens a <see cref="DbConnection"/> using information from the <see cref="IDataAdapterDatabaseConnectionInfoContainer"/> supplied upon instantiation of the current <see cref="AdapterDatabaseUnitOfWorkContext"/> instance. The <see cref="ConnectionInfo"/> used will be that which is associated with the <see cref="Database"/> identified when the <see cref="CreateUnitOfWork(Databases, int)"/> is called.
+        /// Creates and opens a <see cref="DbConnection"/> using information from the <see cref="IAdapterDatabaseConnectionInfoContainer"/> supplied upon instantiation of the current <see cref="AdapterDatabaseUnitOfWorkContext"/> instance. The <see cref="ConnectionInfo"/> used will be that which is associated with the <see cref="Database"/> identified when the <see cref="CreateUnitOfWork(Databases, int)"/> is called.
         /// </summary>
         /// <returns></returns>
         async Task InitializeDbConnectionAsync()
@@ -216,6 +257,31 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             }
 
             connection = await connectionProvider.GetOpenConnectionAsync();
+
+            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Creates and opens a <see cref="NpgsqlConnection"/> using information from the <see cref="IAdapterDatabaseConnectionInfoContainer"/> supplied upon instantiation of the current <see cref="AdapterDatabaseUnitOfWorkContext"/> instance. The <see cref="ConnectionInfo"/> used will be that which is associated with the <see cref="Database"/> identified when the <see cref="CreateUnitOfWork(Databases, int)"/> is called.
+        /// </summary>
+        /// <returns></returns>
+        async Task InitializeNpgsqlConnectionAsync()
+        {
+            MethodBase methodBase = MethodBase.GetCurrentMethod();
+            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
+
+            ConnectionProvider connectionProvider;
+            switch (Database)
+            {
+                case Databases.AdapterDatabase:
+                    connectionProvider = new ConnectionProvider(connectionInfoContainer.AdapterDatabaseConnectionInfo);
+                    Database = Databases.AdapterDatabase;
+                    break;
+                default:
+                    throw new NotSupportedException($"The {nameof(Database)} Database is not supported by this method.");
+            }
+
+            npgsqlConnection = await connectionProvider.GetOpenNpgsqlConnectionAsync();
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }

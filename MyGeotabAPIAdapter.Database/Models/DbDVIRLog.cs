@@ -26,8 +26,8 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string DriverId { get; set; }
         public string DriverRemark { get; set; }
         public bool? IsSafeToOperate { get; set; }
-        public float LocationLatitude { get; set; }
-        public float LocationLongitude { get; set; }
+        public double LocationLatitude { get; set; }
+        public double LocationLongitude { get; set; }
         public string LogType { get; set; }
         public DateTime? RepairDate { get; set; }
         public string RepairedByUserId { get; set; }
