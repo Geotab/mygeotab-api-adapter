@@ -18,7 +18,7 @@ namespace MyGeotabAPIAdapter
         string Id { get; }
 
         /// <summary>
-        /// Evaluates the <paramref name="entitiesToBeFiltered"/>, filters-out any entities whose <see cref="Diagnostic"/> property does not match an item in the <see cref="AdapterConfiguration.DiagnosticsToTrackList"/> and returns the filtered list of entities.
+        /// Evaluates the <paramref name="entitiesToBeFiltered"/>. If <see cref="AdapterConfiguration.ExcludeDiagnosticsToTrack"/> is <c>false</c>, filters-out any entities whose <see cref="Diagnostic"/> property does not match an item in the <see cref="AdapterConfiguration.DiagnosticsToTrackList"/>. If <see cref="AdapterConfiguration.ExcludeDiagnosticsToTrack"/> is <c>true</c>, filters-out ONLY entities whose <see cref="Diagnostic"/> property matches an item in the <see cref="AdapterConfiguration.DiagnosticsToTrackList"/>. Returns the filtered list of entities.
         /// </summary>
         /// <typeparam name="T">The type of <see cref="Entity"/> in the supplied list.</typeparam>
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>

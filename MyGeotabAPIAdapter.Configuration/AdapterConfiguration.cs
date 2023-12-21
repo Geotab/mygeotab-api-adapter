@@ -80,6 +80,7 @@ namespace MyGeotabAPIAdapter.Configuration
         const string ArgNameFeedStartSpecificTimeUTC = "AppSettings:GeneralFeedSettings:FeedStartSpecificTimeUTC";
         public readonly string ArgNameDevicesToTrack = "AppSettings:GeneralFeedSettings:DevicesToTrack";
         public readonly string ArgNameDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:DiagnosticsToTrack";
+        const string ArgNameExcludeDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:ExcludeDiagnosticsToTrack";
         // > AppSettings:Feeds:BinaryData
         const string ArgNameEnableBinaryDataFeed = "AppSettings:Feeds:BinaryData:EnableBinaryDataFeed";
         const string ArgNameBinaryDataFeedIntervalSeconds = "AppSettings:Feeds:BinaryData:BinaryDataFeedIntervalSeconds";
@@ -284,6 +285,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public int ExceptionEventFeedIntervalSeconds { get; private set; }
+
+        /// <inheritdoc/>
+        public bool ExcludeDiagnosticsToTrack { get; private set; }
 
         /// <inheritdoc/>
         public DateTime FailureModeCacheIntervalDailyReferenceStartTimeUTC { get; private set; }
@@ -533,6 +537,7 @@ namespace MyGeotabAPIAdapter.Configuration
             }
             DevicesToTrackList = configurationHelper.GetConfigKeyValueString(ArgNameDevicesToTrack);
             DiagnosticsToTrackList = configurationHelper.GetConfigKeyValueString(ArgNameDiagnosticsToTrack);
+            ExcludeDiagnosticsToTrack = configurationHelper.GetConfigKeyValueBoolean(ArgNameExcludeDiagnosticsToTrack);
 
             // AppSettings:Feeds:BinaryData:
             EnableBinaryDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableBinaryDataFeed);

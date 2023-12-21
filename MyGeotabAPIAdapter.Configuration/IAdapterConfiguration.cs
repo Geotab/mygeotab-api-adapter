@@ -248,6 +248,11 @@ namespace MyGeotabAPIAdapter.Configuration
         int ExceptionEventFeedIntervalSeconds { get; }
 
         /// <summary>
+        /// Indicates whether the <see cref="DiagnosticsToTrackList"/> should be excluded, effectively inverting functionality such that entities with any <see cref="Diagnostic"/> <see cref="Id"/>s EXCEPT those in the <see cref="DiagnosticsToTrackList"/> will be included when utilizing data feeds.
+        /// </summary>
+        bool ExcludeDiagnosticsToTrack { get; }
+
+        /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="FailureMode"/> cache.
         /// </summary>
         DateTime FailureModeCacheIntervalDailyReferenceStartTimeUTC { get; }

@@ -12,7 +12,7 @@ using System.Reflection;
 namespace MyGeotabAPIAdapter
 {
     /// <summary>
-    /// A class that is used to filter lists of <see cref="Entity"/>s that are related to <see cref="Diagnostic"/>s based on the <see cref="AdapterConfiguration.DiagnosticsToTrackList"/>.
+    /// A class that is used to filter lists of <see cref="Entity"/>s that are related to <see cref="Diagnostic"/>s based on the <see cref="AdapterConfiguration.DiagnosticsToTrackList"/> and the <see cref="AdapterConfiguration.ExcludeDiagnosticsToTrack"/> setting value.
     /// </summary>
     internal class GeotabDiagnosticFilterer : IGeotabDiagnosticFilterer
     {
@@ -85,9 +85,24 @@ namespace MyGeotabAPIAdapter
                             throw new Exception(errorMessage);
                     }
 
-                    if (entityToBeEvaluatedDiagnostic != null && genericGeotabObjectFiltererBase.GeotabObjectsToFilterOn.ContainsKey(entityToBeEvaluatedDiagnostic.Id))
+                    if (entityToBeEvaluatedDiagnostic != null)
                     {
-                        filteredEntities.Add(entityToBeEvaluated);
+                        if (adapterConfiguration.ExcludeDiagnosticsToTrack == false)
+                        {
+                            // If ExcludeDiagnosticsToTrack is false, then the entities that are returned should be those that match the DiagnosticsToTrackList.
+                            if (genericGeotabObjectFiltererBase.GeotabObjectsToFilterOn.ContainsKey(entityToBeEvaluatedDiagnostic.Id))
+                            {
+                                filteredEntities.Add(entityToBeEvaluated);
+                            }
+                        }
+                        else
+                        {
+                            // If ExcludeDiagnosticsToTrack is true, then the entities that are returned should be those that do not match the DiagnosticsToTrackList.
+                            if (genericGeotabObjectFiltererBase.GeotabObjectsToFilterOn.ContainsKey(entityToBeEvaluatedDiagnostic.Id) == false)
+                            {
+                                filteredEntities.Add(entityToBeEvaluated);
+                            }
+                        }
                     }
                 }
             }
