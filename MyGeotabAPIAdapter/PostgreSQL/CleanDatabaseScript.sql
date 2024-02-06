@@ -1,5 +1,6 @@
 /* Clean Database */ 
 -- delete from public."BinaryData";
+-- delete from public."ChargeEvents";
 -- delete from public."Conditions";
 -- delete from public."DebugData";
 -- delete from public."Devices";
@@ -26,6 +27,7 @@
 -- delete from public."Zones";
 -- delete from public."ZoneTypes";
 -- ALTER SEQUENCE public."BinaryData_id_seq" RESTART;
+-- ALTER SEQUENCE public."ChargeEvents_id_seq" RESTART;
 -- ALTER SEQUENCE public."Conditions_id_seq" RESTART;
 -- ALTER SEQUENCE public."DebugData_id_seq" RESTART;
 -- ALTER SEQUENCE public."Devices_id_seq" RESTART;
@@ -53,6 +55,8 @@
 
 /* Check counts */
 select 'BinaryData' as "TableName", count(0) as "RecordCount" from public."BinaryData"
+union all
+select 'ChargeEvents', count(0) from public."ChargeEvents"
 union all
 select 'Conditions', count(0) from public."Conditions"
 union all

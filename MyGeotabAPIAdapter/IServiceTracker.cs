@@ -36,6 +36,11 @@ namespace MyGeotabAPIAdapter
         Task<DbOServiceTracking> GetBinaryDataServiceInfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.ChargeEventService"/>.
+        /// </summary>
+        Task<DbOServiceTracking> GetChargeEventServiceInfoAsync();
+
+        /// <summary>
         /// The <see cref="DbOServiceTracking"/> entities associated with all <see cref="AdapterService"/>s.
         /// </summary>
         Task<List<DbOServiceTracking>> GetDbOServiceTrackingListAsync();

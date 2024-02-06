@@ -1,6 +1,7 @@
 ﻿/* Clean Database */
 /* 
 DELETE FROM GeotabAdapter_Client."BinaryData";
+DELETE FROM GeotabAdapter_Client."ChargeEvents";
 DELETE FROM GeotabAdapter_Client."Conditions";
 DELETE FROM GeotabAdapter_Client."DebugData";
 DELETE FROM GeotabAdapter_Client."Devices";
@@ -27,6 +28,7 @@ DELETE FROM GeotabAdapter_Client."Users";
 DELETE FROM GeotabAdapter_Client."Zones";
 DELETE FROM GeotabAdapter_Client."ZoneTypes";
 ALTER TABLE GeotabAdapter_Client."BinaryData" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
+ALTER TABLE GeotabAdapter_Client."ChargeEvents" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."Conditions" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."DebugData" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."Devices" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));

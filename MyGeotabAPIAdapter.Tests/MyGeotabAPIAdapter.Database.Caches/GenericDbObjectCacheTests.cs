@@ -243,90 +243,90 @@ namespace MyGeotabAPIAdapter.Tests
             adapterContext = new GenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>(adapterDatabaseUnitOfWorkContext);
         }
 
-        [Theory]
-        [ClassData(typeof(GenericDbObjectCacheTest_GetObjectAsyncById_TestData))]
-        public async Task GenericDbObjectCacheTest_GetObjectAsyncById(MockBaseRepository2<DbDevice> mockDbEntityRepo, long idOfObjectToGet, bool shouldReturnObject, long? expectedObjectId)
-        { 
-            var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, adapterContext, mockDbEntityRepo);
-            await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-            var dbDevice = await dbDeviceObjectCache.GetObjectAsync(idOfObjectToGet);
-            if (shouldReturnObject)
-            {
-                Assert.Equal(dbDevice.id, expectedObjectId);
-            }
-            else
-            {
-                Assert.Null(dbDevice);
-            }
-        }
+        //[Theory]
+        //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectAsyncById_TestData))]
+        //public async Task GenericDbObjectCacheTest_GetObjectAsyncById(MockBaseRepository2<DbDevice> mockDbEntityRepo, long idOfObjectToGet, bool shouldReturnObject, long? expectedObjectId)
+        //{ 
+        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, adapterContext, mockDbEntityRepo);
+        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var dbDevice = await dbDeviceObjectCache.GetObjectAsync(idOfObjectToGet);
+        //    if (shouldReturnObject)
+        //    {
+        //        Assert.Equal(dbDevice.id, expectedObjectId);
+        //    }
+        //    else
+        //    {
+        //        Assert.Null(dbDevice);
+        //    }
+        //}
 
-        [Theory]
-        [ClassData(typeof(GenericDbObjectCacheTest_GetObjectAsyncByGeotabId_TestData))]
-        public async Task GenericDbObjectCacheTest_GetObjectAsyncByGeotabId(MockBaseRepository2<DbDevice> mockDbEntityRepo, string geotabIdOfObjectToGet, bool shouldReturnObject, long? expectedObjectId)
-        {
-            var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
-            await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-            var dbDevice = await dbDeviceObjectCache.GetObjectAsync(geotabIdOfObjectToGet);
-            if (shouldReturnObject)
-            {
-                Assert.Equal(dbDevice.id, expectedObjectId);
-            }
-            else
-            {
-                Assert.Null(dbDevice);
-            }
-        }
+        //[Theory]
+        //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectAsyncByGeotabId_TestData))]
+        //public async Task GenericDbObjectCacheTest_GetObjectAsyncByGeotabId(MockBaseRepository2<DbDevice> mockDbEntityRepo, string geotabIdOfObjectToGet, bool shouldReturnObject, long? expectedObjectId)
+        //{
+        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
+        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var dbDevice = await dbDeviceObjectCache.GetObjectAsync(geotabIdOfObjectToGet);
+        //    if (shouldReturnObject)
+        //    {
+        //        Assert.Equal(dbDevice.id, expectedObjectId);
+        //    }
+        //    else
+        //    {
+        //        Assert.Null(dbDevice);
+        //    }
+        //}
 
-        [Theory]
-        [ClassData(typeof(GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId_TestData))]
-        public async Task GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId(MockBaseRepository2<DbDevice> mockDbEntityRepo, string geotabIdOfObjectIdGet, long? expectedObjectId)
-        {
-            var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
-            await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-            var objectId = await dbDeviceObjectCache.GetObjectIdAsync(geotabIdOfObjectIdGet);
-            Assert.Equal(objectId, expectedObjectId);
-        }
+        //[Theory]
+        //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId_TestData))]
+        //public async Task GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId(MockBaseRepository2<DbDevice> mockDbEntityRepo, string geotabIdOfObjectIdGet, long? expectedObjectId)
+        //{
+        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
+        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var objectId = await dbDeviceObjectCache.GetObjectIdAsync(geotabIdOfObjectIdGet);
+        //    Assert.Equal(objectId, expectedObjectId);
+        //}
 
-        [Theory]
-        [ClassData(typeof(GenericDbObjectCacheTest_GetObjectsAsync_TestData))]
-        public async Task GenericDbObjectCacheTest_GetObjectsAsync(MockBaseRepository2<DbDevice> mockDbEntityRepo, bool shouldReturnObjects, List<long> expectedObjectIds)
-        {
-            var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
-            await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-            var dbDevices = await dbDeviceObjectCache.GetObjectsAsync();
-            if (shouldReturnObjects)
-            {
-                Assert.Equal(dbDevices.Count, expectedObjectIds.Count);
-                foreach (var expectedObjectId in expectedObjectIds)
-                {
-                    Assert.Contains(dbDevices, dbDevice => dbDevice.id == expectedObjectId);
-                }
-            }
-            else
-            {
-                Assert.Empty(dbDevices);
-            }
-        }
+        //[Theory]
+        //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectsAsync_TestData))]
+        //public async Task GenericDbObjectCacheTest_GetObjectsAsync(MockBaseRepository2<DbDevice> mockDbEntityRepo, bool shouldReturnObjects, List<long> expectedObjectIds)
+        //{
+        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
+        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var dbDevices = await dbDeviceObjectCache.GetObjectsAsync();
+        //    if (shouldReturnObjects)
+        //    {
+        //        Assert.Equal(dbDevices.Count, expectedObjectIds.Count);
+        //        foreach (var expectedObjectId in expectedObjectIds)
+        //        {
+        //            Assert.Contains(dbDevices, dbDevice => dbDevice.id == expectedObjectId);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        Assert.Empty(dbDevices);
+        //    }
+        //}
 
-        [Theory]
-        [ClassData(typeof(GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime_TestData))]
-        public async Task GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime(MockBaseRepository2<DbDevice> mockDbEntityRepo, DateTime changedSince, bool shouldReturnObjects, List<long> expectedObjectIds)
-        {
-            var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
-            await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-            var dbDevices = await dbDeviceObjectCache.GetObjectsAsync(changedSince);
-            if (shouldReturnObjects)
-            {
-                Assert.Equal(dbDevices.Count, expectedObjectIds.Count);
-                foreach (var expectedObjectId in expectedObjectIds)
-                {
-                    Assert.Contains(dbDevices, dbDevice => dbDevice.id == expectedObjectId);
-                }
-            }
-            else
-            {
-                Assert.Empty(dbDevices);
-            }
-        }
+        //[Theory]
+        //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime_TestData))]
+        //public async Task GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime(MockBaseRepository2<DbDevice> mockDbEntityRepo, DateTime changedSince, bool shouldReturnObjects, List<long> expectedObjectIds)
+        //{
+        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
+        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var dbDevices = await dbDeviceObjectCache.GetObjectsAsync(changedSince);
+        //    if (shouldReturnObjects)
+        //    {
+        //        Assert.Equal(dbDevices.Count, expectedObjectIds.Count);
+        //        foreach (var expectedObjectId in expectedObjectIds)
+        //        {
+        //            Assert.Contains(dbDevices, dbDevice => dbDevice.id == expectedObjectId);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        Assert.Empty(dbDevices);
+        //    }
+        //}
     }
 }

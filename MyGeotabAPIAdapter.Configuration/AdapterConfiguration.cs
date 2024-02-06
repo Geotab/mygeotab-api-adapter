@@ -84,6 +84,9 @@ namespace MyGeotabAPIAdapter.Configuration
         // > AppSettings:Feeds:BinaryData
         const string ArgNameEnableBinaryDataFeed = "AppSettings:Feeds:BinaryData:EnableBinaryDataFeed";
         const string ArgNameBinaryDataFeedIntervalSeconds = "AppSettings:Feeds:BinaryData:BinaryDataFeedIntervalSeconds";
+        // > AppSettings:Feeds:ChargeEvent
+        const string ArgNameEnableChargeEventFeed = "AppSettings:Feeds:ChargeEvent:EnableChargeEventFeed";
+        const string ArgNameChargeEventFeedIntervalSeconds = "AppSettings:Feeds:ChargeEvent:ChargeEventFeedIntervalSeconds";
         // > AppSettings:Feeds:DebugData
         const string ArgNameEnableDebugDataFeed = "AppSettings:Feeds:DebugData:EnableDebugDataFeed";
         const string ArgNameDebugDataFeedIntervalSeconds = "AppSettings:Feeds:DebugData:DebugDataFeedIntervalSeconds";
@@ -144,6 +147,9 @@ namespace MyGeotabAPIAdapter.Configuration
         
         /// <inheritdoc/>
         public int BinaryDataFeedIntervalSeconds { get; private set; }
+
+        /// <inheritdoc/>
+        public int ChargeEventFeedIntervalSeconds { get; private set; }
 
         /// <inheritdoc/>
         public DateTime ControllerCacheIntervalDailyReferenceStartTimeUTC { get; private set; }
@@ -216,6 +222,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public bool EnableBinaryDataFeed { get; private set; }
+
+        /// <inheritdoc/>
+        public bool EnableChargeEventFeed { get; private set; }
 
         /// <inheritdoc/>
         public bool EnableControllerCache { get; private set; }
@@ -542,6 +551,10 @@ namespace MyGeotabAPIAdapter.Configuration
             // AppSettings:Feeds:BinaryData:
             EnableBinaryDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableBinaryDataFeed);
             BinaryDataFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameBinaryDataFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+
+            // AppSettings:Feeds:ChargeEvent:
+            EnableChargeEventFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableChargeEventFeed);
+            ChargeEventFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameChargeEventFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
             // AppSettings:Feeds:DebugData:
             EnableDebugDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableDebugDataFeed);

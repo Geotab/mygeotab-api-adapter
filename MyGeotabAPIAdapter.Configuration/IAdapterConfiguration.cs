@@ -13,6 +13,11 @@ namespace MyGeotabAPIAdapter.Configuration
         int BinaryDataFeedIntervalSeconds { get; }
 
         /// <summary>
+        /// The minimum number of seconds to wait between GetFeed() calls for <see cref="ChargeEvent"/> objects.
+        /// </summary>
+        int ChargeEventFeedIntervalSeconds { get; }
+
+        /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="Controller"/> cache.
         /// </summary>
         DateTime ControllerCacheIntervalDailyReferenceStartTimeUTC { get; }
@@ -131,6 +136,11 @@ namespace MyGeotabAPIAdapter.Configuration
         /// Indicates whether a <see cref="BinaryData"/> data feed should be enabled. 
         /// </summary>
         bool EnableBinaryDataFeed { get; }
+
+        /// <summary>
+        /// Indicates whether a <see cref="ChargeEvent"/> data feed should be enabled. 
+        /// </summary>
+        bool EnableChargeEventFeed { get; }
 
         /// <summary>
         /// Indicates whether a <see cref="Controller"/> cache should be enabled. 

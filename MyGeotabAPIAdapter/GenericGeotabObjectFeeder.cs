@@ -1,4 +1,5 @@
 ﻿using Geotab.Checkmate.ObjectModel;
+using Geotab.Checkmate.ObjectModel.Charging;
 using Geotab.Checkmate.ObjectModel.Engine;
 using Geotab.Checkmate.ObjectModel.Exceptions;
 using MyGeotabAPIAdapter.Configuration;
@@ -115,6 +116,7 @@ namespace MyGeotabAPIAdapter
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             if (typeParameterType == typeof(Geotab.Checkmate.ObjectModel.BinaryData)) { return AdapterService.BinaryDataProcessor; }
+            if (typeParameterType == typeof(ChargeEvent)) { return AdapterService.ChargeEventProcessor; }
             if (typeParameterType == typeof(Controller)) { return AdapterService.ControllerProcessor; }
             if (typeParameterType == typeof(DebugData)) { return AdapterService.DebugDataProcessor; }
             if (typeParameterType == typeof(Device)) { return AdapterService.DeviceProcessor; }

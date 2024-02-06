@@ -1,5 +1,5 @@
 --------------------------------------------------------
---  File created - Wednesday-March-22-2023   
+--  File created - Friday-January-19-2024   
 --------------------------------------------------------
 --------------------------------------------------------
 --  DDL for Table BinaryData
@@ -14,6 +14,34 @@
 	"DateTime" TIMESTAMP (7), 
 	"DeviceId" NVARCHAR2(50), 
 	"Version" NVARCHAR2(50), 
+	"RecordCreationTimeUtc" TIMESTAMP (7)
+   ) ;
+--------------------------------------------------------
+--  DDL for Table ChargeEvents
+--------------------------------------------------------
+
+  CREATE TABLE "ChargeEvents" 
+   (	"id" NUMBER(20,0) GENERATED ALWAYS AS IDENTITY MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE , 
+	"GeotabId" NVARCHAR2(50), 
+	"ChargeIsEstimated" NUMBER(1,0), 
+	"ChargeType" NVARCHAR2(50), 
+	"StartTime" TIMESTAMP (7), 
+	"DeviceId" NVARCHAR2(50), 
+	"DurationTicks" NUMBER(20,0), 
+	"EndStateOfCharge" BINARY_FLOAT, 
+	"EnergyConsumedKwh" BINARY_FLOAT, 
+	"EnergyUsedSinceLastChargeKwh" BINARY_FLOAT, 
+	"Latitude" BINARY_DOUBLE, 
+	"Longitude" BINARY_DOUBLE, 
+	"MaxACVoltage" BINARY_FLOAT, 
+	"MeasuredBatteryEnergyInKwh" BINARY_FLOAT, 
+	"MeasuredBatteryEnergyOutKwh" BINARY_FLOAT, 
+	"MeasuredOnBoardChargerEnergyInKwh" BINARY_FLOAT, 
+	"MeasuredOnBoardChargerEnergyOutKwh" BINARY_FLOAT, 
+	"PeakPowerKw" BINARY_FLOAT, 
+	"StartStateOfCharge" BINARY_FLOAT, 
+	"TripStop" TIMESTAMP (7), 
+	"Version" NUMBER(20,0), 
 	"RecordCreationTimeUtc" TIMESTAMP (7)
    ) ;
 --------------------------------------------------------
@@ -476,6 +504,12 @@
   CREATE INDEX "IX_BinaryData_DateTime" ON "BinaryData" ("DateTime") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_ChargeEvent_TripStop
+--------------------------------------------------------
+
+  CREATE INDEX "IX_ChargeEvent_TripStop" ON "ChargeEvents" ("TripStop") 
+  ;
+--------------------------------------------------------
 --  DDL for Index IX_Conditions_RecordLastChangedUtc
 --------------------------------------------------------
 
@@ -612,6 +646,12 @@
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_BINARYDATA" ON "BinaryData" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index PK_CHARGEEVENTS
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "PK_CHARGEEVENTS" ON "ChargeEvents" ("id") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_CONDITIONS
@@ -774,6 +814,18 @@
 --------------------------------------------------------
 
   CREATE INDEX "IX_BinaryData_DateTime" ON "BinaryData" ("DateTime") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_ChargeEvent_TripStop
+--------------------------------------------------------
+
+  CREATE INDEX "IX_ChargeEvent_TripStop" ON "ChargeEvents" ("TripStop") 
+  ;
+--------------------------------------------------------
+--  DDL for Index PK_CHARGEEVENTS
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "PK_CHARGEEVENTS" ON "ChargeEvents" ("id") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_CONDITIONS
@@ -1068,6 +1120,19 @@
   ALTER TABLE "BinaryData" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
   ALTER TABLE "BinaryData" ADD CONSTRAINT "PK_BINARYDATA" PRIMARY KEY ("id")
   USING INDEX "PK_BINARYDATA"  ENABLE;
+--------------------------------------------------------
+--  Constraints for Table ChargeEvents
+--------------------------------------------------------
+
+  ALTER TABLE "ChargeEvents" MODIFY ("id" NOT NULL ENABLE);
+  ALTER TABLE "ChargeEvents" MODIFY ("GeotabId" NOT NULL ENABLE);
+  ALTER TABLE "ChargeEvents" MODIFY ("ChargeIsEstimated" NOT NULL ENABLE);
+  ALTER TABLE "ChargeEvents" MODIFY ("ChargeType" NOT NULL ENABLE);
+  ALTER TABLE "ChargeEvents" MODIFY ("StartTime" NOT NULL ENABLE);
+  ALTER TABLE "ChargeEvents" MODIFY ("DeviceId" NOT NULL ENABLE);
+  ALTER TABLE "ChargeEvents" MODIFY ("DurationTicks" NOT NULL ENABLE);
+  ALTER TABLE "ChargeEvents" MODIFY ("Version" NOT NULL ENABLE);
+  ALTER TABLE "ChargeEvents" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table Conditions
 --------------------------------------------------------

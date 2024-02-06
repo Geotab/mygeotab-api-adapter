@@ -18,6 +18,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbBinaryDataTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbChargeEvent"/> entities.
+        /// </summary>
+        string DbChargeEventsTableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbConfigFeedVersion"/> entities.
         /// </summary>
         string DbConfigFeedVersionsTableName { get; }

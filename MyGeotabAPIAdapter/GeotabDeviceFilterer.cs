@@ -1,4 +1,5 @@
 ﻿using Geotab.Checkmate.ObjectModel;
+using Geotab.Checkmate.ObjectModel.Charging;
 using Geotab.Checkmate.ObjectModel.Engine;
 using Geotab.Checkmate.ObjectModel.Exceptions;
 using MyGeotabAPIAdapter.Configuration;
@@ -75,6 +76,10 @@ namespace MyGeotabAPIAdapter
                         case nameof(Geotab.Checkmate.ObjectModel.BinaryData):
                             var binaryDataToBeEvaluated = entityToBeEvaluated as Geotab.Checkmate.ObjectModel.BinaryData;
                             entityToBeEvaluatedDevice = binaryDataToBeEvaluated.Device;
+                            break;
+                        case nameof(ChargeEvent):
+                            var chargeEventToBeEvaluated = entityToBeEvaluated as ChargeEvent;
+                            entityToBeEvaluatedDevice = chargeEventToBeEvaluated.Device;
                             break;
                         case nameof(DeviceStatusInfo):
                             var deviceStatusInfoToBeEvaluated = entityToBeEvaluated as DeviceStatusInfo;

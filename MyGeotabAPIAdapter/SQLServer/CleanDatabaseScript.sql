@@ -1,5 +1,6 @@
 ﻿/* Clean Database */ 
 -- truncate table [dbo].[BinaryData];
+-- truncate table [dbo].[ChargeEvents];
 -- truncate table [dbo].[Conditions];
 -- truncate table [dbo].[DebugData];
 -- truncate table [dbo].[Devices];
@@ -26,6 +27,7 @@
 -- truncate table [dbo].[Zones];
 -- truncate table [dbo].[ZoneTypes];
 --DBCC CHECKIDENT ('dbo.BinaryData', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.ChargeEvents', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Conditions', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DebugData', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Devices', RESEED, 0);
