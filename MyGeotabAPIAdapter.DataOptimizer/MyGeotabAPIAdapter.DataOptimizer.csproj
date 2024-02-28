@@ -1,23 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <UserSecretsId>dotnet-MyGeotabAPIAdapter.DataOptimizer-869D4350-5E76-4BAE-AC1D-08B82AF48ECA</UserSecretsId>
     <Authors>Geotab Inc.</Authors>
     <Company>Geotab Inc.</Company>
     <Product>MyGeotab API Adapter - DataOptimizer</Product>
-    <AssemblyVersion>2.1.2</AssemblyVersion>
-    <FileVersion>2.1.2</FileVersion>
-    <RuntimeIdentifiers>win-x64;ubuntu.20.04-x64</RuntimeIdentifiers>
+    <AssemblyVersion>2.1.3</AssemblyVersion>
+    <FileVersion>2.1.3</FileVersion>
+    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
     <Description>A worker service designed to migrate data from the MyGeotab API Adapter database into another set of tables that are optimized for use by applications and data analysis tools. Additional columns are added to some of the tables and these are populated via interpolation or other query-based procedues.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="LOG-MyGeotab_API_Adapter-Data_Optimizer-internal.log" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <_WebToolingArtifacts Remove="Properties\PublishProfiles\MyGeotabAPIAdapter.DataOptimizer_Release_SCD_Target_ubuntu-x64.pubxml" />
   </ItemGroup> 
   
   <ItemGroup>
