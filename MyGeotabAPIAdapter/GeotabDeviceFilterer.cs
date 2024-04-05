@@ -89,6 +89,10 @@ namespace MyGeotabAPIAdapter
                             var driverChangeToBeEvaluated = entityToBeEvaluated as DriverChange;
                             entityToBeEvaluatedDevice = driverChangeToBeEvaluated.Device;
                             break;
+                        case nameof(DutyStatusLog):
+                            var dutyStatusLogToBeEvaluated = entityToBeEvaluated as DutyStatusLog;
+                            entityToBeEvaluatedDevice = dutyStatusLogToBeEvaluated.Device;
+                            break;
                         case nameof(DVIRLog):
                             var dvirLogToBeEvaluated = entityToBeEvaluated as DVIRLog;
                             entityToBeEvaluatedDevice = dvirLogToBeEvaluated.Device;

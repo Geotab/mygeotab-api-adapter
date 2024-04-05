@@ -33,6 +33,9 @@
         public string DbDutyStatusAvailabilityTableName => "DutyStatusAvailability";
 
         /// <inheritdoc/>
+        public string DbDutyStatusLogsTableName => "DutyStatusLogs";
+
+        /// <inheritdoc/>
         public string DbDVIRDefectTableName => "DVIRDefects";
 
         /// <inheritdoc/>

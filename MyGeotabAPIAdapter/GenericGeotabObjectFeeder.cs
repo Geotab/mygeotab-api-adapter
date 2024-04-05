@@ -124,6 +124,7 @@ namespace MyGeotabAPIAdapter
             if (typeParameterType == typeof(Diagnostic)) { return AdapterService.DiagnosticProcessor; }
             if (typeParameterType == typeof(DriverChange)) { return AdapterService.DriverChangeProcessor; }
             if (typeParameterType == typeof(DutyStatusAvailability)) { return AdapterService.DutyStatusAvailabilityProcessor; }
+            if (typeParameterType == typeof(DutyStatusLog)) { return AdapterService.DutyStatusLogProcessor; }
             if (typeParameterType == typeof(DVIRLog)) { return AdapterService.DVIRLogProcessor; }
             if (typeParameterType == typeof(ExceptionEvent)) { return AdapterService.ExceptionEventProcessor; }
             if (typeParameterType == typeof(FailureMode)) { return AdapterService.FailureModeProcessor; }

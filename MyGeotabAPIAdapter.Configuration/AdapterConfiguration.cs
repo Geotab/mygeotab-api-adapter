@@ -100,6 +100,9 @@ namespace MyGeotabAPIAdapter.Configuration
         const string ArgNameEnableDutyStatusAvailabilityFeed = "AppSettings:Feeds:DutyStatusAvailability:EnableDutyStatusAvailabilityFeed";
         const string ArgNameDutyStatusAvailabilityFeedIntervalSeconds = "AppSettings:Feeds:DutyStatusAvailability:DutyStatusAvailabilityFeedIntervalSeconds";
         const string ArgNameDutyStatusAvailabilityFeedLastAccessDateCutoffDays = "AppSettings:Feeds:DutyStatusAvailability:DutyStatusAvailabilityFeedLastAccessDateCutoffDays";
+        // > AppSettings:Feeds:DutyStatusLog
+        const string ArgNameEnableDutyStatusLogFeed = "AppSettings:Feeds:DutyStatusLog:EnableDutyStatusLogFeed";
+        const string ArgNameDutyStatusLogFeedIntervalSeconds = "AppSettings:Feeds:DutyStatusLog:DutyStatusLogFeedIntervalSeconds";
         // > AppSettings:Feeds:DVIRLog
         const string ArgNameEnableDVIRLogFeed = "AppSettings:Feeds:DVIRLog:EnableDVIRLogFeed";
         const string ArgNameDVIRLogFeedIntervalSeconds = "AppSettings:Feeds:DVIRLog:DVIRLogFeedIntervalSeconds";
@@ -209,6 +212,9 @@ namespace MyGeotabAPIAdapter.Configuration
         public int DutyStatusAvailabilityFeedLastAccessDateCutoffDays { get; private set; }
 
         /// <inheritdoc/>
+        public int DutyStatusLogFeedIntervalSeconds { get; private set; }
+
+        /// <inheritdoc/>
         public DateTime DVIRDefectListCacheIntervalDailyReferenceStartTimeUTC { get; private set; }
 
         /// <inheritdoc/>
@@ -246,6 +252,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public bool EnableDutyStatusAvailabilityFeed { get; private set; }
+
+        /// <inheritdoc/>
+        public bool EnableDutyStatusLogFeed { get; private set; }
 
         /// <inheritdoc/>
         public bool EnableDVIRDefectCache { get; private set; }
@@ -572,6 +581,10 @@ namespace MyGeotabAPIAdapter.Configuration
             EnableDutyStatusAvailabilityFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableDutyStatusAvailabilityFeed);
             DutyStatusAvailabilityFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameDutyStatusAvailabilityFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
             DutyStatusAvailabilityFeedLastAccessDateCutoffDays = configurationHelper.GetConfigKeyValueInt(ArgNameDutyStatusAvailabilityFeedLastAccessDateCutoffDays, null, false, MinDutyStatusAvailabilityFeedLastAccessDateCutoffDays, MaxDutyStatusAvailabilityFeedLastAccessDateCutoffDays, DefaultDutyStatusAvailabilityFeedLastAccessDateCutoffDays);
+
+            // AppSettings:Feeds:DutyStatusLog:
+            EnableDutyStatusLogFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableDutyStatusLogFeed);
+            DutyStatusLogFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameDutyStatusLogFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
             // AppSettings:Feeds:DVIRLog:
             EnableDVIRLogFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableDVIRLogFeed);

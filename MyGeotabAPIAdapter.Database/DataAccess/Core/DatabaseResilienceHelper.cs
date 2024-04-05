@@ -28,6 +28,11 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         public static string ErrorOccurredWhileGettingOpenConnectionString { get => "exception occurred while attempting to get an open database connection"; }
 
         /// <summary>
+        /// "exception occurred while attempting to get an open postgresql database connection"
+        /// </summary>
+        public static string ErrorOccurredWhileGettingOpenPostgreSQLConnectionString { get => "exception occurred while attempting to get an open postgresql database connection"; }
+
+        /// <summary>
         /// "this sqltransaction has completed; it is no longer usable"
         /// </summary>
         public static string SqlTransactionCompletedNoLongerUsableString { get => "this sqltransaction has completed; it is no longer usable"; }
@@ -101,7 +106,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
         /// <summary>
         /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains:
-        /// <see cref="DeadlockString"/>, <see cref="ErrorOccurredWhileGettingOpenConnectionString"/>, <see cref="SqlTransactionCompletedNoLongerUsableString"/>, <see cref="TimeoutString"/>, <see cref="CommandAlreadyInProgressString"/>, or <see cref="TimeoutString2"/>.
+        /// <see cref="DeadlockString"/>, <see cref="ErrorOccurredWhileGettingOpenConnectionString"/>, <see cref="ErrorOccurredWhileGettingOpenPostgreSQLConnectionString"/>, <see cref="SqlTransactionCompletedNoLongerUsableString"/>, <see cref="TimeoutString"/>, <see cref="CommandAlreadyInProgressString"/>, or <see cref="TimeoutString2"/>.
         /// </summary>
         /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy. Note - only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains one of the strings noted in the summary will be handled.</typeparam>
         /// <param name="logger">The logger to be used for logging any exception and retry-related information.</param>
@@ -114,6 +119,8 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenConnectionString))
                 .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenPostgreSQLConnectionString))
+                .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(TimeoutString))
@@ -125,6 +132,8 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     exception.Message.ToLower().Contains(DeadlockString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenConnectionString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenPostgreSQLConnectionString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
                 .OrInner<TException>(exception =>

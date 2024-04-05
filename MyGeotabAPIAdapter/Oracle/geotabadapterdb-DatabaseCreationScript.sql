@@ -1,5 +1,5 @@
 --------------------------------------------------------
---  File created - Friday-January-19-2024   
+--  File created - Thursday-April-04-2024   
 --------------------------------------------------------
 --------------------------------------------------------
 --  DDL for Table BinaryData
@@ -250,6 +250,46 @@
 	"RestTicks" NUMBER(20,0), 
 	"WorkdayTicks" NUMBER(20,0), 
 	"RecordLastChangedUtc" TIMESTAMP (7)
+   ) ;
+--------------------------------------------------------
+--  DDL for Table DutyStatusLogs
+--------------------------------------------------------
+
+  CREATE TABLE "DutyStatusLogs" 
+   (	"id" NUMBER(20,0) GENERATED ALWAYS AS IDENTITY MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 1 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE , 
+	"GeotabId" NVARCHAR2(50), 
+	"Annotations" NCLOB, 
+	"CoDrivers" NCLOB, 
+	"DateTime" TIMESTAMP (7), 
+	"DeferralMinutes" NUMBER(10,0), 
+	"DeferralStatus" NVARCHAR2(50), 
+	"DeviceId" NVARCHAR2(50), 
+	"DistanceSinceValidCoordinates" FLOAT(24), 
+	"DriverId" NVARCHAR2(50), 
+	"EditDateTime" TIMESTAMP (7), 
+	"EditRequestedByUserId" NVARCHAR2(50), 
+	"EngineHours" BINARY_FLOAT, 
+	"EventCheckSum" NUMBER(20,0), 
+	"EventCode" NUMBER(5,0), 
+	"EventRecordStatus" NUMBER(5,0), 
+	"EventType" NUMBER(5,0), 
+	"IsHidden" NUMBER(1,0), 
+	"IsIgnored" NUMBER(1,0), 
+	"IsTransitioning" NUMBER(1,0), 
+	"Location" NCLOB, 
+	"LocationX" BINARY_DOUBLE, 
+	"LocationY" BINARY_DOUBLE, 
+	"Malfunction" NVARCHAR2(50), 
+	"Odometer" BINARY_FLOAT, 
+	"Origin" NVARCHAR2(50), 
+	"ParentId" NVARCHAR2(50), 
+	"Sequence" NUMBER(20,0), 
+	"State" NVARCHAR2(50), 
+	"Status" NVARCHAR2(50), 
+	"UserHosRuleSet" NCLOB, 
+	"VerifyDateTime" TIMESTAMP (7), 
+	"Version" NUMBER(20,0), 
+	"RecordCreationTimeUtc" TIMESTAMP (7)
    ) ;
 --------------------------------------------------------
 --  DDL for Table ExceptionEvents
@@ -576,6 +616,12 @@
   CREATE INDEX "IX_DutyStatusAvailabilities_RecordLastChangedUtc" ON "DutyStatusAvailabilities" ("RecordLastChangedUtc") 
   ;
 --------------------------------------------------------
+--  DDL for Index IX_DutyStatusLogs_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DutyStatusLogs_DateTime" ON "DutyStatusLogs" ("DateTime") 
+  ;
+--------------------------------------------------------
 --  DDL for Index IX_ExceptionEvents_RecordLastChangedUtc
 --------------------------------------------------------
 
@@ -688,6 +734,12 @@
 --------------------------------------------------------
 
   CREATE UNIQUE INDEX "PK_DUTYSTATUSAVAILABILITIES" ON "DutyStatusAvailabilities" ("id") 
+  ;
+--------------------------------------------------------
+--  DDL for Index PK_DUTYSTATUSLOGS
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "PK_DUTYSTATUSLOGS" ON "DutyStatusLogs" ("id") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_DVIRDEFECTREMARKS
@@ -958,6 +1010,18 @@
 --------------------------------------------------------
 
   CREATE INDEX "IX_DutyStatusAvailabilities_RecordLastChangedUtc" ON "DutyStatusAvailabilities" ("RecordLastChangedUtc") 
+  ;
+--------------------------------------------------------
+--  DDL for Index IX_DutyStatusLogs_DateTime
+--------------------------------------------------------
+
+  CREATE INDEX "IX_DutyStatusLogs_DateTime" ON "DutyStatusLogs" ("DateTime") 
+  ;
+--------------------------------------------------------
+--  DDL for Index PK_DUTYSTATUSLOGS
+--------------------------------------------------------
+
+  CREATE UNIQUE INDEX "PK_DUTYSTATUSLOGS" ON "DutyStatusLogs" ("id") 
   ;
 --------------------------------------------------------
 --  DDL for Index PK_EXCEPTIONEVENTS
@@ -1268,6 +1332,17 @@
   ALTER TABLE "DutyStatusAvailabilities" ADD CONSTRAINT "PK_DUTYSTATUSAVAILABILITIES" PRIMARY KEY ("id")
   USING INDEX "PK_DUTYSTATUSAVAILABILITIES"  ENABLE;
   ALTER TABLE "DutyStatusAvailabilities" MODIFY ("id" NOT NULL ENABLE);
+--------------------------------------------------------
+--  Constraints for Table DutyStatusLogs
+--------------------------------------------------------
+
+  ALTER TABLE "DutyStatusLogs" MODIFY ("id" NOT NULL ENABLE);
+  ALTER TABLE "DutyStatusLogs" ADD CONSTRAINT "PK_DUTYSTATUSLOGS" PRIMARY KEY ("id")
+  USING INDEX "PK_DUTYSTATUSLOGS"  ENABLE;
+  ALTER TABLE "DutyStatusLogs" MODIFY ("GeotabId" NOT NULL ENABLE);
+  ALTER TABLE "DutyStatusLogs" MODIFY ("DateTime" NOT NULL ENABLE);
+  ALTER TABLE "DutyStatusLogs" MODIFY ("Version" NOT NULL ENABLE);
+  ALTER TABLE "DutyStatusLogs" MODIFY ("RecordCreationTimeUtc" NOT NULL ENABLE);
 --------------------------------------------------------
 --  Constraints for Table ExceptionEvents
 --------------------------------------------------------

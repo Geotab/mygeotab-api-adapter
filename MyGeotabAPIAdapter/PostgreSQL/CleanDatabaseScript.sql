@@ -8,6 +8,7 @@
 -- delete from public."Diagnostics";
 -- delete from public."DriverChanges";
 -- delete from public."DutyStatusAvailabilities";
+-- delete from public."DutyStatusLogs";
 -- delete from public."DVIRDefectRemarks";
 -- delete from public."DVIRDefects";
 -- delete from public."DVIRDefectUpdates";
@@ -35,6 +36,7 @@
 -- ALTER SEQUENCE public."Diagnostics_id_seq" RESTART;
 -- ALTER SEQUENCE public."DriverChanges_id_seq" RESTART;
 -- ALTER SEQUENCE public."DutyStatusAvailabilities_id_seq" RESTART;
+-- ALTER SEQUENCE public."DutyStatusLogs_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRDefectRemarks_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRDefects_id_seq" RESTART;
 -- ALTER SEQUENCE public."DVIRDefectUpdates_id_seq" RESTART;
@@ -79,6 +81,8 @@ union all
 select 'DVIRLogs', count(0) from public."DVIRLogs"
 union all
 select 'DutyStatusAvailabilities', count(0) from public."DutyStatusAvailabilities"
+union all
+select 'DutyStatusLogs', count(0) from public."DutyStatusLogs"
 union all
 select 'ExceptionEvents', count(0) from public."ExceptionEvents"
 union all

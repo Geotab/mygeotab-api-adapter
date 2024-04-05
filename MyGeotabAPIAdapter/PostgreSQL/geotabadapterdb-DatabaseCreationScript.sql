@@ -5,7 +5,7 @@
 -- Dumped from database version 16.0
 -- Dumped by pg_dump version 16.0
 
--- Started on 2024-01-19 15:36:25
+-- Started on 2024-04-04 09:47:14
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -19,7 +19,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 5042 (class 1262 OID 16398)
+-- TOC entry 5051 (class 1262 OID 16398)
 -- Name: geotabadapterdb; Type: DATABASE; Schema: -; Owner: geotabadapter_owner
 --
 
@@ -81,7 +81,7 @@ CREATE SEQUENCE public."BinaryData_id_seq"
 ALTER SEQUENCE public."BinaryData_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5044 (class 0 OID 0)
+-- TOC entry 5053 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: BinaryData_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -138,7 +138,7 @@ CREATE SEQUENCE public."ChargeEvents_id_seq"
 ALTER SEQUENCE public."ChargeEvents_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5047 (class 0 OID 0)
+-- TOC entry 5056 (class 0 OID 0)
 -- Dependencies: 289
 -- Name: ChargeEvents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -186,7 +186,7 @@ CREATE SEQUENCE public."Conditions_id_seq"
 ALTER SEQUENCE public."Conditions_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5050 (class 0 OID 0)
+-- TOC entry 5059 (class 0 OID 0)
 -- Dependencies: 240
 -- Name: Conditions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -229,7 +229,7 @@ CREATE SEQUENCE public."DVIRDefectRemarks_id_seq"
 ALTER SEQUENCE public."DVIRDefectRemarks_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5053 (class 0 OID 0)
+-- TOC entry 5062 (class 0 OID 0)
 -- Dependencies: 242
 -- Name: DVIRDefectRemarks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -274,7 +274,7 @@ CREATE SEQUENCE public."DVIRDefectUpdates_id_seq"
 ALTER SEQUENCE public."DVIRDefectUpdates_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5056 (class 0 OID 0)
+-- TOC entry 5065 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: DVIRDefectUpdates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -325,7 +325,7 @@ CREATE SEQUENCE public."DVIRDefects_id_seq"
 ALTER SEQUENCE public."DVIRDefects_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5058 (class 0 OID 0)
+-- TOC entry 5067 (class 0 OID 0)
 -- Dependencies: 246
 -- Name: DVIRDefects_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -379,7 +379,7 @@ CREATE SEQUENCE public."DVIRLogs_id_seq"
 ALTER SEQUENCE public."DVIRLogs_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5061 (class 0 OID 0)
+-- TOC entry 5070 (class 0 OID 0)
 -- Dependencies: 248
 -- Name: DVIRLogs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -463,7 +463,7 @@ CREATE SEQUENCE public."DeviceStatusInfo_id_seq"
 ALTER SEQUENCE public."DeviceStatusInfo_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5066 (class 0 OID 0)
+-- TOC entry 5075 (class 0 OID 0)
 -- Dependencies: 252
 -- Name: DeviceStatusInfo_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -512,7 +512,7 @@ CREATE SEQUENCE public."Devices_id_seq"
 ALTER SEQUENCE public."Devices_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5069 (class 0 OID 0)
+-- TOC entry 5078 (class 0 OID 0)
 -- Dependencies: 254
 -- Name: Devices_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -562,7 +562,7 @@ CREATE SEQUENCE public."Diagnostics_id_seq"
 ALTER SEQUENCE public."Diagnostics_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5072 (class 0 OID 0)
+-- TOC entry 5081 (class 0 OID 0)
 -- Dependencies: 256
 -- Name: Diagnostics_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -646,12 +646,81 @@ CREATE SEQUENCE public."DutyStatusAvailabilities_id_seq"
 ALTER SEQUENCE public."DutyStatusAvailabilities_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5077 (class 0 OID 0)
+-- TOC entry 5086 (class 0 OID 0)
 -- Dependencies: 260
 -- Name: DutyStatusAvailabilities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
 
 ALTER SEQUENCE public."DutyStatusAvailabilities_id_seq" OWNED BY public."DutyStatusAvailabilities".id;
+
+
+--
+-- TOC entry 290 (class 1259 OID 18643)
+-- Name: DutyStatusLogs; Type: TABLE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE TABLE public."DutyStatusLogs" (
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "Annotations" text,
+    "CoDrivers" text,
+    "DateTime" timestamp without time zone NOT NULL,
+    "DeferralMinutes" integer,
+    "DeferralStatus" character varying(50),
+    "DeviceId" character varying(50),
+    "DistanceSinceValidCoordinates" real,
+    "DriverId" character varying(50),
+    "EditDateTime" timestamp without time zone,
+    "EditRequestedByUserId" character varying(50),
+    "EngineHours" double precision,
+    "EventCheckSum" bigint,
+    "EventCode" smallint,
+    "EventRecordStatus" smallint,
+    "EventType" smallint,
+    "IsHidden" boolean,
+    "IsIgnored" boolean,
+    "IsTransitioning" boolean,
+    "Location" text,
+    "LocationX" double precision,
+    "LocationY" double precision,
+    "Malfunction" character varying(50),
+    "Odometer" double precision,
+    "Origin" character varying(50),
+    "ParentId" character varying(50),
+    "Sequence" bigint,
+    "State" character varying(50),
+    "Status" character varying(50),
+    "UserHosRuleSet" text,
+    "VerifyDateTime" timestamp without time zone,
+    "Version" bigint NOT NULL,
+    "RecordCreationTimeUtc" timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE public."DutyStatusLogs" OWNER TO geotabadapter_owner;
+
+--
+-- TOC entry 291 (class 1259 OID 18648)
+-- Name: DutyStatusLogs_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE SEQUENCE public."DutyStatusLogs_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public."DutyStatusLogs_id_seq" OWNER TO geotabadapter_owner;
+
+--
+-- TOC entry 5089 (class 0 OID 0)
+-- Dependencies: 291
+-- Name: DutyStatusLogs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER SEQUENCE public."DutyStatusLogs_id_seq" OWNED BY public."DutyStatusLogs".id;
 
 
 --
@@ -694,7 +763,7 @@ CREATE SEQUENCE public."ExceptionEvents_id_seq"
 ALTER SEQUENCE public."ExceptionEvents_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5080 (class 0 OID 0)
+-- TOC entry 5092 (class 0 OID 0)
 -- Dependencies: 262
 -- Name: ExceptionEvents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -741,7 +810,7 @@ CREATE SEQUENCE public."FailedDVIRDefectUpdates_id_seq"
 ALTER SEQUENCE public."FailedDVIRDefectUpdates_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5083 (class 0 OID 0)
+-- TOC entry 5095 (class 0 OID 0)
 -- Dependencies: 264
 -- Name: FailedDVIRDefectUpdates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -830,7 +899,7 @@ CREATE SEQUENCE public."FaultData_id_seq"
 ALTER SEQUENCE public."FaultData_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5088 (class 0 OID 0)
+-- TOC entry 5100 (class 0 OID 0)
 -- Dependencies: 268
 -- Name: FaultData_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -873,7 +942,7 @@ CREATE SEQUENCE public."LogRecords_id_seq"
 ALTER SEQUENCE public."LogRecords_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5091 (class 0 OID 0)
+-- TOC entry 5103 (class 0 OID 0)
 -- Dependencies: 270
 -- Name: LogRecords_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -934,7 +1003,7 @@ CREATE SEQUENCE public."OServiceTracking_id_seq"
 ALTER SEQUENCE public."OServiceTracking_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5095 (class 0 OID 0)
+-- TOC entry 5107 (class 0 OID 0)
 -- Dependencies: 273
 -- Name: OServiceTracking_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -972,7 +1041,7 @@ CREATE SEQUENCE public."OVDSServerCommands_id_seq"
 ALTER SEQUENCE public."OVDSServerCommands_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5098 (class 0 OID 0)
+-- TOC entry 5110 (class 0 OID 0)
 -- Dependencies: 275
 -- Name: OVDSServerCommands_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -1017,7 +1086,7 @@ CREATE SEQUENCE public."Rules_id_seq"
 ALTER SEQUENCE public."Rules_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5101 (class 0 OID 0)
+-- TOC entry 5113 (class 0 OID 0)
 -- Dependencies: 277
 -- Name: Rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -1059,7 +1128,7 @@ CREATE SEQUENCE public."StatusData_id_seq"
 ALTER SEQUENCE public."StatusData_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5104 (class 0 OID 0)
+-- TOC entry 5116 (class 0 OID 0)
 -- Dependencies: 279
 -- Name: StatusData_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -1124,7 +1193,7 @@ CREATE SEQUENCE public."Trips_id_seq"
 ALTER SEQUENCE public."Trips_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5107 (class 0 OID 0)
+-- TOC entry 5119 (class 0 OID 0)
 -- Dependencies: 281
 -- Name: Trips_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -1172,7 +1241,7 @@ CREATE SEQUENCE public."Users_id_seq"
 ALTER SEQUENCE public."Users_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5110 (class 0 OID 0)
+-- TOC entry 5122 (class 0 OID 0)
 -- Dependencies: 283
 -- Name: Users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -1213,7 +1282,7 @@ CREATE SEQUENCE public."ZoneTypes_id_seq"
 ALTER SEQUENCE public."ZoneTypes_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5113 (class 0 OID 0)
+-- TOC entry 5125 (class 0 OID 0)
 -- Dependencies: 285
 -- Name: ZoneTypes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -1264,7 +1333,7 @@ CREATE SEQUENCE public."Zones_id_seq"
 ALTER SEQUENCE public."Zones_id_seq" OWNER TO geotabadapter_owner;
 
 --
--- TOC entry 5116 (class 0 OID 0)
+-- TOC entry 5128 (class 0 OID 0)
 -- Dependencies: 287
 -- Name: Zones_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_owner
 --
@@ -1273,7 +1342,7 @@ ALTER SEQUENCE public."Zones_id_seq" OWNED BY public."Zones".id;
 
 
 --
--- TOC entry 4787 (class 2604 OID 16550)
+-- TOC entry 4792 (class 2604 OID 16550)
 -- Name: BinaryData id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1281,7 +1350,7 @@ ALTER TABLE ONLY public."BinaryData" ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
--- TOC entry 4819 (class 2604 OID 17930)
+-- TOC entry 4824 (class 2604 OID 17930)
 -- Name: ChargeEvents id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1289,7 +1358,7 @@ ALTER TABLE ONLY public."ChargeEvents" ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
--- TOC entry 4788 (class 2604 OID 16551)
+-- TOC entry 4793 (class 2604 OID 16551)
 -- Name: Conditions id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1297,7 +1366,7 @@ ALTER TABLE ONLY public."Conditions" ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
--- TOC entry 4789 (class 2604 OID 16552)
+-- TOC entry 4794 (class 2604 OID 16552)
 -- Name: DVIRDefectRemarks id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1305,7 +1374,7 @@ ALTER TABLE ONLY public."DVIRDefectRemarks" ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
--- TOC entry 4790 (class 2604 OID 16553)
+-- TOC entry 4795 (class 2604 OID 16553)
 -- Name: DVIRDefectUpdates id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1313,7 +1382,7 @@ ALTER TABLE ONLY public."DVIRDefectUpdates" ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
--- TOC entry 4791 (class 2604 OID 16554)
+-- TOC entry 4796 (class 2604 OID 16554)
 -- Name: DVIRDefects id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1321,7 +1390,7 @@ ALTER TABLE ONLY public."DVIRDefects" ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
--- TOC entry 4792 (class 2604 OID 16555)
+-- TOC entry 4797 (class 2604 OID 16555)
 -- Name: DVIRLogs id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1329,7 +1398,7 @@ ALTER TABLE ONLY public."DVIRLogs" ALTER COLUMN id SET DEFAULT nextval('public."
 
 
 --
--- TOC entry 4794 (class 2604 OID 16556)
+-- TOC entry 4799 (class 2604 OID 16556)
 -- Name: DeviceStatusInfo id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1337,7 +1406,7 @@ ALTER TABLE ONLY public."DeviceStatusInfo" ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
--- TOC entry 4799 (class 2604 OID 16557)
+-- TOC entry 4804 (class 2604 OID 16557)
 -- Name: Devices id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1345,7 +1414,7 @@ ALTER TABLE ONLY public."Devices" ALTER COLUMN id SET DEFAULT nextval('public."D
 
 
 --
--- TOC entry 4800 (class 2604 OID 16558)
+-- TOC entry 4805 (class 2604 OID 16558)
 -- Name: Diagnostics id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1353,7 +1422,7 @@ ALTER TABLE ONLY public."Diagnostics" ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
--- TOC entry 4802 (class 2604 OID 16559)
+-- TOC entry 4807 (class 2604 OID 16559)
 -- Name: DutyStatusAvailabilities id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1361,7 +1430,15 @@ ALTER TABLE ONLY public."DutyStatusAvailabilities" ALTER COLUMN id SET DEFAULT n
 
 
 --
--- TOC entry 4803 (class 2604 OID 16560)
+-- TOC entry 4825 (class 2604 OID 18649)
+-- Name: DutyStatusLogs id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DutyStatusLogs" ALTER COLUMN id SET DEFAULT nextval('public."DutyStatusLogs_id_seq"'::regclass);
+
+
+--
+-- TOC entry 4808 (class 2604 OID 16560)
 -- Name: ExceptionEvents id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1369,7 +1446,7 @@ ALTER TABLE ONLY public."ExceptionEvents" ALTER COLUMN id SET DEFAULT nextval('p
 
 
 --
--- TOC entry 4804 (class 2604 OID 16561)
+-- TOC entry 4809 (class 2604 OID 16561)
 -- Name: FailedDVIRDefectUpdates id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1377,7 +1454,7 @@ ALTER TABLE ONLY public."FailedDVIRDefectUpdates" ALTER COLUMN id SET DEFAULT ne
 
 
 --
--- TOC entry 4806 (class 2604 OID 16562)
+-- TOC entry 4811 (class 2604 OID 16562)
 -- Name: FaultData id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1385,7 +1462,7 @@ ALTER TABLE ONLY public."FaultData" ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
--- TOC entry 4807 (class 2604 OID 16563)
+-- TOC entry 4812 (class 2604 OID 16563)
 -- Name: LogRecords id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1393,7 +1470,7 @@ ALTER TABLE ONLY public."LogRecords" ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
--- TOC entry 4811 (class 2604 OID 16564)
+-- TOC entry 4816 (class 2604 OID 16564)
 -- Name: OServiceTracking id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1401,7 +1478,7 @@ ALTER TABLE ONLY public."OServiceTracking" ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
--- TOC entry 4812 (class 2604 OID 16565)
+-- TOC entry 4817 (class 2604 OID 16565)
 -- Name: OVDSServerCommands id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1409,7 +1486,7 @@ ALTER TABLE ONLY public."OVDSServerCommands" ALTER COLUMN id SET DEFAULT nextval
 
 
 --
--- TOC entry 4813 (class 2604 OID 16566)
+-- TOC entry 4818 (class 2604 OID 16566)
 -- Name: Rules id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1417,7 +1494,7 @@ ALTER TABLE ONLY public."Rules" ALTER COLUMN id SET DEFAULT nextval('public."Rul
 
 
 --
--- TOC entry 4814 (class 2604 OID 16567)
+-- TOC entry 4819 (class 2604 OID 16567)
 -- Name: StatusData id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1425,7 +1502,7 @@ ALTER TABLE ONLY public."StatusData" ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
--- TOC entry 4815 (class 2604 OID 16568)
+-- TOC entry 4820 (class 2604 OID 16568)
 -- Name: Trips id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1433,7 +1510,7 @@ ALTER TABLE ONLY public."Trips" ALTER COLUMN id SET DEFAULT nextval('public."Tri
 
 
 --
--- TOC entry 4816 (class 2604 OID 16569)
+-- TOC entry 4821 (class 2604 OID 16569)
 -- Name: Users id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1441,7 +1518,7 @@ ALTER TABLE ONLY public."Users" ALTER COLUMN id SET DEFAULT nextval('public."Use
 
 
 --
--- TOC entry 4817 (class 2604 OID 16570)
+-- TOC entry 4822 (class 2604 OID 16570)
 -- Name: ZoneTypes id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1449,7 +1526,7 @@ ALTER TABLE ONLY public."ZoneTypes" ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
--- TOC entry 4818 (class 2604 OID 16571)
+-- TOC entry 4823 (class 2604 OID 16571)
 -- Name: Zones id; Type: DEFAULT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1457,7 +1534,7 @@ ALTER TABLE ONLY public."Zones" ALTER COLUMN id SET DEFAULT nextval('public."Zon
 
 
 --
--- TOC entry 4821 (class 2606 OID 16573)
+-- TOC entry 4827 (class 2606 OID 16573)
 -- Name: BinaryData BinaryData_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1466,7 +1543,7 @@ ALTER TABLE ONLY public."BinaryData"
 
 
 --
--- TOC entry 4892 (class 2606 OID 17932)
+-- TOC entry 4898 (class 2606 OID 17932)
 -- Name: ChargeEvents ChargeEvents_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1475,7 +1552,7 @@ ALTER TABLE ONLY public."ChargeEvents"
 
 
 --
--- TOC entry 4824 (class 2606 OID 16575)
+-- TOC entry 4830 (class 2606 OID 16575)
 -- Name: Conditions Conditions_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1484,7 +1561,7 @@ ALTER TABLE ONLY public."Conditions"
 
 
 --
--- TOC entry 4827 (class 2606 OID 16577)
+-- TOC entry 4833 (class 2606 OID 16577)
 -- Name: DVIRDefectRemarks DVIRDefectRemarks_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1493,7 +1570,7 @@ ALTER TABLE ONLY public."DVIRDefectRemarks"
 
 
 --
--- TOC entry 4830 (class 2606 OID 16579)
+-- TOC entry 4836 (class 2606 OID 16579)
 -- Name: DVIRDefectUpdates DVIRDefectUpdates_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1502,7 +1579,7 @@ ALTER TABLE ONLY public."DVIRDefectUpdates"
 
 
 --
--- TOC entry 4833 (class 2606 OID 16581)
+-- TOC entry 4839 (class 2606 OID 16581)
 -- Name: DVIRDefects DVIRDefects_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1511,7 +1588,7 @@ ALTER TABLE ONLY public."DVIRDefects"
 
 
 --
--- TOC entry 4836 (class 2606 OID 16583)
+-- TOC entry 4842 (class 2606 OID 16583)
 -- Name: DVIRLogs DVIRLogs_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1520,7 +1597,7 @@ ALTER TABLE ONLY public."DVIRLogs"
 
 
 --
--- TOC entry 4839 (class 2606 OID 16585)
+-- TOC entry 4845 (class 2606 OID 16585)
 -- Name: DebugData DebugData_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1529,7 +1606,7 @@ ALTER TABLE ONLY public."DebugData"
 
 
 --
--- TOC entry 4842 (class 2606 OID 16587)
+-- TOC entry 4848 (class 2606 OID 16587)
 -- Name: DeviceStatusInfo DeviceStatusInfo_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1538,7 +1615,7 @@ ALTER TABLE ONLY public."DeviceStatusInfo"
 
 
 --
--- TOC entry 4845 (class 2606 OID 16589)
+-- TOC entry 4851 (class 2606 OID 16589)
 -- Name: Devices Devices_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1547,7 +1624,7 @@ ALTER TABLE ONLY public."Devices"
 
 
 --
--- TOC entry 4848 (class 2606 OID 16591)
+-- TOC entry 4854 (class 2606 OID 16591)
 -- Name: Diagnostics Diagnostics_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1556,7 +1633,7 @@ ALTER TABLE ONLY public."Diagnostics"
 
 
 --
--- TOC entry 4851 (class 2606 OID 16593)
+-- TOC entry 4857 (class 2606 OID 16593)
 -- Name: DriverChanges DriverChange_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1565,7 +1642,7 @@ ALTER TABLE ONLY public."DriverChanges"
 
 
 --
--- TOC entry 4854 (class 2606 OID 16595)
+-- TOC entry 4860 (class 2606 OID 16595)
 -- Name: DutyStatusAvailabilities DutyStatusAvailabilities_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1574,7 +1651,16 @@ ALTER TABLE ONLY public."DutyStatusAvailabilities"
 
 
 --
--- TOC entry 4857 (class 2606 OID 16597)
+-- TOC entry 4901 (class 2606 OID 18651)
+-- Name: DutyStatusLogs DutyStatusLogs_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
+--
+
+ALTER TABLE ONLY public."DutyStatusLogs"
+    ADD CONSTRAINT "DutyStatusLogs_pkey" PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4863 (class 2606 OID 16597)
 -- Name: ExceptionEvents ExceptionEvents_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1583,7 +1669,7 @@ ALTER TABLE ONLY public."ExceptionEvents"
 
 
 --
--- TOC entry 4860 (class 2606 OID 16599)
+-- TOC entry 4866 (class 2606 OID 16599)
 -- Name: FailedOVDSServerCommands FailedOVDSServerCommands_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1592,7 +1678,7 @@ ALTER TABLE ONLY public."FailedOVDSServerCommands"
 
 
 --
--- TOC entry 4862 (class 2606 OID 16601)
+-- TOC entry 4868 (class 2606 OID 16601)
 -- Name: FaultData FaultData_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1601,7 +1687,7 @@ ALTER TABLE ONLY public."FaultData"
 
 
 --
--- TOC entry 4866 (class 2606 OID 16603)
+-- TOC entry 4872 (class 2606 OID 16603)
 -- Name: LogRecords LogRecords_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1610,7 +1696,7 @@ ALTER TABLE ONLY public."LogRecords"
 
 
 --
--- TOC entry 4870 (class 2606 OID 16605)
+-- TOC entry 4876 (class 2606 OID 16605)
 -- Name: OServiceTracking OServiceTracking_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1619,7 +1705,7 @@ ALTER TABLE ONLY public."OServiceTracking"
 
 
 --
--- TOC entry 4872 (class 2606 OID 16607)
+-- TOC entry 4878 (class 2606 OID 16607)
 -- Name: OVDSServerCommands OVDSServerCommands_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1628,7 +1714,7 @@ ALTER TABLE ONLY public."OVDSServerCommands"
 
 
 --
--- TOC entry 4875 (class 2606 OID 16609)
+-- TOC entry 4881 (class 2606 OID 16609)
 -- Name: Rules Rules_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1637,7 +1723,7 @@ ALTER TABLE ONLY public."Rules"
 
 
 --
--- TOC entry 4878 (class 2606 OID 16611)
+-- TOC entry 4884 (class 2606 OID 16611)
 -- Name: StatusData StatusData_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1646,7 +1732,7 @@ ALTER TABLE ONLY public."StatusData"
 
 
 --
--- TOC entry 4881 (class 2606 OID 16613)
+-- TOC entry 4887 (class 2606 OID 16613)
 -- Name: Trips Trips_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1655,7 +1741,7 @@ ALTER TABLE ONLY public."Trips"
 
 
 --
--- TOC entry 4884 (class 2606 OID 16615)
+-- TOC entry 4890 (class 2606 OID 16615)
 -- Name: Users Users_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1664,7 +1750,7 @@ ALTER TABLE ONLY public."Users"
 
 
 --
--- TOC entry 4887 (class 2606 OID 16617)
+-- TOC entry 4893 (class 2606 OID 16617)
 -- Name: ZoneTypes ZoneTypes_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1673,7 +1759,7 @@ ALTER TABLE ONLY public."ZoneTypes"
 
 
 --
--- TOC entry 4890 (class 2606 OID 16619)
+-- TOC entry 4896 (class 2606 OID 16619)
 -- Name: Zones Zones_pkey; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1682,7 +1768,7 @@ ALTER TABLE ONLY public."Zones"
 
 
 --
--- TOC entry 4822 (class 1259 OID 16620)
+-- TOC entry 4828 (class 1259 OID 16620)
 -- Name: IX_BinaryData_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1690,7 +1776,7 @@ CREATE INDEX "IX_BinaryData_DateTime" ON public."BinaryData" USING btree ("DateT
 
 
 --
--- TOC entry 4893 (class 1259 OID 17933)
+-- TOC entry 4899 (class 1259 OID 17933)
 -- Name: IX_ChargeEvents_TripStop; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1698,7 +1784,7 @@ CREATE INDEX "IX_ChargeEvents_TripStop" ON public."ChargeEvents" USING btree ("T
 
 
 --
--- TOC entry 4825 (class 1259 OID 16621)
+-- TOC entry 4831 (class 1259 OID 16621)
 -- Name: IX_Conditions_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1706,7 +1792,7 @@ CREATE INDEX "IX_Conditions_RecordLastChangedUtc" ON public."Conditions" USING b
 
 
 --
--- TOC entry 4828 (class 1259 OID 16622)
+-- TOC entry 4834 (class 1259 OID 16622)
 -- Name: IX_DVIRDefectRemarks_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1714,7 +1800,7 @@ CREATE INDEX "IX_DVIRDefectRemarks_RecordLastChangedUtc" ON public."DVIRDefectRe
 
 
 --
--- TOC entry 4831 (class 1259 OID 16623)
+-- TOC entry 4837 (class 1259 OID 16623)
 -- Name: IX_DVIRDefectUpdates_RecordCreationTimeUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1722,7 +1808,7 @@ CREATE INDEX "IX_DVIRDefectUpdates_RecordCreationTimeUtc" ON public."DVIRDefectU
 
 
 --
--- TOC entry 4834 (class 1259 OID 16624)
+-- TOC entry 4840 (class 1259 OID 16624)
 -- Name: IX_DVIRDefects_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1730,7 +1816,7 @@ CREATE INDEX "IX_DVIRDefects_RecordLastChangedUtc" ON public."DVIRDefects" USING
 
 
 --
--- TOC entry 4837 (class 1259 OID 16625)
+-- TOC entry 4843 (class 1259 OID 16625)
 -- Name: IX_DVIRLogs_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1738,7 +1824,7 @@ CREATE INDEX "IX_DVIRLogs_DateTime" ON public."DVIRLogs" USING btree ("DateTime"
 
 
 --
--- TOC entry 4840 (class 1259 OID 16626)
+-- TOC entry 4846 (class 1259 OID 16626)
 -- Name: IX_DebugData_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1746,7 +1832,7 @@ CREATE INDEX "IX_DebugData_DateTime" ON public."DebugData" USING btree ("DateTim
 
 
 --
--- TOC entry 4843 (class 1259 OID 16627)
+-- TOC entry 4849 (class 1259 OID 16627)
 -- Name: IX_DeviceStatusInfo_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1754,7 +1840,7 @@ CREATE INDEX "IX_DeviceStatusInfo_RecordLastChangedUtc" ON public."DeviceStatusI
 
 
 --
--- TOC entry 4846 (class 1259 OID 16628)
+-- TOC entry 4852 (class 1259 OID 16628)
 -- Name: IX_Devices_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1762,7 +1848,7 @@ CREATE INDEX "IX_Devices_RecordLastChangedUtc" ON public."Devices" USING btree (
 
 
 --
--- TOC entry 4849 (class 1259 OID 16629)
+-- TOC entry 4855 (class 1259 OID 16629)
 -- Name: IX_Diagnostics_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1770,7 +1856,7 @@ CREATE INDEX "IX_Diagnostics_RecordLastChangedUtc" ON public."Diagnostics" USING
 
 
 --
--- TOC entry 4852 (class 1259 OID 16630)
+-- TOC entry 4858 (class 1259 OID 16630)
 -- Name: IX_DriverChanges_RecordCreationTimeUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1778,7 +1864,7 @@ CREATE INDEX "IX_DriverChanges_RecordCreationTimeUtc" ON public."DriverChanges" 
 
 
 --
--- TOC entry 4855 (class 1259 OID 16631)
+-- TOC entry 4861 (class 1259 OID 16631)
 -- Name: IX_DutyStatusAvailabilities_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1786,7 +1872,15 @@ CREATE INDEX "IX_DutyStatusAvailabilities_RecordLastChangedUtc" ON public."DutyS
 
 
 --
--- TOC entry 4858 (class 1259 OID 16632)
+-- TOC entry 4902 (class 1259 OID 18652)
+-- Name: IX_DutyStatusLogs_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
+--
+
+CREATE INDEX "IX_DutyStatusLogs_DateTime" ON public."DutyStatusLogs" USING btree ("DateTime");
+
+
+--
+-- TOC entry 4864 (class 1259 OID 16632)
 -- Name: IX_ExceptionEvents_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1794,7 +1888,7 @@ CREATE INDEX "IX_ExceptionEvents_RecordLastChangedUtc" ON public."ExceptionEvent
 
 
 --
--- TOC entry 4863 (class 1259 OID 16633)
+-- TOC entry 4869 (class 1259 OID 16633)
 -- Name: IX_FaultData_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1802,7 +1896,7 @@ CREATE INDEX "IX_FaultData_DateTime" ON public."FaultData" USING btree ("DateTim
 
 
 --
--- TOC entry 4864 (class 1259 OID 16634)
+-- TOC entry 4870 (class 1259 OID 16634)
 -- Name: IX_LogRecords_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1810,7 +1904,7 @@ CREATE INDEX "IX_LogRecords_DateTime" ON public."LogRecords" USING btree ("DateT
 
 
 --
--- TOC entry 4867 (class 1259 OID 16635)
+-- TOC entry 4873 (class 1259 OID 16635)
 -- Name: IX_MyGeotabVersionInfo_RecordCreationTimeUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1818,7 +1912,7 @@ CREATE INDEX "IX_MyGeotabVersionInfo_RecordCreationTimeUtc" ON public."MyGeotabV
 
 
 --
--- TOC entry 4868 (class 1259 OID 16636)
+-- TOC entry 4874 (class 1259 OID 16636)
 -- Name: IX_OServiceTracking_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1826,7 +1920,7 @@ CREATE INDEX "IX_OServiceTracking_RecordLastChangedUtc" ON public."OServiceTrack
 
 
 --
--- TOC entry 4873 (class 1259 OID 16637)
+-- TOC entry 4879 (class 1259 OID 16637)
 -- Name: IX_Rules_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1834,7 +1928,7 @@ CREATE INDEX "IX_Rules_RecordLastChangedUtc" ON public."Rules" USING btree ("Rec
 
 
 --
--- TOC entry 4876 (class 1259 OID 16638)
+-- TOC entry 4882 (class 1259 OID 16638)
 -- Name: IX_StatusData_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1842,7 +1936,7 @@ CREATE INDEX "IX_StatusData_DateTime" ON public."StatusData" USING btree ("DateT
 
 
 --
--- TOC entry 4879 (class 1259 OID 16639)
+-- TOC entry 4885 (class 1259 OID 16639)
 -- Name: IX_Trips_RecordCreationTimeUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1850,7 +1944,7 @@ CREATE INDEX "IX_Trips_RecordCreationTimeUtc" ON public."Trips" USING btree ("Re
 
 
 --
--- TOC entry 4882 (class 1259 OID 16640)
+-- TOC entry 4888 (class 1259 OID 16640)
 -- Name: IX_Users_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1858,7 +1952,7 @@ CREATE INDEX "IX_Users_RecordLastChangedUtc" ON public."Users" USING btree ("Rec
 
 
 --
--- TOC entry 4885 (class 1259 OID 16641)
+-- TOC entry 4891 (class 1259 OID 16641)
 -- Name: IX_ZoneTypes_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1866,7 +1960,7 @@ CREATE INDEX "IX_ZoneTypes_RecordLastChangedUtc" ON public."ZoneTypes" USING btr
 
 
 --
--- TOC entry 4888 (class 1259 OID 16642)
+-- TOC entry 4894 (class 1259 OID 16642)
 -- Name: IX_Zones_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_owner
 --
 
@@ -1874,7 +1968,7 @@ CREATE INDEX "IX_Zones_RecordLastChangedUtc" ON public."Zones" USING btree ("Rec
 
 
 --
--- TOC entry 5043 (class 0 OID 0)
+-- TOC entry 5052 (class 0 OID 0)
 -- Dependencies: 237
 -- Name: TABLE "BinaryData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1883,7 +1977,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."BinaryData" TO geotabadapter_
 
 
 --
--- TOC entry 5045 (class 0 OID 0)
+-- TOC entry 5054 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: SEQUENCE "BinaryData_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1892,7 +1986,7 @@ GRANT ALL ON SEQUENCE public."BinaryData_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5046 (class 0 OID 0)
+-- TOC entry 5055 (class 0 OID 0)
 -- Dependencies: 288
 -- Name: TABLE "ChargeEvents"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1901,7 +1995,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."ChargeEvents" TO geotabadapte
 
 
 --
--- TOC entry 5048 (class 0 OID 0)
+-- TOC entry 5057 (class 0 OID 0)
 -- Dependencies: 289
 -- Name: SEQUENCE "ChargeEvents_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1910,7 +2004,7 @@ GRANT ALL ON SEQUENCE public."ChargeEvents_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5049 (class 0 OID 0)
+-- TOC entry 5058 (class 0 OID 0)
 -- Dependencies: 239
 -- Name: TABLE "Conditions"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1919,7 +2013,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Conditions" TO geotabadapter_
 
 
 --
--- TOC entry 5051 (class 0 OID 0)
+-- TOC entry 5060 (class 0 OID 0)
 -- Dependencies: 240
 -- Name: SEQUENCE "Conditions_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1929,7 +2023,7 @@ GRANT ALL ON SEQUENCE public."Conditions_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5052 (class 0 OID 0)
+-- TOC entry 5061 (class 0 OID 0)
 -- Dependencies: 241
 -- Name: TABLE "DVIRDefectRemarks"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1938,7 +2032,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DVIRDefectRemarks" TO geotaba
 
 
 --
--- TOC entry 5054 (class 0 OID 0)
+-- TOC entry 5063 (class 0 OID 0)
 -- Dependencies: 242
 -- Name: SEQUENCE "DVIRDefectRemarks_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1947,7 +2041,7 @@ GRANT ALL ON SEQUENCE public."DVIRDefectRemarks_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5055 (class 0 OID 0)
+-- TOC entry 5064 (class 0 OID 0)
 -- Dependencies: 243
 -- Name: TABLE "DVIRDefectUpdates"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1956,7 +2050,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DVIRDefectUpdates" TO geotaba
 
 
 --
--- TOC entry 5057 (class 0 OID 0)
+-- TOC entry 5066 (class 0 OID 0)
 -- Dependencies: 245
 -- Name: TABLE "DVIRDefects"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1965,7 +2059,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DVIRDefects" TO geotabadapter
 
 
 --
--- TOC entry 5059 (class 0 OID 0)
+-- TOC entry 5068 (class 0 OID 0)
 -- Dependencies: 246
 -- Name: SEQUENCE "DVIRDefects_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1974,7 +2068,7 @@ GRANT ALL ON SEQUENCE public."DVIRDefects_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5060 (class 0 OID 0)
+-- TOC entry 5069 (class 0 OID 0)
 -- Dependencies: 247
 -- Name: TABLE "DVIRLogs"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1983,7 +2077,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DVIRLogs" TO geotabadapter_cl
 
 
 --
--- TOC entry 5062 (class 0 OID 0)
+-- TOC entry 5071 (class 0 OID 0)
 -- Dependencies: 248
 -- Name: SEQUENCE "DVIRLogs_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -1992,7 +2086,7 @@ GRANT ALL ON SEQUENCE public."DVIRLogs_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5063 (class 0 OID 0)
+-- TOC entry 5072 (class 0 OID 0)
 -- Dependencies: 249
 -- Name: SEQUENCE "DebugData_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2001,7 +2095,7 @@ GRANT ALL ON SEQUENCE public."DebugData_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5064 (class 0 OID 0)
+-- TOC entry 5073 (class 0 OID 0)
 -- Dependencies: 250
 -- Name: TABLE "DebugData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2010,7 +2104,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DebugData" TO geotabadapter_c
 
 
 --
--- TOC entry 5065 (class 0 OID 0)
+-- TOC entry 5074 (class 0 OID 0)
 -- Dependencies: 251
 -- Name: TABLE "DeviceStatusInfo"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2019,7 +2113,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DeviceStatusInfo" TO geotabad
 
 
 --
--- TOC entry 5067 (class 0 OID 0)
+-- TOC entry 5076 (class 0 OID 0)
 -- Dependencies: 252
 -- Name: SEQUENCE "DeviceStatusInfo_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2028,7 +2122,7 @@ GRANT ALL ON SEQUENCE public."DeviceStatusInfo_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5068 (class 0 OID 0)
+-- TOC entry 5077 (class 0 OID 0)
 -- Dependencies: 253
 -- Name: TABLE "Devices"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2037,7 +2131,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Devices" TO geotabadapter_cli
 
 
 --
--- TOC entry 5070 (class 0 OID 0)
+-- TOC entry 5079 (class 0 OID 0)
 -- Dependencies: 254
 -- Name: SEQUENCE "Devices_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2046,7 +2140,7 @@ GRANT ALL ON SEQUENCE public."Devices_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5071 (class 0 OID 0)
+-- TOC entry 5080 (class 0 OID 0)
 -- Dependencies: 255
 -- Name: TABLE "Diagnostics"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2055,7 +2149,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Diagnostics" TO geotabadapter
 
 
 --
--- TOC entry 5073 (class 0 OID 0)
+-- TOC entry 5082 (class 0 OID 0)
 -- Dependencies: 256
 -- Name: SEQUENCE "Diagnostics_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2064,7 +2158,7 @@ GRANT ALL ON SEQUENCE public."Diagnostics_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5074 (class 0 OID 0)
+-- TOC entry 5083 (class 0 OID 0)
 -- Dependencies: 257
 -- Name: SEQUENCE "DriverChanges_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2073,7 +2167,7 @@ GRANT ALL ON SEQUENCE public."DriverChanges_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5075 (class 0 OID 0)
+-- TOC entry 5084 (class 0 OID 0)
 -- Dependencies: 258
 -- Name: TABLE "DriverChanges"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2082,7 +2176,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DriverChanges" TO geotabadapt
 
 
 --
--- TOC entry 5076 (class 0 OID 0)
+-- TOC entry 5085 (class 0 OID 0)
 -- Dependencies: 259
 -- Name: TABLE "DutyStatusAvailabilities"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2091,7 +2185,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DutyStatusAvailabilities" TO 
 
 
 --
--- TOC entry 5078 (class 0 OID 0)
+-- TOC entry 5087 (class 0 OID 0)
 -- Dependencies: 260
 -- Name: SEQUENCE "DutyStatusAvailabilities_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2100,7 +2194,25 @@ GRANT ALL ON SEQUENCE public."DutyStatusAvailabilities_id_seq" TO geotabadapter_
 
 
 --
--- TOC entry 5079 (class 0 OID 0)
+-- TOC entry 5088 (class 0 OID 0)
+-- Dependencies: 290
+-- Name: TABLE "DutyStatusLogs"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."DutyStatusLogs" TO geotabadapter_client;
+
+
+--
+-- TOC entry 5090 (class 0 OID 0)
+-- Dependencies: 291
+-- Name: SEQUENCE "DutyStatusLogs_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
+--
+
+GRANT ALL ON SEQUENCE public."DutyStatusLogs_id_seq" TO geotabadapter_client;
+
+
+--
+-- TOC entry 5091 (class 0 OID 0)
 -- Dependencies: 261
 -- Name: TABLE "ExceptionEvents"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2109,7 +2221,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."ExceptionEvents" TO geotabada
 
 
 --
--- TOC entry 5081 (class 0 OID 0)
+-- TOC entry 5093 (class 0 OID 0)
 -- Dependencies: 262
 -- Name: SEQUENCE "ExceptionEvents_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2118,7 +2230,7 @@ GRANT ALL ON SEQUENCE public."ExceptionEvents_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5082 (class 0 OID 0)
+-- TOC entry 5094 (class 0 OID 0)
 -- Dependencies: 263
 -- Name: TABLE "FailedDVIRDefectUpdates"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2127,7 +2239,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."FailedDVIRDefectUpdates" TO g
 
 
 --
--- TOC entry 5084 (class 0 OID 0)
+-- TOC entry 5096 (class 0 OID 0)
 -- Dependencies: 264
 -- Name: SEQUENCE "FailedDVIRDefectUpdates_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2136,7 +2248,7 @@ GRANT ALL ON SEQUENCE public."FailedDVIRDefectUpdates_id_seq" TO geotabadapter_c
 
 
 --
--- TOC entry 5085 (class 0 OID 0)
+-- TOC entry 5097 (class 0 OID 0)
 -- Dependencies: 265
 -- Name: SEQUENCE "FailedOVDSServerCommands_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2145,7 +2257,7 @@ GRANT ALL ON SEQUENCE public."FailedOVDSServerCommands_id_seq" TO geotabadapter_
 
 
 --
--- TOC entry 5086 (class 0 OID 0)
+-- TOC entry 5098 (class 0 OID 0)
 -- Dependencies: 266
 -- Name: TABLE "FailedOVDSServerCommands"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2154,7 +2266,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."FailedOVDSServerCommands" TO 
 
 
 --
--- TOC entry 5087 (class 0 OID 0)
+-- TOC entry 5099 (class 0 OID 0)
 -- Dependencies: 267
 -- Name: TABLE "FaultData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2163,7 +2275,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."FaultData" TO geotabadapter_c
 
 
 --
--- TOC entry 5089 (class 0 OID 0)
+-- TOC entry 5101 (class 0 OID 0)
 -- Dependencies: 268
 -- Name: SEQUENCE "FaultData_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2172,7 +2284,7 @@ GRANT ALL ON SEQUENCE public."FaultData_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5090 (class 0 OID 0)
+-- TOC entry 5102 (class 0 OID 0)
 -- Dependencies: 269
 -- Name: TABLE "LogRecords"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2181,7 +2293,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."LogRecords" TO geotabadapter_
 
 
 --
--- TOC entry 5092 (class 0 OID 0)
+-- TOC entry 5104 (class 0 OID 0)
 -- Dependencies: 270
 -- Name: SEQUENCE "LogRecords_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2190,7 +2302,7 @@ GRANT ALL ON SEQUENCE public."LogRecords_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5093 (class 0 OID 0)
+-- TOC entry 5105 (class 0 OID 0)
 -- Dependencies: 271
 -- Name: TABLE "MyGeotabVersionInfo"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2199,7 +2311,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."MyGeotabVersionInfo" TO geota
 
 
 --
--- TOC entry 5094 (class 0 OID 0)
+-- TOC entry 5106 (class 0 OID 0)
 -- Dependencies: 272
 -- Name: TABLE "OServiceTracking"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2208,7 +2320,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."OServiceTracking" TO geotabad
 
 
 --
--- TOC entry 5096 (class 0 OID 0)
+-- TOC entry 5108 (class 0 OID 0)
 -- Dependencies: 273
 -- Name: SEQUENCE "OServiceTracking_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2217,7 +2329,7 @@ GRANT ALL ON SEQUENCE public."OServiceTracking_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5097 (class 0 OID 0)
+-- TOC entry 5109 (class 0 OID 0)
 -- Dependencies: 274
 -- Name: TABLE "OVDSServerCommands"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2226,7 +2338,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."OVDSServerCommands" TO geotab
 
 
 --
--- TOC entry 5099 (class 0 OID 0)
+-- TOC entry 5111 (class 0 OID 0)
 -- Dependencies: 275
 -- Name: SEQUENCE "OVDSServerCommands_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2236,7 +2348,7 @@ GRANT ALL ON SEQUENCE public."OVDSServerCommands_id_seq" TO geotabadapter_client
 
 
 --
--- TOC entry 5100 (class 0 OID 0)
+-- TOC entry 5112 (class 0 OID 0)
 -- Dependencies: 276
 -- Name: TABLE "Rules"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2245,7 +2357,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Rules" TO geotabadapter_clien
 
 
 --
--- TOC entry 5102 (class 0 OID 0)
+-- TOC entry 5114 (class 0 OID 0)
 -- Dependencies: 277
 -- Name: SEQUENCE "Rules_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2254,7 +2366,7 @@ GRANT ALL ON SEQUENCE public."Rules_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5103 (class 0 OID 0)
+-- TOC entry 5115 (class 0 OID 0)
 -- Dependencies: 278
 -- Name: TABLE "StatusData"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2263,7 +2375,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."StatusData" TO geotabadapter_
 
 
 --
--- TOC entry 5105 (class 0 OID 0)
+-- TOC entry 5117 (class 0 OID 0)
 -- Dependencies: 279
 -- Name: SEQUENCE "StatusData_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2272,7 +2384,7 @@ GRANT ALL ON SEQUENCE public."StatusData_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5106 (class 0 OID 0)
+-- TOC entry 5118 (class 0 OID 0)
 -- Dependencies: 280
 -- Name: TABLE "Trips"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2281,7 +2393,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Trips" TO geotabadapter_clien
 
 
 --
--- TOC entry 5108 (class 0 OID 0)
+-- TOC entry 5120 (class 0 OID 0)
 -- Dependencies: 281
 -- Name: SEQUENCE "Trips_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2290,7 +2402,7 @@ GRANT ALL ON SEQUENCE public."Trips_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5109 (class 0 OID 0)
+-- TOC entry 5121 (class 0 OID 0)
 -- Dependencies: 282
 -- Name: TABLE "Users"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2299,7 +2411,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Users" TO geotabadapter_clien
 
 
 --
--- TOC entry 5111 (class 0 OID 0)
+-- TOC entry 5123 (class 0 OID 0)
 -- Dependencies: 283
 -- Name: SEQUENCE "Users_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2308,7 +2420,7 @@ GRANT ALL ON SEQUENCE public."Users_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5112 (class 0 OID 0)
+-- TOC entry 5124 (class 0 OID 0)
 -- Dependencies: 284
 -- Name: TABLE "ZoneTypes"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2317,7 +2429,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."ZoneTypes" TO geotabadapter_c
 
 
 --
--- TOC entry 5114 (class 0 OID 0)
+-- TOC entry 5126 (class 0 OID 0)
 -- Dependencies: 285
 -- Name: SEQUENCE "ZoneTypes_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2326,7 +2438,7 @@ GRANT ALL ON SEQUENCE public."ZoneTypes_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 5115 (class 0 OID 0)
+-- TOC entry 5127 (class 0 OID 0)
 -- Dependencies: 286
 -- Name: TABLE "Zones"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2335,7 +2447,7 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public."Zones" TO geotabadapter_clien
 
 
 --
--- TOC entry 5117 (class 0 OID 0)
+-- TOC entry 5129 (class 0 OID 0)
 -- Dependencies: 287
 -- Name: SEQUENCE "Zones_id_seq"; Type: ACL; Schema: public; Owner: geotabadapter_owner
 --
@@ -2344,7 +2456,7 @@ GRANT ALL ON SEQUENCE public."Zones_id_seq" TO geotabadapter_client;
 
 
 --
--- TOC entry 2189 (class 826 OID 16643)
+-- TOC entry 2194 (class 826 OID 16643)
 -- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: postgres
 --
 
@@ -2352,14 +2464,14 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,
 
 
 --
--- TOC entry 2190 (class 826 OID 16644)
+-- TOC entry 2195 (class 826 OID 16644)
 -- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: -; Owner: postgres
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO geotabadapter_client;
 
 
--- Completed on 2024-01-19 15:36:25
+-- Completed on 2024-04-04 09:47:15
 
 --
 -- PostgreSQL database dump complete

@@ -9,6 +9,7 @@ DELETE FROM GeotabAdapter_Client."DeviceStatusInfo";
 DELETE FROM GeotabAdapter_Client."Diagnostics";
 DELETE FROM GeotabAdapter_Client."DriverChanges";
 DELETE FROM GeotabAdapter_Client."DutyStatusAvailabilities";
+DELETE FROM GeotabAdapter_Client."DutyStatusLogs";
 DELETE FROM GeotabAdapter_Client."DVIRDefectRemarks";
 DELETE FROM GeotabAdapter_Client."DVIRDefects";
 DELETE FROM GeotabAdapter_Client."DVIRDefectUpdates";
@@ -36,6 +37,7 @@ ALTER TABLE GeotabAdapter_Client."DeviceStatusInfo" MODIFY("id" GENERATED AS IDE
 ALTER TABLE GeotabAdapter_Client."Diagnostics" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."DriverChanges" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."DutyStatusAvailabilities" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
+ALTER TABLE GeotabAdapter_Client."DutyStatusLogs" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."DVIRDefectRemarks" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."DVIRDefects" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));
 ALTER TABLE GeotabAdapter_Client."DVIRDefectUpdates" MODIFY("id" GENERATED AS IDENTITY (START WITH 1));

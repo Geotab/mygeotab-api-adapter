@@ -108,6 +108,11 @@ namespace MyGeotabAPIAdapter.Configuration
         int DutyStatusAvailabilityFeedIntervalSeconds { get; }
 
         /// <summary>
+        /// The minimum number of seconds to wait between GetFeed() calls for <see cref="DutyStatusLog"/> objects.
+        /// </summary>
+        int DutyStatusLogFeedIntervalSeconds { get; }
+
+        /// <summary>
         /// Used to reduce the number of unnecessary Get calls when retrieving <see cref="DutyStatusAvailability"/> information for all <see cref="Driver"/>s. Data is not queried for Drivers with a <see cref="User.LastAccessDate"/> greater than this many days in the past. This value should be set to approximately twice the longest possible cycle for a HOS ruleset.
         /// </summary>
         int DutyStatusAvailabilityFeedLastAccessDateCutoffDays { get; }
@@ -176,6 +181,11 @@ namespace MyGeotabAPIAdapter.Configuration
         /// Indicates whether a <see cref="DutyStatusAvailability"/> data feed should be enabled. 
         /// </summary>
         bool EnableDutyStatusAvailabilityFeed { get; }
+
+        /// <summary>
+        /// Indicates whether a <see cref="DutyStatusLog"/> data feed should be enabled. 
+        /// </summary>
+        bool EnableDutyStatusLogFeed { get; }
 
         /// <summary>
         /// Indicates whether a <see cref="DVIRDefect"/> cache should be enabled. 

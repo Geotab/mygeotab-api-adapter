@@ -53,6 +53,12 @@ namespace MyGeotabAPIAdapter.Database
         string DbDutyStatusAvailabilityTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbDutyStatusLog"/> entities.
+        /// </summary>
+        string DbDutyStatusLogsTableName { get; }
+
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbDVIRDefect"/> entities.
         /// </summary>
         string DbDVIRDefectTableName { get; }

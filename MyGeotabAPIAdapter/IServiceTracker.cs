@@ -83,6 +83,11 @@ namespace MyGeotabAPIAdapter
         Task<DbOServiceTracking> GetDutyStatusAvailabilityServiceInfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DutyStatusLogService"/>.
+        /// </summary>
+        Task<DbOServiceTracking> GetDutyStatusLogServiceInfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DVIRLogService"/>.
         /// </summary>
         Task<DbOServiceTracking> GetDVIRLogServiceInfoAsync();

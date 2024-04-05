@@ -8,6 +8,7 @@
 -- truncate table [dbo].[Diagnostics];
 -- truncate table [dbo].[DriverChanges];
 -- truncate table [dbo].[DutyStatusAvailabilities];
+-- truncate table [dbo].[DutyStatusLogs];
 -- truncate table [dbo].[DVIRDefectRemarks];
 -- truncate table [dbo].[DVIRDefects];
 -- truncate table [dbo].[DVIRDefectUpdates];
@@ -35,6 +36,7 @@
 --DBCC CHECKIDENT ('dbo.Diagnostics', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DriverChanges', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DutyStatusAvailabilities', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.DutyStatusLogs', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DVIRDefectRemarks', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DVIRDefects', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.DVIRDefectUpdates', RESEED, 0);
