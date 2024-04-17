@@ -228,6 +228,16 @@ namespace MyGeotabAPIAdapter.Configuration
         bool EnableLogRecordFeed { get; }
 
         /// <summary>
+        /// Indicates whether minimum interval sampling should be enabled for the <see cref="LogRecord"/> feed.
+        /// </summary>
+        bool EnableMinimunIntervalSamplingForLogRecords { get; }
+
+        /// <summary>
+        /// Indicates whether minimum interval sampling should be enabled for the <see cref="StatusData"/> feed. Applies only to StatusData with Diagnostics in the <see cref="MinimumIntervalSamplingDiagnosticsList"/> list.
+        /// </summary>
+        bool EnableMinimunIntervalSamplingForStatusData { get; }
+
+        /// <summary>
         /// Indicates whether a <see cref="Rule"/> cache should be enabled. 
         /// </summary>
         bool EnableRuleCache { get; }
@@ -326,6 +336,16 @@ namespace MyGeotabAPIAdapter.Configuration
         /// The minimum number of seconds to wait between GetFeed() calls for <see cref="LogRecord"/> objects.
         /// </summary>
         int LogRecordFeedIntervalSeconds { get; }
+
+        /// <summary>
+        /// The comma-separated list of <see cref="Id"/>s of of specific <see cref="Diagnostic"/> entities for which minimum interval sampling of <see cref="StatusData"/> and/or <see cref="LogRecord"/> entities should be applied. <see cref="ExcludeDiagnosticsToTrack"/> must be false. Items in this list must also be included in the <see cref="DiagnosticsToTrackList"/> list and the wildcard value (*) cannot be used. There can be more Diagnostic Ids listed in the <see cref="DiagnosticsToTrackList"/> list than the <see cref="MinimumIntervalSamplingDiagnosticsList"/> list (i.e. minimum interval sampling can be applied to a subset of the list of Diagnostics being tracked with all StatusData being pulled for the rest of the items in the <see cref="DiagnosticsToTrackList"/> list.
+        /// </summary>
+        string MinimumIntervalSamplingDiagnosticsList {  get; }
+
+        /// <summary>
+        /// The minimum number of seconds that must have elapsed since the DateTime of the last captured record for the subject <see cref="Device"/> (in the case of <see cref="LogRecord"/>s) or <see cref="Device"/> + <see cref="Diagnostic"/> combination (in the case of <see cref="StatusData"/>) before the next record is captured. Note that data points are not captured or interpolated at this exact interval. Rather, the next actual data point at or after the elapsed interval is captured. 
+        /// </summary>
+        int MinimumIntervalSamplingIntervalSeconds { get; }
 
         /// <summary>
         /// The value to use for the <c>Database</c> parameter when authenticating the <see cref="MyGeotabAPIAdapter.Checkmate.API"/>.

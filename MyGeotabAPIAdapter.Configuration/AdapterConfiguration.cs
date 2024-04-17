@@ -1,5 +1,6 @@
 ﻿using NLog;
 using System;
+using System.Linq;
 using System.Reflection;
 
 namespace MyGeotabAPIAdapter.Configuration
@@ -9,6 +10,8 @@ namespace MyGeotabAPIAdapter.Configuration
     /// </summary>
     public class AdapterConfiguration : IAdapterConfiguration
     {
+        const string WildcardString = "*";
+
         // Argument Names for appsettings:
         // > OverrideSetings
         const string ArgNameDisableMachineNameValidation = "OverrideSetings:DisableMachineNameValidation";
@@ -78,9 +81,13 @@ namespace MyGeotabAPIAdapter.Configuration
         // > AppSettings:GeneralFeedSettings
         const string ArgNameFeedStartOption = "AppSettings:GeneralFeedSettings:FeedStartOption";
         const string ArgNameFeedStartSpecificTimeUTC = "AppSettings:GeneralFeedSettings:FeedStartSpecificTimeUTC";
-        public readonly string ArgNameDevicesToTrack = "AppSettings:GeneralFeedSettings:DevicesToTrack";
-        public readonly string ArgNameDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:DiagnosticsToTrack";
+        const string ArgNameDevicesToTrack = "AppSettings:GeneralFeedSettings:DevicesToTrack";
+        const string ArgNameDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:DiagnosticsToTrack";
         const string ArgNameExcludeDiagnosticsToTrack = "AppSettings:GeneralFeedSettings:ExcludeDiagnosticsToTrack";
+        const string ArgNameEnableMinimunIntervalSamplingForLogRecords = "AppSettings:GeneralFeedSettings:EnableMinimunIntervalSamplingForLogRecords";
+        const string ArgNameEnableMinimunIntervalSamplingForStatusData = "AppSettings:GeneralFeedSettings:EnableMinimunIntervalSamplingForStatusData";
+        const string ArgNameMinimumIntervalSamplingDiagnostics = "AppSettings:GeneralFeedSettings:MinimumIntervalSamplingDiagnostics";
+        const string ArgNameMinimumIntervalSamplingIntervalSeconds = "AppSettings:GeneralFeedSettings:MinimumIntervalSamplingIntervalSeconds";
         // > AppSettings:Feeds:BinaryData
         const string ArgNameEnableBinaryDataFeed = "AppSettings:Feeds:BinaryData:EnableBinaryDataFeed";
         const string ArgNameBinaryDataFeedIntervalSeconds = "AppSettings:Feeds:BinaryData:BinaryDataFeedIntervalSeconds";
@@ -142,6 +149,9 @@ namespace MyGeotabAPIAdapter.Configuration
         const int MinDutyStatusAvailabilityFeedLastAccessDateCutoffDays = 14;
         const int MaxDutyStatusAvailabilityFeedLastAccessDateCutoffDays = 60;
         const int DefaultDutyStatusAvailabilityFeedLastAccessDateCutoffDays = 30;
+        const int MinSamplingIntervalSeconds = 1;
+        const int MaxSamplingIntervalSeconds = 3600; // 3600 sec = 1 hr
+        const int DefaultSamplingIntervalSeconds = 300;
 
         // Arbitrary timeout limits:
         const int DefaultTimeoutSeconds = 30;
@@ -281,6 +291,12 @@ namespace MyGeotabAPIAdapter.Configuration
         public bool EnableLogRecordFeed { get; private set; }
 
         /// <inheritdoc/>
+        public bool EnableMinimunIntervalSamplingForLogRecords { get; private set; }
+
+        /// <inheritdoc/>
+        public bool EnableMinimunIntervalSamplingForStatusData { get; private set; }
+
+        /// <inheritdoc/>
         public bool EnableRuleCache { get; private set; }
 
         /// <inheritdoc/>
@@ -339,6 +355,12 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public int LogRecordFeedIntervalSeconds { get; private set; }
+
+        /// <inheritdoc/>
+        public string MinimumIntervalSamplingDiagnosticsList { get; private set; }
+
+        /// <inheritdoc/>
+        public int MinimumIntervalSamplingIntervalSeconds { get; private set; }
 
         /// <inheritdoc/>
         public string MyGeotabDatabase { get; private set; }
@@ -556,6 +578,11 @@ namespace MyGeotabAPIAdapter.Configuration
             DevicesToTrackList = configurationHelper.GetConfigKeyValueString(ArgNameDevicesToTrack);
             DiagnosticsToTrackList = configurationHelper.GetConfigKeyValueString(ArgNameDiagnosticsToTrack);
             ExcludeDiagnosticsToTrack = configurationHelper.GetConfigKeyValueBoolean(ArgNameExcludeDiagnosticsToTrack);
+            EnableMinimunIntervalSamplingForLogRecords = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableMinimunIntervalSamplingForLogRecords);
+            EnableMinimunIntervalSamplingForStatusData = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableMinimunIntervalSamplingForStatusData);
+            MinimumIntervalSamplingDiagnosticsList = configurationHelper.GetConfigKeyValueString(ArgNameMinimumIntervalSamplingDiagnostics);
+            MinimumIntervalSamplingIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameMinimumIntervalSamplingIntervalSeconds, null, false, MinSamplingIntervalSeconds, MaxSamplingIntervalSeconds, DefaultSamplingIntervalSeconds);
+            ValidateMinimumIntervalSamplingDiagnosticsList();
 
             // AppSettings:Feeds:BinaryData:
             EnableBinaryDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableBinaryDataFeed);
@@ -616,6 +643,55 @@ namespace MyGeotabAPIAdapter.Configuration
             DVIRLogManipulatorIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameDVIRLogManipulatorIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
             logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+        }
+
+        /// <summary>
+        /// Validated the MinimumIntervalSamplingDiagnosticsList configuration item.
+        /// </summary>
+        void ValidateMinimumIntervalSamplingDiagnosticsList()
+        {
+            string errorMessage;
+
+            // If both EnableMinimunIntervalSamplingForLogRecords and EnableMinimunIntervalSamplingForStatusData are false, then there is no need to validate the MinimumIntervalSamplingDiagnosticsList.
+            if (EnableMinimunIntervalSamplingForLogRecords == false && EnableMinimunIntervalSamplingForStatusData == false)
+            {
+                return;
+            }
+
+            // If EnableMinimunIntervalSamplingForStatusData is true, then ExcludeDiagnosticsToTrack must be false.
+            if (EnableMinimunIntervalSamplingForStatusData == true && ExcludeDiagnosticsToTrack == true)
+            {
+                errorMessage = $"'{ArgNameEnableMinimunIntervalSamplingForStatusData}' is set to true, but so is '{ArgNameExcludeDiagnosticsToTrack}'. Minimum interval sanpling cannot be enabled for StatusData unless '{ArgNameExcludeDiagnosticsToTrack}' is set to false.";
+                logger.Error(errorMessage);
+                throw new Exception(errorMessage);
+            }
+
+            // If EnableMinimunIntervalSamplingForStatusData is true, then DiagnosticsToTrack must be populated with a list of specific Diagnostic Ids.
+            if (EnableMinimunIntervalSamplingForStatusData == true && (DiagnosticsToTrackList == string.Empty || DiagnosticsToTrackList == WildcardString))
+            {
+                errorMessage = $"'{ArgNameEnableMinimunIntervalSamplingForStatusData}' is set to true, but '{ArgNameDiagnosticsToTrack}' is set to '{DiagnosticsToTrackList}'. Minimum interval sanpling cannot be enabled for StatusData unless '{ArgNameDiagnosticsToTrack}' is populated with a list of specific Diagnostic Ids.";
+                logger.Error(errorMessage);
+                throw new Exception(errorMessage);
+            }
+
+            // If EnableMinimunIntervalSamplingForStatusData is true, then MinimumIntervalSamplingDiagnostics must be populated with a list of specific Diagnostic Ids that is the same as that provided in DiagnosticsToTrack or a subset thereof.
+            if (EnableMinimunIntervalSamplingForStatusData == true && (MinimumIntervalSamplingDiagnosticsList == string.Empty || (MinimumIntervalSamplingDiagnosticsList == WildcardString)))
+            {
+                errorMessage = $"'{ArgNameEnableMinimunIntervalSamplingForStatusData}' is set to true. As such, '{ArgNameMinimumIntervalSamplingDiagnostics}' must be populated with the same list of specific Diagnostic Ids specified in '{ArgNameDiagnosticsToTrack}' or a subset thereof. The wildcard ('{WildcardString}' cannot be used.)";
+                logger.Error(errorMessage);
+                throw new Exception(errorMessage);
+            }
+
+            // If EnableMinimunIntervalSamplingForStatusData is true, then MinimumIntervalSamplingDiagnostics must be populated with a list of specific Diagnostic Ids that is the same as that provided in DiagnosticsToTrack or a subset thereof.
+            string[] diagnosticsToTrackArray = DiagnosticsToTrackList.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] minimumIntervalSamplingDiagnosticsArray = MinimumIntervalSamplingDiagnosticsList.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            bool allMinimumIntervalSamplingDiagnosticsContainedInDiagnosticsToTrack = minimumIntervalSamplingDiagnosticsArray.All(minimumIntervalSamplingDiagnostic => diagnosticsToTrackArray.Contains(minimumIntervalSamplingDiagnostic));
+            if (EnableMinimunIntervalSamplingForStatusData == true && allMinimumIntervalSamplingDiagnosticsContainedInDiagnosticsToTrack == false)
+            {
+                errorMessage = $"'{ArgNameEnableMinimunIntervalSamplingForStatusData}' is set to true. As such, '{ArgNameMinimumIntervalSamplingDiagnostics}' must be populated with the same list of specific Diagnostic Ids specified in '{ArgNameDiagnosticsToTrack}' or a subset thereof. The list provided for '{ArgNameMinimumIntervalSamplingDiagnostics}' contains at least one item that is not in the list provided for '{ArgNameDiagnosticsToTrack}'.";
+                logger.Error(errorMessage);
+                throw new Exception(errorMessage);
+            }
         }
     }
 }

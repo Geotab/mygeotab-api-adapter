@@ -1,4 +1,5 @@
-﻿using Geotab.Checkmate.ObjectModel.Engine;
+﻿using Geotab.Checkmate.ObjectModel;
+using Geotab.Checkmate.ObjectModel.Engine;
 using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Configuration;
@@ -46,6 +47,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
         readonly IGeotabDiagnosticFilterer geotabDiagnosticFilterer;
         readonly IGeotabStatusDataDbStatusDataObjectMapper geotabStatusDataDbStatusDataObjectMapper;
+        readonly IMinimumIntervalSampler<StatusData> minimumIntervalSampler;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IPrerequisiteServiceChecker prerequisiteServiceChecker;
         readonly IServiceTracker serviceTracker;
@@ -59,7 +61,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="StatusDataProcessor"/> class.
         /// </summary>
-        public StatusDataProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbStatusData> dbStatusDataEntityPersister, IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDiagnosticFilterer geotabDiagnosticFilterer, IGenericGeotabObjectFeeder<StatusData> statusDataGeotabObjectFeeder, IGeotabStatusDataDbStatusDataObjectMapper geotabStatusDataDbStatusDataObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IVSSConfiguration vssConfiguration, IVSSObjectMapper vssObjectMapper, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public StatusDataProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbStatusData> dbStatusDataEntityPersister, IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDiagnosticFilterer geotabDiagnosticFilterer, IGenericGeotabObjectFeeder<StatusData> statusDataGeotabObjectFeeder, IGeotabStatusDataDbStatusDataObjectMapper geotabStatusDataDbStatusDataObjectMapper, IMinimumIntervalSampler<StatusData> minimumIntervalSampler, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IVSSConfiguration vssConfiguration, IVSSObjectMapper vssObjectMapper, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -73,6 +75,7 @@ namespace MyGeotabAPIAdapter.Services
             this.geotabDiagnosticFilterer = geotabDiagnosticFilterer;
             this.statusDataGeotabObjectFeeder = statusDataGeotabObjectFeeder;
             this.geotabStatusDataDbStatusDataObjectMapper = geotabStatusDataDbStatusDataObjectMapper;
+            this.minimumIntervalSampler = minimumIntervalSampler;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.prerequisiteServiceChecker = prerequisiteServiceChecker;
             this.serviceTracker = serviceTracker;
@@ -153,9 +156,10 @@ namespace MyGeotabAPIAdapter.Services
                         var dbOVDSServerCommandsToPersist = new List<DbOVDSServerCommand>();
                         if (statusDatas.Count > 0)
                         {
-                            // Apply tracked device filter and/or tracked diagnostic filter (if configured in appsettings.json) and then map the StatusDatas to DbStatusDatas.
+                            // Apply tracked device filter and/or tracked diagnostic filter and/or interval sampling (if configured in appsettings.json) and then map the StatusDatas to DbStatusDatas.
                             var filteredStatusDatas = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, statusDatas);
                             filteredStatusDatas = await geotabDiagnosticFilterer.ApplyDiagnosticFilterAsync(cancellationTokenSource, filteredStatusDatas);
+                            filteredStatusDatas = await minimumIntervalSampler.ApplyMinimumIntervalAsync(cancellationTokenSource, filteredStatusDatas);
                             dbStatusDatasToPersist = geotabStatusDataDbStatusDataObjectMapper.CreateEntities(filteredStatusDatas);
 
                             // Generate DbOVDSServerCommands if dictated by the configured VSSOutputOption.

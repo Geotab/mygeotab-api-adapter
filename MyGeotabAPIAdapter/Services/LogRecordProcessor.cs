@@ -45,6 +45,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGenericGeotabObjectFeeder<LogRecord> logRecordGeotabObjectFeeder;
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
         readonly IGeotabLogRecordDbLogRecordObjectMapper geotabLogRecordDbLogRecordObjectMapper;
+        readonly IMinimumIntervalSampler<LogRecord> minimumIntervalSampler;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IPrerequisiteServiceChecker prerequisiteServiceChecker;
         readonly IServiceTracker serviceTracker;
@@ -58,7 +59,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="LogRecordProcessor"/> class.
         /// </summary>
-        public LogRecordProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbLogRecord> dbLogRecordEntityPersister, IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister, IGeotabDeviceFilterer geotabDeviceFilterer, IGenericGeotabObjectFeeder<LogRecord> logRecordGeotabObjectFeeder, IGeotabLogRecordDbLogRecordObjectMapper geotabLogRecordDbLogRecordObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IVSSConfiguration vssConfiguration, IVSSObjectMapper vssObjectMapper, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public LogRecordProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbLogRecord> dbLogRecordEntityPersister, IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister, IGeotabDeviceFilterer geotabDeviceFilterer, IGenericGeotabObjectFeeder<LogRecord> logRecordGeotabObjectFeeder, IGeotabLogRecordDbLogRecordObjectMapper geotabLogRecordDbLogRecordObjectMapper, IMinimumIntervalSampler<LogRecord> minimumIntervalSampler, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IVSSConfiguration vssConfiguration, IVSSObjectMapper vssObjectMapper, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -71,6 +72,7 @@ namespace MyGeotabAPIAdapter.Services
             this.geotabDeviceFilterer = geotabDeviceFilterer;
             this.logRecordGeotabObjectFeeder = logRecordGeotabObjectFeeder;
             this.geotabLogRecordDbLogRecordObjectMapper = geotabLogRecordDbLogRecordObjectMapper;
+            this.minimumIntervalSampler = minimumIntervalSampler;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.prerequisiteServiceChecker = prerequisiteServiceChecker;
             this.serviceTracker = serviceTracker;
@@ -151,8 +153,9 @@ namespace MyGeotabAPIAdapter.Services
                         var dbOVDSServerCommandsToPersist = new List<DbOVDSServerCommand>();
                         if (logRecords.Count > 0)
                         {
-                            // Apply tracked device filter (if configured in appsettings.json) and then map the LogRecords to DbLogRecords.
+                            // Apply tracked device filter and/or interval sampling (if configured in appsettings.json) and then map the LogRecords to DbLogRecords.
                             var filteredLogRecords = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, logRecords);
+                            filteredLogRecords = await minimumIntervalSampler.ApplyMinimumIntervalAsync(cancellationTokenSource, filteredLogRecords);
                             dbLogRecordsToPersist = geotabLogRecordDbLogRecordObjectMapper.CreateEntities(filteredLogRecords);
 
                             // Generate DbOVDSServerCommands if dictated by the configured VSSOutputOption.

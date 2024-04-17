@@ -224,6 +224,8 @@ namespace MyGeotabAPIAdapter
                         .AddSingleton<IGeotabDeviceFilterer, GeotabDeviceFilterer>()
                         .AddSingleton<IGenericGeotabObjectFiltererBase<Diagnostic>, GenericGeotabObjectFiltererBase<Diagnostic>>()
                         .AddSingleton<IGeotabDiagnosticFilterer, GeotabDiagnosticFilterer>()
+                        .AddSingleton<IMinimumIntervalSampler<LogRecord>, MinimumIntervalSampler<LogRecord>>()
+                        .AddSingleton<IMinimumIntervalSampler<StatusData>, MinimumIntervalSampler<StatusData>>()
 
                         // Geotab Object Hydrators:
                         .AddSingleton<IGenericGeotabObjectHydrator<Controller>, GenericGeotabObjectHydrator<Controller>>()
