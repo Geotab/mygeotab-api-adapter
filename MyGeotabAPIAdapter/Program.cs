@@ -117,6 +117,10 @@ namespace MyGeotabAPIAdapter
                         // Database Entity to Database Entity Mappers:
                         .AddTransient<IDbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper, DbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper>()
 
+                        // Geotab object comparers:
+                        .AddTransient<IGeotabDateTimeProviderComparer<LogRecord>, GeotabDateTimeProviderComparer<LogRecord>>()
+                        .AddTransient<IGeotabDateTimeProviderComparer<StatusData>, GeotabDateTimeProviderComparer<StatusData>>()
+
                         // Geotab Object to Database Entity Mappers:
                         .AddTransient<IGeotabBinaryDataDbBinaryDataObjectMapper, GeotabBinaryDataDbBinaryDataObjectMapper>()
                         .AddTransient<IGeotabChargeEventDbChargeEventObjectMapper, GeotabChargeEventDbChargeEventObjectMapper>()

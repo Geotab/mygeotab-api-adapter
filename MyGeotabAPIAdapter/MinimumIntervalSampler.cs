@@ -23,6 +23,8 @@ namespace MyGeotabAPIAdapter
         const string WildcardString = "*";
 
         readonly IAdapterConfiguration adapterConfiguration;
+        readonly IGeotabDateTimeProviderComparer<LogRecord> logRecordDateTimeComparer;
+        readonly IGeotabDateTimeProviderComparer<StatusData> statusDataDateTimeComparer;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -36,12 +38,14 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Initializes a new instance of the <see cref="MinimumIntervalSampler"/> class.
         /// </summary>
-        public MinimumIntervalSampler(IAdapterConfiguration adapterConfiguration, IMyGeotabAPIHelper myGeotabAPIHelper)
+        public MinimumIntervalSampler(IAdapterConfiguration adapterConfiguration, IGeotabDateTimeProviderComparer<LogRecord> logRecordDateTimeComparer, IGeotabDateTimeProviderComparer<StatusData> statusDataDateTimeComparer, IMyGeotabAPIHelper myGeotabAPIHelper)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             this.adapterConfiguration = adapterConfiguration;
+            this.logRecordDateTimeComparer = logRecordDateTimeComparer;
+            this.statusDataDateTimeComparer = statusDataDateTimeComparer;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
 
             minimumIntervalSamplingDiagnosticIds = new HashSet<string>(adapterConfiguration.MinimumIntervalSamplingDiagnosticsList.Split(','));
@@ -88,7 +92,22 @@ namespace MyGeotabAPIAdapter
                     throw new Exception(errorMessage);
             }
 
-            // Since minimum interval sampling is configured, iterate through the entitiesToBeFiltered and apply minimum interval sampling.
+            // Minimum interval sampling is configured. First, sort the entitiesToBeFiltered by DateTime.
+            switch (entityTypeName)
+            {
+                case nameof(LogRecord):
+                    entitiesToBeFiltered.Sort((IComparer<T>)logRecordDateTimeComparer);
+                    break;
+                case nameof(StatusData):
+                    entitiesToBeFiltered.Sort((IComparer<T>)statusDataDateTimeComparer);
+                    break;
+                default:
+                    errorMessage = $"The entity type '{entityTypeName}' is not supported by the '{methodBase.ReflectedType.Name}' method.";
+                    logger.Error(errorMessage);
+                    throw new Exception(errorMessage);
+            }
+
+            // Iterate through the sorted entitiesToBeFiltered and apply minimum interval sampling.
             foreach (var entityToBeEvaluated in entitiesToBeFiltered)
             {
                 // Build the key for use with the sampleIntervalTrackingDictionary.
@@ -130,6 +149,12 @@ namespace MyGeotabAPIAdapter
 
                 // Determine if the entityToBeEvaluated should be kept.
                 if (entityToBeEvaluatedDateTime > previouslySampledDateTime.AddSeconds(adapterConfiguration.MinimumIntervalSamplingIntervalSeconds))
+                {
+                    // The entityToBeEvaluated should be kept. Update the sampleIntervalTrackingDictionary.
+                    sampleIntervalTrackingDictionary.AddOrUpdate(sampleIntervalTrackingKey, entityToBeEvaluatedDateTime, (key, oldValue) => entityToBeEvaluatedDateTime);
+                    filteredEntities.Add(entityToBeEvaluated);
+                }
+                else if (entityToBeEvaluatedDateTime < previouslySampledDateTime)
                 {
                     // The entityToBeEvaluated should be kept. Update the sampleIntervalTrackingDictionary.
                     sampleIntervalTrackingDictionary.AddOrUpdate(sampleIntervalTrackingKey, entityToBeEvaluatedDateTime, (key, oldValue) => entityToBeEvaluatedDateTime);

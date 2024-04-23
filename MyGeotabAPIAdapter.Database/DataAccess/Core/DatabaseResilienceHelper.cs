@@ -18,6 +18,11 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         public static string CommandAlreadyInProgressString { get => "command is already in progress"; }
 
         /// <summary>
+        /// "Connection is busy"
+        /// </summary>
+        public static string ConnectionIsBusyString { get => "connection is busy"; }
+
+        /// <summary>
         /// "chosen as the deadlock victim"
         /// </summary>
         public static string DeadlockString { get => "chosen as the deadlock victim"; }
@@ -106,7 +111,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
         /// <summary>
         /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains:
-        /// <see cref="DeadlockString"/>, <see cref="ErrorOccurredWhileGettingOpenConnectionString"/>, <see cref="ErrorOccurredWhileGettingOpenPostgreSQLConnectionString"/>, <see cref="SqlTransactionCompletedNoLongerUsableString"/>, <see cref="TimeoutString"/>, <see cref="CommandAlreadyInProgressString"/>, or <see cref="TimeoutString2"/>.
+        /// <see cref="DeadlockString"/>, <see cref="ErrorOccurredWhileGettingOpenConnectionString"/>, <see cref="ErrorOccurredWhileGettingOpenPostgreSQLConnectionString"/>, <see cref="SqlTransactionCompletedNoLongerUsableString"/>, <see cref="TimeoutString"/>, <see cref="CommandAlreadyInProgressString"/>, <see cref="ConnectionIsBusyString"/>, or <see cref="TimeoutString2"/>.
         /// </summary>
         /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy. Note - only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains one of the strings noted in the summary will be handled.</typeparam>
         /// <param name="logger">The logger to be used for logging any exception and retry-related information.</param>
@@ -128,6 +133,8 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     exception.Message.ToLower().Contains(TimeoutString2))
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(CommandAlreadyInProgressString))
+                .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(ConnectionIsBusyString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(DeadlockString))
                 .OrInner<TException>(exception =>
@@ -142,6 +149,8 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     exception.Message.ToLower().Contains(TimeoutString2))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(CommandAlreadyInProgressString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(ConnectionIsBusyString))
                 .WaitAndRetryAsync(
                     retryCount: maxRetries,
                     sleepDurationProvider: (retryAttempt) =>
