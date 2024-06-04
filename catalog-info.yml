@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: geotab
+  description: Geotab Integration
+spec:
+  owner: TBD
+---
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: mygeotab-api-adapter
+  description: My Geotab API Adapter Repo
