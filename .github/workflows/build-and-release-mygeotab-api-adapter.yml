@@ -1,0 +1,50 @@
+name: Build and Release My Geotab API Adapter On Merge
+
+concurrency:
+  group: mygeotab-api-adapter-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: read
+
+# This tells github when we want our pipeline to be triggered.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-and-release-mygeotab-api-adapter.yml"
+      - "MyGeotabAPIAdapter**"
+      - "!DeployToAzure"
+      - "!**/catalog-info.yaml"
+  pull_request:
+    branches:
+      - main
+    paths:
+    - ".github/workflows/build-and-release-mygeotab-api-adapter.yml"
+    - "MyGeotabAPIAdapter**"
+    - "!DeployToAzure"
+    - "!**/catalog-info.yaml"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      # build and package your app
+      - name: Build and package
+        run: |
+          dotnet restore
+          dotnet publish -c Release -o dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist          # this name is used as the "artifact-name" attribute for our create-release action
+          path: ./dist # the path to the package generated in the previous stage
+
+      # Run this create-release action like this:
+      - name: create release
+        uses: eroad/github-actions-pipelines/actions/dist/create-release@v6.0
+        with:
+          artifact_name: dist # this come from the name of the uploaded artifact
