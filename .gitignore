@@ -117,3 +117,4 @@
 /MyGeotabAPIAdapter.Logging/bin/Release/net8.0
 /MyGeotabAPIAdapter.MyGeotabAPI/bin/Release/net8.0
 /MyGeotabAPIAdapter.Tests/bin/Release/net8.0
+.env
