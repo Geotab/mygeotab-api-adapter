@@ -5,14 +5,14 @@ The MyGeotab API Adapter solution serves as both an example of proper integratio
 - A good overview can be found in the [MyGeotab API Adapter](https://docs.google.com/presentation/d/1PhsDhZwj23i2oWXrqZozf4h0svUEHZLnFXtzMYyk4kQ/edit?usp=sharing) presentation.
 - For detailed information, refer to the [MyGeotab API Adapter - Solution and Implementation Guide](https://docs.google.com/document/d/12TIgTCuWVF_AYc3evsIms9VOecc1NT4P9Kn-eVg-H7k/edit?usp=sharing).
 - Developers seeking to learn about the API Adapter source code and database may find the [MyGeotab API Adapter - Developer Overview](https://docs.google.com/presentation/d/1agH1x6EYRjNDemzoLixPwPpakwxepAhEJSrktZ5ek_Y/edit?usp=sharing) presentation helpful.
-- Is there a Geotab entity type that you would like to add to the API Adapter? Please refer to the [MyGeotab API Adapter — How to Add a Data Feed](https://docs.google.com/document/d/10sGCVsJgYxr7UBxY7lPrDOy4jPzW-bzNEnVfqDVEfBs/edit?usp=sharing) guide for step-by-step instructions.
+- Is there a Geotab entity type that you would like to add to the API Adapter? Please refer to the [MyGeotab API Adapter - How to Add a Data Feed](https://docs.google.com/document/d/10sGCVsJgYxr7UBxY7lPrDOy4jPzW-bzNEnVfqDVEfBs/edit?usp=sharing) guide for step-by-step instructions.
 - Want to access the above materials, but don't have a Gmail address or aren't permitted to use one? No problem - you can [create a Google account without using Gmail](https://accounts.google.com/signup/v2/webcreateaccount?flowName=GlifWebSignIn&flowEntry=SignUp&nogm=true).
 
 ## Data Optimizer - Taking the Adapter to the Next Level!
 
 As detailed in the [Database Maintenance](https://docs.google.com/document/d/12TIgTCuWVF_AYc3evsIms9VOecc1NT4P9Kn-eVg-H7k/edit#heading=h.ki9kegy47bi5) section of main guide, the adapter database has been designed as a staging database, serving as an intermediary between the Geotab platform and the final repository where the extracted data will ultimately be stored for further processing and consumption by downstream applications.
 
-The **Data Optimizer** is a second application that takes the adapter solution to the next level, following the [Suggested Strategy](https://docs.google.com/document/d/12TIgTCuWVF_AYc3evsIms9VOecc1NT4P9Kn-eVg-H7k/edit#heading=h.aqakdi5gf7v6) outlined in the main guide. It migrates data from the adapter database into an “optimizer database” which can then be queried directly by applications. The Data Optimizer includes additional services that enhance the data and overcome certain challenges such as linking data points with different timestamps from different tables. For example, the StatusData and FaultData tables have added Latitude, Longitude, Speed, Bearing and Direction columns that can optionally be populated using LogRecords and interpolation techniques.
+The **Data Optimizer** is a second application that takes the adapter solution to the next level, following the [Suggested Strategy](https://docs.google.com/document/d/12TIgTCuWVF_AYc3evsIms9VOecc1NT4P9Kn-eVg-H7k/edit#heading=h.aqakdi5gf7v6) outlined in the main guide. It migrates data from the adapter database into an "optimizer database" which can then be queried directly by applications. The Data Optimizer includes additional services that enhance the data and overcome certain challenges such as linking data points with different timestamps from different tables. For example, the StatusData and FaultData tables have added Latitude, Longitude, Speed, Bearing and Direction columns that can optionally be populated using LogRecords and interpolation techniques.
 
 Full details pertaining to the Data Optimizer can be found in the [MyGeotab API Adapter and Data Optimizer](https://docs.google.com/presentation/d/1PC9Wm73EwuLgBQwxXnH4oiIY5JtfxQAUQTkqdHeDUlA/edit?usp=sharing) presentation and the [MyGeotab API Adapter - Data Optimizer - Solution and Implementation Guide](https://docs.google.com/document/d/1t8AunsFvW7NZtXaQ_9Q85qi5dR1GTfVVTYIcwXoRG1E/edit?usp=sharing). Additional information realted to using and expanding on the Data Optimizer can be found in the [MyGeotab API Adapter - Expanding on the Data Optimizer](https://docs.google.com/presentation/d/1Srs6eJtUT9CoD62t2L5ZoVVpKGAbK9ngj1gxPc_FX0o/edit?usp=sharing) presentation.
 
@@ -30,7 +30,7 @@ The solution requires:
 	- Npgsql
 	- Oracle.ManagedDataAccess.Core
 	- Polly
-- MyGeotab credentials with all “View” clearances enabled on any MyGeotab database with which the MyGeotab API Adapter is to be used. It is recommended that a Service Account be set-up for this purpose. See the [Service Account Guidelines](https://docs.google.com/document/d/1KXJY3S6xyTjp9-qLgxo4PTedQjEuxrqKDlVWgfcC_lc/edit#heading=h.flbpi6nh4xjx) document for more details.
+- MyGeotab credentials with all "View" clearances enabled on any MyGeotab database with which the MyGeotab API Adapter is to be used. It is recommended that a Service Account be set-up for this purpose. See the [Service Account Guidelines](https://docs.google.com/document/d/1KXJY3S6xyTjp9-qLgxo4PTedQjEuxrqKDlVWgfcC_lc/edit#heading=h.flbpi6nh4xjx) document for more details.
 - If **PostgreSQL** is the chosen database provider, access to a PostgreSQL 16 (or greater) server on which the adapter database is deployed.
 	- If the adapter and database will reside on separate servers, it may be necessary to ensure that appropriate security and networking steps are undertaken to ensure the ability of the adapter to interact with the database.
 	- Although not a strict requirement, it is recommended to have access to a tool such as [pgAdmin](https://www.pgadmin.org/) to view data that the adapter writes to the database.
@@ -46,6 +46,94 @@ The [MyGeotab API Adapter](https://docs.google.com/presentation/d/1PhsDhZwj23i2o
 ```shell
 > git clone https://github.com/Geotab/mygeotab-api-adapter.git mygeotab-api-adapter
 ```
+
+## Using with Docker
+
+> **âš ï¸ Important Note**: The SQL Server Docker container included in this compose file is using Microsoft's SQL Server Developer Edition, which is not licensed for production use. For production deployments, you should:
+> - Use an existing SQL Server instance
+> - Follow Microsoft's [SQL Server licensing guidelines](https://www.microsoft.com/en-us/sql-server/sql-server-2022-pricing)
+> - Update the connection string to point to your production database
+
+The adapter can be run using Docker and Docker Compose, which is especially useful for local development on MacOS or Linux systems.
+
+### Quick Start
+```shell
+# Clone the repository
+git clone https://github.com/Geotab/mygeotab-api-adapter.git
+cd mygeotab-api-adapter
+
+# Copy and configure environment variables
+cp .env.example .env
+# Edit .env with your settings
+vim .env
+
+# Start the services
+docker compose up -d
+```
+
+### Environment Configuration
+
+There are two ways to override application settings:
+
+1. **Using Environment Variables in docker-compose.yml**:
+```yaml
+services:
+  mygeotab-adapter:
+    environment:
+      - DatabaseSettings__DatabaseProviderType=SQLServer
+      - DatabaseSettings__DatabaseConnectionString=Server=db;Database=geotabadapterdb;User Id=geotabadapter_client;Password=${DB_PASSWORD}
+      - LoginSettings__MyGeotabServer=${GEOTAB_SERVER}
+```
+
+2. **Using a Custom appsettings.json**:
+```yaml
+services:
+  mygeotab-adapter:
+    volumes:
+      - ./appsettings.Production.json:/app/appsettings.Production.json
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+```
+
+### Useful Docker Commands
+
+```shell
+# Start services
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop services
+docker compose down
+
+# Rebuild and restart services
+docker compose up -d --build
+
+# Remove volumes (to reset database)
+docker compose down -v
+
+# Check service status
+docker compose ps
+
+# Execute command in container
+docker compose exec mygeotab-optimizer sh
+```
+
+### Database Access
+- SQL Server runs on `localhost:1433`
+- Default credentials are set in `.env` file
+- Connection string format: `Server=localhost;Database=geotabadapterdb;User Id=geotabadapter_client;Password=your_password`
+
+### Configuration Precedence
+1. Environment variables (highest priority)
+2. appsettings.{Environment}.json
+3. appsettings.json (lowest priority)
+
+### Common Issues
+- If database fails to initialize, check the logs: `docker compose logs db`
+- For permission issues: `chmod +x MyGeotabAPIAdapter/SQLServer/init.sh`
+- To reset everything: `docker compose down -v && docker compose up -d`
 
 # Deploy to Azure
 
