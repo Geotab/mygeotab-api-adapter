@@ -15,5 +15,12 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
         /// <param name="zoneTypes">The list of <see cref="ZoneType"/> objects whose Ids are to be included in the output JSON array.</param>
         /// <returns></returns>
         string GetZoneTypeIdsJSON(IList<ZoneType> zoneTypes);
+
+        /// <summary>
+        /// Builds a JSON array containing the Ids of the <paramref name="zoneGroups"/>.
+        /// </summary>
+        /// <param name="zoneGroups">The list of <see cref="Group"/> objects whose Ids are to be included in the output JSON array.</param>
+        /// <returns></returns>
+        string GetZoneGroupsJSON(IList<Group> zoneGroups);
     }
 }

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace MyGeotabAPIAdapter.Tests
 {
-    public class ValidateAdapterMachineNameTestData : TheoryData<IAdapterEnvironment, List<DbOServiceTracking>, AdapterService, bool>
+    public class ValidateAdapterMachineNameTestData : TheoryData<IAdapterEnvironment<DbOServiceTracking>, List<DbOServiceTracking>, AdapterService, bool>
     {
         public ValidateAdapterMachineNameTestData()
         {
@@ -39,7 +39,7 @@ namespace MyGeotabAPIAdapter.Tests
         }
     }
 
-    public class ValidateAdapterVersionTestData : TheoryData<IAdapterEnvironment, List<DbOServiceTracking>, AdapterService, bool>
+    public class ValidateAdapterVersionTestData : TheoryData<IAdapterEnvironment<DbOServiceTracking>, List<DbOServiceTracking>, AdapterService, bool>
     {
         public ValidateAdapterVersionTestData()
         {
@@ -77,7 +77,7 @@ namespace MyGeotabAPIAdapter.Tests
         }
     }
 
-    public class ValidateAdapterVersionTestData2 : TheoryData<IAdapterEnvironment, List<DbOServiceTracking>, AdapterService, bool>
+    public class ValidateAdapterVersionTestData2 : TheoryData<IAdapterEnvironment<DbOServiceTracking>, List<DbOServiceTracking>, AdapterService, bool>
     {
         public ValidateAdapterVersionTestData2()
         {
@@ -101,9 +101,9 @@ namespace MyGeotabAPIAdapter.Tests
     {
         [Theory]
         [ClassData(typeof(ValidateAdapterMachineNameTestData))]
-        public void ValidateAdapterMachineNameTests(IAdapterEnvironment optimizerEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
+        public void ValidateAdapterMachineNameTests(IAdapterEnvironment<DbOServiceTracking> optimizerEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
         {
-            var optimizerEnvironmentValidator = new AdapterEnvironmentValidator();
+            var optimizerEnvironmentValidator = new AdapterEnvironmentValidator<DbOServiceTracking>();
             var exception = Record.Exception(() => optimizerEnvironmentValidator.ValidateAdapterMachineName(optimizerEnvironment, dbOServiceTrackings, adapterService));
             if (shouldThrowException == true)
             {
@@ -117,9 +117,9 @@ namespace MyGeotabAPIAdapter.Tests
 
         [Theory]
         [ClassData(typeof(ValidateAdapterVersionTestData))]
-        public void ValidateAdapterVersionTests(IAdapterEnvironment optimizerEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
+        public void ValidateAdapterVersionTests(IAdapterEnvironment<DbOServiceTracking> optimizerEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
         {
-            var optimizerEnvironmentValidator = new AdapterEnvironmentValidator();
+            var optimizerEnvironmentValidator = new AdapterEnvironmentValidator<DbOServiceTracking>();
             var exception = Record.Exception(() => optimizerEnvironmentValidator.ValidateAdapterVersion(optimizerEnvironment, dbOServiceTrackings, adapterService));
             if (shouldThrowException == true)
             {
@@ -133,9 +133,9 @@ namespace MyGeotabAPIAdapter.Tests
 
         [Theory]
         [ClassData(typeof(ValidateAdapterVersionTestData2))]
-        public void ValidateAdapterVersionTests2(IAdapterEnvironment optimizerEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
+        public void ValidateAdapterVersionTests2(IAdapterEnvironment<DbOServiceTracking> optimizerEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
         {
-            var optimizerEnvironmentValidator = new AdapterEnvironmentValidator();
+            var optimizerEnvironmentValidator = new AdapterEnvironmentValidator<DbOServiceTracking>();
             var exception = Record.Exception(() => optimizerEnvironmentValidator.ValidateAdapterVersion(optimizerEnvironment, dbOServiceTrackings, adapterService));
             if (shouldThrowException == true)
             {

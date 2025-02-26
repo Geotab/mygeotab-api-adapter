@@ -9,9 +9,10 @@ namespace MyGeotabAPIAdapter
     /// <summary>
     /// A class for obtaining environment information related to the <see cref="MyGeotabAPIAdapter"/>. 
     /// </summary>
-    public class AdapterEnvironment : IAdapterEnvironment
+    /// <typeparam name="T">The type of <see cref="IDbOServiceTracking"/> implementation to be used.</typeparam>
+    public class AdapterEnvironment<T> : IAdapterEnvironment<T> where T : IDbOServiceTracking
     {
-        readonly IAdapterEnvironmentValidator adapterEnvironmentValidator;
+        readonly IAdapterEnvironmentValidator<T> adapterEnvironmentValidator;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <inheritdoc/>
@@ -29,23 +30,19 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Initializes a new instance of the <see cref="AdapterEnvironment"/> class.
         /// </summary>
-        public AdapterEnvironment(IAdapterEnvironmentValidator adapterEnvironmentValidator)
+        public AdapterEnvironment(IAdapterEnvironmentValidator<T> adapterEnvironmentValidator)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-                        
             this.adapterEnvironmentValidator = adapterEnvironmentValidator;
             AdapterAssemblyName = GetType().Assembly.GetName().Name;
             AdapterMachineName = Environment.MachineName;
             AdapterVersion = GetType().Assembly.GetName().Version;
 
             Id = Guid.NewGuid().ToString();
-            logger.Debug($"{nameof(AdapterEnvironment)} [Id: {Id}] created.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            logger.Debug($"{nameof(AdapterEnvironment<T>)} [Id: {Id}] created.");
         }
 
         /// <inheritdoc/>
-        public void ValidateAdapterEnvironment(List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool disableMachineNameValidation)
+        public void ValidateAdapterEnvironment(List<T> dbOServiceTrackings, AdapterService adapterService, bool disableMachineNameValidation)
         {
             adapterEnvironmentValidator.ValidateAdapterVersion(this, dbOServiceTrackings, adapterService);
             if (disableMachineNameValidation == false)

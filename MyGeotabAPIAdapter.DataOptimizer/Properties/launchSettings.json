@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MyGeotabAPIAdapter.DataOptimizer": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

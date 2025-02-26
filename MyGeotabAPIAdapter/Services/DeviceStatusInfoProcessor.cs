@@ -37,7 +37,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
 
         readonly IAdapterConfiguration adapterConfiguration;
-        readonly IAdapterEnvironment adapterEnvironment;
+        readonly IAdapterEnvironment<DbOServiceTracking> adapterEnvironment;
         readonly IExceptionHelper exceptionHelper;
         readonly IGenericGenericDbObjectCache<DbDeviceStatusInfo, AdapterGenericDbObjectCache<DbDeviceStatusInfo>> dbDeviceStatusInfoObjectCache;
         readonly IGenericEntityPersister<DbDeviceStatusInfo> dbDeviceStatusInfoEntityPersister;
@@ -45,9 +45,9 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
         readonly IGeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper geotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
-        readonly IPrerequisiteServiceChecker prerequisiteServiceChecker;
-        readonly IServiceTracker serviceTracker;
-        readonly IStateMachine stateMachine;
+        readonly IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker;
+        readonly IServiceTracker<DbOServiceTracking> serviceTracker;
+        readonly IStateMachine<DbMyGeotabVersionInfo> stateMachine;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -55,11 +55,8 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="DeviceStatusInfoProcessor"/> class.
         /// </summary>
-        public DeviceStatusInfoProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbDeviceStatusInfo, AdapterGenericDbObjectCache<DbDeviceStatusInfo>> dbDeviceStatusInfoObjectCache, IGenericEntityPersister<DbDeviceStatusInfo> dbDeviceStatusInfoEntityPersister, IGenericGeotabObjectFeeder<DeviceStatusInfo> deviceStatusInfoGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper geotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DeviceStatusInfoProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking> adapterEnvironment, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbDeviceStatusInfo, AdapterGenericDbObjectCache<DbDeviceStatusInfo>> dbDeviceStatusInfoObjectCache, IGenericEntityPersister<DbDeviceStatusInfo> dbDeviceStatusInfoEntityPersister, IGenericGeotabObjectFeeder<DeviceStatusInfo> deviceStatusInfoGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper geotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker, IServiceTracker<DbOServiceTracking> serviceTracker, IStateMachine<DbMyGeotabVersionInfo> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
             this.exceptionHelper = exceptionHelper;
@@ -78,8 +75,6 @@ namespace MyGeotabAPIAdapter.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -90,7 +85,6 @@ namespace MyGeotabAPIAdapter.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -135,7 +129,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned DeviceStatusInfos.
                         var deviceStatusInfos = deviceStatusInfoGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbDeviceStatusInfosToPersist = new List<DbDeviceStatusInfo>();
-                        if (deviceStatusInfos.Count > 0)
+                        if (deviceStatusInfos.Any())
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredDeviceStatusInfos = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, deviceStatusInfos);
@@ -184,7 +178,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbDeviceStatusInfoEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDeviceStatusInfosToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbDeviceStatusInfosToPersist.Count > 0)
+                                    if (dbDeviceStatusInfosToPersist.Any())
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DeviceStatusInfoProcessor, deviceStatusInfoGeotabObjectFeeder.LastFeedRetrievalTimeUtc, deviceStatusInfoGeotabObjectFeeder.LastFeedVersion);
                                     }
@@ -207,7 +201,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // If any DbDeviceStatusInfos were added or updated, force the DbDeviceStatusInfo cache to be updated so that the changes are immediately available to other consumers.
-                        if (dbDeviceStatusInfosToPersist.Count > 0)
+                        if (dbDeviceStatusInfosToPersist.Any())
                         {
                             await dbDeviceStatusInfoObjectCache.UpdateAsync(true);
                         }
@@ -246,8 +240,6 @@ namespace MyGeotabAPIAdapter.Services
                     await Task.Delay(delayTimeSpan, stoppingToken);
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -281,9 +273,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task InitializeOrUpdateCachesAsync(CancellationTokenSource cancellationTokenSource)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbObjectCacheInitializationAndUpdateTasks = new List<Task>();
 
             // Update the in-memory cache of database objects that correspond with Geotab objects.
@@ -293,8 +282,6 @@ namespace MyGeotabAPIAdapter.Services
             }
 
             await Task.WhenAll(dbObjectCacheInitializationAndUpdateTasks);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -304,9 +291,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
             adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.DeviceStatusInfoProcessor, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
@@ -328,7 +312,7 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.EnableDeviceStatusInfoFeed == true)
+            if (adapterConfiguration.UseDataModel2 == false && adapterConfiguration.EnableDeviceStatusInfoFeed == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -346,9 +330,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
         }
@@ -360,9 +341,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task WaitForPrerequisiteServicesIfNeededAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var prerequisiteServices = new List<AdapterService>
             {
                 AdapterService.DeviceProcessor,
@@ -370,8 +348,6 @@ namespace MyGeotabAPIAdapter.Services
             };
 
             await prerequisiteServiceChecker.WaitForPrerequisiteServicesIfNeededAsync(CurrentClassName, prerequisiteServices, cancellationToken);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

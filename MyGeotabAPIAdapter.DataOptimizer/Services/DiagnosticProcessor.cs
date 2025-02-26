@@ -66,9 +66,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// </summary>
         public DiagnosticProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IStateMachine stateMachine, IDataOptimizerDatabaseConnectionInfoContainer connectionInfoContainer, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IProcessorTracker processorTracker, IDbDiagnosticDbDiagnosticIdTEntityMapper dbDiagnosticDbDiagnosticIdTEntityMapper, IDbDiagnosticDbDiagnosticTEntityMapper dbDiagnosticDbDiagnosticTEntityMapper, IGenericEntityPersister<DbDiagnosticIdT> dbDiagnosticIdTEntityPersister, IGenericEntityPersister<DbDiagnosticT> dbDiagnosticTEntityPersister, IGenericGenericDbObjectCache<DbDiagnostic, AdapterGenericDbObjectCache<DbDiagnostic>> dbDiagnosticObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT> dbDiagnosticIdTObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext, IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> optimizerContext)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.dataOptimizerConfiguration = dataOptimizerConfiguration;
             this.optimizerDatabaseObjectNames = optimizerDatabaseObjectNames;
             this.adapterDatabaseObjectNames = adapterDatabaseObjectNames;
@@ -96,8 +93,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -108,7 +103,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -177,7 +171,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
                                 foreach (var changedDbDiagnostic in changedDbDiagnostics)
                                 {
                                     // Try to get the DbDiagnosticT that corresponds with the DbDiagnostic based on matching the GeotabGUID.
-                                    var dbDiagnosticT = await dbDiagnosticTObjectCache.GetObjectByGeotabGUIDAsync(changedDbDiagnostic.GeotabGUID);
+                                    var dbDiagnosticT = await dbDiagnosticTObjectCache.GetObjectByGeotabGUIDAsync(changedDbDiagnostic.GeotabGUIDString);
                                     if (dbDiagnosticT == null)
                                     {
                                         // The DbDiagnosticT doesn't yet exist. Create a new one along with a corresponding DbDiagnosticIdT.
@@ -196,7 +190,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
                                         dbDiagnosticTsToPersist.Add(dbDiagnosticT);
 
                                         // Check to see whether the Diagnostic Id has changed and, if so, add a new DbDiagnosticIdT.
-                                        var dbDiagnosticIdTs = await dbDiagnosticIdTObjectCache.GetObjectsAsync(changedDbDiagnostic.GeotabGUID, changedDbDiagnostic.GeotabId);
+                                        var dbDiagnosticIdTs = await dbDiagnosticIdTObjectCache.GetObjectsAsync(changedDbDiagnostic.GeotabGUIDString, changedDbDiagnostic.GeotabId);
                                         if (dbDiagnosticIdTs.Any() == false)
                                         {
                                             var dbDiagnosticIdT = dbDiagnosticDbDiagnosticIdTEntityMapper.CreateEntity(changedDbDiagnostic);
@@ -312,8 +306,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
                     HandleException(ex, NLogLogLevelName.Fatal, DefaultErrorMessagePrefix);
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -347,9 +339,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         async Task InitializeOrUpdateCachesAsync(CancellationTokenSource cancellationTokenSource)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             // Initialize object caches. Run tasks in parallel.
             var dbObjectCacheInitializationAndUpdateTasks = new List<Task>();
 
@@ -367,8 +356,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
             }
 
             await Task.WhenAll(dbObjectCacheInitializationAndUpdateTasks);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -378,9 +365,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbOProcessorTrackings = await processorTracker.GetDbOProcessorTrackingListAsync();
             optimizerEnvironment.ValidateOptimizerEnvironment(dbOProcessorTrackings, DataOptimizerProcessor.DiagnosticProcessor, dataOptimizerConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
@@ -420,9 +404,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
         }
@@ -434,16 +415,11 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         public async Task WaitForPrerequisiteProcessorsIfNeededAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var prerequisiteProcessors = new List<DataOptimizerProcessor>
             {
             };
 
             await prerequisiteProcessorChecker.WaitForPrerequisiteProcessorsIfNeededAsync(CurrentClassName, prerequisiteProcessors, cancellationToken);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

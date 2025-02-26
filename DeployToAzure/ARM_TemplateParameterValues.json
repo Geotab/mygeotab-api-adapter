@@ -35,6 +35,9 @@
     "sqlAdminPassword": {
       "value": "<sql server admin password>"
     },
+    "sqlUseDataModel2": {
+      "value": "false"
+    },
     "sqlDatabaseName": {
       "value": "geotabadapterdb"
     },

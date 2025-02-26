@@ -5,7 +5,7 @@ using System;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("MyGeotabVersionInfo")]
-    public class DbMyGeotabVersionInfo : IDbEntity
+    public class DbMyGeotabVersionInfo : IDbMyGeotabVersionInfo
     {
         /// <inheritdoc/>
         [Write(false)]

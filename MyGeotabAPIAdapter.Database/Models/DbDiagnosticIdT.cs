@@ -20,7 +20,9 @@ namespace MyGeotabAPIAdapter.Database.Models
 
         [Key]
         public long id { get; set; }
-        public string GeotabGUID { get; set; }
+        [Write(false)]
+        public Guid? GeotabGUID { get; set; }
+        public string GeotabGUIDString { get; set; }
         public string GeotabId { get; set; }
         public bool HasShimId { get; set; }
         public string FormerShimGeotabGUID { get; set; }

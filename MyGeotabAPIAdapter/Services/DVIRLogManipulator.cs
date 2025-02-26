@@ -36,15 +36,15 @@ namespace MyGeotabAPIAdapter
 
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IAdapterDatabaseObjectNames adapterDatabaseObjectNames;
-        readonly IAdapterEnvironment adapterEnvironment;
+        readonly IAdapterEnvironment<DbOServiceTracking> adapterEnvironment;
         readonly IDbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper dbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper;
         readonly IExceptionHelper exceptionHelper;
         readonly IGenericEntityPersister<DbDVIRDefectUpdate> dbDVIRDefectUpdateEntityPersister;
         readonly IGenericEntityPersister<DbFailedDVIRDefectUpdate> dbFailedDVIRDefectUpdateEntityPersister;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
-        readonly IPrerequisiteServiceChecker prerequisiteServiceChecker;
-        readonly IServiceTracker serviceTracker;
-        readonly IStateMachine stateMachine;
+        readonly IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker;
+        readonly IServiceTracker<DbOServiceTracking> serviceTracker;
+        readonly IStateMachine<DbMyGeotabVersionInfo> stateMachine;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -59,11 +59,8 @@ namespace MyGeotabAPIAdapter
         /// <summary>
         /// Instantiates a new instance of the <see cref="DVIRLogManipulator"/> class.
         /// </summary>
-        public DVIRLogManipulator(IAdapterConfiguration adapterConfiguration, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IAdapterEnvironment adapterEnvironment, IDbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper dbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbDVIRDefectUpdate> dbDVIRDefectUpdateEntityPersister, IGenericEntityPersister<DbFailedDVIRDefectUpdate> dbFailedDVIRDefectUpdateEntityPersister, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DVIRLogManipulator(IAdapterConfiguration adapterConfiguration, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IAdapterEnvironment<DbOServiceTracking> adapterEnvironment, IDbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper dbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbDVIRDefectUpdate> dbDVIRDefectUpdateEntityPersister, IGenericEntityPersister<DbFailedDVIRDefectUpdate> dbFailedDVIRDefectUpdateEntityPersister, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker, IServiceTracker<DbOServiceTracking> serviceTracker, IStateMachine<DbMyGeotabVersionInfo> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.adapterDatabaseObjectNames = adapterDatabaseObjectNames;
             this.adapterEnvironment = adapterEnvironment;
@@ -84,8 +81,6 @@ namespace MyGeotabAPIAdapter
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -96,9 +91,6 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         bool AddDefectRemark(DVIRDefect dvirDefect, DbDVIRDefectUpdate dbDVIRDefectUpdate)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             // Check whether the DbDVIRDefectUpdate includes a remark to be added.
             if (dbDVIRDefectUpdate.Remark == null && dbDVIRDefectUpdate.RemarkDateTime == null && dbDVIRDefectUpdate.RemarkUserId == null)
             {
@@ -124,8 +116,6 @@ namespace MyGeotabAPIAdapter
                 dvirDefect.DefectRemarks = new List<DefectRemark>();
             }
             dvirDefect.DefectRemarks.Add(defectRemark);
-            
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return true;
         }
 
@@ -137,7 +127,6 @@ namespace MyGeotabAPIAdapter
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -361,8 +350,6 @@ namespace MyGeotabAPIAdapter
                     await Task.Delay(delayTimeSpan, stoppingToken);
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -421,9 +408,6 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
             adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.DVIRLogManipulator, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
@@ -445,7 +429,7 @@ namespace MyGeotabAPIAdapter
             }, new Context());
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.EnableDVIRLogManipulator == true)
+            if (adapterConfiguration.UseDataModel2 == false && adapterConfiguration.EnableDVIRLogManipulator == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -463,9 +447,6 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
         }
@@ -478,9 +459,6 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         bool UpdateDVIRDefectRepairStatus(DVIRDefect dvirDefect, DbDVIRDefectUpdate dbDVIRDefectUpdate)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             // Check whether the DbDVIRDefectUpdate repair status properties are populated.
             if (dbDVIRDefectUpdate.RepairDateTime == null && dbDVIRDefectUpdate.RepairStatus == null && dbDVIRDefectUpdate.RepairUserId == null)
             {
@@ -512,8 +490,6 @@ namespace MyGeotabAPIAdapter
             dvirDefect.RepairDateTime = dbDVIRDefectUpdate.RepairDateTime;
             dvirDefect.RepairStatus = updateRepairStatusType;
             dvirDefect.RepairUser = updateRepairUser;
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return true;
         }
 
@@ -524,17 +500,12 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         async Task WaitForPrerequisiteServicesIfNeededAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var prerequisiteServices = new List<AdapterService>
             {
                 AdapterService.DVIRLogProcessor
             };
 
             await prerequisiteServiceChecker.WaitForPrerequisiteServicesIfNeededAsync(CurrentClassName, prerequisiteServices, cancellationToken);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

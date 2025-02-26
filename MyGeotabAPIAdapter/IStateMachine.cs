@@ -1,4 +1,5 @@
 ﻿using MyGeotabAPIAdapter.Database.DataAccess;
+using MyGeotabAPIAdapter.Database.Models;
 using System.Threading.Tasks;
 
 namespace MyGeotabAPIAdapter
@@ -6,7 +7,8 @@ namespace MyGeotabAPIAdapter
     /// <summary>
     /// Interface for a class that helps to keep track of overall application state with respect to MyGeotab API and database connectivity.
     /// </summary>
-    interface IStateMachine
+    /// <typeparam name="T">The type of <see cref="IDbMyGeotabVersionInfo"/> implementation to be used.</typeparam>
+    interface IStateMachine<T> where T : class, IDbMyGeotabVersionInfo
     {
         /// <summary>
         /// The current <see cref="State"/> of the <see cref="StateMachine"/> instance.
@@ -43,14 +45,4 @@ namespace MyGeotabAPIAdapter
         /// <param name="stateReason"></param>
         void SetState(State state, StateReason stateReason);
     }
-
-    /// <summary>
-    /// A list of possible application states for use by the <see cref="IStateMachine"/>.
-    /// </summary>
-    public enum State { Normal, Waiting }
-
-    /// <summary>
-    /// A list of possible reasons for the current <see cref="State"/> of the <see cref="IStateMachine"/>.
-    /// </summary>
-    public enum StateReason { ApplicationNotInitialized, AdapterDatabaseNotAvailable, MyGeotabNotAvailable, NoReason }
 }

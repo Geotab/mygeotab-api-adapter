@@ -42,7 +42,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
 
         readonly IAdapterConfiguration adapterConfiguration;
-        readonly IAdapterEnvironment adapterEnvironment;
+        readonly IAdapterEnvironment<DbOServiceTracking> adapterEnvironment;
         readonly IDateTimeHelper dateTimeHelper;
         readonly IExceptionHelper exceptionHelper;
         readonly IGenericGenericDbObjectCache<DbDutyStatusAvailability, AdapterGenericDbObjectCache<DbDutyStatusAvailability>> dbDutyStatusAvailabilityObjectCache;
@@ -51,9 +51,9 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
         readonly IGeotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper geotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
-        readonly IPrerequisiteServiceChecker prerequisiteServiceChecker;
-        readonly IServiceTracker serviceTracker;
-        readonly IStateMachine stateMachine;
+        readonly IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker;
+        readonly IServiceTracker<DbOServiceTracking> serviceTracker;
+        readonly IStateMachine<DbMyGeotabVersionInfo> stateMachine;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -61,11 +61,8 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="DutyStatusAvailabilityProcessor"/> class.
         /// </summary>
-        public DutyStatusAvailabilityProcessor(IAdapterConfiguration adapterConfiguration, IDateTimeHelper dateTimeHelper, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbDutyStatusAvailability, AdapterGenericDbObjectCache<DbDutyStatusAvailability>> dbDutyStatusAvailabilityObjectCache, IGenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>> dbUserObjectCache, IGenericEntityPersister<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntityPersister, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper geotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DutyStatusAvailabilityProcessor(IAdapterConfiguration adapterConfiguration, IDateTimeHelper dateTimeHelper, IAdapterEnvironment<DbOServiceTracking> adapterEnvironment, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbDutyStatusAvailability, AdapterGenericDbObjectCache<DbDutyStatusAvailability>> dbDutyStatusAvailabilityObjectCache, IGenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>> dbUserObjectCache, IGenericEntityPersister<DbDutyStatusAvailability> dbDutyStatusAvailabilityEntityPersister, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper geotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker, IServiceTracker<DbOServiceTracking> serviceTracker, IStateMachine<DbMyGeotabVersionInfo> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.dateTimeHelper = dateTimeHelper;
             this.adapterEnvironment = adapterEnvironment;
@@ -85,8 +82,6 @@ namespace MyGeotabAPIAdapter.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -97,7 +92,6 @@ namespace MyGeotabAPIAdapter.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -163,7 +157,7 @@ namespace MyGeotabAPIAdapter.Services
                                         // Iterate through the returned DutyStatusAvailability entities.
                                         foreach (var result in results)
                                         {
-                                            if (result is List<DutyStatusAvailability> resultDutyStatusAvailabilityList && resultDutyStatusAvailabilityList.Count > 0)
+                                            if (result is List<DutyStatusAvailability> resultDutyStatusAvailabilityList && resultDutyStatusAvailabilityList.Any())
                                             {
                                                 var dutyStatusAvailability = resultDutyStatusAvailabilityList[0];
                                                 var dutyStatusAvailabilityDriver = dutyStatusAvailability.Driver;
@@ -290,8 +284,6 @@ namespace MyGeotabAPIAdapter.Services
                 logger.Info($"{CurrentClassName} pausing for the configured feed interval ({delayTimeSpan}).");
                 await Task.Delay(delayTimeSpan, stoppingToken);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -325,9 +317,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task InitializeOrUpdateCachesAsync(CancellationTokenSource cancellationTokenSource)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbObjectCacheInitializationAndUpdateTasks = new List<Task>();
 
             // Update the in-memory caches of database objects that correspond with Geotab objects.
@@ -341,8 +330,6 @@ namespace MyGeotabAPIAdapter.Services
             }
 
             await Task.WhenAll(dbObjectCacheInitializationAndUpdateTasks);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -352,9 +339,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
             adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.DutyStatusAvailabilityProcessor, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
@@ -376,7 +360,7 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.EnableDutyStatusAvailabilityFeed == true)
+            if (adapterConfiguration.UseDataModel2 == false && adapterConfiguration.EnableDutyStatusAvailabilityFeed == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -394,9 +378,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
         }
@@ -408,17 +389,12 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task WaitForPrerequisiteServicesIfNeededAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var prerequisiteServices = new List<AdapterService>
             {
                 AdapterService.UserProcessor
             };
 
             await prerequisiteServiceChecker.WaitForPrerequisiteServicesIfNeededAsync(CurrentClassName, prerequisiteServices, cancellationToken);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

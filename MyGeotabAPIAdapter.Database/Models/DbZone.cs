@@ -31,6 +31,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string CommentOracle { get => Comment; }
         public bool? Displayed { get; set; }
         public string ExternalReference { get; set; }
+        public string? Groups { get; set; }
         public bool? MustIdentifyStops { get; set; }
         public string Name { get; set; }
         public string Points { get; set; }

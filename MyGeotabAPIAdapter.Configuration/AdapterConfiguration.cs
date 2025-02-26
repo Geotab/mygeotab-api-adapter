@@ -16,6 +16,14 @@ namespace MyGeotabAPIAdapter.Configuration
         // > OverrideSetings
         const string ArgNameDisableMachineNameValidation = "OverrideSetings:DisableMachineNameValidation";
         // > DatabaseSettings
+        const string ArgNameUseDataModel2 = "DatabaseSettings:UseDataModel2";
+        const string ArgNameEnableLevel1DatabaseMaintenance = "DatabaseSettings:EnableLevel1DatabaseMaintenance";
+        const string ArgNameLevel1DatabaseMaintenanceIntervalMinutes = "DatabaseSettings:Level1DatabaseMaintenanceIntervalMinutes";
+        const string ArgNameEnableLevel2DatabaseMaintenance = "DatabaseSettings:EnableLevel2DatabaseMaintenance";
+        const string ArgNameLevel2DatabaseMaintenanceIntervalMinutes = "DatabaseSettings:Level2DatabaseMaintenanceIntervalMinutes";
+        const string ArgNameEnableLevel2DatabaseMaintenanceWindow = "DatabaseSettings:EnableLevel2DatabaseMaintenanceWindow";
+        const string ArgNameLevel2DatabaseMaintenanceWindowStartTimeUTC = "DatabaseSettings:Level2DatabaseMaintenanceWindowStartTimeUTC";
+        const string ArgNameLevel2DatabaseMaintenanceWindowMaxMinutes = "DatabaseSettings:Level2DatabaseMaintenanceWindowMaxMinutes";
         const string ArgNameDatabaseProviderType = "DatabaseSettings:DatabaseProviderType";
         const string ArgNameDatabaseConnectionString = "DatabaseSettings:DatabaseConnectionString";
         // > LoginSettings
@@ -129,6 +137,32 @@ namespace MyGeotabAPIAdapter.Configuration
         // > AppSettings:Feeds:Trip
         const string ArgNameEnableTripFeed = "AppSettings:Feeds:Trip:EnableTripFeed";
         const string ArgNameTripFeedIntervalSeconds = "AppSettings:Feeds:Trip:TripFeedIntervalSeconds";
+        // > AppSettings:DataEnhancementServices:StatusData
+        const string ArgNameEnableStatusDataLocationService = "AppSettings:DataEnhancementServices:StatusData:EnableStatusDataLocationService";
+        const string ArgNameStatusDataLocationServiceOperationMode = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServiceOperationMode";
+        const string ArgNameStatusDataLocationServiceDailyStartTimeUTC = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServiceDailyStartTimeUTC";
+        const string ArgNameStatusDataLocationServiceDailyRunTimeSeconds = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServiceDailyRunTimeSeconds";
+        const string ArgNameStatusDataLocationServiceExecutionIntervalSeconds = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServiceExecutionIntervalSeconds";
+        const string ArgNameStatusDataLocationServicePopulateSpeed = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServicePopulateSpeed";
+        const string ArgNameStatusDataLocationServicePopulateBearing = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServicePopulateBearing";
+        const string ArgNameStatusDataLocationServicePopulateDirection = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServicePopulateDirection";
+        const string ArgNameStatusDataLocationServiceNumberOfCompassDirections = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServiceNumberOfCompassDirections";
+        const string ArgNameStatusDataLocationServiceMaxDaysPerBatch = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServiceMaxDaysPerBatch";
+        const string ArgNameStatusDataLocationServiceMaxBatchSize = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServiceMaxBatchSize";
+        const string ArgNameStatusDataLocationServiceBufferMinutes = "AppSettings:DataEnhancementServices:StatusData:StatusDataLocationServiceBufferMinutes";
+        // > AppSettings:DataEnhancementServices:FaultData
+        const string ArgNameEnableFaultDataLocationService = "AppSettings:DataEnhancementServices:FaultData:EnableFaultDataLocationService";
+        const string ArgNameFaultDataLocationServiceOperationMode = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServiceOperationMode";
+        const string ArgNameFaultDataLocationServiceDailyStartTimeUTC = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServiceDailyStartTimeUTC";
+        const string ArgNameFaultDataLocationServiceDailyRunTimeSeconds = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServiceDailyRunTimeSeconds";
+        const string ArgNameFaultDataLocationServiceExecutionIntervalSeconds = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServiceExecutionIntervalSeconds";
+        const string ArgNameFaultDataLocationServicePopulateSpeed = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServicePopulateSpeed";
+        const string ArgNameFaultDataLocationServicePopulateBearing = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServicePopulateBearing";
+        const string ArgNameFaultDataLocationServicePopulateDirection = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServicePopulateDirection";
+        const string ArgNameFaultDataLocationServiceNumberOfCompassDirections = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServiceNumberOfCompassDirections";
+        const string ArgNameFaultDataLocationServiceMaxDaysPerBatch = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServiceMaxDaysPerBatch";
+        const string ArgNameFaultDataLocationServiceMaxBatchSize = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServiceMaxBatchSize";
+        const string ArgNameFaultDataLocationServiceBufferMinutes = "AppSettings:DataEnhancementServices:FaultData:FaultDataLocationServiceBufferMinutes";
         // > AppSettings:Manipulators:DVIRLog
         const string ArgNameEnableDVIRLogManipulator = "AppSettings:Manipulators:DVIRLog:EnableDVIRLogManipulator";
         const string ArgNameDVIRLogManipulatorIntervalSeconds = "AppSettings:Manipulators:DVIRLog:DVIRLogManipulatorIntervalSeconds";
@@ -153,11 +187,46 @@ namespace MyGeotabAPIAdapter.Configuration
         const int MaxSamplingIntervalSeconds = 3600; // 3600 sec = 1 hr
         const int DefaultSamplingIntervalSeconds = 300;
 
+        // Daily run time seconds limits:
+        const int MinDailyRunTimeSeconds = 300; // 300 sec = 5 mins
+        const int MaxDailyRunTimeSeconds = 82800; // 82800 sec = 23 hrs
+
         // Arbitrary timeout limits:
         const int DefaultTimeoutSeconds = 30;
         const int MinTimeoutSeconds = 10;
         const int MaxTimeoutSeconds = 10800;
-        
+
+        // Database maintenance limits:
+        const int MinDatabaseMaintenanceIntervalMinutes = 30;
+        const int MaxDatabaseMaintenanceIntervalMinutes = 43200; // 43200 min = 30 days
+        const int DefaultLevel1DatabaseMaintenanceIntervalMinutes = 30;
+        const int DefaultLevel2DatabaseMaintenanceIntervalMinutes = 1440; // 1440 min = 1 day
+        const int MinLevel2DatabaseMaintenanceWindowMinutes = 10;
+        const int MaxLevel2DatabaseMaintenanceWindowMinutes = 720; // 720 min = 12 hrs
+        const int DefaultLevel2DatabaseMaintenanceWindowMinutes = 60;
+
+        // Interpolation limits - FaultData:
+        const int MinFaultDataLocationServiceMaxDaysPerBatch = 1;
+        const int MaxFaultDataLocationServiceMaxDaysPerBatch = 10;
+        const int DefaultFaultDataLocationServiceMaxDaysPerBatch = 2;
+        const int MinFaultDataLocationServiceMaxBatchSize = 10000;
+        const int MaxFaultDataLocationServiceMaxBatchSize = 500000;
+        const int DefaultFaultDataLocationServiceMaxBatchSize = 100000;
+        const int MinFaultDataLocationServiceBufferMinutes = 10;
+        const int MaxFaultDataLocationServiceBufferMinutes = 1440; // 1440 min = 1 day
+        const int DefaultFaultDataLocationServiceBufferMinutes = 1440;
+
+        // Interpolation limits - StatusData:
+        const int MinStatusDataLocationServiceMaxDaysPerBatch = 1;
+        const int MaxStatusDataLocationServiceMaxDaysPerBatch = 10;
+        const int DefaultStatusDataLocationServiceMaxDaysPerBatch = 2;
+        const int MinStatusDataLocationServiceMaxBatchSize = 10000;
+        const int MaxStatusDataLocationServiceMaxBatchSize = 500000;
+        const int DefaultStatusDataLocationServiceMaxBatchSize = 100000;
+        const int MinStatusDataLocationServiceBufferMinutes = 10;
+        const int MaxStatusDataLocationServiceBufferMinutes = 1440; // 1440 min = 1 day
+        const int DefaultStatusDataLocationServiceBufferMinutes = 1440;
+
         /// <inheritdoc/>
         public int BinaryDataFeedIntervalSeconds { get; private set; }
 
@@ -285,7 +354,19 @@ namespace MyGeotabAPIAdapter.Configuration
         public bool EnableFaultDataFeed { get; private set; }
 
         /// <inheritdoc/>
+        public bool EnableFaultDataLocationService { get; private set; }
+
+        /// <inheritdoc/>
         public bool EnableGroupCache { get; private set; }
+
+        /// <inheritdoc/>
+        public bool EnableLevel1DatabaseMaintenance { get; private set; }
+
+        /// <inheritdoc/>
+        public bool EnableLevel2DatabaseMaintenance { get; private set; }
+
+        /// <inheritdoc/>
+        public bool EnableLevel2DatabaseMaintenanceWindow { get; private set; }
 
         /// <inheritdoc/>
         public bool EnableLogRecordFeed { get; private set; }
@@ -301,6 +382,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public bool EnableStatusDataFeed { get; private set; }
+
+        /// <inheritdoc/>
+        public bool EnableStatusDataLocationService { get; private set; }
 
         /// <inheritdoc/>
         public bool EnableTripFeed { get; private set; }
@@ -336,6 +420,39 @@ namespace MyGeotabAPIAdapter.Configuration
         public int FaultDataFeedIntervalSeconds { get; private set; }
 
         /// <inheritdoc/>
+        public int FaultDataLocationServiceBufferMinutes { get; private set; }
+
+        /// <inheritdoc/>
+        public DateTime FaultDataLocationServiceDailyStartTimeUTC { get; private set; }
+
+        /// <inheritdoc/>
+        public int FaultDataLocationServiceDailyRunTimeSeconds { get; private set; }
+
+        /// <inheritdoc/>
+        public int FaultDataLocationServiceExecutionIntervalSeconds { get; private set; }
+
+        /// <inheritdoc/>
+        public int FaultDataLocationServiceMaxBatchSize { get; private set; }
+
+        /// <inheritdoc/>
+        public int FaultDataLocationServiceMaxDaysPerBatch { get; private set; }
+
+        /// <inheritdoc/>
+        public int FaultDataLocationServiceNumberOfCompassDirections { get; private set; }
+
+        /// <inheritdoc/>
+        public OperationMode FaultDataLocationServiceOperationMode { get; private set; }
+
+        /// <inheritdoc/>
+        public bool FaultDataLocationServicePopulateBearing { get; private set; }
+
+        /// <inheritdoc/>
+        public bool FaultDataLocationServicePopulateDirection { get; private set; }
+
+        /// <inheritdoc/>
+        public bool FaultDataLocationServicePopulateSpeed { get; private set; }
+
+        /// <inheritdoc/>
         public FeedStartOption FeedStartOption { get; private set; }
 
         /// <inheritdoc/>
@@ -352,6 +469,18 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public string Id { get; private set; }
+
+        /// <inheritdoc/>
+        public int Level1DatabaseMaintenanceIntervalMinutes { get; private set; }
+
+        /// <inheritdoc/>
+        public int Level2DatabaseMaintenanceIntervalMinutes { get; private set; }
+
+        /// <inheritdoc/>
+        public int Level2DatabaseMaintenanceWindowMaxMinutes { get; private set; }
+
+        /// <inheritdoc/>
+        public DateTime Level2DatabaseMaintenanceWindowStartTimeUTC { get; private set; }
 
         /// <inheritdoc/>
         public int LogRecordFeedIntervalSeconds { get; private set; }
@@ -387,6 +516,39 @@ namespace MyGeotabAPIAdapter.Configuration
         public int StatusDataFeedIntervalSeconds { get; private set; }
 
         /// <inheritdoc/>
+        public int StatusDataLocationServiceBufferMinutes { get; private set; }
+
+        /// <inheritdoc/>
+        public DateTime StatusDataLocationServiceDailyStartTimeUTC { get; private set; }
+
+        /// <inheritdoc/>
+        public int StatusDataLocationServiceDailyRunTimeSeconds { get; private set; }
+
+        /// <inheritdoc/>
+        public int StatusDataLocationServiceExecutionIntervalSeconds { get; private set; }
+
+        /// <inheritdoc/>
+        public int StatusDataLocationServiceMaxBatchSize { get; private set; }
+
+        /// <inheritdoc/>
+        public int StatusDataLocationServiceMaxDaysPerBatch { get; private set; }
+
+        /// <inheritdoc/>
+        public int StatusDataLocationServiceNumberOfCompassDirections { get; private set; }
+
+        /// <inheritdoc/>
+        public OperationMode StatusDataLocationServiceOperationMode { get; private set; }
+
+        /// <inheritdoc/>
+        public bool StatusDataLocationServicePopulateBearing { get; private set; }
+
+        /// <inheritdoc/>
+        public bool StatusDataLocationServicePopulateDirection { get; private set; }
+
+        /// <inheritdoc/>
+        public bool StatusDataLocationServicePopulateSpeed { get; private set; }
+
+        /// <inheritdoc/>
         public int TimeoutSecondsForDatabaseTasks { get; private set; }
 
         /// <inheritdoc/>
@@ -406,6 +568,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public int UnitOfMeasureCacheUpdateIntervalMinutes { get; private set; }
+
+        /// <inheritdoc/>
+        public bool UseDataModel2 { get; private set; }
 
         /// <inheritdoc/>
         public DateTime UserCacheIntervalDailyReferenceStartTimeUTC { get; private set; }
@@ -442,22 +607,16 @@ namespace MyGeotabAPIAdapter.Configuration
         /// </summary>
         public AdapterConfiguration(IConfigurationHelper configurationHelper)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.configurationHelper = configurationHelper;
             ProcessConfigItems();
 
             Id = Guid.NewGuid().ToString();
             logger.Debug($"{nameof(AdapterConfiguration)} [Id: {Id}] created.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public void ProcessConfigItems()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
             logger.Info($"Processing configuration items.");
 
             // OverrideSetings:
@@ -467,7 +626,15 @@ namespace MyGeotabAPIAdapter.Configuration
                 logger.Warn($"WARNING: Machine name validation has been disabled. This should only be done in cases where the application is installed in hosted environments where machine names are not static. Improper use of this setting may lead to application instability and data integrity issues.");
             }
 
-            // DatabaseSettings:AdapterDatabase:
+            // DatabaseSettings:
+            UseDataModel2 = configurationHelper.GetConfigKeyValueBoolean(ArgNameUseDataModel2);
+            EnableLevel1DatabaseMaintenance = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableLevel1DatabaseMaintenance);
+            Level1DatabaseMaintenanceIntervalMinutes = configurationHelper.GetConfigKeyValueInt(ArgNameLevel1DatabaseMaintenanceIntervalMinutes, null, false, MinDatabaseMaintenanceIntervalMinutes, MaxDatabaseMaintenanceIntervalMinutes, DefaultLevel1DatabaseMaintenanceIntervalMinutes);
+            EnableLevel2DatabaseMaintenance = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableLevel2DatabaseMaintenance);
+            Level2DatabaseMaintenanceIntervalMinutes = configurationHelper.GetConfigKeyValueInt(ArgNameLevel2DatabaseMaintenanceIntervalMinutes, null, false, MinDatabaseMaintenanceIntervalMinutes, MaxDatabaseMaintenanceIntervalMinutes, DefaultLevel2DatabaseMaintenanceIntervalMinutes);
+            EnableLevel2DatabaseMaintenanceWindow = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableLevel2DatabaseMaintenanceWindow);
+            Level2DatabaseMaintenanceWindowStartTimeUTC = configurationHelper.GetConfigKeyValueDateTime(ArgNameLevel2DatabaseMaintenanceWindowStartTimeUTC);
+            Level2DatabaseMaintenanceWindowMaxMinutes = configurationHelper.GetConfigKeyValueInt(ArgNameLevel2DatabaseMaintenanceWindowMaxMinutes, null, false, MinLevel2DatabaseMaintenanceWindowMinutes, MaxLevel2DatabaseMaintenanceWindowMinutes, DefaultLevel2DatabaseMaintenanceWindowMinutes);
             DatabaseConnectionString = configurationHelper.GetConfigKeyValueString(ArgNameDatabaseConnectionString, null, true, true);
             DatabaseProviderType = configurationHelper.GetConfigKeyValueString(ArgNameDatabaseProviderType);
 
@@ -638,11 +805,75 @@ namespace MyGeotabAPIAdapter.Configuration
             EnableTripFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableTripFeed);
             TripFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameTripFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
+            // > AppSettings:DataEnhancementServices:StatusData
+            EnableStatusDataLocationService = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableStatusDataLocationService);
+            string statusDataLocationServiceOperationModeString = configurationHelper.GetConfigKeyValueString(ArgNameStatusDataLocationServiceOperationMode);
+            switch (statusDataLocationServiceOperationModeString)
+            {
+                case nameof(OperationMode.Continuous):
+                    StatusDataLocationServiceOperationMode = OperationMode.Continuous;
+                    break;
+                case nameof(OperationMode.Scheduled):
+                    StatusDataLocationServiceOperationMode = OperationMode.Scheduled;
+                    StatusDataLocationServiceDailyStartTimeUTC = configurationHelper.GetConfigKeyValueDateTime(ArgNameStatusDataLocationServiceDailyStartTimeUTC);
+                    StatusDataLocationServiceDailyRunTimeSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameStatusDataLocationServiceDailyRunTimeSeconds, null, false, MinDailyRunTimeSeconds, MaxDailyRunTimeSeconds, MinDailyRunTimeSeconds);
+                    break;
+                default:
+                    errorMessage = $"The value of '{statusDataLocationServiceOperationModeString}' provided for the '{ArgNameStatusDataLocationServiceOperationMode}' configuration item is not valid.";
+                    logger.Error(errorMessage);
+                    throw new Exception(errorMessage);
+            }
+            StatusDataLocationServiceExecutionIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameStatusDataLocationServiceExecutionIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+            StatusDataLocationServicePopulateSpeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameStatusDataLocationServicePopulateSpeed);
+            StatusDataLocationServicePopulateBearing = configurationHelper.GetConfigKeyValueBoolean(ArgNameStatusDataLocationServicePopulateBearing);
+            StatusDataLocationServicePopulateDirection = configurationHelper.GetConfigKeyValueBoolean(ArgNameStatusDataLocationServicePopulateDirection);
+            StatusDataLocationServiceNumberOfCompassDirections = configurationHelper.GetConfigKeyValueInt(ArgNameStatusDataLocationServiceNumberOfCompassDirections, null, false, 4, 16, 16);
+            if (StatusDataLocationServiceNumberOfCompassDirections != 4 && StatusDataLocationServiceNumberOfCompassDirections != 8 && StatusDataLocationServiceNumberOfCompassDirections != 16)
+            {
+                errorMessage = $"The value of '{StatusDataLocationServiceNumberOfCompassDirections}' provided for the '{ArgNameStatusDataLocationServiceNumberOfCompassDirections}' configuration item is not valid. Value must be one of 4, 8 or 16.";
+                logger.Error(errorMessage);
+                throw new Exception(errorMessage);
+            }
+            StatusDataLocationServiceMaxDaysPerBatch = configurationHelper.GetConfigKeyValueInt(ArgNameStatusDataLocationServiceMaxDaysPerBatch, null, false, MinStatusDataLocationServiceMaxDaysPerBatch, MaxStatusDataLocationServiceMaxDaysPerBatch, DefaultStatusDataLocationServiceMaxDaysPerBatch);
+            StatusDataLocationServiceMaxBatchSize = configurationHelper.GetConfigKeyValueInt(ArgNameStatusDataLocationServiceMaxBatchSize, null, false, MinStatusDataLocationServiceMaxBatchSize, MaxStatusDataLocationServiceMaxBatchSize, DefaultStatusDataLocationServiceMaxBatchSize);
+            StatusDataLocationServiceBufferMinutes = configurationHelper.GetConfigKeyValueInt(ArgNameStatusDataLocationServiceBufferMinutes, null, false, MinStatusDataLocationServiceBufferMinutes, MaxStatusDataLocationServiceBufferMinutes, DefaultStatusDataLocationServiceBufferMinutes);
+
+            // > AppSettings:DataEnhancementServices:FaultData
+            EnableFaultDataLocationService = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableFaultDataLocationService);
+            string faultDataLocationServiceOperationModeString = configurationHelper.GetConfigKeyValueString(ArgNameFaultDataLocationServiceOperationMode);
+            switch (faultDataLocationServiceOperationModeString)
+            {
+                case nameof(OperationMode.Continuous):
+                    FaultDataLocationServiceOperationMode = OperationMode.Continuous;
+                    break;
+                case nameof(OperationMode.Scheduled):
+                    FaultDataLocationServiceOperationMode = OperationMode.Scheduled;
+                    FaultDataLocationServiceDailyStartTimeUTC = configurationHelper.GetConfigKeyValueDateTime(ArgNameFaultDataLocationServiceDailyStartTimeUTC);
+                    FaultDataLocationServiceDailyRunTimeSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameFaultDataLocationServiceDailyRunTimeSeconds, null, false, MinDailyRunTimeSeconds, MaxDailyRunTimeSeconds, MinDailyRunTimeSeconds);
+                    break;
+                default:
+                    errorMessage = $"The value of '{faultDataLocationServiceOperationModeString}' provided for the '{ArgNameFaultDataLocationServiceOperationMode}' configuration item is not valid.";
+                    logger.Error(errorMessage);
+                    throw new Exception(errorMessage);
+            }
+            FaultDataLocationServiceExecutionIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameFaultDataLocationServiceExecutionIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+            FaultDataLocationServicePopulateSpeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameFaultDataLocationServicePopulateSpeed);
+            FaultDataLocationServicePopulateBearing = configurationHelper.GetConfigKeyValueBoolean(ArgNameFaultDataLocationServicePopulateBearing);
+            FaultDataLocationServicePopulateDirection = configurationHelper.GetConfigKeyValueBoolean(ArgNameFaultDataLocationServicePopulateDirection);
+            FaultDataLocationServiceNumberOfCompassDirections = configurationHelper.GetConfigKeyValueInt(ArgNameFaultDataLocationServiceNumberOfCompassDirections, null, false, 4, 16, 16);
+            if (FaultDataLocationServiceNumberOfCompassDirections != 4 && FaultDataLocationServiceNumberOfCompassDirections != 8 && FaultDataLocationServiceNumberOfCompassDirections != 16)
+            {
+                errorMessage = $"The value of '{FaultDataLocationServiceNumberOfCompassDirections}' provided for the '{ArgNameFaultDataLocationServiceNumberOfCompassDirections}' configuration item is not valid. Value must be one of 4, 8 or 16.";
+                logger.Error(errorMessage);
+                throw new Exception(errorMessage);
+            }
+            FaultDataLocationServiceMaxDaysPerBatch = configurationHelper.GetConfigKeyValueInt(ArgNameFaultDataLocationServiceMaxDaysPerBatch, null, false, MinFaultDataLocationServiceMaxDaysPerBatch, MaxFaultDataLocationServiceMaxDaysPerBatch, DefaultFaultDataLocationServiceMaxDaysPerBatch);
+            FaultDataLocationServiceMaxBatchSize = configurationHelper.GetConfigKeyValueInt(ArgNameFaultDataLocationServiceMaxBatchSize, null, false, MinFaultDataLocationServiceMaxBatchSize, MaxFaultDataLocationServiceMaxBatchSize, DefaultFaultDataLocationServiceMaxBatchSize);
+            FaultDataLocationServiceBufferMinutes = configurationHelper.GetConfigKeyValueInt(ArgNameFaultDataLocationServiceBufferMinutes, null, false, MinFaultDataLocationServiceBufferMinutes, MaxFaultDataLocationServiceBufferMinutes, DefaultFaultDataLocationServiceBufferMinutes);
+
             // AppSettings:Manipulators:DVIRLog:
             EnableDVIRLogManipulator = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableDVIRLogManipulator);
             DVIRLogManipulatorIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameDVIRLogManipulatorIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>

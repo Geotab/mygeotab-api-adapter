@@ -105,9 +105,6 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         public GenericGeotabObjectCacher(IAdapterConfiguration adapterConfiguration, IDateTimeHelper dateTimeHelper, IMyGeotabAPIHelper myGeotabAPIHelper)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.dateTimeHelper = dateTimeHelper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
@@ -115,7 +112,6 @@ namespace MyGeotabAPIAdapter
 
             Id = Guid.NewGuid().ToString();
             logger.Debug($"{nameof(GenericGeotabObjectCacher<T>)}<{typeParameterType}> [Id: {Id}] created.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
@@ -127,9 +123,6 @@ namespace MyGeotabAPIAdapter
         /// <inheritdoc/>
         public CacheOperationType GetRequiredCacheOperationType()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name} for type '{typeParameterType.Name}'");
-
             // By default, no cache operation is required, unless the following logic determines an update or refresh is needed.
             var requiredCacheOperationType = CacheOperationType.None;
 
@@ -186,18 +179,12 @@ namespace MyGeotabAPIAdapter
                     }
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name} for type '{typeParameterType.Name}'");
-
             return requiredCacheOperationType;
         }
 
         /// <inheritdoc/>
         public async Task InitializeAsync(CancellationTokenSource cancellationTokenSource, DateTime cacheIntervalDailyReferenceStartTimeUTC, int cacheUpdateIntervalMinutes, int cacheRefreshIntervalMinutes, int feedResultsLimit = DefaultFeedResultsLimit, bool useGetFeed = true)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await initializationLock.WaitAsync();
             try
             {
@@ -222,16 +209,12 @@ namespace MyGeotabAPIAdapter
             {
                 initializationLock.Release();
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public async Task UpdateGeotabObjectCacheAsync(CancellationTokenSource cancellationTokenSource)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name} for type '{typeParameterType.Name}'");
-
             await updateLock.WaitAsync();
             try
             {
@@ -319,14 +302,25 @@ namespace MyGeotabAPIAdapter
                                     }
                                 }
 
-                                // Add the object to the GeotabObjectCache.
+                                // Add or update the object in the GeotabObjectCache.
                                 if (excludeItemFromCache == false)
                                 {
-                                    if (!GeotabObjectCache.TryAdd(feedResultItem.Id, feedResultItem))
+                                    bool isNewEntry = !GeotabObjectCache.ContainsKey(feedResultItem.Id);
+
+                                    GeotabObjectCache.AddOrUpdate(
+                                        feedResultItem.Id,
+                                        feedResultItem,
+                                        (key, existingValue) => feedResultItem
+                                    );
+
+                                    if (isNewEntry == false)
                                     {
-                                        throw new Exception($"Unable to add {typeParameterType.Name} with id \"{feedResultItem.Id}\" to GeotabObjectCache.");
+                                        logger.Warn($"{typeParameterType.Name} with id \"{feedResultItem.Id}\" was already in the GeotabObjectCache and was updated.");
                                     }
-                                    cacheRecordsAdded += 1;
+                                    else
+                                    {
+                                        cacheRecordsAdded += 1;
+                                    }
                                 }
                             }
                             if (feedResult.Data.Count < FeedResultsLimit)
@@ -359,8 +353,6 @@ namespace MyGeotabAPIAdapter
             {
                 updateLock.Release();
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name} for type '{typeParameterType.Name}'");
         }
 
         /// <summary>
@@ -368,15 +360,10 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         void ValidateInitialized()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (isInitialized == false && isInternalUpdate == false)
             {
                 throw new InvalidOperationException($"The current {CurrentClassName} has not been initialized. The {nameof(InitializeAsync)} method must be called before other methods can be invoked.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>

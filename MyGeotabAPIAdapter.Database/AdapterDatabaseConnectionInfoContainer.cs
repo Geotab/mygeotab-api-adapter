@@ -23,9 +23,6 @@ namespace MyGeotabAPIAdapter.Database
         /// </summary>
         public AdapterDatabaseConnectionInfoContainer(IAdapterConfiguration adapterConfiguration, IExceptionHelper exceptionHelper)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.exceptionHelper = exceptionHelper;
 
@@ -39,8 +36,6 @@ namespace MyGeotabAPIAdapter.Database
                 exceptionHelper.LogException(ex, NLogLogLevelName.Error, $"An exception was encountered while attempting to instantiate {nameof(ConnectionInfo)} objects.");
                 throw;
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

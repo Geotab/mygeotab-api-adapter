@@ -25,22 +25,14 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// </summary>
         public PrerequisiteProcessorChecker(IMessageLogger messageLogger, IOrchestratorServiceTracker orchestratorServiceTracker, IProcessorTracker processorTracker)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.messageLogger = messageLogger;
             this.orchestratorServiceTracker = orchestratorServiceTracker;
             this.processorTracker = processorTracker;
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public async Task WaitForPrerequisiteProcessorsIfNeededAsync(string dependentProcessorClassName, List<DataOptimizerProcessor> prerequisiteProcessors, CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             // Perform initial check to see whether the Orchestrator service has been initialized.
             var orchestratorServiceInitialized = orchestratorServiceTracker.OrchestratorServiceInitialized;
 
@@ -78,8 +70,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer
 
                 cancellationToken.ThrowIfCancellationRequested();
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

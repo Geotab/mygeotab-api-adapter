@@ -29,6 +29,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string Comment { get; set; }
         [Write(false)]
         public string CommentOracle { get => Comment; }
+        public string? Groups { get; set; }
         public long? Version { get; set; }
         public int EntityStatus { get; set; }
         [ChangeTracker]

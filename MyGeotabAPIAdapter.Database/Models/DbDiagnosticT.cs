@@ -21,20 +21,24 @@ namespace MyGeotabAPIAdapter.Database.Models
 
         [Write(false)]
         public long id { get; set; }
+
+        [Write(false)]
+        public Guid? GeotabGUID { get; set; }
+
         /// <summary>
-        /// NOTE: The <see cref="GeotabId"/> property is included in the <see cref="DbDiagnosticT"/> class only to satisfy the <see cref="IIdCacheableDbEntity"/> interface. The corresponding column does not exist in the database table. The <see cref="GeotabGUID"/> property is the actual ExplicitKey for the <see cref="DbDiagnosticT"/>. If used, this property will simply relay to/from the <see cref="GeotabGUID"/> property.
+        /// NOTE: The <see cref="GeotabId"/> property is included in the <see cref="DbDiagnosticT"/> class only to satisfy the <see cref="IIdCacheableDbEntity"/> interface. The corresponding column does not exist in the database table. The <see cref="GeotabGUIDString"/> property is the actual ExplicitKey for the <see cref="DbDiagnosticT"/>. If used, this property will simply relay to/from the <see cref="GeotabGUIDString"/> property.
         /// </summary>
         [Computed]
         public string GeotabId
         {
-            get => GeotabGUID; 
+            get => GeotabGUIDString; 
             set
             {
-                GeotabGUID = value;
+                GeotabGUIDString = value;
             }
         }
         [ExplicitKey]
-        public string GeotabGUID { get; set; }
+        public string GeotabGUIDString { get; set; }
         public bool HasShimId { get; set; }
         public string FormerShimGeotabGUID { get; set; }
         public string ControllerId { get; set; }

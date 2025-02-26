@@ -73,16 +73,11 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// </summary>
         public GenericIdCache(IDateTimeHelper dateTimeHelper, OptimizerDatabaseUnitOfWorkContext context)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.dateTimeHelper = dateTimeHelper;
             this.context = context;
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
@@ -117,9 +112,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public async Task InitializeAsync(Databases database, int autoRefreshIntervalMinutes)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await initializationLock.WaitAsync();
             try
             {
@@ -132,8 +124,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
             {
                 initializationLock.Release();
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
@@ -145,9 +135,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public async Task RefreshAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             using (await asyncReaderWriterLock.WriteLockAsync())
             {
                 if (isInitialized == false)
@@ -173,8 +160,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
                 }
                 lastRefreshed = DateTime.UtcNow;
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>

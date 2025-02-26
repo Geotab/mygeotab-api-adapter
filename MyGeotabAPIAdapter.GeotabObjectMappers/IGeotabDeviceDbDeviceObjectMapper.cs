@@ -8,5 +8,11 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     /// </summary>
     public interface IGeotabDeviceDbDeviceObjectMapper : IStatusableGeotabObjectMapper<Device, DbDevice>
     {
+        /// <summary>
+        /// Builds a JSON array containing the Ids of the <paramref name="deviceGroups"/>.
+        /// </summary>
+        /// <param name="deviceGroups">The list of <see cref="Group"/> objects whose Ids are to be included in the output JSON array.</param>
+        /// <returns></returns>
+        string GetDeviceGroupsJSON(IList<Group> deviceGroups);
     }
 }

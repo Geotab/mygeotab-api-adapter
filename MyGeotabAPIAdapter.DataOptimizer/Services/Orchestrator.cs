@@ -38,9 +38,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// </summary>
         public Orchestrator(IOrchestratorServiceTracker orchestratorServiceTracker, IStateMachine stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext, IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> optimizerContext)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.orchestratorServiceTracker = orchestratorServiceTracker;
             this.stateMachine = stateMachine;
             this.adapterContext = adapterContext;
@@ -48,8 +45,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -81,9 +76,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         void PerformInitializationTasks()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             try
             {
                 // Log application start-up.
@@ -103,8 +95,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
                 logger.Error(errorMessage);
                 throw new Exception(errorMessage, ex);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -114,9 +104,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
             await base.StartAsync(cancellationToken);
         }
@@ -128,9 +115,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             orchestratorServiceTracker.OrchestratorServiceInitialized = false;
 
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
@@ -143,9 +127,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         async Task WaitForConnectivityRestorationAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Warn($"******** CONNECTIVITY LOST. REASON: '{stateMachine.Reason}'. WAITING FOR RESTORATION OF CONNECTIVITY...");
 
             while (stateMachine.CurrentState == State.Waiting)
@@ -182,8 +163,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
                     }, new Context());
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

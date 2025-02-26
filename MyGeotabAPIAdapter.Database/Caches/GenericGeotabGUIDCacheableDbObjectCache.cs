@@ -88,9 +88,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// </summary>
         public GenericGeotabGUIDCacheableDbObjectCache(IDateTimeHelper dateTimeHelper, OptimizerDatabaseUnitOfWorkContext context)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             lastUpdated = defaultDateTime;
             this.dateTimeHelper = dateTimeHelper;
 
@@ -99,8 +96,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -108,9 +103,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// </summary>
         public GenericGeotabGUIDCacheableDbObjectCache(IDateTimeHelper dateTimeHelper, OptimizerDatabaseUnitOfWorkContext context, IBaseRepository<T> testDbEntityRepo)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             lastUpdated = defaultDateTime;
             this.dateTimeHelper = dateTimeHelper;
 
@@ -118,16 +110,11 @@ namespace MyGeotabAPIAdapter.Database.Caches
             logger.Debug($"{nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {context.Id}] associated with {CurrentClassName}.");
 
             dbEntityRepo = testDbEntityRepo;
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public async Task<T?> GetObjectAsync(long id)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await UpdateAsync();
             using (await asyncReaderWriterLock.ReadLockAsync())
             {
@@ -142,9 +129,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public async Task<T?> GetObjectByGeotabGUIDAsync(string geotabGUID)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var objectId = await GetObjectIdByGeotabGUIDAsync(geotabGUID);
             if (objectId != null)
             {
@@ -157,9 +141,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public async Task<string?> GetObjectGeotabGUIDByGeotabIdAsync(string geotabId)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await UpdateAsync();
             using (await asyncReaderWriterLock.ReadLockAsync())
             {
@@ -174,9 +155,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public async Task<long?> GetObjectIdByGeotabGUIDAsync(string geotabGUID)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await UpdateAsync();
             using (await asyncReaderWriterLock.ReadLockAsync())
             {
@@ -191,9 +169,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public async Task<List<T>> GetObjectsAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await UpdateAsync();
             using (await asyncReaderWriterLock.ReadLockAsync())
             {
@@ -213,9 +188,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public async Task<List<T>> GetObjectsAsync(DateTime changedSince)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await UpdateAsync();
             using (await asyncReaderWriterLock.ReadLockAsync())
             {
@@ -238,9 +210,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public async Task<List<T>> GetObjectsAsync(string geotabGUID, string geotabId)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await UpdateAsync();
             using (await asyncReaderWriterLock.ReadLockAsync())
             {
@@ -251,7 +220,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
                 {
                     var currentKVP = objectEnumerator.Current;
                     var currentObject = currentKVP.Value;
-                    if (currentObject.GeotabGUID == geotabGUID && currentObject.GeotabId == geotabId)
+                    if (currentObject.GeotabGUIDString == geotabGUID && currentObject.GeotabId == geotabId)
                     {
                         results.Add(currentObject);
                     }
@@ -263,9 +232,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <inheritdoc/>
         public async Task InitializeAsync(Databases database)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await initializationLock.WaitAsync();
             try
             {
@@ -284,16 +250,11 @@ namespace MyGeotabAPIAdapter.Database.Caches
             {
                 initializationLock.Release();
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public async Task UpdateAsync(bool ForceUpdate = false)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             // Abort if the configured execution interval has not elapsed since the last time this method was executed AND ForceUpdate is false.
             if (!dateTimeHelper.TimeIntervalHasElapsed(lastUpdated, DateTimeIntervalType.Minutes, cacheUpdateIntervalMinutes) && !ForceUpdate)
             {
@@ -359,7 +320,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
                     }
 
                     // Add or update the dbIdFromGeotabGuidCache.
-                    _ = dbIdFromGeotabGuidCache.AddOrUpdate(dbEntity.GeotabGUID, dbEntity.id,
+                    _ = dbIdFromGeotabGuidCache.AddOrUpdate(dbEntity.GeotabGUIDString, dbEntity.id,
                         (geotabGUID, existingEntityId) =>
                         {
                             // If this delegate is invoked, then the key already exists. This would be the case when a new KnownId is assigned to a Diagnostic. If this is the case, use the higher of the two Id values since the new one will have been added to the database table later than the original one and we'd logically want to have any new data (e.g. StatusData or FaultData) tied to the newer KnownId going forward.
@@ -372,13 +333,13 @@ namespace MyGeotabAPIAdapter.Database.Caches
                         });
 
                     // Add or update to geotabGuidFromGeotabIdCache.
-                    _ = geotabGuidFromGeotabIdCache.AddOrUpdate(dbEntity.GeotabId, dbEntity.GeotabGUID,
+                    _ = geotabGuidFromGeotabIdCache.AddOrUpdate(dbEntity.GeotabId, dbEntity.GeotabGUIDString,
                         (geotabID, existingEntityGeotabGUID) =>
                         {
                             // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the geotabGuidFromGeotabIdCache that has the same GeotabId, but a different GeotabGUID.
-                            if (dbEntity.GeotabGUID != existingEntityGeotabGUID)
+                            if (dbEntity.GeotabGUIDString != existingEntityGeotabGUID)
                             {
-                                throw new ArgumentException($"A {typeof(T).Name} with GeotabId \"{dbEntity.GeotabId}\" already exists in the geotabGuidFromGeotabIdCache. Duplicates are not allowed. The existing {typeof(T).Name} has a GeotabGUID of \"{existingEntityGeotabGUID}\". The {typeof(T).Name} with the same GeotabId that cannot be added to the geotabGuidFromGeotabIdCache has a GeotabGUID of \"{dbEntity.GeotabGUID}\".");
+                                throw new ArgumentException($"A {typeof(T).Name} with GeotabId \"{dbEntity.GeotabId}\" already exists in the geotabGuidFromGeotabIdCache. Duplicates are not allowed. The existing {typeof(T).Name} has a GeotabGUID of \"{existingEntityGeotabGUID}\". The {typeof(T).Name} with the same GeotabId that cannot be added to the geotabGuidFromGeotabIdCache has a GeotabGUID of \"{dbEntity.GeotabGUIDString}\".");
                             }
                             // Nothing to do here, since the GeotabGUID is the only updatable property.
                             return existingEntityGeotabGUID;
@@ -388,8 +349,6 @@ namespace MyGeotabAPIAdapter.Database.Caches
 
             lastUpdated = DateTime.UtcNow;
             isUpdating = false;
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -397,15 +356,10 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// </summary>
         void ValidateInitialized()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (isInitialized == false)
             {
                 throw new InvalidOperationException($"The current {CurrentClassName} has not been initialized. The {nameof(InitializeAsync)} method must be called before other methods can be invoked.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

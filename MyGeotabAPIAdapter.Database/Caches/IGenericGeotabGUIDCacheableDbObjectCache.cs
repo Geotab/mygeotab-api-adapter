@@ -54,21 +54,21 @@ namespace MyGeotabAPIAdapter.Database.Caches
         /// <summary>
         /// Retrieves an object from the cache. If not found, returns <c>null</c>.
         /// </summary>
-        /// <param name="geotabGUID">The <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/> of the object to retrieve from the cache.</param>
+        /// <param name="geotabGUID">The <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUIDString"/> of the object to retrieve from the cache.</param>
         /// <returns></returns>
         Task<T?> GetObjectByGeotabGUIDAsync(string geotabGUID);
 
         /// <summary>
-        /// Retrieves the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/> of an object in the cache. If not found, returns <c>null</c>.
+        /// Retrieves the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUIDString"/> of an object in the cache. If not found, returns <c>null</c>.
         /// </summary>
-        /// <param name="geotabId">The <see cref="IGeotabGUIDCacheableDbEntity.id"/> of the object in the cache for which to return the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/>.</param>
+        /// <param name="geotabId">The <see cref="IGeotabGUIDCacheableDbEntity.id"/> of the object in the cache for which to return the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUIDString"/>.</param>
         /// <returns></returns>
         Task<string?> GetObjectGeotabGUIDByGeotabIdAsync(string geotabId);
 
         /// <summary>
         /// Retrieves the <see cref="IGeotabGUIDCacheableDbEntity.id"/> of an object in the cache. If not found, returns <c>null</c>.
         /// </summary>
-        /// <param name="geotabGUID">The <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/> of the object in the cache for which to return the <see cref="IGeotabGUIDCacheableDbEntity.id"/>.</param>
+        /// <param name="geotabGUID">The <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUIDString"/> of the object in the cache for which to return the <see cref="IGeotabGUIDCacheableDbEntity.id"/>.</param>
         /// <returns></returns>
         Task<long?> GetObjectIdByGeotabGUIDAsync(string geotabGUID);
 
@@ -86,9 +86,9 @@ namespace MyGeotabAPIAdapter.Database.Caches
         Task<List<T>> GetObjectsAsync(DateTime changedSince);
 
         /// <summary>
-        /// Retrieves a list of objects from the cache where the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/> value is equal to <paramref name="geotabGUID"/> and the <see cref="IGeotabGUIDCacheableDbEntity.GeotabId"/> value is equal to <paramref name="geotabId"/>. If no objects are found to meet this criterion, the returned list will be empty.
+        /// Retrieves a list of objects from the cache where the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUIDString"/> value is equal to <paramref name="geotabGUID"/> and the <see cref="IGeotabGUIDCacheableDbEntity.GeotabId"/> value is equal to <paramref name="geotabId"/>. If no objects are found to meet this criterion, the returned list will be empty.
         /// </summary>
-        /// <param name="geotabGUID">The value of the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUID"/> for any objects to be returned.</param>
+        /// <param name="geotabGUID">The value of the <see cref="IGeotabGUIDCacheableDbEntity.GeotabGUIDString"/> for any objects to be returned.</param>
         /// <param name="geotabId">The value of the <see cref="IGeotabGUIDCacheableDbEntity.GeotabId"/> for any objects to be returned.</param>
         /// <returns></returns>
         Task<List<T>> GetObjectsAsync(string geotabGUID, string geotabId);

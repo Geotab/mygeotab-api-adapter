@@ -18,6 +18,8 @@ using MyGeotabAPIAdapter.Database.EntityMappers;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Database.Models.Add_Ons.VSS;
+using MyGeotabAPIAdapter.DataEnhancement;
+using MyGeotabAPIAdapter.Geospatial;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
 using MyGeotabAPIAdapter.Helpers;
 using MyGeotabAPIAdapter.Logging;
@@ -25,6 +27,7 @@ using MyGeotabAPIAdapter.MyGeotabAPI;
 using MyGeotabAPIAdapter.Services;
 using NLog;
 using NLog.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MyGeotabAPIAdapter
 {
@@ -38,9 +41,12 @@ namespace MyGeotabAPIAdapter
             var logger = LogManager.GetCurrentClassLogger();
             try
             {
+                var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+
                 var config = new ConfigurationBuilder()
                     .SetBasePath(System.IO.Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                    .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
                     .Build();
 
                 CreateHostBuilder(args, config).Build().Run();
@@ -76,7 +82,10 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IDateTimeHelper, DateTimeHelper>()
                         .AddTransient<IEntityPersistenceLogger, EntityPersistenceLogger>()
                         .AddTransient<IExceptionHelper, ExceptionHelper>()
+                        .AddTransient<IGeospatialHelper, GeospatialHelper>()
+                        .AddTransient<IGeotabIdConverter, GeotabIdConverter>()
                         .AddTransient<IHttpHelper, HttpHelper>()
+                        .AddTransient<ILocationInterpolator, LocationInterpolator>()
                         .AddTransient<IMessageLogger, MessageLogger>()
                         .AddSingleton<IMyGeotabAPIHelper, MyGeotabAPIHelper>()
                         .AddTransient<IStringHelper, StringHelper>()
@@ -86,26 +95,38 @@ namespace MyGeotabAPIAdapter
                         // Models for Dependency Injection:
                         .AddTransient<DbCondition>()
                         .AddTransient<DbDevice>()
+                        .AddTransient<DbDevice2>()
                         .AddTransient<DbDeviceStatusInfo>()
                         .AddTransient<DbDiagnostic>()
+                        .AddTransient<DbDiagnostic2>()
+                        .AddTransient<DbDiagnosticId2>()
                         .AddTransient<DbDutyStatusAvailability>()
+                        .AddTransient<DbGroup>()
                         .AddTransient<DbOServiceTracking>()
+                        .AddTransient<DbOServiceTracking2>()
                         .AddTransient<DbRule>()
                         .AddTransient<DbUser>()
+                        .AddTransient<DbUser2>()
                         .AddTransient<DbZone>()
+                        .AddTransient<DbZone2>()
                         .AddTransient<DbZoneType>()
+                        .AddTransient<DbZoneType2>()
 
                         // Unit of Work:
                         .AddTransient<AdapterDatabaseUnitOfWorkContext>()
                         .AddTransient<IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>, GenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>>()
 
                         // Environment:
-                        .AddSingleton<IAdapterEnvironment, AdapterEnvironment>()
-                        .AddSingleton<IAdapterEnvironmentValidator, AdapterEnvironmentValidator>()
+                        .AddSingleton<IAdapterEnvironment<DbOServiceTracking>, AdapterEnvironment<DbOServiceTracking>>()
+                        .AddSingleton<IAdapterEnvironment<DbOServiceTracking2>, AdapterEnvironment<DbOServiceTracking2>>()
+                        .AddSingleton<IAdapterEnvironmentValidator<DbOServiceTracking>, AdapterEnvironmentValidator<DbOServiceTracking>>()
+                        .AddSingleton<IAdapterEnvironmentValidator<DbOServiceTracking2>, AdapterEnvironmentValidator<DbOServiceTracking2>>()
                         .AddSingleton<IOrchestratorServiceTracker, OrchestratorServiceTracker>()
-                        .AddTransient<IPrerequisiteServiceChecker, PrerequisiteServiceChecker>()
-                        .AddSingleton<IServiceTracker, ServiceTracker>()
-                        .AddSingleton<IStateMachine, StateMachine>()
+                        .AddTransient<IPrerequisiteServiceChecker<DbOServiceTracking>, PrerequisiteServiceChecker<DbOServiceTracking>>()
+                        .AddTransient<IPrerequisiteServiceChecker<DbOServiceTracking2>, PrerequisiteServiceChecker<DbOServiceTracking2>>()
+                        .AddSingleton<IServiceTracker<DbOServiceTracking>, ServiceTracker<DbOServiceTracking>>()
+                        .AddSingleton<IServiceTracker<DbOServiceTracking2>, ServiceTracker<DbOServiceTracking2>>()
+                        .AddSingleton<IStateMachine<DbMyGeotabVersionInfo>, StateMachine<DbMyGeotabVersionInfo>>()
 
                         // Configuration:
                         .AddSingleton<IAdapterConfiguration, AdapterConfiguration>()
@@ -114,8 +135,14 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IConfigurationHelper, ConfigurationHelper>()
                         .AddSingleton<IVSSConfiguration, VSSConfiguration>()
 
+                        // Database Validator:
+                        .AddSingleton<IDatabaseValidator, DatabaseValidator>()
+
                         // Database Entity to Database Entity Mappers:
                         .AddTransient<IDbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper, DbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper>()
+                        .AddTransient<IDbFaultData2DbEntityMetadata2EntityMapper, DbFaultData2DbEntityMetadata2EntityMapper>()
+                        .AddTransient<IDbLogRecord2DbEntityMetadata2EntityMapper, DbLogRecord2DbEntityMetadata2EntityMapper>()
+                        .AddTransient<IDbStatusData2DbEntityMetadata2EntityMapper, DbStatusData2DbEntityMetadata2EntityMapper>()
 
                         // Geotab object comparers:
                         .AddTransient<IGeotabDateTimeProviderComparer<LogRecord>, GeotabDateTimeProviderComparer<LogRecord>>()
@@ -127,8 +154,11 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGeotabDebugDataDbDebugDataObjectMapper, GeotabDebugDataDbDebugDataObjectMapper>()
                         .AddTransient<IGeotabConditionDbConditionObjectMapper, GeotabConditionDbConditionObjectMapper>()
                         .AddTransient<IGeotabDeviceDbDeviceObjectMapper, GeotabDeviceDbDeviceObjectMapper>()
+                        .AddTransient<IGeotabDeviceDbDevice2ObjectMapper, GeotabDeviceDbDevice2ObjectMapper>()
                         .AddTransient<IGeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper, GeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper>()
                         .AddTransient<IGeotabDiagnosticDbDiagnosticObjectMapper, GeotabDiagnosticDbDiagnosticObjectMapper>()
+                        .AddTransient<IGeotabDiagnosticDbDiagnostic2ObjectMapper, GeotabDiagnosticDbDiagnostic2ObjectMapper>()
+                        .AddTransient<IGeotabDiagnosticDbDiagnosticId2ObjectMapper, GeotabDiagnosticDbDiagnosticId2ObjectMapper>()
                         .AddTransient<IGeotabDriverChangeDbDriverChangeObjectMapper, GeotabDriverChangeDbDriverChangeObjectMapper>()
                         .AddTransient<IGeotabDVIRDefectDbDVIRDefectObjectMapper, GeotabDVIRDefectDbDVIRDefectObjectMapper>()
                         .AddTransient<IGeotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper, GeotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper>()
@@ -137,22 +167,33 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGeotabDVIRLogDbDVIRLogObjectMapper, GeotabDVIRLogDbDVIRLogObjectMapper>()
                         .AddTransient<IGeotabExceptionEventDbExceptionEventObjectMapper, GeotabExceptionEventDbExceptionEventObjectMapper>()
                         .AddTransient<IGeotabFaultDataDbFaultDataObjectMapper, GeotabFaultDataDbFaultDataObjectMapper>()
+                        .AddTransient<IGeotabGroupDbGroupObjectMapper, GeotabGroupDbGroupObjectMapper>()
+                        .AddTransient<IGeotabFaultDataDbFaultData2ObjectMapper, GeotabFaultDataDbFaultData2ObjectMapper>()
                         .AddTransient<IGeotabLogRecordDbLogRecordObjectMapper, GeotabLogRecordDbLogRecordObjectMapper>()
+                        .AddTransient<IGeotabLogRecordDbLogRecord2ObjectMapper, GeotabLogRecordDbLogRecord2ObjectMapper>()
                         .AddTransient<IGeotabRuleDbRuleObjectMapper, GeotabRuleDbRuleObjectMapper>()
                         .AddTransient<IGeotabStatusDataDbStatusDataObjectMapper, GeotabStatusDataDbStatusDataObjectMapper>()
+                        .AddTransient<IGeotabStatusDataDbStatusData2ObjectMapper, GeotabStatusDataDbStatusData2ObjectMapper>()
                         .AddTransient<IGeotabTripDbTripObjectMapper, GeotabTripDbTripObjectMapper>()
                         .AddTransient<IGeotabUserDbUserObjectMapper, GeotabUserDbUserObjectMapper>()
+                        .AddTransient<IGeotabUserDbUser2ObjectMapper, GeotabUserDbUser2ObjectMapper>()
                         .AddTransient<IGeotabZoneDbZoneObjectMapper, GeotabZoneDbZoneObjectMapper>()
+                        .AddTransient<IGeotabZoneDbZone2ObjectMapper, GeotabZoneDbZone2ObjectMapper>()
                         .AddTransient<IGeotabZoneTypeDbZoneTypeObjectMapper, GeotabZoneTypeDbZoneTypeObjectMapper>()
+                        .AddTransient<IGeotabZoneTypeDbZoneType2ObjectMapper, GeotabZoneTypeDbZoneType2ObjectMapper>()
 
                         // Database Entity Persisters:
                         .AddTransient<IGenericEntityPersister<DbBinaryData>, GenericEntityPersister<DbBinaryData>>()
                         .AddTransient<IGenericEntityPersister<DbChargeEvent>, GenericEntityPersister<DbChargeEvent>>()
                         .AddTransient<IGenericEntityPersister<DbCondition>, GenericEntityPersister<DbCondition>>()
+                        .AddTransient<IGenericEntityPersister<DbDBMaintenanceLog2>, GenericEntityPersister<DbDBMaintenanceLog2>>()
                         .AddTransient<IGenericEntityPersister<DbDebugData>, GenericEntityPersister<DbDebugData>>()
                         .AddTransient<IGenericEntityPersister<DbDevice>, GenericEntityPersister<DbDevice>>()
+                        .AddTransient<IGenericEntityPersister<DbDevice2>, GenericEntityPersister<DbDevice2>>()
                         .AddTransient<IGenericEntityPersister<DbDeviceStatusInfo>, GenericEntityPersister<DbDeviceStatusInfo>>()
                         .AddTransient<IGenericEntityPersister<DbDiagnostic>, GenericEntityPersister<DbDiagnostic>>()
+                        .AddTransient<IGenericEntityPersister<DbDiagnostic2>, GenericEntityPersister<DbDiagnostic2>>()
+                        .AddTransient<IGenericEntityPersister<DbDiagnosticId2>, GenericEntityPersister<DbDiagnosticId2>>()
                         .AddTransient<IGenericEntityPersister<DbDriverChange>, GenericEntityPersister<DbDriverChange>>()
                         .AddTransient<IGenericEntityPersister<DbDutyStatusAvailability>, GenericEntityPersister<DbDutyStatusAvailability>>()
                         .AddTransient<IGenericEntityPersister<DbDutyStatusLog>, GenericEntityPersister<DbDutyStatusLog>>()
@@ -160,42 +201,73 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGenericEntityPersister<DbDVIRDefect>, GenericEntityPersister<DbDVIRDefect>>()
                         .AddTransient<IGenericEntityPersister<DbDVIRDefectRemark>, GenericEntityPersister<DbDVIRDefectRemark>>()
                         .AddTransient<IGenericEntityPersister<DbDVIRDefectUpdate>, GenericEntityPersister<DbDVIRDefectUpdate>>()
+                        .AddTransient<IGenericEntityPersister<DbEntityMetadata2>, GenericEntityPersister<DbEntityMetadata2>>()
                         .AddTransient<IGenericEntityPersister<DbExceptionEvent>, GenericEntityPersister<DbExceptionEvent>>()
                         .AddTransient<IGenericEntityPersister<DbFailedDVIRDefectUpdate>, GenericEntityPersister<DbFailedDVIRDefectUpdate>>()
                         .AddTransient<IGenericEntityPersister<DbFailedOVDSServerCommand>, GenericEntityPersister<DbFailedOVDSServerCommand>>()
                         .AddTransient<IGenericEntityPersister<DbFaultData>, GenericEntityPersister<DbFaultData>>()
+                        .AddTransient<IGenericEntityPersister<DbGroup>, GenericEntityPersister<DbGroup>>()
+                        .AddTransient<IGenericEntityPersister<DbFaultData2>, GenericEntityPersister<DbFaultData2>>()
+                        .AddTransient<IGenericEntityPersister<DbFaultDataLocation2>, GenericEntityPersister<DbFaultDataLocation2>>()
                         .AddTransient<IGenericEntityPersister<DbLogRecord>, GenericEntityPersister<DbLogRecord>>()
+                        .AddTransient<IGenericEntityPersister<DbLogRecord2>, GenericEntityPersister<DbLogRecord2>>()
+                        .AddTransient<IGenericEntityPersister<DbMyGeotabVersionInfo2>, GenericEntityPersister<DbMyGeotabVersionInfo2>>()
                         .AddTransient<IGenericEntityPersister<DbMyGeotabVersionInfo>, GenericEntityPersister<DbMyGeotabVersionInfo>>()
+                        .AddTransient<IGenericEntityPersister<DbMyGeotabVersionInfo2>, GenericEntityPersister<DbMyGeotabVersionInfo2>>()
                         .AddSingleton<IGenericEntityPersister<DbOServiceTracking>, GenericEntityPersister<DbOServiceTracking>>()
+                        .AddSingleton<IGenericEntityPersister<DbOServiceTracking2>, GenericEntityPersister<DbOServiceTracking2>>()
                         .AddTransient<IGenericEntityPersister<DbOVDSServerCommand>, GenericEntityPersister<DbOVDSServerCommand>>()
                         .AddTransient<IGenericEntityPersister<DbRule>, GenericEntityPersister<DbRule>>()
                         .AddTransient<IGenericEntityPersister<DbStatusData>, GenericEntityPersister<DbStatusData>>()
+                        .AddTransient<IGenericEntityPersister<DbStatusData2>, GenericEntityPersister<DbStatusData2>>()
+                        .AddTransient<IGenericEntityPersister<DbStatusDataLocation2>, GenericEntityPersister<DbStatusDataLocation2>>()
                         .AddTransient<IGenericEntityPersister<DbTrip>, GenericEntityPersister<DbTrip>>()
                         .AddTransient<IGenericEntityPersister<DbUser>, GenericEntityPersister<DbUser>>()
+                        .AddTransient<IGenericEntityPersister<DbUser2>, GenericEntityPersister<DbUser2>>()
                         .AddTransient<IGenericEntityPersister<DbZone>, GenericEntityPersister<DbZone>>()
+                        .AddTransient<IGenericEntityPersister<DbZone2>, GenericEntityPersister<DbZone2>>()
                         .AddTransient<IGenericEntityPersister<DbZoneType>, GenericEntityPersister<DbZoneType>>()
+                        .AddTransient<IGenericEntityPersister<DbZoneType2>, GenericEntityPersister<DbZoneType2>>()
 
                         // Database Object Caches:
                         .AddSingleton<AdapterGenericDbObjectCache<DbCondition>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbCondition, AdapterGenericDbObjectCache<DbCondition>>, GenericGenericDbObjectCache<DbCondition, AdapterGenericDbObjectCache<DbCondition>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbDevice>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbDevice, AdapterGenericDbObjectCache<DbDevice>>, GenericGenericDbObjectCache<DbDevice, AdapterGenericDbObjectCache<DbDevice>>>()
+                        .AddSingleton<AdapterGenericDbObjectCache<DbDevice2>>()
+                        .AddSingleton<IGenericGenericDbObjectCache<DbDevice2, AdapterGenericDbObjectCache<DbDevice2>>, GenericGenericDbObjectCache<DbDevice2, AdapterGenericDbObjectCache<DbDevice2>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbDeviceStatusInfo>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbDeviceStatusInfo, AdapterGenericDbObjectCache<DbDeviceStatusInfo>>, GenericGenericDbObjectCache<DbDeviceStatusInfo, AdapterGenericDbObjectCache<DbDeviceStatusInfo>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbDiagnostic>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbDiagnostic, AdapterGenericDbObjectCache<DbDiagnostic>>, GenericGenericDbObjectCache<DbDiagnostic, AdapterGenericDbObjectCache<DbDiagnostic>>>()
+                        .AddSingleton<AdapterGenericDbObjectCache<DbDiagnosticId2>>()
+                        .AddSingleton<IGenericGenericDbObjectCache<DbDiagnosticId2, AdapterGenericDbObjectCache<DbDiagnosticId2>>, GenericGenericDbObjectCache<DbDiagnosticId2, AdapterGenericDbObjectCache<DbDiagnosticId2>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbDutyStatusAvailability>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbDutyStatusAvailability, AdapterGenericDbObjectCache<DbDutyStatusAvailability>>, GenericGenericDbObjectCache<DbDutyStatusAvailability, AdapterGenericDbObjectCache<DbDutyStatusAvailability>>>()
+                        .AddSingleton<AdapterGenericDbObjectCache<DbGroup>>()
+                        .AddSingleton<IGenericGenericDbObjectCache<DbGroup, AdapterGenericDbObjectCache<DbGroup>>, GenericGenericDbObjectCache<DbGroup, AdapterGenericDbObjectCache<DbGroup>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbOServiceTracking>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbOServiceTracking, AdapterGenericDbObjectCache<DbOServiceTracking>>, GenericGenericDbObjectCache<DbOServiceTracking, AdapterGenericDbObjectCache<DbOServiceTracking>>>()
+                        .AddSingleton<AdapterGenericDbObjectCache<DbOServiceTracking2>>()
+                        .AddSingleton<IGenericGenericDbObjectCache<DbOServiceTracking2, AdapterGenericDbObjectCache<DbOServiceTracking2>>, GenericGenericDbObjectCache<DbOServiceTracking2, AdapterGenericDbObjectCache<DbOServiceTracking2>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbRule>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbRule, AdapterGenericDbObjectCache<DbRule>>, GenericGenericDbObjectCache<DbRule, AdapterGenericDbObjectCache<DbRule>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbUser>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>>, GenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>>>()
+                        .AddSingleton<AdapterGenericDbObjectCache<DbUser2>>()
+                        .AddSingleton<IGenericGenericDbObjectCache<DbUser2, AdapterGenericDbObjectCache<DbUser2>>, GenericGenericDbObjectCache<DbUser2, AdapterGenericDbObjectCache<DbUser2>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbZone>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbZone, AdapterGenericDbObjectCache<DbZone>>, GenericGenericDbObjectCache<DbZone, AdapterGenericDbObjectCache<DbZone>>>()
+                        .AddSingleton<AdapterGenericDbObjectCache<DbZone2>>()
+                        .AddSingleton<IGenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>>, GenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbZoneType>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbZoneType, AdapterGenericDbObjectCache<DbZoneType>>, GenericGenericDbObjectCache<DbZoneType, AdapterGenericDbObjectCache<DbZoneType>>>()
+                        .AddSingleton<AdapterGenericDbObjectCache<DbZoneType2>>()
+                        .AddSingleton<IGenericGenericDbObjectCache<DbZoneType2, AdapterGenericDbObjectCache<DbZoneType2>>, GenericGenericDbObjectCache<DbZoneType2, AdapterGenericDbObjectCache<DbZoneType2>>>()
+
+                        // Database Id and Object Caches:
+                        .AddSingleton<IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext>, GenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext>>()
+                        .AddSingleton<IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnostic2, AdapterDatabaseUnitOfWorkContext>, GenericGeotabGUIDCacheableDbObjectCache2<DbDiagnostic2, AdapterDatabaseUnitOfWorkContext>>()
 
                         // Geotab Object Cachers:
                         .AddSingleton<IGenericGeotabObjectCacher<Controller>, GenericGeotabObjectCacher<Controller>>()
@@ -236,8 +308,124 @@ namespace MyGeotabAPIAdapter
                         .AddSingleton<IGenericGeotabObjectHydrator<Device>, GenericGeotabObjectHydrator<Device>>()
                         .AddSingleton<IGenericGeotabObjectHydrator<Diagnostic>, GenericGeotabObjectHydrator<Diagnostic>>()
                         .AddSingleton<IGenericGeotabObjectHydrator<FailureMode>, GenericGeotabObjectHydrator<FailureMode>>()
+                        ;
 
-                        // Services:
+                    // Resolve IAdapterConfiguration early to use it for conditional service registration.
+                    var serviceProvider = services.BuildServiceProvider();
+                    var adapterConfig = serviceProvider.GetRequiredService<IAdapterConfiguration>();
+
+                    // Conditionally register services based on which data model is being used.
+                    if (adapterConfig.UseDataModel2 == true)
+                    {
+                        // Run the DatabaseValidator to ensure the adapter database version is correct.
+                        var databaseValidator = serviceProvider.GetRequiredService<IDatabaseValidator>();
+                        databaseValidator.ValidateDatabaseVersion();
+
+                        // Configure options for the services. This is necessary because the services are registered as hosted services and the options are used to determine whether the individual services should pause for database maintenance windows wherein operations such as reindexing could potentially cause exceptions.
+                        var serviceNames = new string[] { nameof(Orchestrator2), nameof(ControllerProcessor2), nameof(DeviceProcessor2), nameof(DiagnosticProcessor2), nameof(FailureModeProcessor2), nameof(FaultDataLocationService2), nameof(FaultDataProcessor2), nameof(GroupProcessor2), nameof(LogRecordProcessor2), nameof(StatusDataLocationService2), nameof(StatusDataProcessor2), nameof(UnitOfMeasureProcessor2), nameof(UserProcessor2), nameof(ZoneProcessor2), nameof(ZoneTypeProcessor2) };
+
+                        // Register the ServiceOprionsProvider.
+                        services.AddSingleton<IServiceOptionsProvider, ServiceOptionsProvider>();
+
+                        // Register the service names in the ServiceOptionsProvider. All services should be tracked (even if they don't need to e paused for database maintenance) so that it is possible to know when they have all been loaded on startup before initiating any database maintenance.
+                        services.AddSingleton<IServiceOptionsProvider>(sp =>
+                        {
+                            // Resolve the required IOptionsMonitor<ServiceOptions> from the service provider.
+                            var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ServiceOptions>>();
+
+                            // Create an instance of ServiceOptionsProvider with the resolved dependency.
+                            var serviceOptionsProvider = new ServiceOptionsProvider(optionsMonitor);
+
+                            // Track all service names.
+                            foreach (var serviceName in serviceNames)
+                            {
+                                serviceOptionsProvider.TrackService(serviceName);
+                            }
+
+                            return serviceOptionsProvider;
+                        });
+
+                        // Configure the ServiceOptions for each service.
+                        foreach (var serviceName in serviceNames)
+                        {
+                            services.Configure<ServiceOptions>(serviceName, options =>
+                            {
+                                options.ServiceName = serviceName;
+
+                                // Any services that don't interact with the adapter database should not pause for database maintenance and can be added to the to the line below. The rest should pause for database maintenance.
+                                if (serviceName == nameof(Orchestrator2) || serviceName == nameof(ControllerProcessor2) || serviceName == nameof(GroupProcessor2) || serviceName == nameof(UnitOfMeasureProcessor2))
+                                {
+                                    options.PauseForDatabaseMaintenance = false;
+                                }
+                                else
+                                {
+                                    options.PauseForDatabaseMaintenance = true;
+                                }
+                            });
+                        }
+
+                        // Register the StateMachine
+                        services.AddSingleton<IStateMachine2<DbMyGeotabVersionInfo2>>(sp =>
+                        {
+                            var serviceOptionsProvider = sp.GetRequiredService<IServiceOptionsProvider>();
+
+                            // Get all service names from configured ServiceOptions.
+                            var serviceNames = serviceOptionsProvider.GetAllServiceNames();
+
+                            // Retrieve all configured ServiceOptions using the service names.
+                            var serviceOptions = serviceOptionsProvider.GetAllServiceOptions(serviceNames);
+
+                            var adapterConfiguration = sp.GetRequiredService<IAdapterConfiguration>();
+                            var myGeotabAPIHelper = sp.GetRequiredService<IMyGeotabAPIHelper>();
+
+                            // Pass the service options and other dependencies to the StateMachine constructor.
+                            return new StateMachine2<DbMyGeotabVersionInfo2>(adapterConfiguration, myGeotabAPIHelper, serviceOptions);
+                        });
+
+                        // Register the services.
+                        services
+                        .AddHostedService<Orchestrator2>()
+                        .AddHostedService<DatabaseMaintenanceService2>()
+                        .AddHostedService<ControllerProcessor2>()
+                        .AddHostedService<DeviceProcessor2>()
+                        .AddHostedService<DiagnosticProcessor2>()
+                        .AddHostedService<FailureModeProcessor2>()
+                        .AddHostedService<FaultDataLocationService2>()
+                        .AddHostedService<FaultDataProcessor2>()
+                        .AddHostedService<GroupProcessor2>()
+                        .AddHostedService<LogRecordProcessor2>()
+                        .AddHostedService<StatusDataLocationService2>()
+                        .AddHostedService<StatusDataProcessor2>()
+                        .AddHostedService<UnitOfMeasureProcessor2>()
+                        .AddHostedService<UserProcessor2>()
+                        .AddHostedService<ZoneProcessor2>()
+                        .AddHostedService<ZoneTypeProcessor2>()
+                        ;
+
+                        // Register a BackgroundServiceAwaiter for each service.
+                        services
+                        .AddSingleton<IBackgroundServiceAwaiter<Orchestrator2>, BackgroundServiceAwaiter<Orchestrator2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<DatabaseMaintenanceService2>, BackgroundServiceAwaiter<DatabaseMaintenanceService2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<ControllerProcessor2>, BackgroundServiceAwaiter<ControllerProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<DeviceProcessor2>, BackgroundServiceAwaiter<DeviceProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<DiagnosticProcessor2>, BackgroundServiceAwaiter<DiagnosticProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<FailureModeProcessor2>, BackgroundServiceAwaiter<FailureModeProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<FaultDataLocationService2>, BackgroundServiceAwaiter<FaultDataLocationService2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<FaultDataProcessor2>, BackgroundServiceAwaiter<FaultDataProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<GroupProcessor2>, BackgroundServiceAwaiter<GroupProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<LogRecordProcessor2>, BackgroundServiceAwaiter<LogRecordProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<StatusDataLocationService2>, BackgroundServiceAwaiter<StatusDataLocationService2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<StatusDataProcessor2>, BackgroundServiceAwaiter<StatusDataProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<UnitOfMeasureProcessor2>, BackgroundServiceAwaiter<UnitOfMeasureProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<UserProcessor2>, BackgroundServiceAwaiter<UserProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<ZoneProcessor2>, BackgroundServiceAwaiter<ZoneProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<ZoneTypeProcessor2>, BackgroundServiceAwaiter<ZoneTypeProcessor2>>()
+                        ;
+                    }
+                    else
+                    {
+                        // Register the services.
+                        services
                         .AddHostedService<Orchestrator>()
                         .AddHostedService<BinaryDataProcessor>()
                         .AddHostedService<ChargeEventProcessor>()
@@ -265,7 +453,7 @@ namespace MyGeotabAPIAdapter
                         .AddHostedService<ZoneProcessor>()
                         .AddHostedService<ZoneTypeProcessor>()
                         ;
+                    }
                 });
-
     }
 }

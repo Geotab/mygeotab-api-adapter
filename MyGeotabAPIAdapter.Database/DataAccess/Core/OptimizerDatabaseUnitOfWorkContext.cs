@@ -64,22 +64,17 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         public OptimizerDatabaseUnitOfWorkContext(IDataOptimizerDatabaseConnectionInfoContainer connectionInfoContainer)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             Id = System.Guid.NewGuid().ToString();
             this.connectionInfoContainer = connectionInfoContainer;
             this.TimeoutSecondsForDatabaseTasks = connectionInfoContainer.OptimizerDatabaseConnectionInfo.TimeoutSecondsForDatabaseTasks;
 
             logger.Trace($"{nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {Id}] created.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public UnitOfWork CreateUnitOfWork(Databases database)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var uowOpen = IsUnitOfWorkOpen;
             if (uowOpen)
             {
@@ -106,32 +101,23 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             unitOfWork = new UnitOfWork(connection, this.TimeoutSecondsForDatabaseTasks);
 
             logger.Debug($"{nameof(UnitOfWork)} [Id: {unitOfWork.Id}] created by {nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {Id}] and database transaction initiated.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return unitOfWork;
         }
 
         /// <inheritdoc/>
         public DbConnection GetConnection()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (!IsUnitOfWorkOpen)
             {
                 throw new InvalidOperationException(
                     $"There is no {nameof(UnitOfWork)} currently associated with this {nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {Id}]. The {nameof(CreateUnitOfWork)} method must be called to create a new {nameof(UnitOfWork)} before calling the {nameof(GetConnection)} method.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return unitOfWork.Connection;
         }
 
         /// <inheritdoc/>
         public NpgsqlConnection GetNpgsqlConnection()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (!IsUnitOfWorkOpen)
             {
                 throw new InvalidOperationException(
@@ -144,33 +130,65 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 InitializeNpgsqlConnectionAsync().Wait();
                 unitOfWork.NpgsqlConnection = npgsqlConnection;
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return unitOfWork.NpgsqlConnection;
         }
 
         /// <inheritdoc/>
         public NpgsqlTransaction GetNpgsqlTransaction()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (!IsUnitOfWorkOpen)
             {
                 throw new InvalidOperationException(
                     $"There is no {nameof(UnitOfWork)} currently associated with this {nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {Id}]. The {nameof(CreateUnitOfWork)} method must be called to create a new {nameof(UnitOfWork)} before calling the {nameof(GetNpgsqlTransaction)} method.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return unitOfWork.NpgsqlTransaction;
+        }
+
+        /// <inheritdoc/>
+        public async Task<SqlConnection> GetStandaloneSqlConnectionAsync()
+        {
+            ConnectionProvider connectionProvider;
+            switch (Database)
+            {
+                case Databases.AdapterDatabase:
+                    connectionProvider = new ConnectionProvider(connectionInfoContainer.AdapterDatabaseConnectionInfo);
+                    Database = Databases.AdapterDatabase;
+                    break;
+                case Databases.OptimizerDatabase:
+                    connectionProvider = new ConnectionProvider(connectionInfoContainer.OptimizerDatabaseConnectionInfo);
+                    Database = Databases.OptimizerDatabase;
+                    break;
+                default:
+                    throw new NotSupportedException($"The {nameof(Database)} Database is not supported by this method.");
+            }
+            var sqlConnection = await connectionProvider.GetOpenSqlConnectionAsync();
+            return sqlConnection;
+        }
+
+        /// <inheritdoc/>
+        public async Task<NpgsqlConnection> GetStandaloneNpgsqlConnectionAsync()
+        {
+            ConnectionProvider connectionProvider;
+            switch (Database)
+            {
+                case Databases.AdapterDatabase:
+                    connectionProvider = new ConnectionProvider(connectionInfoContainer.AdapterDatabaseConnectionInfo);
+                    Database = Databases.AdapterDatabase;
+                    break;
+                case Databases.OptimizerDatabase:
+                    connectionProvider = new ConnectionProvider(connectionInfoContainer.OptimizerDatabaseConnectionInfo);
+                    Database = Databases.OptimizerDatabase;
+                    break;
+                default:
+                    throw new NotSupportedException($"The {nameof(Database)} Database is not supported by this method.");
+            }
+            var npgsqlConnection = await connectionProvider.GetOpenNpgsqlConnectionAsync();
+            return npgsqlConnection;
         }
 
         /// <inheritdoc/>
         public SqlConnection GetSqlConnection()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (!IsUnitOfWorkOpen)
             {
                 throw new InvalidOperationException(
@@ -183,56 +201,39 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 InitializeSqlConnectionAsync().Wait();
                 unitOfWork.SqlConnection = sqlConnection;
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return unitOfWork.SqlConnection;
         }
 
         /// <inheritdoc/>
         public SqlTransaction GetSqlTransaction()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (!IsUnitOfWorkOpen)
             {
                 throw new InvalidOperationException(
                     $"There is no {nameof(UnitOfWork)} currently associated with this {nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {Id}]. The {nameof(CreateUnitOfWork)} method must be called to create a new {nameof(UnitOfWork)} before calling the {nameof(GetSqlTransaction)} method.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return unitOfWork.SqlTransaction;
         }
 
         /// <inheritdoc/>
         public DbTransaction GetTransaction()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (!IsUnitOfWorkOpen)
             {
                 throw new InvalidOperationException(
                     $"There is no {nameof(UnitOfWork)} currently associated with this {nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {Id}]. The {nameof(CreateUnitOfWork)} method must be called to create a new {nameof(UnitOfWork)} before calling the {nameof(GetTransaction)} method.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return unitOfWork.Transaction;
         }
 
         /// <inheritdoc/>
         public string GetUnitOfWorkId()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (!IsUnitOfWorkOpen)
             {
                 throw new InvalidOperationException(
                     $"There is no {nameof(UnitOfWork)} currently associated with this {nameof(OptimizerDatabaseUnitOfWorkContext)} [Id: {Id}]. The {nameof(CreateUnitOfWork)} method must be called to create a new {nameof(UnitOfWork)} before calling the {nameof(GetUnitOfWorkId)} method.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return unitOfWork.Id;
         }
 
@@ -242,9 +243,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <returns></returns>
         async Task InitializeDbConnectionAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             ConnectionProvider connectionProvider;
             switch (Database)
             {
@@ -259,10 +257,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 default:
                     throw new NotSupportedException($"The {nameof(Database)} Database is not supported by this method.");
             }
-
             connection = await connectionProvider.GetOpenConnectionAsync();
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -271,9 +266,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <returns></returns>
         async Task InitializeNpgsqlConnectionAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             ConnectionProvider connectionProvider;
             switch (Database)
             {
@@ -288,10 +280,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 default:
                     throw new NotSupportedException($"The {nameof(Database)} Database is not supported by this method.");
             }
-
             npgsqlConnection = await connectionProvider.GetOpenNpgsqlConnectionAsync();
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -300,9 +289,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <returns></returns>
         async Task InitializeSqlConnectionAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             ConnectionProvider connectionProvider;
             switch (Database)
             {
@@ -317,10 +303,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 default:
                     throw new NotSupportedException($"The {nameof(Database)} Database is not supported by this method.");
             }
-
             sqlConnection = await connectionProvider.GetOpenSqlConnectionAsync();
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

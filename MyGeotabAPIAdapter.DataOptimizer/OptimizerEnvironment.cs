@@ -28,15 +28,10 @@ namespace MyGeotabAPIAdapter.DataOptimizer
         /// </summary>
         public OptimizerEnvironment(IOptimizerEnvironmentValidator optimizerEnvironmentValidator)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.optimizerEnvironmentValidator = optimizerEnvironmentValidator;
             OptimizerAssemblyName = GetType().Assembly.GetName().Name;
             OptimizerMachineName = Environment.MachineName;
             OptimizerVersion = GetType().Assembly.GetName().Version;
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>

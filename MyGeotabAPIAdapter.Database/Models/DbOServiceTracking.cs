@@ -6,7 +6,7 @@ using System.Globalization;
 namespace MyGeotabAPIAdapter.Database.Models
 {
     [Table("OServiceTracking")]
-    public class DbOServiceTracking : IDbEntity, IIdCacheableDbEntity
+    public class DbOServiceTracking : IDbOServiceTracking
     {
         /// <inheritdoc/>
         [Write(false)]

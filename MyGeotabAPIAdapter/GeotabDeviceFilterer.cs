@@ -34,23 +34,18 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         public GeotabDeviceFilterer(IAdapterConfiguration adapterConfiguration, IGenericGeotabObjectFiltererBase<Device> genericGeotabObjectFiltererBase, IMyGeotabAPIHelper myGeotabAPIHelper)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.genericGeotabObjectFiltererBase = genericGeotabObjectFiltererBase;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
 
             Id = Guid.NewGuid().ToString();
             logger.Debug($"{nameof(GeotabDeviceFilterer)} [Id: {Id}] created.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public async Task<List<T>> ApplyDeviceFilterAsync<T>(CancellationTokenSource cancellationTokenSource, List<T> entitiesToBeFiltered) where T : Entity
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             if (genericGeotabObjectFiltererBase.IsInitialized == false)
             {
@@ -129,7 +124,6 @@ namespace MyGeotabAPIAdapter
                     }
                 }
             }
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return filteredEntities;
         }
     }

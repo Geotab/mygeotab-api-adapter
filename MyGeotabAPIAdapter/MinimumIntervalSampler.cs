@@ -40,9 +40,6 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         public MinimumIntervalSampler(IAdapterConfiguration adapterConfiguration, IGeotabDateTimeProviderComparer<LogRecord> logRecordDateTimeComparer, IGeotabDateTimeProviderComparer<StatusData> statusDataDateTimeComparer, IMyGeotabAPIHelper myGeotabAPIHelper)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.logRecordDateTimeComparer = logRecordDateTimeComparer;
             this.statusDataDateTimeComparer = statusDataDateTimeComparer;
@@ -54,14 +51,12 @@ namespace MyGeotabAPIAdapter
 
             Id = Guid.NewGuid().ToString();
             logger.Debug($"{CurrentClassName} [Id: {Id}] created.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public async Task<List<T>> ApplyMinimumIntervalAsync(CancellationTokenSource cancellationTokenSource, List<T> entitiesToBeFiltered)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             var filteredEntities = new List<T>();
             string entityTypeName = typeof(T).Name;
@@ -163,7 +158,6 @@ namespace MyGeotabAPIAdapter
             }
 
             logger.Debug($"{CurrentClassName} [Id: {Id}] filtered {entitiesToBeFiltered.Count} {entityTypeName} entities down to {filteredEntities.Count} entities.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return filteredEntities;
         }
     }

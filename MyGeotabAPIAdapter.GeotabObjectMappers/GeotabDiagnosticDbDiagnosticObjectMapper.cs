@@ -45,7 +45,7 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 DiagnosticUnitOfMeasureName = diagnosticUnitOfMeasure.Name,
                 EntityStatus = (int)entityStatus,
                 GeotabId = entityToMapTo.Id.ToString(),
-                GeotabGUID = geotabGUID,
+                GeotabGUIDString = geotabGUID,
                 HasShimId = isShimId,
                 RecordLastChangedUtc = DateTime.UtcNow
             }; if (diagnosticController != null)

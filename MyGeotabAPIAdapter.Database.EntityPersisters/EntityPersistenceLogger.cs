@@ -21,18 +21,12 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// </summary>
         public EntityPersistenceLogger()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            // Nothing to do here. Kept for dependency injection purposes.
         }
 
         /// <inheritdoc/>
         public void LogPersistenceOperationDetails(Common.DatabaseWriteOperationType databaseWriteOperationType, long affectedEntityCount, Databases database, string databaseTableName, TimeSpan elapsedTime, Logging.LogLevel logLevel)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             string databaseOperationPreposition = "";
             switch (databaseWriteOperationType)
             {
@@ -83,8 +77,6 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                 default:
                     break;
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

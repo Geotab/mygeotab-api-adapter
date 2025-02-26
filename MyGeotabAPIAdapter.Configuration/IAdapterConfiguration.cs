@@ -218,9 +218,29 @@ namespace MyGeotabAPIAdapter.Configuration
         bool EnableFaultDataFeed { get; }
 
         /// <summary>
+        /// Indicates whether the <see cref="MyGeotabAPIAdapter.Service.FaultDataLocationService"/> should be enabled. 
+        /// </summary>
+        bool EnableFaultDataLocationService { get; }
+
+        /// <summary>
         /// Indicates whether a <see cref="Group"/> cache should be enabled. 
         /// </summary>
         bool EnableGroupCache { get; }
+
+        /// <summary>
+        /// Indicates whether "Level 1" database maintenance should be enabled. This includes non-interfering tasks that can be executed outside a maintenance window.  
+        /// </summary>
+        bool EnableLevel1DatabaseMaintenance { get; }
+
+        /// <summary>
+        /// Indicates whether "Level 2" database maintenance should be enabled. This includes tasks that can interfere with application functionality and must be executed within a maintenance window.  
+        /// </summary>
+        bool EnableLevel2DatabaseMaintenance { get; }
+
+        /// <summary>
+        /// Indicates whether "Level 2" database maintenance should only occur during the daily maintenance window, the start of which is defined by <see cref="Level2DatabaseMaintenanceWindowStartTimeUTC"/> and the end of which is determined by adding <see cref="Level2DatabaseMaintenanceWindowMaxMinutes"/> to the start time. This setting is only used if <see cref="EnableLevel2DatabaseMaintenance"/> is <c>true</c>.  
+        /// </summary>
+        bool EnableLevel2DatabaseMaintenanceWindow { get; }
 
         /// <summary>
         /// Indicates whether a <see cref="LogRecord"/> data feed should be enabled. 
@@ -246,6 +266,11 @@ namespace MyGeotabAPIAdapter.Configuration
         /// Indicates whether a <see cref="StatusData"/> data feed should be enabled. 
         /// </summary>
         bool EnableStatusDataFeed { get; }
+
+        /// <summary>
+        /// Indicates whether the <see cref="MyGeotabAPIAdapter.Service.StatusDataLocationService"/> should be enabled. 
+        /// </summary>
+        bool EnableStatusDataLocationService { get; }
 
         /// <summary>
         /// Indicates whether a <see cref="Trip"/> data feed should be enabled. 
@@ -303,6 +328,61 @@ namespace MyGeotabAPIAdapter.Configuration
         int FaultDataFeedIntervalSeconds { get; }
 
         /// <summary>
+        /// When getting the DateTime range of a batch of unprocessed FaultData records, this buffer is applied to either end of the DateTime range when selecting LogRecords to use for interpolation such that lag LogRecords can be obtained for records that are “early” in the batch and lead LogRecords can be obtained for records that are “late” in the batch.
+        /// </summary>
+        int FaultDataLocationServiceBufferMinutes { get; }
+
+        /// <summary>
+        /// The <see cref="DateTime"/> of which the time of day portion will be used as the daily start time for the FaultDataLocationService. Only used if <see cref="FaultDataLocationServiceOperationMode"/> is set to <see cref="OperationMode.Scheduled"/>.
+        /// </summary>
+        DateTime FaultDataLocationServiceDailyStartTimeUTC { get; }
+
+        /// <summary>
+        /// The number of seconds to add to the <see cref="DateTime.TimeOfDay"/> of the <see cref="FaultDataLocationServiceDailyStartTimeUTC"/> in order to calculate the daily stop time for the FaultDataLocationService. Only used if <see cref="FaultDataLocationServiceOperationMode"/> is set to <see cref="OperationMode.Scheduled"/>.
+        /// </summary>
+        int FaultDataLocationServiceDailyRunTimeSeconds { get; }
+
+        /// <summary>
+        /// The minimum number of seconds to wait between the start of one execution iteration of the  FaultDataLocationService and the next.
+        /// </summary>
+        int FaultDataLocationServiceExecutionIntervalSeconds { get; }
+
+        /// <summary>
+        /// The maximum number of unprocessed FaultData records to retrieve for interpolation per batch.
+        /// </summary>
+        int FaultDataLocationServiceMaxBatchSize { get; }
+
+        /// <summary>
+        /// The maximum number of days over which unprocessed FaultData records in a batch can span.
+        /// </summary>
+        int FaultDataLocationServiceMaxDaysPerBatch { get; }
+
+        /// <summary>
+        /// Indicates the number of directions on the <see href="https://en.wikipedia.org/wiki/Compass_rose">compass rose</see> to use when returning compass directions associated with specific bearing values. Determines the <see cref="MyGeotabAPIAdapter.Geospatial.CompassRoseType"/> that will be used. This property is only used if <see cref="FaultDataLocationServicePopulateDirection"/> is set to <c>true</c>.
+        /// </summary>
+        int FaultDataLocationServiceNumberOfCompassDirections { get; }
+
+        /// <summary>
+        /// The operation mode to be used by the FaultDataLocationService.
+        /// </summary>
+        OperationMode FaultDataLocationServiceOperationMode { get; }
+
+        /// <summary>
+        /// Indicates whether the <c>Bearing</c> column in the <c>FaultDataLocations2</c> table should be populated.
+        /// </summary>
+        bool FaultDataLocationServicePopulateBearing { get; }
+
+        /// <summary>
+        /// Indicates whether the <c>Direction</c> column in the <c>FaultDataLocations2</c> table should be populated. This property is only used if <see cref="FaultDataLocationServicePopulateBearing"/> is set to <c>true</c>.
+        /// </summary>
+        bool FaultDataLocationServicePopulateDirection { get; }
+
+        /// <summary>
+        /// Indicates whether the <c>Speed</c> column in the <c>FaultDataLocations2</c> table should be populated.
+        /// </summary>
+        bool FaultDataLocationServicePopulateSpeed { get; }
+
+        /// <summary>
         /// The <see cref="Common.FeedStartOption"/> to use for the initial GetFeed call for each data feed.
         /// </summary>
         FeedStartOption FeedStartOption { get; }
@@ -331,6 +411,26 @@ namespace MyGeotabAPIAdapter.Configuration
         /// A unique identifier assigned during instantiation. Intended for debugging purposes.
         /// </summary>
         string Id { get; }
+
+        /// <summary>
+        /// The number of minutes to wait between executions of "Level1" database maintenance.
+        /// </summary>
+        int Level1DatabaseMaintenanceIntervalMinutes { get; }
+
+        /// <summary>
+        /// The number of minutes to wait between executions of "Level2" database maintenance.
+        /// </summary>
+        int Level2DatabaseMaintenanceIntervalMinutes { get; }
+
+        /// <summary>
+        /// The maximum number of minutes to allow for execution of "Level2" database maintenance once it starts (based on the <see cref="Level2DatabaseMaintenanceWindowStartTimeUTC"/>).
+        /// </summary>
+        int Level2DatabaseMaintenanceWindowMaxMinutes { get; }
+
+        /// <summary>
+        /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for determining the start of the maintenance window for "Level 2" maintenance.
+        /// </summary>
+        DateTime Level2DatabaseMaintenanceWindowStartTimeUTC { get; }
 
         /// <summary>
         /// The minimum number of seconds to wait between GetFeed() calls for <see cref="LogRecord"/> objects.
@@ -388,6 +488,61 @@ namespace MyGeotabAPIAdapter.Configuration
         int StatusDataFeedIntervalSeconds { get; }
 
         /// <summary>
+        /// When getting the DateTime range of a batch of unprocessed StatusData records, this buffer is applied to either end of the DateTime range when selecting LogRecords to use for interpolation such that lag LogRecords can be obtained for records that are “early” in the batch and lead LogRecords can be obtained for records that are “late” in the batch.
+        /// </summary>
+        int StatusDataLocationServiceBufferMinutes { get; }
+
+        /// <summary>
+        /// The <see cref="DateTime"/> of which the time of day portion will be used as the daily start time for the StatusDataLocationService. Only used if <see cref="StatusDataLocationServiceOperationMode"/> is set to <see cref="OperationMode.Scheduled"/>.
+        /// </summary>
+        DateTime StatusDataLocationServiceDailyStartTimeUTC { get; }
+
+        /// <summary>
+        /// The number of seconds to add to the <see cref="DateTime.TimeOfDay"/> of the <see cref="StatusDataLocationServiceDailyStartTimeUTC"/> in order to calculate the daily stop time for the StatusDataLocationService. Only used if <see cref="StatusDataLocationServiceOperationMode"/> is set to <see cref="OperationMode.Scheduled"/>.
+        /// </summary>
+        int StatusDataLocationServiceDailyRunTimeSeconds { get; }
+
+        /// <summary>
+        /// The minimum number of seconds to wait between the start of one execution iteration of the  StatusDataLocationService and the next.
+        /// </summary>
+        int StatusDataLocationServiceExecutionIntervalSeconds { get; }
+
+        /// <summary>
+        /// The maximum number of unprocessed StatusData records to retrieve for interpolation per batch.
+        /// </summary>
+        int StatusDataLocationServiceMaxBatchSize { get; }
+
+        /// <summary>
+        /// The maximum number of days over which unprocessed StatusData records in a batch can span.
+        /// </summary>
+        int StatusDataLocationServiceMaxDaysPerBatch { get; }
+
+        /// <summary>
+        /// Indicates the number of directions on the <see href="https://en.wikipedia.org/wiki/Compass_rose">compass rose</see> to use when returning compass directions associated with specific bearing values. Determines the <see cref="MyGeotabAPIAdapter.Geospatial.CompassRoseType"/> that will be used. This property is only used if <see cref="StatusDataLocationServicePopulateDirection"/> is set to <c>true</c>.
+        /// </summary>
+        int StatusDataLocationServiceNumberOfCompassDirections { get; }
+
+        /// <summary>
+        /// The operation mode to be used by the StatusDataLocationService.
+        /// </summary>
+        OperationMode StatusDataLocationServiceOperationMode { get; }
+
+        /// <summary>
+        /// Indicates whether the <c>Bearing</c> column in the <c>StatusDataLocations2</c> table should be populated.
+        /// </summary>
+        bool StatusDataLocationServicePopulateBearing { get; }
+
+        /// <summary>
+        /// Indicates whether the <c>Direction</c> column in the <c>StatusDataLocations2</c> table should be populated. This property is only used if <see cref="StatusDataLocationServicePopulateBearing"/> is set to <c>true</c>.
+        /// </summary>
+        bool StatusDataLocationServicePopulateDirection { get; }
+
+        /// <summary>
+        /// Indicates whether the <c>Speed</c> column in the <c>StatusDataLocations2</c> table should be populated.
+        /// </summary>
+        bool StatusDataLocationServicePopulateSpeed { get; }
+
+        /// <summary>
         /// The maximum number of seconds that a database <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> will be thrown.
         /// </summary>
         int TimeoutSecondsForDatabaseTasks { get; }
@@ -421,6 +576,11 @@ namespace MyGeotabAPIAdapter.Configuration
         /// The number of seconds to wait, after updating the <see cref="UnitOfMeasure"/> cache, before initiating the next update of the subject cache.
         /// </summary>
         int UnitOfMeasureCacheUpdateIntervalMinutes { get; }
+
+        /// <summary>
+        /// Indicates whether the adapter database with which the application is paired is using version 2 of the data model. Services will be configured to use the appropriate data model based on the value provided here. 
+        /// </summary>
+        bool UseDataModel2 { get; }
 
         /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="User"/> cache.

@@ -2,6 +2,7 @@
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Helpers;
+using System.Text;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
@@ -40,6 +41,10 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             if (entityToMapTo.HosRuleSet != null)
             {
                 dbUser.HosRuleSet = entityToMapTo.HosRuleSet.Value.ToString();
+            }
+            if (entityToMapTo.CompanyGroups != null && entityToMapTo.CompanyGroups.Count > 0)
+            {
+                dbUser.CompanyGroups = GetUserGroupsJSON(entityToMapTo.CompanyGroups);
             }
             return dbUser;
         }
@@ -101,9 +106,38 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 return true;
             }
+            string userCompanyGroupsIds = GetUserGroupsJSON(entityToMapTo.CompanyGroups);
+            if (entityToMapTo.CompanyGroups.Count == 0)
+            {
+                userCompanyGroupsIds = null;
+            }
+            if (stringHelper.AreEqual(entityToEvaluate.CompanyGroups, userCompanyGroupsIds) == false)
+            {
+                return true;
+            }            
             return false;
         }
 
+        /// <inheritdoc/>
+        public string GetUserGroupsJSON(IList<Group> userGroups)
+        {
+            bool userGroupsArrayHasItems = false;
+            var userGroupsIds = new StringBuilder();
+            userGroupsIds.Append('[');
+
+            for (int i = 0; i < userGroups.Count; i++)
+            {
+                if (userGroupsArrayHasItems == true)
+                {
+                    userGroupsIds.Append(',');
+                }
+                string userGroupsId = userGroups[i].Id.ToString();
+                userGroupsIds.Append($"{{\"id\":\"{userGroupsId}\"}}");
+                userGroupsArrayHasItems = true;
+            }
+            userGroupsIds.Append(']');
+            return userGroupsIds.ToString();
+        }
         /// <inheritdoc/>
         public DbUser UpdateEntity(DbUser entityToUpdate, User entityToMapTo, Common.DatabaseRecordStatus entityStatus = Common.DatabaseRecordStatus.Active)
         {

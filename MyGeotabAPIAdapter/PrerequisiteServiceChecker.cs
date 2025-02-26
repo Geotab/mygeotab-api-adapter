@@ -1,4 +1,5 @@
-﻿using MyGeotabAPIAdapter.Logging;
+﻿using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.Logging;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -11,36 +12,28 @@ namespace MyGeotabAPIAdapter
     /// <summary>
     /// A class that handles checking whether prerequisite services are running.
     /// </summary>
-    internal class PrerequisiteServiceChecker : IPrerequisiteServiceChecker
+    internal class PrerequisiteServiceChecker<T> : IPrerequisiteServiceChecker<T> where T : IDbOServiceTracking
     {
         const int OrchestratorServiceInitializationCheckIntervalSeconds = 5;
 
         readonly IMessageLogger messageLogger;
         readonly IOrchestratorServiceTracker orchestratorServiceTracker;
-        readonly IServiceTracker serviceTracker;
+        readonly IServiceTracker<T> serviceTracker;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PrerequisiteServiceChecker"/> class.
         /// </summary>
-        public PrerequisiteServiceChecker(IMessageLogger messageLogger, IOrchestratorServiceTracker orchestratorServiceTracker, IServiceTracker serviceTracker)
+        public PrerequisiteServiceChecker(IMessageLogger messageLogger, IOrchestratorServiceTracker orchestratorServiceTracker, IServiceTracker<T> serviceTracker)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.messageLogger = messageLogger;
             this.orchestratorServiceTracker = orchestratorServiceTracker;
             this.serviceTracker = serviceTracker;
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public async Task WaitForPrerequisiteServicesIfNeededAsync(string dependentServiceClassName, List<AdapterService> prerequisiteServices, CancellationToken cancellationToken, bool includeCheckForWhetherServicesHaveProcessedAnyData = false)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             // Perform initial check to see whether the Orchestrator service has been initialized.
             var orchestratorServiceInitialized = orchestratorServiceTracker.OrchestratorServiceInitialized;
 
@@ -50,6 +43,8 @@ namespace MyGeotabAPIAdapter
             var allPrerequisiteServicesHaveProcessedData = false;
 
             // If all prerequisite services are not running, keep checking until they are.
+            var waitForOrchestratorMessageLogged = false;
+            var waitForPrerequisiteServicesMessageLogged = false;
             while (orchestratorServiceInitialized == false || allPrerequisiteServicesRunning == false || allPrerequisiteServicesHaveProcessedData == false)
             {
                 orchestratorServiceInitialized = orchestratorServiceTracker.OrchestratorServiceInitialized;
@@ -63,23 +58,35 @@ namespace MyGeotabAPIAdapter
 
                 if (orchestratorServiceInitialized == false)
                 {
-                    messageLogger.LogWaitForOrchestratorServiceServicePause(dependentServiceClassName, TimeSpan.FromSeconds(OrchestratorServiceInitializationCheckIntervalSeconds));
+                    if (waitForOrchestratorMessageLogged == false)
+                    {
+                        messageLogger.LogWaitForOrchestratorServiceServicePause(dependentServiceClassName, TimeSpan.FromSeconds(OrchestratorServiceInitializationCheckIntervalSeconds));
+                        waitForOrchestratorMessageLogged = true;
+                    }
                     await Task.Delay(TimeSpan.FromSeconds(OrchestratorServiceInitializationCheckIntervalSeconds), cancellationToken);
                 }
                 else
                 {
                     if (allPrerequisiteServicesRunning == false || allPrerequisiteServicesHaveProcessedData == false)
                     {
-                        messageLogger.LogWaitForPrerequisiteServicesServicePause(dependentServiceClassName, prerequisiteServiceOperationCheckResult.ServicesNeverRunStatement, prerequisiteServiceOperationCheckResult.ServicesNotRunningStatement, prerequisiteServiceOperationCheckResult.ServicesWithNoDataProcessedStatement, prerequisiteServiceOperationCheckResult.RecommendedDelayBeforeNextCheck);
+                        if (waitForPrerequisiteServicesMessageLogged == false)
+                        {
+                            messageLogger.LogWaitForPrerequisiteServicesServicePause(dependentServiceClassName, prerequisiteServiceOperationCheckResult.ServicesNeverRunStatement, prerequisiteServiceOperationCheckResult.ServicesNotRunningStatement, prerequisiteServiceOperationCheckResult.ServicesWithNoDataProcessedStatement, prerequisiteServiceOperationCheckResult.RecommendedDelayBeforeNextCheck);
+                            waitForPrerequisiteServicesMessageLogged = true;
+                        }
+                        
                         await Task.Delay(prerequisiteServiceOperationCheckResult.RecommendedDelayBeforeNextCheck, cancellationToken);
-                        messageLogger.LogWaitForPrerequisiteServicesServiceResumption(dependentServiceClassName);
                     }
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            // Log a message indicating that the service is resuming operation.
+            if (waitForOrchestratorMessageLogged == true || waitForPrerequisiteServicesMessageLogged == true)
+            {
+                messageLogger.LogWaitForPrerequisiteServicesServiceResumption(dependentServiceClassName);
+            }
         }
     }
 }

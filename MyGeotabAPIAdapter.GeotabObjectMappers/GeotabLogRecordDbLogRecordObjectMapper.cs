@@ -32,10 +32,10 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 DateTime = entityToMapTo.DateTime.GetValueOrDefault(),
                 DeviceId = entityToMapTo.Device.Id.ToString(),
                 GeotabId = entityToMapTo.Id.ToString(),
-                Latitude = entityToMapTo.Latitude,
-                Longitude = entityToMapTo.Longitude,
+                Latitude = (double)entityToMapTo.Latitude,
+                Longitude = (double)entityToMapTo.Longitude,
                 RecordCreationTimeUtc = DateTime.UtcNow,
-                Speed = entityToMapTo.Speed
+                Speed = (float)entityToMapTo.Speed
             };
             return dbLogRecord;
         }

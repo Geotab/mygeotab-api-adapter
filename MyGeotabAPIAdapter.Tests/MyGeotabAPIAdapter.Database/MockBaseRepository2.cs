@@ -95,6 +95,14 @@ namespace MyGeotabAPIAdapter.Tests
         /// <summary>
         /// NOT IMPLEMENTED
         /// </summary>
+        public Task<bool> ExecuteAsync(string sql, object[]? parameters, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext? uowContext = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// NOT IMPLEMENTED
+        /// </summary>
         public async Task<IEnumerable<T>> GetAsync(dynamic dynamicParams, CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "")
         {
             await Task.Delay(1);
@@ -204,6 +212,66 @@ namespace MyGeotabAPIAdapter.Tests
                 updatedEntityCount += 1;
             }
             return updatedEntityCount;
+        }
+
+        public Task<bool> DeleteAsync(T entity, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<long> InsertAsync(T entity, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<long> InsertAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> UpdateAsync(T entity, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<long> UpdateAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> UpdateAsync(T entity, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext uowContext = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> DeleteAsync(T entity, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext uowContext = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "", bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext uowContext = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<long> InsertAsync(T entity, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext uowContext = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<long> InsertAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext uowContext = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<long> UpdateAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext uowContext = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<T>> QueryAsync(string sql, object parameters, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext uowContext = null)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -12,5 +12,12 @@
         /// <param name="s2">The string to compare with <paramref name="s1"/>.</param>
         /// <returns></returns>
         bool AreEqual(string s1, string s2);
+
+        /// <summary>
+        /// Indicates whether <paramref name="identifier"/> is a valid identifier for a database object such as a schame name or a table name. A valid identifier must start with a letter (capital or lowercase) or an underscore, and may contain only letters (capital or lowercase), numbers, underscores, and dashes.
+        /// </summary>
+        /// <param name="identifier">The identifier to be evaluated.</param>
+        /// <returns></returns>
+        bool IsValidIdentifierForDatabaseObject(string identifier);
     }
 }

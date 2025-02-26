@@ -85,9 +85,6 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         public GenericGeotabObjectFeeder(IAdapterConfiguration adapterConfiguration, IDateTimeHelper dateTimeHelper, IMyGeotabAPIHelper myGeotabAPIHelper)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.dateTimeHelper = dateTimeHelper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
@@ -104,7 +101,6 @@ namespace MyGeotabAPIAdapter
 
             Id = Guid.NewGuid().ToString();
             logger.Debug($"{nameof(GenericGeotabObjectFeeder<T>)}<{typeParameterType}> [Id: {Id}] created.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -112,9 +108,6 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         AdapterService GetAdapterServiceMemberForT()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (typeParameterType == typeof(Geotab.Checkmate.ObjectModel.BinaryData)) { return AdapterService.BinaryDataProcessor; }
             if (typeParameterType == typeof(ChargeEvent)) { return AdapterService.ChargeEventProcessor; }
             if (typeParameterType == typeof(Controller)) { return AdapterService.ControllerProcessor; }
@@ -147,8 +140,6 @@ namespace MyGeotabAPIAdapter
         /// <inheritdoc/>
         public async Task GetFeedDataBatchAsync(CancellationTokenSource cancellationTokenSource)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
             _ = cancellationTokenSource.Token;
 
             CancellationToken cancellationToken = cancellationTokenSource.Token;
@@ -258,7 +249,6 @@ namespace MyGeotabAPIAdapter
             {
                 logger.Debug($"{typeParameterType.Name} data feed not polled; {FeedPollingIntervalSeconds} seconds have not passed since last poll.");
             }
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
@@ -276,9 +266,6 @@ namespace MyGeotabAPIAdapter
         /// <inheritdoc/>
         public async Task InitializeAsync(CancellationTokenSource cancellationTokenSource, int feedPollingIntervalSeconds, int feedResultsLimit, long? lastFeedVersion)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await initializationLock.WaitAsync();
             try
             {
@@ -309,8 +296,6 @@ namespace MyGeotabAPIAdapter
             {
                 initializationLock.Release();
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -318,15 +303,10 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         void ValidateInitialized()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (IsInitialized == false)
             {
                 throw new InvalidOperationException($"The current {CurrentClassName} has not been initialized. The {nameof(InitializeAsync)} method must be called before other methods can be invoked.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

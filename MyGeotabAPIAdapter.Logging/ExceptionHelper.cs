@@ -38,9 +38,6 @@ namespace MyGeotabAPIAdapter.Logging
         /// <inheritdoc/>
         public bool AllInnerExceptionsAreTaskCanceledExceptions(AggregateException aggregateException)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             bool allInnerExceptionsAreTaskCanceledExceptions = true;
             foreach (var exception in aggregateException.InnerExceptions)
             {
@@ -50,17 +47,12 @@ namespace MyGeotabAPIAdapter.Logging
                     break;
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return allInnerExceptionsAreTaskCanceledExceptions;
         }
 
         /// <inheritdoc/>
         public bool ConnectivityIssueDetected(AggregateException aggregateException)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             bool connectivityIssueDetected = false;
             foreach (var exception in aggregateException.InnerExceptions)
             {
@@ -70,17 +62,12 @@ namespace MyGeotabAPIAdapter.Logging
                     break;
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return connectivityIssueDetected;
         }
 
         /// <inheritdoc/>
         public bool DatabaseConnectivityIssueDetected(AggregateException aggregateException)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             bool connectivityIssueDetected = false;
             foreach (var exception in aggregateException.InnerExceptions)
             {
@@ -90,8 +77,6 @@ namespace MyGeotabAPIAdapter.Logging
                     break;
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return connectivityIssueDetected;
         }
 
@@ -119,7 +104,6 @@ namespace MyGeotabAPIAdapter.Logging
         public void HandleConnectivityRelatedAggregateException(AggregateException aggregateException, ConnectivityIssueType connectivityIssueType, string errorMessage)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             // Any exceptions that occurred when executing any of the tasks executed via Task.WaitAll will be included in this AggregateException. Log the exception(s) and, if any are connectivity-related, raise a new MyGeotabConnectionException or DatabaseConnectionException. Otherwise, simply pass the AggregateException along (unless all of its inner exceptions are TaskCanceledExceptions, in which case the AggregateException can be ignored).
             LogExceptions(aggregateException, NLogLogLevelName.Warn);
@@ -222,9 +206,6 @@ namespace MyGeotabAPIAdapter.Logging
         /// <inheritdoc/>
         public bool MyGeotabConnectivityIssueDetected(AggregateException aggregateException)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             bool connectivityIssueDetected = false;
             foreach (var exception in aggregateException.InnerExceptions)
             {
@@ -234,8 +215,6 @@ namespace MyGeotabAPIAdapter.Logging
                     break;
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return connectivityIssueDetected;
         }
     }

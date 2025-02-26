@@ -310,9 +310,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
         /// </summary>
         public VSSConfiguration(IConfigurationHelper configurationHelper, IDateTimeHelper dateTimeHelper, IHttpHelper httpHelper)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.configurationHelper = configurationHelper;
             this.dateTimeHelper = dateTimeHelper;
             this.httpHelper = httpHelper;
@@ -320,7 +317,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
 
             Id = Guid.NewGuid().ToString();
             logger.Debug($"{nameof(VSSConfiguration)} [Id: {Id}] created.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -422,9 +418,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
         /// <inheritdoc/>
         public async Task InitializeAsync(string vssPathMapFileDirectory, string vssPathMapFileName)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             await initializationLock.WaitAsync();
             try
             {
@@ -450,8 +443,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
                 isInternalUpdate = false;
                 initializationLock.Release();
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -459,9 +450,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
         /// </summary>
         void LoadAttributeVSSPathMaps()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             AttributeVSSPathMaps = new Dictionary<string, VSSPathMap>();
             var attributeVSSPathMapsSection = configurationHelper.GetConfigSection(ArgNameAttributeVSSPathMaps);
             var attributeVSSPathMaps = attributeVSSPathMapsSection.Get<VSSPathMap[]>();
@@ -471,8 +459,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
                 attributeVSSPathMap.GeotabObjectPropertyName = nameof(GeotabObjectFieldNames.Data);
                 AttributeVSSPathMaps.Add(attributeVSSPathMap.GeotabDiagnosticId, attributeVSSPathMap);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -480,9 +466,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
         /// </summary>
         void LoadLogRecordVSSPathMaps()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             LogRecordVSSPathMaps = new Dictionary<string, VSSPathMap>();
             var logRecordVSSPathMapsSection = configurationHelper.GetConfigSection(ArgNameLogRecordVSSPathMaps);
             var logRecordVSSPathMaps = logRecordVSSPathMapsSection.Get<VSSPathMap[]>();
@@ -491,8 +474,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
                 logRecordVSSPathMap.GeotabObjectType = VSSMappableGeotabObjectTypes.LogRecord.ToString();
                 LogRecordVSSPathMaps.Add(logRecordVSSPathMap.GeotabObjectPropertyName, logRecordVSSPathMap);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -500,9 +481,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
         /// </summary>
         void LoadStatusDataVSSPathMaps()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             StatusDataVSSPathMaps = new Dictionary<string, VSSPathMap>();
             var statusDataVSSPathMapsSection = configurationHelper.GetConfigSection(ArgNameStatusDataVSSPathMaps);
             var statusDataVSSPathMaps = statusDataVSSPathMapsSection.Get<VSSPathMap[]>();
@@ -512,8 +490,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
                 statusDataVSSPathMap.GeotabObjectPropertyName = nameof(GeotabObjectFieldNames.Data);
                 StatusDataVSSPathMaps.Add(statusDataVSSPathMap.GeotabDiagnosticId, statusDataVSSPathMap);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -530,8 +506,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
         /// <inheritdoc/>
         public void ProcessConfigItems()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
             logger.Info($"Processing configuration items.");
 
             // AppSettings:AddOns:VSS:
@@ -549,8 +523,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
             OVDSServerURL = configurationHelper.GetConfigKeyValueString(ArgNameOVDSServerURL);
             OVDSSetCommandTemplate = configurationHelper.GetConfigKeyValueString(ArgNameOVDSSetCommandTemplate);
             OVDSSetCommandTemplateForAttributeVSSPathMaps = configurationHelper.GetConfigKeyValueString(ArgNameOVDSSetCommandTemplateForAttributeVSSPathMaps);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -560,9 +532,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
         /// <exception cref="Exception"></exception>
         async Task DownloadVSSPathMapsFileAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             // Construct URL of VSS path map file - incorporating the VSS version.
             StringBuilder urlBuilder = new();
             urlBuilder.Append(VSSPathMapFileURL);
@@ -604,8 +573,6 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
                     throw;
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -628,15 +595,10 @@ namespace MyGeotabAPIAdapter.Configuration.Add_Ons.VSS
         /// </summary>
         void ValidateInitialized()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (isInitialized == false && isInternalUpdate == false)
             {
                 throw new InvalidOperationException($"The current {CurrentClassName} has not been initialized. The {nameof(InitializeAsync)} method must be called before other methods can be invoked.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

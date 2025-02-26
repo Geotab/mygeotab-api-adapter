@@ -27,25 +27,17 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         /// </summary>
         public UnmappedDiagnosticManager(IDateTimeHelper dateTimeHelper, IGenericGeotabObjectHydrator<Diagnostic> diagnosticGeotabObjectHydrator, IVSSConfiguration vssConfiguration)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.dateTimeHelper = dateTimeHelper;
             this.diagnosticGeotabObjectHydrator = diagnosticGeotabObjectHydrator;
             this.vssConfiguration = vssConfiguration;
 
             UnmappedDiagnosticsDictionary = new Dictionary<Id, UnmappedDiagnostic>();
             UnmappedDiagnosticsLastLoggedTimeUtc = DateTime.MinValue;
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public void AddUnmappedDiagnosticToDictionary(StatusData statusData)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (statusData.Diagnostic != null && statusData.Diagnostic.Id != null)
             {
                 // Get and hydrate the StatusData's Diagnostic.
@@ -73,16 +65,11 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
                     UnmappedDiagnosticsDictionary.Add(diagnostic.Id, unmappedDiagnostic);
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public void LogUnmappedDiagnostics()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             // Only proeed if UnmappedDiagnostics are configured to be logged and the configured time interval has elapsed since the last time they were logged.
             if (vssConfiguration.LogUnmappedDiagnostics == true && dateTimeHelper.TimeIntervalHasElapsed(UnmappedDiagnosticsLastLoggedTimeUtc, DateTimeIntervalType.Minutes, vssConfiguration.UnmappedDiagnosticsLogIntervalMinutes))
             {
@@ -95,8 +82,6 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
 
                 UnmappedDiagnosticsLastLoggedTimeUtc = DateTime.UtcNow;
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using MyGeotabAPIAdapter.Logging;
+using NLog;
 using Polly;
 using Polly.Retry;
 using Polly.Timeout;
@@ -12,44 +13,17 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
     /// </summary>
     public static class DatabaseResilienceHelper
     {
-        /// <summary>
-        /// "command is already in progress"
-        /// </summary>
+        // Known strings to look for in exception messages:
         public static string CommandAlreadyInProgressString { get => "command is already in progress"; }
-
-        /// <summary>
-        /// "Connection is busy"
-        /// </summary>
         public static string ConnectionIsBusyString { get => "connection is busy"; }
-
-        /// <summary>
-        /// "chosen as the deadlock victim"
-        /// </summary>
         public static string DeadlockString { get => "chosen as the deadlock victim"; }
-
-        /// <summary>
-        /// "exception occurred while attempting to get an open database connection"
-        /// </summary>
         public static string ErrorOccurredWhileGettingOpenConnectionString { get => "exception occurred while attempting to get an open database connection"; }
-
-        /// <summary>
-        /// "exception occurred while attempting to get an open postgresql database connection"
-        /// </summary>
         public static string ErrorOccurredWhileGettingOpenPostgreSQLConnectionString { get => "exception occurred while attempting to get an open postgresql database connection"; }
-
-        /// <summary>
-        /// "this sqltransaction has completed; it is no longer usable"
-        /// </summary>
+        public static string PKViolationString { get => "violation of primary key constraint"; }
+        public static string SqlTransactionAbortedString { get => "current transaction is aborted, commands ignored until end of transaction block"; }
+        public static string SqlTransactionCannotBeCommittedString { get => "transaction cannot be committed"; }
         public static string SqlTransactionCompletedNoLongerUsableString { get => "this sqltransaction has completed; it is no longer usable"; }
-
-        /// <summary>
-        /// "timeout"
-        /// </summary>
         public static string TimeoutString { get => "timeout"; }
-
-        /// <summary>
-        /// "time out"
-        /// </summary>
         public static string TimeoutString2 { get => "time out"; }
 
         /// <summary>
@@ -62,10 +36,10 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// </summary>
         public static int TimeoutSecondsToAddOnEachCommandRetryAttempt { get => 300; }
 
-    /// <summary>
-    /// The maximum allowed timeout in seconds.
-    /// </summary>
-    public static int MaxTimeoutSeconds { get => 3600; } // 1 hour
+        /// <summary>
+        /// The maximum allowed timeout in seconds.
+        /// </summary>
+        public static int MaxTimeoutSeconds { get => 3600; } // 1 hour
 
         // Polly context variable names:
         public static string PollyContextKeyRetryAttemptNumber { get => "RetryAttemptNumber"; }
@@ -93,7 +67,11 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     sleepDurationProvider: (retryAttempt) =>
                     {
                         // Set the delay time before retrying based on the retry attempt number.
-                        int sleepDurationSeconds = 1;
+                        int sleepDurationSeconds = retryAttempt + 1;
+                        if (sleepDurationSeconds > MaxTransactionRetryAttemptDelaySeconds)
+                        {
+                            sleepDurationSeconds = MaxTransactionRetryAttemptDelaySeconds;
+                        }
                         var jitterer = new Random();
                         int sleepDurationMilliseconds = sleepDurationSeconds * 1000 + jitterer.Next(0, 3000);
                         var sleepDuration = TimeSpan.FromMilliseconds(sleepDurationMilliseconds);
@@ -104,7 +82,8 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     {
                         var commandTimeout = (TimeSpan)context[PollyContextKeyRetryAttemptTimeoutTimeSpan];
                         context[PollyContextKeyRetryAttemptNumber] = attemptNumber;
-                        logger.Warn($"Transient exception of type \'{exception.GetType().Name}\' with message \'{exception.Message}\' detected. Command timeout was {commandTimeout}. Retrying command in {sleepDuration} (attempt {attemptNumber} of {maxRetries}).");
+                        ExceptionHelper exceptionHelper = new();
+                        exceptionHelper.LogException(exception, NLogLogLevelName.Warn, $"Transient exception of type \'{exception.GetType().Name}\' with message \'{exception.Message}\' detected. Command timeout was {commandTimeout}. Retrying command in {sleepDuration} (attempt {attemptNumber} of {maxRetries}).");
                     }
                  );
         }
@@ -126,6 +105,12 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenPostgreSQLConnectionString))
                 .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(PKViolationString))
+                .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(SqlTransactionAbortedString))
+                .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(SqlTransactionCannotBeCommittedString))
+                .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(TimeoutString))
@@ -141,6 +126,12 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenConnectionString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenPostgreSQLConnectionString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(PKViolationString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(SqlTransactionAbortedString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(SqlTransactionCannotBeCommittedString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
                 .OrInner<TException>(exception =>
@@ -169,7 +160,8 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     onRetry: (exception, sleepDuration, attemptNumber, context) =>
                     {
                         context[PollyContextKeyRetryAttemptNumber] = attemptNumber;
-                        logger.Warn($"Transient exception of type \'{exception.GetType().Name}\' with message \'{exception.Message}\' detected within a transaction. Retrying transaction in {sleepDuration} (attempt {attemptNumber} of {maxRetries}).");
+                        ExceptionHelper exceptionHelper = new();
+                        exceptionHelper.LogException(exception, NLogLogLevelName.Warn, $"Transient exception of type \'{exception.GetType().Name}\' with message \'{exception.Message}\' detected within a transaction. Retrying transaction in {sleepDuration} (attempt {attemptNumber} of {maxRetries}).");
                     }
                  );
         }

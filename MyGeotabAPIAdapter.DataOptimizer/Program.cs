@@ -30,9 +30,12 @@ namespace MyGeotabAPIAdapter.DataOptimizer
             var logger = LogManager.GetCurrentClassLogger();
             try
             {
+                var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+
                 var config = new ConfigurationBuilder()
                     .SetBasePath(System.IO.Directory.GetCurrentDirectory())
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                    .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
                     .Build();
 
                 CreateHostBuilder(args, config).Build().Run();

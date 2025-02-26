@@ -8,9 +8,10 @@ using System.Threading.Tasks;
 namespace MyGeotabAPIAdapter
 {
     /// <summary>
-    /// Interface for a class that helps manage <see cref="DbOServiceTracking"/> information for all <see cref="AdapterService"/>s.
+    /// Interface for a class that helps manage <see cref="T"/> information for all <see cref="AdapterService"/>s.
     /// </summary>
-    internal interface IServiceTracker
+    /// <typeparam name="T">The type of <see cref="IDbOServiceTracking"/> implementation to be used.</typeparam>
+    internal interface IServiceTracker<T> where T : IDbOServiceTracking
     {
         /// <summary>
         /// A unique identifier assigned during instantiation. Intended for debugging purposes.
@@ -18,7 +19,7 @@ namespace MyGeotabAPIAdapter
         string Id { get; }
 
         /// <summary>
-        /// Indicates whether the current <see cref="DbOServiceTracking<T>"/> is in the process of updating the database.
+        /// Indicates whether the current <see cref="T"/> is in the process of updating the database.
         /// </summary>
         bool IsUpdating { get; }
 
@@ -31,114 +32,169 @@ namespace MyGeotabAPIAdapter
         Task<PrerequisiteServiceOperationCheckResult> CheckOperationOfPrerequisiteServicesAsync(List<AdapterService> prerequisiteServices, bool includeCheckForWhetherServicesHaveProcessedAnyData = false);
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.BinaryDataService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.BinaryDataProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetBinaryDataServiceInfoAsync();
+        Task<T> GetBinaryDataServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.ChargeEventService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ChargeEventProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetChargeEventServiceInfoAsync();
+        Task<T> GetChargeEventServiceInfoAsync();
 
         /// <summary>
-        /// The <see cref="DbOServiceTracking"/> entities associated with all <see cref="AdapterService"/>s.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DatabaseMaintenanceService"/>.
         /// </summary>
-        Task<List<DbOServiceTracking>> GetDbOServiceTrackingListAsync();
+        Task<T> GetDatabaseMaintenanceService2InfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the specified <paramref name="adapterService"/>.
+        /// The <see cref="T"/> entities associated with all <see cref="AdapterService"/>s.
         /// </summary>
-        /// <param name="adapterService">The <see cref="AdapterService"/> of the <see cref="DbOServiceTracking"/> entity to be retrieved.</param>
+        Task<List<T>> GetDbOServiceTrackingListAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the specified <paramref name="adapterService"/>.
+        /// </summary>
+        /// <param name="adapterService">The <see cref="AdapterService"/> of the <see cref="T"/> entity to be retrieved.</param>
         /// <returns></returns>
-        Task<DbOServiceTracking> GetDbOServiceTrackingRecordAsync(AdapterService adapterService);
+        Task<T> GetDbOServiceTrackingRecordAsync(AdapterService adapterService);
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DebugDataService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DebugDataProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetDebugDataServiceInfoAsync();
+        Task<T> GetDebugDataServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DeviceService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DeviceProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetDeviceServiceInfoAsync();
+        Task<T> GetDeviceServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DeviceStatusInfoService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DeviceProcessor2"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetDeviceStatusInfoServiceInfoAsync();
+        Task<T> GetDeviceService2InfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DiagnosticService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DeviceStatusInfoProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetDiagnosticServiceInfoAsync();
+        Task<T> GetDeviceStatusInfoServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DriverChangeService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DiagnosticProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetDriverChangeServiceInfoAsync();
+        Task<T> GetDiagnosticServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DutyStatusAvailabilityService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DiagnosticProcessor2"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetDutyStatusAvailabilityServiceInfoAsync();
+        Task<T> GetDiagnosticService2InfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DutyStatusLogService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DriverChangeProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetDutyStatusLogServiceInfoAsync();
+        Task<T> GetDriverChangeServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.DVIRLogService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DutyStatusAvailabilityProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetDVIRLogServiceInfoAsync();
+        Task<T> GetDutyStatusAvailabilityServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.ExceptionEventService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DutyStatusLogProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetExceptionEventServiceInfoAsync();
+        Task<T> GetDutyStatusLogServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.FaultDataService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DVIRLogProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetFaultDataServiceInfoAsync();
+        Task<T> GetDVIRLogServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.LogRecordService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ExceptionEventProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetLogRecordServiceInfoAsync();
+        Task<T> GetExceptionEventServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.RuleService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.FaultDataLocationService2"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetRuleServiceInfoAsync();
+        Task<T> GetFaultDataLocationService2InfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.StatusDataService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.FaultDataProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetStatusDataServiceInfoAsync();
+        Task<T> GetFaultDataServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.TripService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.FaultDataProcessor2"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetTripServiceInfoAsync();
+        Task<T> GetFaultDataService2InfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.UserService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.LogRecordProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetUserServiceInfoAsync();
+        Task<T> GetLogRecordServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.ZoneService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.LogRecordProcessor2"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetZoneServiceInfoAsync();
+        Task<T> GetLogRecordService2InfoAsync();
 
         /// <summary>
-        /// Retrieves the <see cref="DbOServiceTracking"/> entity associated with the <see cref="AdapterService.ZoneTypeService"/>.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.RuleProcessor"/>.
         /// </summary>
-        Task<DbOServiceTracking> GetZoneTypeServiceInfoAsync();
+        Task<T> GetRuleServiceInfoAsync();
 
         /// <summary>
-        /// Retrieves all existing <see cref="DbOServiceTracking"/> entities from the database. For any <see cref="AdapterService"/> not included in the retrieved list, new entities will be created and persisted to the database.
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.StatusDataLocationService2"/>.
+        /// </summary>
+        Task<T> GetStatusDataLocationService2InfoAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.StatusDataProcessor"/>.
+        /// </summary>
+        Task<T> GetStatusDataServiceInfoAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.StatusDataProcessor2"/>.
+        /// </summary>
+        Task<T> GetStatusDataService2InfoAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.TripProcessor"/>.
+        /// </summary>
+        Task<T> GetTripServiceInfoAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.UserProcessor"/>.
+        /// </summary>
+        Task<T> GetUserServiceInfoAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.UserProcessor2"/>.
+        /// </summary>
+        Task<T> GetUserService2InfoAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ZoneProcessor"/>.
+        /// </summary>
+        Task<T> GetZoneServiceInfoAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ZoneProcessor2"/>.
+        /// </summary>
+        Task<T> GetZoneService2InfoAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ZoneTypeProcessor"/>.
+        /// </summary>
+        Task<T> GetZoneTypeServiceInfoAsync();
+
+        /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ZoneTypeProcessor2"/>.
+        /// </summary>
+        Task<T> GetZoneTypeService2InfoAsync();
+
+        /// <summary>
+        /// Retrieves all existing <see cref="T"/> entities from the database. For any <see cref="AdapterService"/> not included in the retrieved list, new entities will be created and persisted to the database.
         /// </summary>
         /// <returns></returns>
         Task InitializeDbOServiceTrackingListAsync();
@@ -165,22 +221,22 @@ namespace MyGeotabAPIAdapter
         Task<bool> ServiceIsRunningAsync(AdapterService adapterService);
 
         /// <summary>
-        /// Updates the <see cref="DbOServiceTracking"/> entity associated with the specified <paramref name="adapterService"/> setting its properties with the associated supplied parameter values. Any properties for which null values are supplied will not be updated. 
+        /// Updates the <see cref="T"/> entity associated with the specified <paramref name="adapterService"/> setting its properties with the associated supplied parameter values. Any properties for which null values are supplied will not be updated. 
         /// </summary>
         /// <param name="context">The <see cref="AdapterDatabaseUnitOfWorkContext"/> to use.</param>
-        /// <param name="adapterService">The <see cref="AdapterService"/> of the <see cref="DbOServiceTracking"/> entity to be updated.</param>
-        /// <param name="entitiesLastProcessedUtc">The new <see cref="DbOServiceTracking.EntitiesLastProcessedUtc"/> value to use.</param>
-        /// <param name="lastProcessedFeedVersion">The new <see cref="DbOServiceTracking.LastProcessedFeedVersion"/> value to use.</param>
+        /// <param name="adapterService">The <see cref="AdapterService"/> of the <see cref="T"/> entity to be updated.</param>
+        /// <param name="entitiesLastProcessedUtc">The new <see cref="T.EntitiesLastProcessedUtc"/> value to use.</param>
+        /// <param name="lastProcessedFeedVersion">The new <see cref="T.LastProcessedFeedVersion"/> value to use.</param>
         /// <returns></returns>
         Task UpdateDbOServiceTrackingRecordAsync(IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> context, AdapterService adapterService, DateTime? entitiesLastProcessedUtc = null, long? lastProcessedFeedVersion = null);
 
         /// <summary>
-        /// Updates the <see cref="DbOServiceTracking"/> entity associated with the specified <paramref name="adapterService"/> setting its properties with the associated supplied parameter values. Any properties for which null values are supplied will not be updated.
+        /// Updates the <see cref="T"/> entity associated with the specified <paramref name="adapterService"/> setting its properties with the associated supplied parameter values. Any properties for which null values are supplied will not be updated.
         /// </summary>
         /// <param name="context">The <see cref="AdapterDatabaseUnitOfWorkContext"/> to use.</param>
-        /// <param name="adapterService">The <see cref="AdapterService"/> of the <see cref="DbOServiceTracking"/> entity to be updated.</param>
-        /// <param name="adapterVersion">The new <see cref="DbOServiceTracking.AdapterVersion"/> value to use.</param>
-        /// <param name="adapterMachineName">The new <see cref="DbOServiceTracking.AdapterMachineName"/> value to use.</param>
+        /// <param name="adapterService">The <see cref="AdapterService"/> of the <see cref="T"/> entity to be updated.</param>
+        /// <param name="adapterVersion">The new <see cref="T.AdapterVersion"/> value to use.</param>
+        /// <param name="adapterMachineName">The new <see cref="T.AdapterMachineName"/> value to use.</param>
         /// <returns></returns>
         Task UpdateDbOServiceTrackingRecordAsync(IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> context, AdapterService adapterService, string? adapterVersion = null, string? adapterMachineName = null);
 

@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace MyGeotabAPIAdapter
@@ -73,7 +74,7 @@ namespace MyGeotabAPIAdapter
                 ServicesNeverRun = servicesNeverRun;
             }
 
-            if (servicesNeverRun != null && servicesNeverRun.Count > 0)
+            if (servicesNeverRun != null && servicesNeverRun.Any())
             {
                 if (servicesNeverRun.Count == 1)
                 {
@@ -114,11 +115,11 @@ namespace MyGeotabAPIAdapter
                 ServicesNotRunning = servicesNotRunning;
             }
 
-            if (servicesNotRunning != null && servicesNotRunning.Count > 0)
+            if (servicesNotRunning != null && servicesNotRunning.Any())
             {
                 if (servicesNotRunning.Count == 1)
                 {
-                    ServicesNotRunningStatement = $"The prerequisite {servicesNotRunning[0]} is not currently running.";
+                    ServicesNotRunningStatement = $"The prerequisite {servicesNotRunning[0]} is not currently running or has not yet completed initialization.";
                 }
                 else
                 {
@@ -155,7 +156,7 @@ namespace MyGeotabAPIAdapter
                 ServicesWithNoDataProcessed = servicesWithNoDataProcessed;
             }
 
-            if (servicesWithNoDataProcessed != null && servicesWithNoDataProcessed.Count > 0)
+            if (servicesWithNoDataProcessed != null && servicesWithNoDataProcessed.Any())
             {
                 if (servicesWithNoDataProcessed.Count == 1)
                 {

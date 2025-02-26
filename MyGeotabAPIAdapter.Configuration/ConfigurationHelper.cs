@@ -26,9 +26,6 @@ namespace MyGeotabAPIAdapter.Configuration
         /// <inheritdoc/>
         public bool GetConfigKeyValueBoolean(string keyString, string sectionString = "", bool isMasked = false)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             string valueString = GetConfigKeyValueString(keyString, sectionString, false);
             if (bool.TryParse(valueString, out bool configItemValueBool))
             {
@@ -47,17 +44,12 @@ namespace MyGeotabAPIAdapter.Configuration
                 logger.Error(errorMessage);
                 throw new Exception(errorMessage);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return configItemValueBool;
         }
 
         /// <inheritdoc/>
         public DateTime GetConfigKeyValueDateTime(string keyString, string sectionString = "", bool isMasked = false)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             string configItemValueString = GetConfigKeyValueString(keyString, sectionString, false);
             if (DateTime.TryParse(configItemValueString, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime configItemValueDateTime))
             {
@@ -76,17 +68,12 @@ namespace MyGeotabAPIAdapter.Configuration
                 logger.Error(errorMessage);
                 throw new Exception(errorMessage);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return configItemValueDateTime;
         }
 
         /// <inheritdoc/>
         public int GetConfigKeyValueInt(string keyString, string sectionString = "", bool isMasked = false, int minimumAllowedValue = int.MinValue, int maximumAllowedValue = int.MaxValue, int defaultValueIfOutsideRange = int.MinValue)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             string valueString = GetConfigKeyValueString(keyString, sectionString, false);
 
             if (int.TryParse(valueString, out int output))
@@ -132,16 +119,12 @@ namespace MyGeotabAPIAdapter.Configuration
                 logger.Error(errorMessage);
                 throw new Exception(errorMessage);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return output;
         }
 
         /// <inheritdoc/>
         public string GetConfigKeyValueString(string keyString, string sectionString = "", bool isLogged = true, bool isMasked = false)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
             string output;
             if (string.IsNullOrEmpty(sectionString))
             {
@@ -170,32 +153,20 @@ namespace MyGeotabAPIAdapter.Configuration
                     logger.Info($">{keyString}: {output}");
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return output;
         }
 
         /// <inheritdoc/>
         public IConfigurationSection GetConfigSection(string sectionString)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var output = configuration.GetSection(sectionString);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
             return output;
         }
 
         /// <inheritdoc/>
         public void SetConfiguration(IConfiguration configuration)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.configuration = configuration;
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

@@ -74,7 +74,7 @@ Wait-Event -Timeout 120
 
 $createlogin = "CREATE LOGIN [$appUser] WITH PASSWORD=N'$appPassword'"
 $createappuser = "CREATE USER [$appUser] FOR LOGIN [$appUser] WITH DEFAULT_SCHEMA=[dbo]; ALTER ROLE [db_datareader] ADD MEMBER [$appUser]; ALTER ROLE [db_datawriter] ADD MEMBER [$appUser];"
-$excutescript = "$rootPath\SQLServer\geotabadapterdb-DatabaseCreationScript.sql"
+$excutescript = "$rootPath\SQLServer\v1\geotabadapterdb-DatabaseCreationScript.sql"
 
 # Create the login and user that the MyGeotab API Adapter will use to connect to the database:
 WriteLog "CREATE LOGIN [$appUser]."
@@ -111,6 +111,7 @@ $output | Set-Content $appSettingsFile
 # Update the MyGeotab API Adapter appsettings.json file with values from the 'ARM_TemplateParameterValues.json' file.
 $json = Get-Content $appSettingsFile -Raw | ConvertFrom-Json -Verbose
 $json.DatabaseSettings.DatabaseProviderType = 'SQLServer'
+$json.DatabaseSettings.UseDataModel2 = sqlUseDataModel2
 $json.DatabaseSettings.DatabaseConnectionString  = "Server=$sqlServerName;Database=$sqlDatabaseName;User Id=$appUser;Password=$appPassword"
 $json.LoginSettings.MyGeotabServer  = "$loginMYGServer"
 $json.LoginSettings.MyGeotabDatabase  = "$loginMYGDatabase"

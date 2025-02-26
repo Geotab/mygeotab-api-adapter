@@ -3,6 +3,8 @@ using Microsoft.CSharp.RuntimeBinder;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Helpers;
+using Newtonsoft.Json;
+using System.Text;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
@@ -32,6 +34,8 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
 
             string deviceComment = entityToMapTo.Comment;
 
+            string deviceGroups = String.Empty;
+
             try
             {
                 deviceLicensePlate = convertedDevice.LicensePlate;
@@ -59,6 +63,15 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 // Property does not exist for the subject Device type.
             }
 
+            try
+            {
+                deviceGroups = convertedDevice.Groups;
+            }
+            catch (RuntimeBinderException)
+            {
+                // Property does not exist for the subject Device type.
+            }
+
             if (deviceLicensePlate != null && deviceLicensePlate.Length == 0)
             {
                 deviceLicensePlate = String.Empty;
@@ -74,6 +87,11 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             if (deviceComment != null && deviceComment.Length == 0)
             {
                 deviceComment = String.Empty;
+            }
+
+            if (deviceGroups != null && deviceGroups.Length == 0)
+            {
+                deviceGroups = String.Empty;
             }
 
             DbDevice dbDevice = new()
@@ -93,6 +111,10 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 SerialNumber = entityToMapTo.SerialNumber,
                 VIN = deviceVIN
             };
+            if (entityToMapTo.Groups != null && entityToMapTo.Groups.Count > 0)
+            {
+                dbDevice.Groups = GetDeviceGroupsJSON(entityToMapTo.Groups);
+            }
             return dbDevice;
         }
 
@@ -132,6 +154,15 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 return true;
             }
+            string deviceGroupsIds = GetDeviceGroupsJSON(entityToMapTo.Groups);
+            if (entityToMapTo.Groups.Count == 0)
+            {
+                deviceGroupsIds = null;
+            }
+            if (stringHelper.AreEqual(entityToEvaluate.Groups, deviceGroupsIds) == false)
+            {
+                return true;
+            }
 
             // Add any additional checks for properties that are only available on certain types of Device.
             dynamic convertedDevice = Convert.ChangeType(entityToMapTo, entityToMapTo.GetType());
@@ -167,6 +198,27 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             }
 
             return false;
+        }
+
+        /// <inheritdoc/>
+        public string GetDeviceGroupsJSON(IList<Group> deviceGroups)
+        {
+            bool deviceGroupsArrayHasItems = false;
+            var deviceGroupsIds = new StringBuilder();
+            deviceGroupsIds.Append('[');
+
+            for (int i = 0; i < deviceGroups.Count; i++)
+            {
+                if (deviceGroupsArrayHasItems == true)
+                {
+                    deviceGroupsIds.Append(',');
+                }
+                string deviceGroupsId = deviceGroups[i].Id.ToString();
+                deviceGroupsIds.Append($"{{\"id\":\"{deviceGroupsId}\"}}");
+                deviceGroupsArrayHasItems = true;
+            }
+            deviceGroupsIds.Append(']');
+            return deviceGroupsIds.ToString();
         }
 
         /// <inheritdoc/>

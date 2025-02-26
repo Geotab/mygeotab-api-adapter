@@ -67,9 +67,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// </summary>
         public StatusDataProcessor(IDataOptimizerConfiguration dataOptimizerConfiguration, IOptimizerDatabaseObjectNames optimizerDatabaseObjectNames, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IMessageLogger messageLogger, IOptimizerEnvironment optimizerEnvironment, IPrerequisiteProcessorChecker prerequisiteProcessorChecker, IStateMachine stateMachine, IDataOptimizerDatabaseConnectionInfoContainer connectionInfoContainer, IProcessorTracker processorTracker, IDbStatusDataDbStatusDataTEntityMapper dbStatusDataDbStatusDataTEntityMapper, IGenericEntityPersister<DbStatusData> dbStatusDataEntityPersister, IGenericEntityPersister<DbStatusDataT> dbStatusDataTEntityPersister, IGenericGenericDbObjectCache<DbDeviceT, OptimizerGenericDbObjectCache<DbDeviceT>> dbDeviceTObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticIdT> dbDiagnosticIdTObjectCache, IGenericGeotabGUIDCacheableDbObjectCache<DbDiagnosticT> dbDiagnosticTObjectCache, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext, IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> optimizerContext)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.dataOptimizerConfiguration = dataOptimizerConfiguration;
             this.optimizerDatabaseObjectNames = optimizerDatabaseObjectNames;
             this.adapterDatabaseObjectNames = adapterDatabaseObjectNames;
@@ -96,8 +93,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -108,7 +103,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -290,8 +284,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
                     HandleException(ex, NLogLogLevelName.Fatal, DefaultErrorMessagePrefix);
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -325,9 +317,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         async Task InitializeOrUpdateCachesAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             // Initialize object caches. Run tasks in parallel.
             var dbObjectCacheInitializationAndUpdateTasks = new List<Task>();
 
@@ -345,8 +334,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
             }
 
             await Task.WhenAll(dbObjectCacheInitializationAndUpdateTasks);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -356,9 +343,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbOProcessorTrackings = await processorTracker.GetDbOProcessorTrackingListAsync();
 
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
@@ -399,9 +383,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
         }
@@ -413,9 +394,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
         /// <returns></returns>
         public async Task WaitForPrerequisiteProcessorsIfNeededAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var prerequisiteProcessors = new List<DataOptimizerProcessor>
             {
                 DataOptimizerProcessor.DeviceProcessor,
@@ -423,8 +401,6 @@ namespace MyGeotabAPIAdapter.DataOptimizer.Services
             };
 
             await prerequisiteProcessorChecker.WaitForPrerequisiteProcessorsIfNeededAsync(CurrentClassName, prerequisiteProcessors, cancellationToken);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

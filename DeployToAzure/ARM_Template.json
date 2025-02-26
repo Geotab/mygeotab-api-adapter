@@ -62,6 +62,12 @@
         "description": "Azure SQL Server Admin Password"
       }
     },
+    "sqlUseDataModel2": {
+      "type": "string",
+      "metadata": {
+        "description": "Use Data Model 2"
+      }
+    },
     "sqlDatabaseName": {
       "type": "string",
       "metadata": {

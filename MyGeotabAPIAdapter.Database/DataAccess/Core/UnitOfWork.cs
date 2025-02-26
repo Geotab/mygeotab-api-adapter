@@ -93,16 +93,11 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <param name="timeoutSecondsForDatabaseTasks">The maximum number of seconds that a database <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> should be thrown.</param>
         public UnitOfWork(DbConnection connection, int timeoutSecondsForDatabaseTasks)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             Id = System.Guid.NewGuid().ToString();
             Connection = connection;
             TimeoutSecondsForDatabaseTasks = timeoutSecondsForDatabaseTasks;
             Transaction = Connection.BeginTransaction();
-            
             logger.Trace($"{nameof(UnitOfWork)} [Id: {Id}] created and database transaction initiated.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -110,9 +105,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// </summary>
         public void Dispose()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             Dispose(true);
             GC.SuppressFinalize(this);
         }
@@ -173,9 +165,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <returns></returns>
         public async Task CommitAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (Transaction != null)
             {
                 await Transaction.CommitAsync();
@@ -193,8 +182,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 await SqlTransaction.CommitAsync();
                 logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] SQL Server database transaction committed.");
             }
-            
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -203,9 +190,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <returns></returns>
         public async Task RollBackAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             if (Transaction != null)
             {
                 await Transaction.RollbackAsync();
@@ -223,8 +207,6 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 await SqlTransaction.RollbackAsync();
                 logger.Debug($"{nameof(UnitOfWork)} [Id: {Id}] SQL Server database transaction rolled back.");
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

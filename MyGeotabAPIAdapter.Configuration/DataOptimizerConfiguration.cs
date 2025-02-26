@@ -344,20 +344,13 @@ namespace MyGeotabAPIAdapter.Configuration
         /// </summary>
         public DataOptimizerConfiguration(IConfigurationHelper configurationHelper)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.configurationHelper = configurationHelper;
             ProcessConfigItems();
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>
         public void ProcessConfigItems()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
             logger.Info ($"Processing configuration items.");
 
             string errorMessage;
@@ -608,8 +601,6 @@ namespace MyGeotabAPIAdapter.Configuration
                 throw new Exception(errorMessage);
             }
             StatusDataOptimizerPopulateDriverId = configurationHelper.GetConfigKeyValueBoolean(ArgNameStatusDataOptimizerPopulateDriverId);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

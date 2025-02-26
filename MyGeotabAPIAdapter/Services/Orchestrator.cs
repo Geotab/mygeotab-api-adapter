@@ -41,18 +41,15 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGenericEntityPersister<DbMyGeotabVersionInfo> dbMyGeotabVersionInfoEntityPersister;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IOrchestratorServiceTracker orchestratorServiceTracker;
-        readonly IStateMachine stateMachine;
+        readonly IStateMachine<DbMyGeotabVersionInfo> stateMachine;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> context;
 
         /// <summary>
         /// Instantiates a new instance of the <see cref="Orchestrator"/> class.
         /// </summary>
-        public Orchestrator(IAdapterConfiguration adapterConfiguration, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbMyGeotabVersionInfo> dbMyGeotabVersionInfoEntityPersister, IMyGeotabAPIHelper myGeotabAPIHelper, IOrchestratorServiceTracker orchestratorServiceTracker, IStateMachine stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> context)
+        public Orchestrator(IAdapterConfiguration adapterConfiguration, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbMyGeotabVersionInfo> dbMyGeotabVersionInfoEntityPersister, IMyGeotabAPIHelper myGeotabAPIHelper, IOrchestratorServiceTracker orchestratorServiceTracker, IStateMachine<DbMyGeotabVersionInfo> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> context)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.exceptionHelper = exceptionHelper;
             this.dbMyGeotabVersionInfoEntityPersister = dbMyGeotabVersionInfoEntityPersister;
@@ -63,8 +60,6 @@ namespace MyGeotabAPIAdapter.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -121,9 +116,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async void PerformInitializationTasks()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             try
             {
                 // Log application start-up.
@@ -147,8 +139,6 @@ namespace MyGeotabAPIAdapter.Services
                 logger.Error(errorMessage);
                 throw new Exception(errorMessage, ex);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -158,11 +148,16 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
-            logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
-            await base.StartAsync(cancellationToken);
+            // Only start this service if it has been configured to be enabled.
+            if (adapterConfiguration.UseDataModel2 == false)
+            {
+                logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
+                await base.StartAsync(cancellationToken);
+            }
+            else
+            {
+                logger.Warn($"******** WARNING - SERVICE DISABLED: The {CurrentClassName} service has not been enabled and will NOT be started.");
+            }
         }
 
         /// <summary>
@@ -172,9 +167,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             orchestratorServiceTracker.OrchestratorServiceInitialized = false;
 
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
@@ -187,9 +179,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task ValidateMyGeotabVersionInformationAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var versionInformation = await myGeotabAPIHelper.GetVersionInformationAsync(adapterConfiguration.TimeoutSecondsForMyGeotabTasks);
 
             logger.Info($"Version information for MyGeotab database '{myGeotabAPIHelper.MyGeotabAPI.Database}' on server '{myGeotabAPIHelper.MyGeotabAPI.Server}': Server='{versionInformation.Application.Build}-{versionInformation.Application.Branch}-{versionInformation.Application.Commit}', Database='{versionInformation.Database}', GoTalk='{versionInformation.GoTalk}'");
@@ -199,7 +188,7 @@ namespace MyGeotabAPIAdapter.Services
                 // Create a new DbMyGeotabVersionInfo entity with info from the VersionInformation of the current MyGeotab database.
                 var newDbMyGeotabVersionInfo = new DbMyGeotabVersionInfo
                 {
-                    ApplicationBranch = versionInformation.Application.Branch,
+                    ApplicationBranch = versionInformation.Application.Branch.Length > 50 ? versionInformation.Application.Branch.Substring(0, 50) : versionInformation.Application.Branch,
                     ApplicationBuild = versionInformation.Application.Build,
                     ApplicationCommit = versionInformation.Application.Commit,
                     DatabaseName = myGeotabAPIHelper.MyGeotabAPI.Database,
@@ -279,8 +268,6 @@ namespace MyGeotabAPIAdapter.Services
             {
                 throw;
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -289,9 +276,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task WaitForConnectivityRestorationAsync()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Warn($"******** CONNECTIVITY LOST. REASON: '{stateMachine.Reason}'. WAITING FOR RESTORATION OF CONNECTIVITY...");
 
             while (stateMachine.CurrentState == State.Waiting)
@@ -322,8 +306,6 @@ namespace MyGeotabAPIAdapter.Services
                     }
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

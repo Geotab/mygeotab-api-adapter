@@ -2,8 +2,12 @@
 using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
+using MyGeotabAPIAdapter.Database.Caches;
 using MyGeotabAPIAdapter.Database.DataAccess;
+using MyGeotabAPIAdapter.Database.EntityPersisters;
+using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Exceptions;
+using MyGeotabAPIAdapter.GeotabObjectMappers;
 using MyGeotabAPIAdapter.Logging;
 using MyGeotabAPIAdapter.MyGeotabAPI;
 using NLog;
@@ -11,6 +15,7 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +23,7 @@ using System.Threading.Tasks;
 namespace MyGeotabAPIAdapter.Services
 {
     /// <summary>
-    /// A <see cref="BackgroundService"/> that extracts <see cref="Group"/> objects from a MyGeotab database for in-memory caching. 
+    /// A <see cref="BackgroundService"/> that extracts <see cref="Group"/> objects from a MyGeotab database for in-memory caching and inserts/updates corresponding records in the Adapter database. 
     /// </summary>
     class GroupProcessor : BackgroundService
     {
@@ -30,13 +35,16 @@ namespace MyGeotabAPIAdapter.Services
         readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
 
         readonly IAdapterConfiguration adapterConfiguration;
-        readonly IAdapterEnvironment adapterEnvironment;
+        readonly IAdapterEnvironment<DbOServiceTracking> adapterEnvironment;
         readonly IExceptionHelper exceptionHelper;
+        readonly IGenericGenericDbObjectCache<DbGroup, AdapterGenericDbObjectCache<DbGroup>> dbGroupObjectCache;
+        readonly IGenericEntityPersister<DbGroup> dbGroupEntityPersister;
         readonly IGenericGeotabObjectCacher<Group> groupGeotabObjectCacher;
+        readonly IGeotabGroupDbGroupObjectMapper geotabGroupDbGroupObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
-        readonly IPrerequisiteServiceChecker prerequisiteServiceChecker;
-        readonly IServiceTracker serviceTracker;
-        readonly IStateMachine stateMachine;
+        readonly IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker;
+        readonly IServiceTracker<DbOServiceTracking> serviceTracker;
+        readonly IStateMachine<DbMyGeotabVersionInfo> stateMachine;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -44,14 +52,14 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="GroupProcessor"/> class.
         /// </summary>
-        public GroupProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IGenericGeotabObjectCacher<Group> groupGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public GroupProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking> adapterEnvironment, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbGroup, AdapterGenericDbObjectCache<DbGroup>> dbGroupObjectCache, IGenericEntityPersister<DbGroup> dbGroupEntityPersister, IGeotabGroupDbGroupObjectMapper geotabGroupDbGroupObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker, IServiceTracker<DbOServiceTracking> serviceTracker, IStateMachine<DbMyGeotabVersionInfo> stateMachine, IGenericGeotabObjectCacher<Group> groupGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
             this.exceptionHelper = exceptionHelper;
+            this.dbGroupObjectCache = dbGroupObjectCache;
+            this.dbGroupEntityPersister = dbGroupEntityPersister;
+            this.geotabGroupDbGroupObjectMapper = geotabGroupDbGroupObjectMapper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.prerequisiteServiceChecker = prerequisiteServiceChecker;
             this.serviceTracker = serviceTracker;
@@ -63,8 +71,6 @@ namespace MyGeotabAPIAdapter.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -75,7 +81,6 @@ namespace MyGeotabAPIAdapter.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -95,6 +100,101 @@ namespace MyGeotabAPIAdapter.Services
                     using (var cancellationTokenSource = new CancellationTokenSource())
                     {
                         await InitializeOrUpdateCachesAsync(cancellationTokenSource);
+                        var dbGroupsToPersist = new List<DbGroup>();
+                        var newDbGroupsToPersistDictionary = new Dictionary<string, Common.DatabaseWriteOperationType>();
+                        // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
+                        if (groupGeotabObjectCacher.LastUpdatedTimeUTC > groupGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
+                        {
+                            DateTime recordChangedTimestampUtc = DateTime.UtcNow;
+
+                            // Find any groups that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
+                            var dbGroups = await dbGroupObjectCache.GetObjectsAsync();
+                            foreach (var dbGroup in dbGroups)
+                            {
+                                if (dbGroup.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
+                                {
+                                    bool groupExistsInCache = groupGeotabObjectCacher.GeotabObjectCache.ContainsKey(Id.Create(dbGroup.GeotabId));
+                                    if (!groupExistsInCache)
+                                    {
+                                        logger.Debug($"Group '{dbGroup.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
+                                        dbGroup.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
+                                        dbGroup.RecordLastChangedUtc = recordChangedTimestampUtc;
+                                        dbGroup.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                                        dbGroupsToPersist.Add(dbGroup);
+                                    }
+                                }
+                            }
+
+                            // Iterate through the in-memory cache of Geotab Group objects.
+                            foreach (var group in groupGeotabObjectCacher.GeotabObjectCache.Values)
+                            {
+                                // Try to find the existing database record for the cached group.
+                                var dbGroup = await dbGroupObjectCache.GetObjectAsync(group.Id.ToString());
+                                if (dbGroup != null)
+                                {
+                                    // The group has already been added to the database.
+                                    if (geotabGroupDbGroupObjectMapper.EntityRequiresUpdate(dbGroup, group))
+                                    {
+                                        DbGroup updatedDbGroup = geotabGroupDbGroupObjectMapper.UpdateEntity(dbGroup, group);
+                                        dbGroupsToPersist.Add(updatedDbGroup);
+                                    }
+                                }
+                                else
+                                {
+                                    // The group has not yet been added to the database. Create a DbGroup, set its properties and add it to the cache.
+                                    var newDbGroup = geotabGroupDbGroupObjectMapper.CreateEntity(group);
+
+                                    // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
+                                    if (newDbGroupsToPersistDictionary.ContainsKey(newDbGroup.GeotabId))
+                                    {
+                                        newDbGroup.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
+                                    }
+
+                                    dbGroupsToPersist.Add(newDbGroup);
+                                    if (newDbGroup.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
+                                    {
+                                        newDbGroupsToPersistDictionary.Add(newDbGroup.GeotabId, newDbGroup.DatabaseWriteOperationType);
+                                    }
+                                }
+                            }
+
+                            stoppingToken.ThrowIfCancellationRequested();
+                        }
+                        else
+                        {
+                            logger.Debug($"Group cache in database is up-to-date.");
+                        }
+
+                        // Persist changes to database.
+                        await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                        {
+                            using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
+                            {
+                                try
+                                {
+                                    // DbGroup:
+                                    await dbGroupEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbGroupsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                    // DbOServiceTracking:
+                                    await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.GroupProcessor, DateTime.UtcNow);
+
+                                    // Commit transactions:
+                                    await adapterUOW.CommitAsync();
+                                }
+                                catch (Exception ex)
+                                {
+                                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                    await adapterUOW.RollBackAsync();
+                                    throw;
+                                }
+                            }
+                        }, new Context());
+
+                        // If there were any changes, force the DbGroup cache to be updated so that the changes are immediately available to other consumers.
+                        if (dbGroupsToPersist.Any())
+                        {
+                            await dbGroupObjectCache.UpdateAsync(true);
+                        }
                     }
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -124,8 +224,6 @@ namespace MyGeotabAPIAdapter.Services
                 logger.Info($"{CurrentClassName} pausing for the configured update interval ({delayTimeSpan}).");
                 await Task.Delay(delayTimeSpan, stoppingToken);
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -159,9 +257,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task InitializeOrUpdateCachesAsync(CancellationTokenSource cancellationTokenSource)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbObjectCacheInitializationAndUpdateTasks = new List<Task>();
 
             // Update the in-memory cache of Geotab objects obtained via API from the MyGeotab database.
@@ -174,9 +269,13 @@ namespace MyGeotabAPIAdapter.Services
                 dbObjectCacheInitializationAndUpdateTasks.Add(groupGeotabObjectCacher.UpdateGeotabObjectCacheAsync(cancellationTokenSource));
             }
 
-            await Task.WhenAll(dbObjectCacheInitializationAndUpdateTasks);
+            // Update the in-memory cache of database objects that correspond with Geotab objects.
+            if (dbGroupObjectCache.IsInitialized == false)
+            {
+                dbObjectCacheInitializationAndUpdateTasks.Add(dbGroupObjectCache.InitializeAsync(Databases.AdapterDatabase));
+            }
 
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
+            await Task.WhenAll(dbObjectCacheInitializationAndUpdateTasks);
         }
 
         /// <summary>
@@ -186,9 +285,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
             adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.GroupProcessor, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
@@ -210,7 +306,7 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.EnableGroupCache == true)
+            if (adapterConfiguration.UseDataModel2 == false && adapterConfiguration.EnableGroupCache == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -228,9 +324,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
         }
@@ -242,16 +335,11 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task WaitForPrerequisiteServicesIfNeededAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var prerequisiteServices = new List<AdapterService>
             {
             };
 
             await prerequisiteServiceChecker.WaitForPrerequisiteServicesIfNeededAsync(CurrentClassName, prerequisiteServices, cancellationToken);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

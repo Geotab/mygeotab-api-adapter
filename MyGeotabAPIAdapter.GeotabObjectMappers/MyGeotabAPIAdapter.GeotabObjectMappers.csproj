@@ -7,14 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="11.7.179" />
+    <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="11.62.237" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.8" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MyGeotabAPIAdapter.Database\MyGeotabAPIAdapter.Database.csproj" />
     <ProjectReference Include="..\MyGeotabAPIAdapter.Helpers\MyGeotabAPIAdapter.Helpers.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.MyGeotabAPI\MyGeotabAPIAdapter.MyGeotabAPI.csproj" />
   </ItemGroup>
 
 </Project>

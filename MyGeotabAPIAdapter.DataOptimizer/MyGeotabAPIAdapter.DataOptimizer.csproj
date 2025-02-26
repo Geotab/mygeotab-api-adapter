@@ -6,8 +6,8 @@
     <Authors>Geotab Inc.</Authors>
     <Company>Geotab Inc.</Company>
     <Product>MyGeotab API Adapter - DataOptimizer</Product>
-    <AssemblyVersion>2.2.0.2</AssemblyVersion>
-    <FileVersion>2.2.0.2</FileVersion>
+    <AssemblyVersion>3.0.0.0</AssemblyVersion>
+    <FileVersion>3.0.0.0</FileVersion>
     <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
     <Description>A worker service designed to migrate data from the MyGeotab API Adapter database into another set of tables that are optimized for use by applications and data analysis tools. Additional columns are added to some of the tables and these are populated via interpolation or other query-based procedues.</Description>
   </PropertyGroup>
@@ -17,10 +17,10 @@
   </ItemGroup> 
   
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.2" />
     <PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.8" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.4.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,21 +33,29 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Properties\PublishProfiles\" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="appsettings.Publish.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Properties\PublishProfiles\" />
-  </ItemGroup>  
-  
-  <Target Name="RenameAppsettings" AfterTargets="Publish" Condition=" '$(Configuration)'=='Release' ">
-    <Move SourceFiles="$(PublishDir)\appsettings.Publish.json" DestinationFiles="$(PublishDir)\appsettings.json" />
-  </Target>  
-  
-  <ProjectExtensions><VisualStudio><UserProperties appsettings_1publish_1json__JsonSchema="https://json.schemastore.org/appsettings.json" /></VisualStudio></ProjectExtensions>  
+	<ItemGroup>
+		<Content Remove="appsettings.Development.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <_WebToolingArtifacts Remove="Properties\launchSettings.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="Properties\launchSettings.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="appsettings.Development.json" />
+	</ItemGroup>
+
 </Project>

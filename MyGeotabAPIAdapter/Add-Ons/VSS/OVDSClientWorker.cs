@@ -21,6 +21,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using MyGeotabAPIAdapter.Database.Models;
 
 namespace MyGeotabAPIAdapter.Add_Ons.VSS
 {
@@ -38,15 +39,15 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
 
         readonly IAdapterConfiguration adapterConfiguration;
-        readonly IAdapterEnvironment adapterEnvironment;
+        readonly IAdapterEnvironment<DbOServiceTracking> adapterEnvironment;
         readonly IAdapterDatabaseObjectNames adapterDatabaseObjectNames;
         readonly IDateTimeHelper dateTimeHelper;
         readonly IExceptionHelper exceptionHelper;
         readonly IGenericEntityPersister<DbFailedOVDSServerCommand> dbFailedOVDSServerCommandEntityPersister;
         readonly IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister;
         readonly IHttpHelper httpHelper;
-        readonly IServiceTracker serviceTracker;
-        readonly IStateMachine stateMachine;
+        readonly IServiceTracker<DbOServiceTracking> serviceTracker;
+        readonly IStateMachine<DbMyGeotabVersionInfo> stateMachine;
         readonly IVSSConfiguration vssConfiguration;
         readonly IVSSObjectMapper vssObjectMapper;
 
@@ -61,11 +62,8 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         /// <summary>
         /// Instantiates a new instance of the <see cref="OVDSClientWorker"/> class.
         /// </summary>
-        public OVDSClientWorker(IAdapterConfiguration adapterConfiguration, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IAdapterEnvironment adapterEnvironment, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbFailedOVDSServerCommand> dbFailedOVDSServerCommandEntityPersister, IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister, IHttpHelper httpHelper, IServiceTracker serviceTracker, IStateMachine stateMachine, IVSSConfiguration vssConfiguration, IVSSObjectMapper vssObjectMapper, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public OVDSClientWorker(IAdapterConfiguration adapterConfiguration, IAdapterDatabaseObjectNames adapterDatabaseObjectNames, IAdapterEnvironment<DbOServiceTracking> adapterEnvironment, IDateTimeHelper dateTimeHelper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbFailedOVDSServerCommand> dbFailedOVDSServerCommandEntityPersister, IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister, IHttpHelper httpHelper, IServiceTracker<DbOServiceTracking> serviceTracker, IStateMachine<DbMyGeotabVersionInfo> stateMachine, IVSSConfiguration vssConfiguration, IVSSObjectMapper vssObjectMapper, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.adapterDatabaseObjectNames = adapterDatabaseObjectNames;
             this.adapterEnvironment = adapterEnvironment;
@@ -87,8 +85,6 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -96,9 +92,6 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         /// </summary>
         public override void Dispose()
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             base.Dispose();
         }
 
@@ -110,7 +103,6 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             // This is the loop containing all of the business logic that is executed iteratively throughout the lifeime of the application.
             while (!stoppingToken.IsCancellationRequested)
@@ -312,8 +304,6 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
                     await Task.Delay(delayTimeSpan, stoppingToken);
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -369,9 +359,6 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
             adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.OVDSClientWorker, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
@@ -415,9 +402,6 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
         }

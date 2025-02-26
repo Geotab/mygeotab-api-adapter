@@ -28,6 +28,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbConfigFeedVersionsTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbDBMaintenanceLog2"/> entities.
+        /// </summary>
+        string DbDBMaintenanceLog2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbDebugData"/> entities.
         /// </summary>
         string DbDebugDataTableName { get; }
@@ -38,9 +43,24 @@ namespace MyGeotabAPIAdapter.Database
         string DbDeviceTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbDevice2"/> entities.
+        /// </summary>
+        string DbDevice2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbDiagnostic"/> entities.
         /// </summary>
         string DbDiagnosticTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbDiagnostic2"/> entities.
+        /// </summary>
+        string DbDiagnostic2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbDiagnosticId2"/> entities.
+        /// </summary>
+        string DbDiagnosticId2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbDriverChange"/> entities.
@@ -99,14 +119,49 @@ namespace MyGeotabAPIAdapter.Database
         string DbFaultDataTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbFaultData2"/> entities.
+        /// </summary>
+        string DbFaultData2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbFaultData2WithLagLeadLongLat"/> entities.
+        /// </summary>
+        string DbFaultData2WithLagLeadLongLatStoredProcedureName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbFaultDataLocation2"/> entities.
+        /// </summary>
+        string DbFaultDataLocation2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbFaultDataLocation2Tracking"/> entities.
+        /// </summary>
+        string DbFaultDataLocation2TrackingTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbGroup"/> entities.
+        /// </summary>
+        string DbGroupTableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbLogRecord"/> entities.
         /// </summary>
         string DbLogRecordTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbLogRecord2"/> entities.
+        /// </summary>
+        string DbLogRecord2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbOVDSServerCommand"/> entities.
         /// </summary>
         string DbOVDSServerCommandTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbDBPartitionInfo2"/> entities.
+        /// </summary>
+        string DBPartitionInfo2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbRule"/> entities.
@@ -119,6 +174,26 @@ namespace MyGeotabAPIAdapter.Database
         string DbStatusDataTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbStatusData2"/> entities.
+        /// </summary>
+        string DbStatusData2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStatusData2WithLagLeadLongLat"/> entities.
+        /// </summary>
+        string DbStatusData2WithLagLeadLongLatStoredProcedureName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStatusDataLocation2"/> entities.
+        /// </summary>
+        string DbStatusDataLocation2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStatusDataLocation2Tracking"/> entities.
+        /// </summary>
+        string DbStatusDataLocation2TrackingTableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbTrip"/> entities.
         /// </summary>
         string DbTripTableName { get; }
@@ -129,9 +204,19 @@ namespace MyGeotabAPIAdapter.Database
         string DbUserTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbUser2"/> entities.
+        /// </summary>
+        string DbUser2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbZone"/> entities.
         /// </summary>
         string DbZoneTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbZone2"/> entities.
+        /// </summary>
+        string DbZone2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbZoneType"/> entities.
@@ -139,8 +224,18 @@ namespace MyGeotabAPIAdapter.Database
         string DbZoneTypeTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbZoneType2"/> entities.
+        /// </summary>
+        string DbZoneType2TableName { get; }
+
+        /// <summary>
         /// A unique identifier assigned during instantiation. Intended for debugging purposes.
         /// </summary>
         string Id { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for database partitioning.
+        /// </summary>
+        string PartitioningProcedureName { get; }
     }
 }

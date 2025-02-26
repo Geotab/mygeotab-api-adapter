@@ -36,14 +36,9 @@ namespace MyGeotabAPIAdapter.Add_Ons.VSS
         /// </summary>
         public VSSObjectMapper(IGenericGeotabObjectHydrator<Device> deviceGeotabObjectHydrator, IUnmappedDiagnosticManager unmappedDiagnosticManager, IVSSConfiguration vssConfiguration)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.deviceGeotabObjectHydrator = deviceGeotabObjectHydrator;
             this.unmappedDiagnosticManager = unmappedDiagnosticManager;
             this.vssConfiguration = vssConfiguration;
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>

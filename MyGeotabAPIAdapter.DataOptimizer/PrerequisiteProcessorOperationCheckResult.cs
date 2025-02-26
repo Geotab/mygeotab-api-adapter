@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace MyGeotabAPIAdapter.DataOptimizer
@@ -73,7 +74,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                 ProcessorsNeverRun = processorsNeverRun;
             }
 
-            if (processorsNeverRun != null && processorsNeverRun.Count > 0)
+            if (processorsNeverRun != null && processorsNeverRun.Any())
             {
                 if (processorsNeverRun.Count == 1)
                 {
@@ -114,7 +115,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                 ProcessorsNotRunning = processorsNotRunning;
             }
 
-            if (processorsNotRunning != null && processorsNotRunning.Count > 0)
+            if (processorsNotRunning != null && processorsNotRunning.Any())
             {
                 if (processorsNotRunning.Count == 1)
                 {
@@ -155,7 +156,7 @@ namespace MyGeotabAPIAdapter.DataOptimizer
                 ProcessorsWithNoDataProcessed = processorsWithNoDataProcessed;
             }
 
-            if (processorsWithNoDataProcessed != null && processorsWithNoDataProcessed.Count > 0)
+            if (processorsWithNoDataProcessed != null && processorsWithNoDataProcessed.Any())
             {
                 if (processorsWithNoDataProcessed.Count == 1)
                 {

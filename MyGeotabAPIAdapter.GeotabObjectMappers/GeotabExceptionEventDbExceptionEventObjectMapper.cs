@@ -42,7 +42,7 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 DriverId = driver.Id.ToString(),
                 Duration = entityToMapTo.Duration,
                 GeotabId = entityToMapTo.Id.ToString(),
-                LastModifiedDateTime = entityToMapTo.LastModifiedDateTime,
+                LastModifiedDateTime = (DateTime)entityToMapTo.LastModifiedDateTime,
                 RecordLastChangedUtc = DateTime.UtcNow,
                 RuleId = rule.Id.ToString(),
                 State = state.Key,

@@ -7,14 +7,15 @@ namespace MyGeotabAPIAdapter
 {
     /// <summary>
     /// A class that includes validation logic to help ensure that only one instance of a given <see cref="AdapterService"/> is running against the same adapter database in a distributed deployment scenario in which copies of the <see cref="MyGeotabAPIAdapter"/> are installed on multiple machines with different services running on each (in order to distribute load and maximize throughput) AND that the same version of the <see cref="MyGeotabAPIAdapter"/> is used on all machines involved. 
+    /// <typeparam name="T">The type of <see cref="IDbOServiceTracking"/> implementation to be used.</typeparam>
     /// </summary>
-    public class AdapterEnvironmentValidator : IAdapterEnvironmentValidator
+    public class AdapterEnvironmentValidator<T> : IAdapterEnvironmentValidator<T> where T : IDbOServiceTracking
     {
         /// <inheritdoc/>
         public string Id { get; private set; }
 
         /// <inheritdoc/>
-        public void ValidateAdapterMachineName(IAdapterEnvironment adapterEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService)
+        public void ValidateAdapterMachineName(IAdapterEnvironment<T> adapterEnvironment, List<T> dbOServiceTrackings, AdapterService adapterService)
         {
             var subjectDbOServiceTracking = dbOServiceTrackings.Where(dbOServiceTracking => dbOServiceTracking.ServiceId == adapterService.ToString()).FirstOrDefault();
 
@@ -35,7 +36,7 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
-        public void ValidateAdapterVersion(IAdapterEnvironment adapterEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService)
+        public void ValidateAdapterVersion(IAdapterEnvironment<T> adapterEnvironment, List<T> dbOServiceTrackings, AdapterService adapterService)
         {
             const int VersionMatchValue = 0;
             var subjectDbOServiceTracking = dbOServiceTrackings.Where(dbOServiceTracking => dbOServiceTracking.ServiceId == adapterService.ToString()).FirstOrDefault();

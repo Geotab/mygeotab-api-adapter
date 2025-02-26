@@ -59,6 +59,10 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 dbZone.ExternalReference = entityToMapTo.ExternalReference;
             }
+            if (entityToMapTo.Groups != null && entityToMapTo.Groups.Count > 0)
+            {
+                dbZone.Groups = GetZoneGroupsJSON(entityToMapTo.Groups);
+            }
             string zonePoints = JsonConvert.SerializeObject(entityToMapTo.Points);
             dbZone.Points = zonePoints;
             dbZone.ZoneTypeIds = GetZoneTypeIdsJSON(entityToMapTo.ZoneTypes);
@@ -116,6 +120,15 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 return true;
             }
+            string zoneGroupsIds = GetZoneGroupsJSON(entityToMapTo.Groups);
+            if (entityToMapTo.Groups.Count == 0)
+            {
+                zoneGroupsIds = null;
+            }
+            if (stringHelper.AreEqual(entityToEvaluate.Groups, zoneGroupsIds) == false)
+            {
+                return true;
+            }
             if (stringHelper.AreEqual(entityToEvaluate.Name, entityToMapTo.Name) == false)
             {
                 return true;
@@ -131,6 +144,27 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 return true;
             }
             return false;
+        }
+
+        /// <inheritdoc/>
+        public string GetZoneGroupsJSON(IList<Group> zoneGroups)
+        {
+            bool zoneGroupsArrayHasItems = false;
+            var zoneGroupsIds = new StringBuilder();
+            zoneGroupsIds.Append('[');
+
+            for (int i = 0; i < zoneGroups.Count; i++)
+            {
+                if (zoneGroupsArrayHasItems == true)
+                {
+                    zoneGroupsIds.Append(',');
+                }
+                string zoneGroupsId = zoneGroups[i].Id.ToString();
+                zoneGroupsIds.Append($"{{\"id\":\"{zoneGroupsId}\"}}");
+                zoneGroupsArrayHasItems = true;
+            }
+            zoneGroupsIds.Append(']');
+            return zoneGroupsIds.ToString();
         }
 
         /// <inheritdoc/>

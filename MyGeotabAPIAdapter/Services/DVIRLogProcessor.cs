@@ -42,7 +42,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly IDictionary<Id, DefectListPartDefect> defectListPartDefectsDictionary;
 
         readonly IAdapterConfiguration adapterConfiguration;
-        readonly IAdapterEnvironment adapterEnvironment;
+        readonly IAdapterEnvironment<DbOServiceTracking> adapterEnvironment;
         readonly IExceptionHelper exceptionHelper;
         readonly IGenericEntityPersister<DbDVIRDefect> dbDVIRDefectEntityPersister;
         readonly IGenericEntityPersister<DbDVIRDefectRemark> dbDVIRDefectRemarkEntityPersister;
@@ -53,9 +53,9 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGeotabDVIRDefectRemarkDbDVIRDefectRemarkObjectMapper geotabDVIRDefectRemarkDbDVIRDefectRemarkObjectMapper;
         readonly IGeotabDVIRLogDbDVIRLogObjectMapper geotabDVIRLogDbDVIRLogObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
-        readonly IPrerequisiteServiceChecker prerequisiteServiceChecker;
-        readonly IServiceTracker serviceTracker;
-        readonly IStateMachine stateMachine;
+        readonly IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker;
+        readonly IServiceTracker<DbOServiceTracking> serviceTracker;
+        readonly IStateMachine<DbMyGeotabVersionInfo> stateMachine;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -63,11 +63,8 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="DVIRLogProcessor"/> class.
         /// </summary>
-        public DVIRLogProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment adapterEnvironment, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbDVIRDefect> dbDVIRDefectEntityPersister, IGenericEntityPersister<DbDVIRDefectRemark> dbDVIRDefectRemarkEntityPersister, IGenericEntityPersister<DbDVIRLog> dbDVIRLogEntityPersister, IGenericGeotabObjectFeeder<DVIRLog> dvirLogGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDVIRDefectDbDVIRDefectObjectMapper geotabDVIRDefectDbDVIRDefectObjectMapper, IGeotabDVIRDefectRemarkDbDVIRDefectRemarkObjectMapper geotabDVIRDefectRemarkDbDVIRDefectRemarkObjectMapper, IGeotabDVIRLogDbDVIRLogObjectMapper geotabDVIRLogDbDVIRLogObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker prerequisiteServiceChecker, IServiceTracker serviceTracker, IStateMachine stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DVIRLogProcessor(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking> adapterEnvironment, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbDVIRDefect> dbDVIRDefectEntityPersister, IGenericEntityPersister<DbDVIRDefectRemark> dbDVIRDefectRemarkEntityPersister, IGenericEntityPersister<DbDVIRLog> dbDVIRLogEntityPersister, IGenericGeotabObjectFeeder<DVIRLog> dvirLogGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDVIRDefectDbDVIRDefectObjectMapper geotabDVIRDefectDbDVIRDefectObjectMapper, IGeotabDVIRDefectRemarkDbDVIRDefectRemarkObjectMapper geotabDVIRDefectRemarkDbDVIRDefectRemarkObjectMapper, IGeotabDVIRLogDbDVIRLogObjectMapper geotabDVIRLogDbDVIRLogObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IPrerequisiteServiceChecker<DbOServiceTracking> prerequisiteServiceChecker, IServiceTracker<DbOServiceTracking> serviceTracker, IStateMachine<DbMyGeotabVersionInfo> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
             this.exceptionHelper = exceptionHelper;
@@ -94,8 +91,6 @@ namespace MyGeotabAPIAdapter.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -113,9 +108,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         void AddDefectListPartDefectToList(string defectListAssetType, string defectListID, string defectListName, string partID, string partName, string defectID, string defectName, string defectSeverity, IDictionary<Id, DefectListPartDefect> defectListPartDefectsDictionary)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var defectListPartDefect = new DefectListPartDefect
             {
                 DefectListAssetType = defectListAssetType,
@@ -132,8 +124,6 @@ namespace MyGeotabAPIAdapter.Services
             defectListPartDefectsDictionary.Add(Id.Create(defectListPartDefect.DefectID), defectListPartDefect);
 
             logger.Debug($"DefectListId {defectListPartDefect.DefectListID}|DefectListName {defectListPartDefect.DefectListName}|DefectListAssetType {defectListPartDefect.DefectListAssetType}|PartId {defectListPartDefect.PartID}|PartName {defectListPartDefect.PartName}|DefectId {defectListPartDefect.DefectID}|DefectName {defectListPartDefect.DefectName}|DefectSeverity {defectListPartDefect.DefectSeverity}");
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -144,7 +134,6 @@ namespace MyGeotabAPIAdapter.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -193,7 +182,7 @@ namespace MyGeotabAPIAdapter.Services
                         var dbDVIRLogsToPersist = new List<DbDVIRLog>();
                         var dbDVIRDefectsToPersist = new List<DbDVIRDefect>();
                         var dbDVIRDefectRemarksToPersist = new List<DbDVIRDefectRemark>();
-                        if (dvirLogs.Count > 0)
+                        if (dvirLogs.Any())
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredDVIRLogs = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, dvirLogs);
@@ -298,7 +287,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbDVIRDefectRemarkEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDVIRDefectRemarksToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbDVIRLogsToPersist.Count > 0)
+                                    if (dbDVIRLogsToPersist.Any())
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DVIRLogProcessor, dvirLogGeotabObjectFeeder.LastFeedRetrievalTimeUtc, dvirLogGeotabObjectFeeder.LastFeedVersion);
                                     }
@@ -354,8 +343,6 @@ namespace MyGeotabAPIAdapter.Services
                     await Task.Delay(delayTimeSpan, stoppingToken);
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -460,9 +447,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
             adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.DVIRLogProcessor, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
@@ -484,7 +468,7 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.EnableDVIRLogFeed == true)
+            if (adapterConfiguration.UseDataModel2 == false && adapterConfiguration.EnableDVIRLogFeed == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -502,9 +486,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
         }
@@ -516,9 +497,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task UpdateDefectListPartDefectsDictionaryAsync(CancellationTokenSource cancellationTokenSource)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             CancellationToken cancellationToken = cancellationTokenSource.Token;
 
             // Only update the cache if the defectListPartDefectCacheExpiryTime has been reached.
@@ -567,8 +545,6 @@ namespace MyGeotabAPIAdapter.Services
                     }
                 }
             }
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <summary>
@@ -578,9 +554,6 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task WaitForPrerequisiteServicesIfNeededAsync(CancellationToken cancellationToken)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             var prerequisiteServices = new List<AdapterService>
             {
                 AdapterService.DeviceProcessor,
@@ -588,8 +561,6 @@ namespace MyGeotabAPIAdapter.Services
             };
 
             await prerequisiteServiceChecker.WaitForPrerequisiteServicesIfNeededAsync(CurrentClassName, prerequisiteServices, cancellationToken);
-
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
     }
 }

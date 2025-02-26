@@ -31,14 +31,9 @@ namespace MyGeotabAPIAdapter
         /// <param name="genericGeotabObjectCacher"></param>
         public GenericGeotabObjectHydrator(IGenericGeotabObjectCacher<T> genericGeotabObjectCacher)
         {
-            MethodBase methodBase = MethodBase.GetCurrentMethod();
-            logger.Trace($"Begin {methodBase.ReflectedType.Name}.{methodBase.Name}");
-
             this.genericGeotabObjectCacher = genericGeotabObjectCacher;
-
             Id = Guid.NewGuid().ToString();
             logger.Debug($"{nameof(GenericGeotabObjectHydrator<T>)}<{typeParameterType}> [Id: {Id}] created.");
-            logger.Trace($"End {methodBase.ReflectedType.Name}.{methodBase.Name}");
         }
 
         /// <inheritdoc/>

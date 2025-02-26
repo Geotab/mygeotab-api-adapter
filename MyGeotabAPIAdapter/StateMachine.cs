@@ -11,7 +11,8 @@ namespace MyGeotabAPIAdapter
     /// <summary>
     /// A class that helps to keep track of overall application state with respect to MyGeotab API and database connectivity.
     /// </summary>
-    class StateMachine : IStateMachine
+    /// <typeparam name="T">The type of <see cref="IDbMyGeotabVersionInfo"/> implementation to be used.</typeparam>
+    class StateMachine<T> : IStateMachine<T> where T : class, IDbMyGeotabVersionInfo
     {
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
@@ -43,7 +44,7 @@ namespace MyGeotabAPIAdapter
                 using (var cancellationTokenSource = new CancellationTokenSource())
                 {
                     // Attempt a call that retrieves data from the database. If successful, database is accessible. If an exception is encountered, the database will be deemed inaccessible.
-                    var dbMyGeotabVersionInfoRepo = new BaseRepository<DbMyGeotabVersionInfo>(context);
+                    var dbMyGeotabVersionInfoRepo = new BaseRepository<T>(context);
                     var dbMyGeotabVersionInfos = await dbMyGeotabVersionInfoRepo.GetAllAsync(cancellationTokenSource);
                 }
                 return true;

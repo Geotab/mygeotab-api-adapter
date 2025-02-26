@@ -22,7 +22,7 @@ namespace MyGeotabAPIAdapter.Database.EntityMappers
                 DiagnosticUnitOfMeasureId = entityToMapTo.DiagnosticUnitOfMeasureId,
                 DiagnosticUnitOfMeasureName = entityToMapTo.DiagnosticUnitOfMeasureName,
                 EntityStatus = entityToMapTo.EntityStatus,
-                GeotabGUID = entityToMapTo.GeotabGUID,
+                GeotabGUIDString = entityToMapTo.GeotabGUIDString,
                 HasShimId = entityToMapTo.HasShimId,
                 FormerShimGeotabGUID = entityToMapTo.FormerShimGeotabGUID,
                 OBD2DTC = entityToMapTo.OBD2DTC,
@@ -34,9 +34,9 @@ namespace MyGeotabAPIAdapter.Database.EntityMappers
         /// <inheritdoc/>
         public void UpdateEntity(DbDiagnosticT entityToUpdate, DbDiagnostic entityToMapTo)
         {
-            if (entityToUpdate.GeotabGUID != entityToMapTo.GeotabGUID)
+            if (entityToUpdate.GeotabGUIDString != entityToMapTo.GeotabGUIDString)
             {
-                throw new ArgumentException($"Cannot update {nameof(DbDiagnosticT)} '{entityToUpdate.id} (GeotabGUID {entityToUpdate.GeotabGUID})' with {nameof(DbDiagnostic)} '{entityToMapTo.id} (GeotabGUID {entityToMapTo.GeotabGUID})' because the GeotabGUIDs do not match.");
+                throw new ArgumentException($"Cannot update {nameof(DbDiagnosticT)} '{entityToUpdate.id} (GeotabGUID {entityToUpdate.GeotabGUIDString})' with {nameof(DbDiagnostic)} '{entityToMapTo.id} (GeotabGUID {entityToMapTo.GeotabGUIDString})' because the GeotabGUIDs do not match.");
             }
 
             entityToUpdate.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;

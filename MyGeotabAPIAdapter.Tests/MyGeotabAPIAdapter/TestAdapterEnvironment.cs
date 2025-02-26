@@ -7,7 +7,7 @@ namespace MyGeotabAPIAdapter.Tests
     /// <summary>
     /// A test class for simulating environment information related to the <see cref="MyGeotabAPIAdapter"/>. 
     /// </summary>
-    class TestAdapterEnvironment : IAdapterEnvironment
+    class TestAdapterEnvironment : IAdapterEnvironment<DbOServiceTracking>
     {
         /// <inheritdoc/>
         public string AdapterAssemblyName { get; }

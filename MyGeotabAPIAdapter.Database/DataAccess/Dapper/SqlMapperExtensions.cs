@@ -225,7 +225,7 @@ namespace Dapper.Contrib.Extensions
             if (keyCount == 0)
                 throw new DataException($"{method}<T> only supports an entity with a [Key] or an [ExplicitKey] property");
 
-            return keys.Count > 0 ? keys[0] : explicitKeys[0];
+            return keys.Any() ? keys[0] : explicitKeys[0];
         }
 
         #region Customizations
@@ -252,7 +252,7 @@ namespace Dapper.Contrib.Extensions
 
             var allProperties = TypePropertiesCache(type);
 
-            if (allProperties.Count > 0)
+            if (allProperties.Any())
             {
                 var sortKeyProp = allProperties.Find(p => string.Equals(p.Name, sortColumnName, StringComparison.CurrentCultureIgnoreCase));
                 if (sortKeyProp != null)
@@ -493,7 +493,7 @@ namespace Dapper.Contrib.Extensions
 #nullable disable
                 string connectionProviderType = connection.GetType().Namespace;
 
-                if (changedSince != null && changeTrackerProperties.Count > 0)
+                if (changedSince != null && changeTrackerProperties.Any())
                 {
                     changedSinceProperty = changeTrackerProperties[0];
                     changedSinceColumnName = changedSinceProperty.Name;
@@ -1333,7 +1333,7 @@ namespace Dapper.Contrib.Extensions
             string? changedSinceColumnName = null;
 #nullable disable
 
-            if (changedSince != null && changeTrackerProperties.Count > 0)
+            if (changedSince != null && changeTrackerProperties.Any())
             {
                 changedSinceProperty = changeTrackerProperties[0];
                 changedSinceColumnName = changedSinceProperty.Name;

@@ -1,4 +1,5 @@
-﻿using Dapper;
+﻿#nullable enable
+using Dapper;
 using Dapper.Contrib.Extensions;
 using NLog;
 using Polly;
@@ -8,6 +9,8 @@ using System.Data;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Data.Common;
+using System.Linq;
 
 namespace MyGeotabAPIAdapter.Database.DataAccess
 {
@@ -59,9 +62,30 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <inheritdoc/>
-        public async Task<bool> DeleteAsync(T entity, CancellationTokenSource methodCancellationTokenSource)
+        public async Task<bool> DeleteAsync(T entity, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext? uowContext = null)
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+            DbConnection? standaloneConnection = null;
+
+            if (useStandaloneDbConnection == true && uowContext == null)
+            {
+                throw new Exception($"A '{nameof(uowContext)}' must be provided if '{nameof(useStandaloneDbConnection)}' is set to 'true'.");
+            }
+
+            if (useStandaloneDbConnection == true)
+            {
+                switch (uowContext.ProviderType)
+                {
+                    case ConnectionInfo.DataAccessProviderType.PostgreSQL:
+                        standaloneConnection = await uowContext.GetStandaloneNpgsqlConnectionAsync();
+                        break;
+                    case ConnectionInfo.DataAccessProviderType.SQLServer:
+                        standaloneConnection = await uowContext.GetStandaloneSqlConnectionAsync();
+                        break;
+                    default:
+                        throw new Exception($"The provider type '{uowContext.ProviderType}' is not supported.");
+                }
+            }
 
             bool result = false;
             try
@@ -71,9 +95,16 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
                     var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                    var connection = connectionContext.GetConnection();
-                    var transaction = connectionContext.GetTransaction();
-                    result = await connection.DeleteAsync<T>(entity, transaction, commandTimeout: timeoutSeconds);
+                    if (useStandaloneDbConnection == true)
+                    {
+                        result = await standaloneConnection.DeleteAsync<T>(entity, null, commandTimeout: timeoutSeconds);
+                    }
+                    else
+                    {
+                        var connection = connectionContext.GetConnection();
+                        var transaction = connectionContext.GetTransaction();
+                        result = await connection.DeleteAsync<T>(entity, transaction, commandTimeout: timeoutSeconds);
+                    }
                 }, new Context());
             }
             catch (OperationCanceledException exception)
@@ -84,6 +115,15 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             {
                 throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
             }
+            finally
+            {
+                // Close the connection if it's a standalone database connection.
+                if (useStandaloneDbConnection == true && standaloneConnection != null)
+                {
+                    await standaloneConnection.CloseAsync();
+                    standaloneConnection.Dispose();
+                }
+            }
 
             methodCancellationToken.ThrowIfCancellationRequested();
             if (result != false)
@@ -91,6 +131,81 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 return result;
             }
             throw new Exception($"The subject {typeof(T).Name} entity was not deleted.");
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> ExecuteAsync(string sql, object[]? parameters, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext? uowContext = null)
+        {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+            DbConnection? standaloneConnection = null;
+
+            if (useStandaloneDbConnection == true && uowContext == null)
+            {
+                throw new Exception($"A '{nameof(uowContext)}' must be provided if '{nameof(useStandaloneDbConnection)}' is set to 'true'.");
+            }
+
+            if (useStandaloneDbConnection == true)
+            {
+                switch (uowContext.ProviderType)
+                {
+                    case ConnectionInfo.DataAccessProviderType.PostgreSQL:
+                        standaloneConnection = await uowContext.GetStandaloneNpgsqlConnectionAsync();
+                        break;
+                    case ConnectionInfo.DataAccessProviderType.SQLServer:
+                        standaloneConnection = await uowContext.GetStandaloneSqlConnectionAsync();
+                        break;
+                    default:
+                        throw new Exception($"The provider type '{uowContext.ProviderType}' is not supported.");
+                }
+            }
+
+            bool result = false;
+            try
+            {
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                    if (useStandaloneDbConnection == true)
+                    {
+                        await standaloneConnection.ExecuteAsync(sql, parameters, null, timeoutSeconds);
+                        result = true;
+                    }
+                    else
+                    {
+                        var connection = connectionContext.GetConnection();
+                        var transaction = connectionContext.GetTransaction();
+                        await connection.ExecuteAsync(sql, parameters, transaction, timeoutSeconds);
+                        result = true;
+                    }
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+            finally
+            {
+                // Close the connection if it's a standalone database connection.
+                if (useStandaloneDbConnection == true && standaloneConnection != null)
+                { 
+                    await standaloneConnection.CloseAsync();
+                    standaloneConnection.Dispose();
+                }
+            }
+
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            if (result != false)
+            {
+                return result;
+            }
+            throw new Exception($"Query not executed successfully.");
         }
 
         /// <summary>
@@ -114,7 +229,16 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
                     var connection = connectionContext.GetConnection();
                     var transaction = connectionContext.GetTransaction();
-                    records = await connection.QueryAsync<T>(storedProcedureName, parameters, transaction, commandTimeout: timeoutSeconds, commandType: CommandType.StoredProcedure);
+                    if (connection.GetType() == typeof(Npgsql.NpgsqlConnection))
+                    {
+                        // NOTE: The Npgsql provider does not seem to properly support the CommandType.StoredProcedure option for the QueryAsync method. As such, we are using a workaround to execute the stored procedure or function as a raw SQL query. This code will need to be revisited at some point if parameters are included in the stored procedure or function call as the current implementation below assumes no parameters.
+                        string sql = $"SELECT * FROM public.\"{storedProcedureName}\"();";
+                        records = await connection.QueryAsync<T>(sql, parameters, transaction, commandTimeout: timeoutSeconds);
+                    }
+                    else
+                    {
+                        records = await connection.QueryAsync<T>(storedProcedureName, parameters, transaction, commandTimeout: timeoutSeconds, commandType: CommandType.StoredProcedure);
+                    }
                 }, new Context());
             }
             catch (OperationCanceledException exception)
@@ -131,9 +255,30 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <inheritdoc/>
-        public async Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "")
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationTokenSource methodCancellationTokenSource, int? resultsLimit = null, DateTime? changedSince = null, string sortColumnName = "", bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext? uowContext = null)
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+            DbConnection? standaloneConnection = null;
+
+            if (useStandaloneDbConnection == true && uowContext == null)
+            {
+                throw new Exception($"A '{nameof(uowContext)}' must be provided if '{nameof(useStandaloneDbConnection)}' is set to 'true'.");
+            }
+
+            if (useStandaloneDbConnection == true)
+            {
+                switch (uowContext.ProviderType)
+                {
+                    case ConnectionInfo.DataAccessProviderType.PostgreSQL:
+                        standaloneConnection = await uowContext.GetStandaloneNpgsqlConnectionAsync();
+                        break;
+                    case ConnectionInfo.DataAccessProviderType.SQLServer:
+                        standaloneConnection = await uowContext.GetStandaloneSqlConnectionAsync();
+                        break;
+                    default:
+                        throw new Exception($"The provider type '{uowContext.ProviderType}' is not supported.");
+                }
+            }
 
             IEnumerable<T> records = null;
             try
@@ -143,9 +288,16 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
                     var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                    var connection = connectionContext.GetConnection();
-                    var transaction = connectionContext.GetTransaction();
-                    records = await connection.GetAllAsync<T>(transaction, commandTimeout: timeoutSeconds, resultsLimit, changedSince, sortColumnName);
+                    if (useStandaloneDbConnection == true)
+                    {
+                        records = await standaloneConnection.GetAllAsync<T>(null, commandTimeout: timeoutSeconds, resultsLimit, changedSince, sortColumnName);
+                    }
+                    else
+                    {
+                        var connection = connectionContext.GetConnection();
+                        var transaction = connectionContext.GetTransaction();
+                        records = await connection.GetAllAsync<T>(transaction, commandTimeout: timeoutSeconds, resultsLimit, changedSince, sortColumnName);
+                    }
                 }, new Context());
             }
             catch (OperationCanceledException exception)
@@ -155,6 +307,15 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             catch (Exception exception)
             {
                 throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+            finally
+            {
+                // Close the connection if it's a standalone database connection.
+                if (useStandaloneDbConnection == true && standaloneConnection != null)
+                {
+                    await standaloneConnection.CloseAsync();
+                    standaloneConnection.Dispose();
+                }
             }
 
             methodCancellationToken.ThrowIfCancellationRequested();
@@ -277,9 +438,30 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <inheritdoc/>
-        public async Task<long> InsertAsync(T entity, CancellationTokenSource methodCancellationTokenSource)
+        public async Task<long> InsertAsync(T entity, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext? uowContext = null)
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+            DbConnection? standaloneConnection = null;
+
+            if (useStandaloneDbConnection == true && uowContext == null)
+            {
+                throw new Exception($"A '{nameof(uowContext)}' must be provided if '{nameof(useStandaloneDbConnection)}' is set to 'true'.");
+            }
+
+            if (useStandaloneDbConnection == true)
+            {
+                switch (uowContext.ProviderType)
+                {
+                    case ConnectionInfo.DataAccessProviderType.PostgreSQL:
+                        standaloneConnection = await uowContext.GetStandaloneNpgsqlConnectionAsync();
+                        break;
+                    case ConnectionInfo.DataAccessProviderType.SQLServer:
+                        standaloneConnection = await uowContext.GetStandaloneSqlConnectionAsync();
+                        break;
+                    default:
+                        throw new Exception($"The provider type '{uowContext.ProviderType}' is not supported.");
+                }
+            }
 
             long result = NullLongValue;
             try
@@ -289,9 +471,16 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
                     var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                    var connection = connectionContext.GetConnection();
-                    var transaction = connectionContext.GetTransaction();
-                    result = await connection.InsertAsync(entity, transaction, commandTimeout: timeoutSeconds);
+                    if (useStandaloneDbConnection == true)
+                    {
+                        result = await standaloneConnection.InsertAsync<T>(entity, null, commandTimeout: timeoutSeconds);
+                    }
+                    else
+                    {
+                        var connection = connectionContext.GetConnection();
+                        var transaction = connectionContext.GetTransaction();
+                        result = await connection.InsertAsync(entity, transaction, commandTimeout: timeoutSeconds);
+                    }
                 }, new Context());
             }
             catch (OperationCanceledException exception)
@@ -301,6 +490,15 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             catch (Exception exception)
             {
                 throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+            finally
+            {
+                // Close the connection if it's a standalone database connection.
+                if (useStandaloneDbConnection == true && standaloneConnection != null)
+                {
+                    await standaloneConnection.CloseAsync();
+                    standaloneConnection.Dispose();
+                }
             }
 
             methodCancellationToken.ThrowIfCancellationRequested();
@@ -312,7 +510,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <inheritdoc/>
-        public async Task<long> InsertAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource)
+        public async Task<long> InsertAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext? uowContext = null)
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
 
@@ -325,7 +523,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
                 foreach (var entity in entities)
                 {
-                    await InsertAsync(entity, methodCancellationTokenSource);
+                    await InsertAsync(entity, methodCancellationTokenSource, useStandaloneDbConnection, uowContext);
                     insertedEntityCount += 1;
                     methodCancellationToken.ThrowIfCancellationRequested();
                 }
@@ -343,11 +541,32 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <inheritdoc/>
-        public async Task<bool> UpdateAsync(T entity, CancellationTokenSource methodCancellationTokenSource)
+        public async Task<IEnumerable<T>> QueryAsync(string sql, object? parameters, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext? uowContext = null)
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+            DbConnection? standaloneConnection = null;
 
-            bool result = false;
+            if (useStandaloneDbConnection == true && uowContext == null)
+            {
+                throw new Exception($"A '{nameof(uowContext)}' must be provided if '{nameof(useStandaloneDbConnection)}' is set to 'true'.");
+            }
+
+            if (useStandaloneDbConnection == true)
+            {
+                switch (uowContext.ProviderType)
+                {
+                    case ConnectionInfo.DataAccessProviderType.PostgreSQL:
+                        standaloneConnection = await uowContext.GetStandaloneNpgsqlConnectionAsync();
+                        break;
+                    case ConnectionInfo.DataAccessProviderType.SQLServer:
+                        standaloneConnection = await uowContext.GetStandaloneSqlConnectionAsync();
+                        break;
+                    default:
+                        throw new Exception($"The provider type '{uowContext.ProviderType}' is not supported.");
+                }
+            }
+
+            IEnumerable<T> records = Enumerable.Empty<T>();
             try
             {
                 await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
@@ -355,9 +574,16 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                     var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
                     var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                    var connection = connectionContext.GetConnection();
-                    var transaction = connectionContext.GetTransaction();
-                    result = await connection.UpdateAsync<T>(entity, transaction, commandTimeout: timeoutSeconds);
+                    if (useStandaloneDbConnection == true)
+                    {
+                        records = await standaloneConnection.QueryAsync<T>(sql, parameters, null, commandTimeout: timeoutSeconds);
+                    }
+                    else
+                    {
+                        var connection = connectionContext.GetConnection();
+                        var transaction = connectionContext.GetTransaction();
+                        records = await connection.QueryAsync<T>(sql, parameters, transaction, commandTimeout: timeoutSeconds);
+                    }
                 }, new Context());
             }
             catch (OperationCanceledException exception)
@@ -367,6 +593,83 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             catch (Exception exception)
             {
                 throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+            finally
+            {
+                // Close the connection if it's a standalone database connection.
+                if (useStandaloneDbConnection == true && standaloneConnection != null)
+                {
+                    await standaloneConnection.CloseAsync();
+                    standaloneConnection.Dispose();
+                }
+            }
+
+            methodCancellationToken.ThrowIfCancellationRequested();
+            return records;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> UpdateAsync(T entity, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext? uowContext = null)
+        {
+            CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
+            DbConnection? standaloneConnection = null;
+
+            if (useStandaloneDbConnection == true && uowContext == null)
+            { 
+                throw new Exception($"A '{nameof(uowContext)}' must be provided if '{nameof(useStandaloneDbConnection)}' is set to 'true'.");
+            }
+
+            if (useStandaloneDbConnection == true)
+            {
+                switch (uowContext.ProviderType)
+                {
+                    case ConnectionInfo.DataAccessProviderType.PostgreSQL:
+                        standaloneConnection = await uowContext.GetStandaloneNpgsqlConnectionAsync();
+                        break;
+                    case ConnectionInfo.DataAccessProviderType.SQLServer:
+                        standaloneConnection = await uowContext.GetStandaloneSqlConnectionAsync();
+                        break;
+                    default:
+                        throw new Exception($"The provider type '{uowContext.ProviderType}' is not supported.");
+                }
+            }
+
+            bool result = false;
+            try
+            {
+                await asyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+
+                    if (useStandaloneDbConnection == true)
+                    {
+                        result = await standaloneConnection.UpdateAsync<T>(entity, null, commandTimeout: timeoutSeconds);
+                    }
+                    else
+                    {
+                        var connection = connectionContext.GetConnection();
+                        var transaction = connectionContext.GetTransaction();
+                        result = await connection.UpdateAsync<T>(entity, transaction, commandTimeout: timeoutSeconds);
+                    }
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new DatabaseConnectionException($"Database operation did not complete within the allowed time of {connectionContext.TimeoutSecondsForDatabaseTasks} seconds.", exception);
+            }
+            catch (Exception exception)
+            {
+                throw new DatabaseConnectionException($"Exception encountered while attempting database operation.", exception);
+            }
+            finally
+            {
+                // Close the connection if it's a standalone database connection.
+                if (useStandaloneDbConnection == true && standaloneConnection != null)
+                {
+                    await standaloneConnection.CloseAsync();
+                    standaloneConnection.Dispose();
+                }
             }
 
             methodCancellationToken.ThrowIfCancellationRequested();
@@ -378,7 +681,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         }
 
         /// <inheritdoc/>
-        public async Task<long> UpdateAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource)
+        public async Task<long> UpdateAsync(IEnumerable<T> entities, CancellationTokenSource methodCancellationTokenSource, bool useStandaloneDbConnection = false, IDatabaseUnitOfWorkContext? uowContext = null)
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
 
@@ -391,7 +694,7 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
                 foreach (var entity in entities)
                 {
-                    await UpdateAsync(entity, methodCancellationTokenSource);
+                    await UpdateAsync(entity, methodCancellationTokenSource, useStandaloneDbConnection, uowContext);
                     updateedEntityCount += 1;
                     methodCancellationToken.ThrowIfCancellationRequested();
                 }

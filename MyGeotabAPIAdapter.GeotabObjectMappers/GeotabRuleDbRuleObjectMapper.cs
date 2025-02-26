@@ -1,7 +1,9 @@
-﻿using Geotab.Checkmate.ObjectModel.Exceptions;
+﻿using Geotab.Checkmate.ObjectModel;
+using Geotab.Checkmate.ObjectModel.Exceptions;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Helpers;
+using System.Text;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
@@ -42,6 +44,12 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 RecordLastChangedUtc = DateTime.UtcNow,
                 Version = entityToMapTo.Version
             };
+
+            if (entityToMapTo.Groups != null && entityToMapTo.Groups.Count > 0)
+            {
+                dbRule.Groups = GetRuleGroupsJSON(entityToMapTo.Groups);
+            }
+
             return dbRule;
         }
 
@@ -82,9 +90,39 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 return true;
             }
+
+            string ruleGroupsIds = GetRuleGroupsJSON(entityToMapTo.Groups);
+            if (entityToMapTo.Groups.Count == 0)
+            {
+                ruleGroupsIds = null;
+            }
+            if (stringHelper.AreEqual(entityToEvaluate.Groups, ruleGroupsIds) == false)
+            {
+                return true;
+            }
             return false;
         }
 
+        /// <inheritdoc/>
+        public string GetRuleGroupsJSON(IList<Group> ruleGroups)
+        {
+            bool ruleGroupsArrayHasItems = false;
+            var ruleGroupsIds = new StringBuilder();
+            ruleGroupsIds.Append('[');
+
+            for (int i = 0; i < ruleGroups.Count; i++)
+            {
+                if (ruleGroupsArrayHasItems == true)
+                {
+                    ruleGroupsIds.Append(',');
+                }
+                string ruleGroupsId = ruleGroups[i].Id.ToString();
+                ruleGroupsIds.Append($"{{\"id\":\"{ruleGroupsId}\"}}");
+                ruleGroupsArrayHasItems = true;
+            }
+            ruleGroupsIds.Append(']');
+            return ruleGroupsIds.ToString();
+        }
         /// <inheritdoc/>
         public DbRule UpdateEntity(DbRule entityToUpdate, Rule entityToMapTo, Common.DatabaseRecordStatus entityStatus = Common.DatabaseRecordStatus.Active)
         {
