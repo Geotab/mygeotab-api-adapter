@@ -1,6 +1,7 @@
 ﻿using Geotab.Checkmate.ObjectModel;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,6 +41,11 @@ namespace MyGeotabAPIAdapter
         ConcurrentDictionary<Id, T> GeotabObjectCache { get; }
 
         /// <summary>
+        /// A subset of items in the <see cref="GeotabObjectCache"/> that have been added or updated in the last cache update. This is intended to be used for incremental updates to the database.
+        /// </summary>
+        IEnumerable<T> GeotabObjectsChangedInLastUpdate { get; }
+
+        /// <summary>
         /// A unique identifier assigned during instantiation. Intended for debugging purposes.
         /// </summary>
         string Id { get; }
@@ -48,6 +54,11 @@ namespace MyGeotabAPIAdapter
         /// Indicates whether the <see cref="InitializeAsync(CancellationTokenSource, DateTime, int, int, int, bool)"/> method has been invoked since the current class instance was created.
         /// </summary>
         bool IsInitialized { get; }
+
+        /// <summary>
+        /// The last <see cref="CacheOperationType"/> that was executed on the <see cref="GeotabObjectCache"/>.
+        /// </summary>
+        CacheOperationType LastCacheOperationType { get; set; }
 
         /// <summary>
         /// The FeedVersion of the latest <see cref="GeotabObjectCache"/>; applies only if the <see cref="GeotabObjectCache"/> is populated via the GetFeed() method.

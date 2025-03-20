@@ -4,12 +4,12 @@ using System;
 
 namespace MyGeotabAPIAdapter.Database.Models
 {
-    [Table("Groups")]
-    public class DbGroup : IDbEntity, IIdCacheableDbEntity, IStatusableDbEntity
+    [Table("stg_ZoneTypes2")]
+    public class DbStgZoneType2 : IDbEntity, IIdCacheableDbEntity, IStatusableDbEntity
     {
         /// <inheritdoc/>
         [Write(false)]
-        public string DatabaseTableName => "Groups";
+        public string DatabaseTableName => "stg_ZoneTypes2";
 
         /// <inheritdoc/>
         [Write(false)]
@@ -22,11 +22,8 @@ namespace MyGeotabAPIAdapter.Database.Models
         [Key]
         public long id { get; set; }
         public string GeotabId { get; set; }
-        public string? Children { get; set; }
-        public string? Color { get; set; }
-        public string? Comments { get; set; }
-        public string? Name { get; set; }
-        public string? Reference { get; set; }
+        public string Comment { get; set; }
+        public string Name { get; set; }
         public int EntityStatus { get; set; }
         [ChangeTracker]
         public DateTime RecordLastChangedUtc { get; set; }

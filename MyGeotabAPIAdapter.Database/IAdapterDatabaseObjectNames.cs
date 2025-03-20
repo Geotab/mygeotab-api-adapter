@@ -144,6 +144,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbGroupTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbGroup2"/> entities.
+        /// </summary>
+        string DbGroup2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbLogRecord"/> entities.
         /// </summary>
         string DbLogRecordTableName { get; }
@@ -194,6 +199,36 @@ namespace MyGeotabAPIAdapter.Database
         string DbStatusDataLocation2TrackingTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbStgDevice2"/> entities.
+        /// </summary>
+        string DbStgDevice2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgDiagnostic2"/> entities.
+        /// </summary>
+        string DbStgDiagnostic2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgGroup2"/> entities.
+        /// </summary>
+        string DbStgGroup2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgUser2"/> entities.
+        /// </summary>
+        string DbStgUser2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgZone2"/> entities.
+        /// </summary>
+        string DbStgZone2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgZoneType2"/> entities.
+        /// </summary>
+        string DbStgZoneType2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbTrip"/> entities.
         /// </summary>
         string DbTripTableName { get; }
@@ -232,6 +267,36 @@ namespace MyGeotabAPIAdapter.Database
         /// A unique identifier assigned during instantiation. Intended for debugging purposes.
         /// </summary>
         string Id { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging Devices into the main Devices2 table.
+        /// </summary>
+        string MergeStagingDevicesProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging Diagnostics into the main Diagnostics2 table.
+        /// </summary>
+        string MergeStagingDiagnosticsProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging Groups into the main Groups2 table.
+        /// </summary>
+        string MergeStagingGroupsProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging Users into the main Users2 table.
+        /// </summary>
+        string MergeStagingUsersProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging Zones into the main Zones2 table.
+        /// </summary>
+        string MergeStagingZonesProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging ZoneTypes into the main ZoneTypes2 table.
+        /// </summary>
+        string MergeStagingZoneTypesProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for database partitioning.

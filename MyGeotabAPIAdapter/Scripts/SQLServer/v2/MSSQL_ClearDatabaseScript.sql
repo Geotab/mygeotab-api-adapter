@@ -67,6 +67,7 @@ GO
 --truncate table [dbo].[EntityMetadata2];
 --truncate table [dbo].[FaultData2];
 --truncate table [dbo].[FaultDataLocations2];
+--truncate table [dbo].[Groups2];
 --truncate table [dbo].[LogRecords2];
 --truncate table [dbo].[MyGeotabVersionInfo2];
 --truncate table [dbo].[OServiceTracking2];
@@ -79,6 +80,8 @@ GO
 --DBCC CHECKIDENT ('dbo.DiagnosticIds2', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.Diagnostics2', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.EntityMetadata2', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.Groups2', RESEED, 0);
+--DBCC CHECKIDENT ('dbo.ZoneTypes2', RESEED, 0);
 --DBCC CHECKIDENT ('dbo.OServiceTracking2', RESEED, 0);
 
 ---- Step 4: Recreate foreign key constraints:

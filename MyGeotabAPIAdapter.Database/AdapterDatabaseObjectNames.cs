@@ -87,6 +87,8 @@
         public string DbGroupTableName => "Groups";
 
         /// <inheritdoc/>
+        public string DbGroup2TableName => "Groups2";
+        /// <inheritdoc/>
         public string DbLogRecordTableName => "LogRecords";
 
         /// <inheritdoc/>
@@ -117,6 +119,24 @@
         public string DbStatusDataLocation2TrackingTableName => "StatusDataLocations2Tracking";
 
         /// <inheritdoc/>
+        public string DbStgDevice2TableName => "stg_Devices2";
+
+        /// <inheritdoc/>
+        public string DbStgDiagnostic2TableName => "stg_Diagnostics2";
+
+        /// <inheritdoc/>
+        public string DbStgGroup2TableName => "stg_Groups2";
+
+        /// <inheritdoc/>
+        public string DbStgUser2TableName => "stg_Users2";
+
+        /// <inheritdoc/>
+        public string DbStgZone2TableName => "stg_Zones2";
+
+        /// <inheritdoc/>
+        public string DbStgZoneType2TableName => "stg_ZoneTypes2";
+
+        /// <inheritdoc/>
         public string DbTripTableName => "Trips";
 
         /// <inheritdoc/>
@@ -139,6 +159,24 @@
 
         /// <inheritdoc/>
         public string Id { get; private set; }
+
+        /// <inheritdoc/>
+        public string MergeStagingDevicesProcedureName => "spMerge_stg_Devices2";
+
+        /// <inheritdoc/>
+        public string MergeStagingDiagnosticsProcedureName => "spMerge_stg_Diagnostics2";
+
+        /// <inheritdoc/>
+        public string MergeStagingGroupsProcedureName => "spMerge_stg_Groups2";
+
+        /// <inheritdoc/>
+        public string MergeStagingUsersProcedureName => "spMerge_stg_Users2";
+
+        /// <inheritdoc/>
+        public string MergeStagingZonesProcedureName => "spMerge_stg_Zones2";
+
+        /// <inheritdoc/>
+        public string MergeStagingZoneTypesProcedureName => "spMerge_stg_ZonesTypes2";
 
         /// <inheritdoc/>
         public string PartitioningProcedureName => "spManagePartitions";

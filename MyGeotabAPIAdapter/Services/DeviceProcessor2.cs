@@ -15,7 +15,6 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,11 +36,12 @@ namespace MyGeotabAPIAdapter.Services
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment;
         readonly IBackgroundServiceAwaiter<DeviceProcessor2> awaiter;
+        readonly IBaseRepository<DbStgDevice2> dbStgDevice2Repo;
         readonly IExceptionHelper exceptionHelper;
         readonly IGenericGenericDbObjectCache<DbDevice2, AdapterGenericDbObjectCache<DbDevice2>> dbDevice2ObjectCache;
-        readonly IGenericEntityPersister<DbDevice2> dbDevice2EntityPersister;
+        readonly IGenericEntityPersister<DbStgDevice2> dbStgDevice2EntityPersister;
         readonly IGenericGeotabObjectCacher<Device> deviceGeotabObjectCacher;
-        readonly IGeotabDeviceDbDevice2ObjectMapper geotabDeviceDbDevice2ObjectMapper;
+        readonly IGeotabDeviceDbStgDevice2ObjectMapper geotabDeviceDbStgDevice2ObjectMapper;
         readonly IGeotabIdConverter geotabIdConverter;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
@@ -53,20 +53,22 @@ namespace MyGeotabAPIAdapter.Services
          /// <summary>
         /// Initializes a new instance of the <see cref="DeviceProcessor2"/> class.
         /// </summary>
-        public DeviceProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<DeviceProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbDevice2, AdapterGenericDbObjectCache<DbDevice2>> dbDevice2ObjectCache, IGenericEntityPersister<DbDevice2> dbDevice2EntityPersister, IGeotabDeviceDbDevice2ObjectMapper geotabDeviceDbDevice2ObjectMapper, IGeotabIdConverter geotabIdConverter, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Device> deviceGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DeviceProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<DeviceProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbDevice2, AdapterGenericDbObjectCache<DbDevice2>> dbDevice2ObjectCache, IGenericEntityPersister<DbStgDevice2> dbStgDevice2EntityPersister, IGeotabDeviceDbStgDevice2ObjectMapper geotabDeviceDbStgDevice2ObjectMapper, IGeotabIdConverter geotabIdConverter, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Device> deviceGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
             this.awaiter = awaiter;
             this.exceptionHelper = exceptionHelper;
             this.dbDevice2ObjectCache = dbDevice2ObjectCache;
-            this.dbDevice2EntityPersister = dbDevice2EntityPersister;
-            this.geotabDeviceDbDevice2ObjectMapper = geotabDeviceDbDevice2ObjectMapper;
+            this.dbStgDevice2EntityPersister = dbStgDevice2EntityPersister;
+            this.geotabDeviceDbStgDevice2ObjectMapper = geotabDeviceDbStgDevice2ObjectMapper;
             this.geotabIdConverter = geotabIdConverter;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
             this.deviceGeotabObjectCacher = deviceGeotabObjectCacher;
+
+            dbStgDevice2Repo = new BaseRepository<DbStgDevice2>(adapterContext);
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -82,6 +84,11 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            const string MergeFunctionSQL_Postgres = @"SELECT public.""spMerge_stg_Devices2""(@SetEntityStatusDeletedForMissingDevices::boolean);";
+            const string MergeProcedureSQL_SQLServer = @"EXEC [dbo].[spMerge_stg_Devices2] @SetEntityStatusDeletedForMissingDevices = @SetEntityStatusDeletedForMissingDevices;";
+            const string TruncateStagingTableSQL_Postgres = @"TRUNCATE TABLE public.""stg_Devices2"";";
+            const string TruncateStagingTableSQL_SQLServer = @"TRUNCATE TABLE [dbo].[stg_Devices2];";
+
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             var delayTimeSpan = TimeSpan.FromMinutes(adapterConfiguration.DeviceCacheUpdateIntervalMinutes);
 
@@ -101,63 +108,16 @@ namespace MyGeotabAPIAdapter.Services
                     {
                         await InitializeOrUpdateCachesAsync(cancellationTokenSource);
 
-                        var dbDevice2sToPersist = new List<DbDevice2>();
-                        var newDbDevice2sToPersistDictionary = new Dictionary<long, Common.DatabaseWriteOperationType>();
+                        var dbStgDevice2sToPersist = new List<DbStgDevice2>();
+
                         // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
                         if (deviceGeotabObjectCacher.LastUpdatedTimeUTC > deviceGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
                         {
-                            DateTime recordChangedTimestampUtc = DateTime.UtcNow;
-
-                            // Find any devices that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
-                            var dbDevice2s = await dbDevice2ObjectCache.GetObjectsAsync();
-                            foreach (var dbDevice2 in dbDevice2s)
+                            // Iterate through the in-memory cache of Geotab Device objects that were added or updated in the last cache update, mapping them to corresponding DbStgDevice2 entities and adding them to the list of DbStgDevice2 objects to persist. Note that deduplication logic is contained in the database.
+                            foreach (var device in deviceGeotabObjectCacher.GeotabObjectsChangedInLastUpdate)
                             {
-                                if (dbDevice2.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
-                                {
-                                    bool deviceExistsInCache = deviceGeotabObjectCacher.GeotabObjectCache.ContainsKey(Id.Create(dbDevice2.GeotabId));
-                                    if (!deviceExistsInCache)
-                                    {
-                                        logger.Debug($"Device '{dbDevice2.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
-                                        dbDevice2.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
-                                        dbDevice2.RecordLastChangedUtc = recordChangedTimestampUtc;
-                                        dbDevice2.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                        dbDevice2sToPersist.Add(dbDevice2);
-                                    }
-                                }
-                            }
-
-                            // Iterate through the in-memory cache of Geotab Device objects.
-                            foreach (var device in deviceGeotabObjectCacher.GeotabObjectCache.Values)
-                            {
-                                // Try to find the existing database record for the cached device.
-                                long deviceId = geotabIdConverter.ToLong(device.Id);
-                                var dbDevice2 = await dbDevice2ObjectCache.GetObjectAsync(deviceId);
-                                if (dbDevice2 != null)
-                                {
-                                    // The device has already been added to the database.
-                                    if (geotabDeviceDbDevice2ObjectMapper.EntityRequiresUpdate(dbDevice2, device))
-                                    {
-                                        DbDevice2 updatedDbDevice2 = geotabDeviceDbDevice2ObjectMapper.UpdateEntity(dbDevice2, device);
-                                        dbDevice2sToPersist.Add(updatedDbDevice2);
-                                    }
-                                }
-                                else
-                                {
-                                    // The device has not yet been added to the database. Create a DbDevice2, set its properties and add it to the cache.
-                                    var newDbDevice2 = geotabDeviceDbDevice2ObjectMapper.CreateEntity(device);
-
-                                    // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (newDbDevice2sToPersistDictionary.ContainsKey(newDbDevice2.id))
-                                    {
-                                        newDbDevice2.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                    }
-
-                                    dbDevice2sToPersist.Add(newDbDevice2);
-                                    if (newDbDevice2.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
-                                    {
-                                        newDbDevice2sToPersistDictionary.Add(newDbDevice2.id, newDbDevice2.DatabaseWriteOperationType);
-                                    }
-                                }
+                                var newdbStgDevice2 = geotabDeviceDbStgDevice2ObjectMapper.CreateEntity(device);
+                                dbStgDevice2sToPersist.Add(newdbStgDevice2);
                             }
 
                             stoppingToken.ThrowIfCancellationRequested();
@@ -167,15 +127,71 @@ namespace MyGeotabAPIAdapter.Services
                             logger.Debug($"Device cache in database is up-to-date.");
                         }
 
-                        // Persist changes to database.
+                        // Persist changes to database. Step 1: Persist the DbStgDevice2 entities.
+                        if (dbStgDevice2sToPersist.Count != 0)
+                        {
+                            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                            {
+                                using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
+                                {
+                                    try
+                                    {
+                                        // Truncate staging table in case it contains any data:
+                                        var sql = adapterContext.ProviderType switch
+                                        {
+                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => TruncateStagingTableSQL_Postgres,
+                                            ConnectionInfo.DataAccessProviderType.SQLServer => TruncateStagingTableSQL_SQLServer,
+                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
+                                        };
+                                        await dbStgDevice2Repo.ExecuteAsync(sql, null, cancellationTokenSource, true, adapterContext);
+
+                                        // DbStgDevice2:
+                                        await dbStgDevice2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStgDevice2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                        // Commit transactions:
+                                        await adapterUOW.CommitAsync();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                        await adapterUOW.RollBackAsync();
+                                        throw;
+                                    }
+                                }
+                            }, new Context());
+                        }
+
+                        // Persist changes to database. Step 2: Merge the DbStgDevice2 entities into the DbDevice2 table and update the DbOServiceTracking table.
                         await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                         {
                             using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                             {
                                 try
                                 {
-                                    // DbDevice2:
-                                    await dbDevice2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDevice2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                    if (dbStgDevice2sToPersist.Count != 0)
+                                    {
+                                        // Define parameters for the merge procedure.
+                                        var setEntityStatusDeletedForMissingDevices = false;
+                                        if (deviceGeotabObjectCacher.LastCacheOperationType == CacheOperationType.Refresh)
+                                        {
+                                            setEntityStatusDeletedForMissingDevices = true;
+                                        }
+                                        var parameters = new[]
+                                        {
+                                        new { SetEntityStatusDeletedForMissingDevices = setEntityStatusDeletedForMissingDevices }
+                                    };
+
+                                        // Build the SQL statement to execute the merge procedure.
+                                        var sql = adapterContext.ProviderType switch
+                                        {
+                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => MergeFunctionSQL_Postgres,
+                                            ConnectionInfo.DataAccessProviderType.SQLServer => MergeProcedureSQL_SQLServer,
+                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
+                                        };
+
+                                        // Execute the merge procedure.
+                                        await dbStgDevice2Repo.ExecuteAsync(sql, parameters, cancellationTokenSource);
+                                    }
 
                                     // DbOServiceTracking:
                                     await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DeviceProcessor2, DateTime.UtcNow);
@@ -193,7 +209,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // If there were any changes, force the DbDevice2 cache to be updated so that the changes are immediately available to other consumers.
-                        if (dbDevice2sToPersist.Any())
+                        if (dbStgDevice2sToPersist.Count != 0)
                         {
                             await dbDevice2ObjectCache.UpdateAsync(true);
                         }

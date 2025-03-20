@@ -173,7 +173,19 @@ namespace MyGeotabAPIAdapter.Services
                             };
 
                             // Execute the stored procedure / function to get a batch of DbStatusData2WithLagLeadLongLats.
-                            IEnumerable<DbStatusData2WithLagLeadLongLat> dbStatusData2WithLagLeadLongLats = await dbStatusData2WithLagLeadLongLatRepo.QueryAsync(sql, parameters, cancellationTokenSource, true, adapterContext);
+                            IEnumerable<DbStatusData2WithLagLeadLongLat> dbStatusData2WithLagLeadLongLats = null;
+                            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                            {
+                                try
+                                {
+                                    dbStatusData2WithLagLeadLongLats = await dbStatusData2WithLagLeadLongLatRepo.QueryAsync(sql, parameters, cancellationTokenSource, true, adapterContext);
+                                }
+                                catch (Exception ex)
+                                {
+                                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                    throw;
+                                }
+                            }, new Context());
 
                             lastBatchRecordCount = dbStatusData2WithLagLeadLongLats.Count();
 
@@ -350,7 +362,20 @@ namespace MyGeotabAPIAdapter.Services
             }
 
             // Get information on the progress of the location interpolation process.
-            var dbvwStatForLocationInterpolationProgresss = (List<DbvwStatForLocationInterpolationProgress>)await dbvwStatForLocationInterpolationProgressRepo.GetAllAsync(new CancellationTokenSource(TimeSpan.FromSeconds(adapterConfiguration.TimeoutSecondsForDatabaseTasks)), null, null, nameof(DbvwStatForLocationInterpolationProgress.Table), true, adapterContext);
+            List<DbvwStatForLocationInterpolationProgress> dbvwStatForLocationInterpolationProgresss = new();
+            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            {
+                try
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(adapterConfiguration.TimeoutSecondsForDatabaseTasks));
+                    dbvwStatForLocationInterpolationProgresss = (List<DbvwStatForLocationInterpolationProgress>)await dbvwStatForLocationInterpolationProgressRepo.GetAllAsync(cts, null, null, nameof(DbvwStatForLocationInterpolationProgress.Table), true, adapterContext);
+                }
+                catch (Exception ex)
+                {
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                    throw;
+                }
+            }, new Context());
 
             // Log any progress information that was retrieved.
             if (dbvwStatForLocationInterpolationProgresss.Count != 0)

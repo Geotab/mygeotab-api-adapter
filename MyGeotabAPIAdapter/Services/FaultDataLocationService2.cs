@@ -155,7 +155,19 @@ namespace MyGeotabAPIAdapter.Services
                             };
 
                             // Execute the stored procedure / function to get a batch of DbFaultData2WithLagLeadLongLats.
-                            IEnumerable<DbFaultData2WithLagLeadLongLat> dbFaultData2WithLagLeadLongLats = await dbFaultData2WithLagLeadLongLatRepo.QueryAsync(sql, parameters, cancellationTokenSource, true, adapterContext);
+                            IEnumerable<DbFaultData2WithLagLeadLongLat> dbFaultData2WithLagLeadLongLats = null;
+                            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                            {
+                                try
+                                {
+                                    dbFaultData2WithLagLeadLongLats = await dbFaultData2WithLagLeadLongLatRepo.QueryAsync(sql, parameters, cancellationTokenSource, true, adapterContext);
+                                }
+                                catch (Exception ex)
+                                {
+                                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                    throw;
+                                }
+                            }, new Context());
 
                             lastBatchRecordCount = dbFaultData2WithLagLeadLongLats.Count();
 

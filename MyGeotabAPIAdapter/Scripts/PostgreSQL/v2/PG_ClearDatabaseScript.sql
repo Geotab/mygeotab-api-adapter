@@ -49,6 +49,9 @@
 -- ALTER TABLE public."Devices2" DISABLE TRIGGER ALL;
 -- delete from public."Devices2";
 -- ALTER TABLE public."Devices2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."Groups2" DISABLE TRIGGER ALL;
+-- delete from public."Groups2";
+-- ALTER TABLE public."Groups2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."Users2" DISABLE TRIGGER ALL;
 -- delete from public."Users2";
 -- ALTER TABLE public."Users2" ENABLE TRIGGER ALL;
@@ -58,11 +61,13 @@
 -- ALTER TABLE public."ZoneTypes2" DISABLE TRIGGER ALL;
 -- delete from public."ZoneTypes2";
 -- ALTER TABLE public."ZoneTypes2" ENABLE TRIGGER ALL;
+-- ALTER SEQUENCE public."DBMaintenanceLogs2_id_seq" RESTART;
 -- ALTER SEQUENCE public."DiagnosticIds2_id_seq" RESTART;
 -- ALTER SEQUENCE public."Diagnostics2_id_seq" RESTART;
 -- ALTER SEQUENCE public."EntityMetadata2_id_seq" RESTART;
+-- ALTER SEQUENCE public."Groups2_id_seq" RESTART;
+-- ALTER SEQUENCE public."ZoneTypes2_id_seq" RESTART;
 -- ALTER SEQUENCE public."OServiceTracking2_id_seq" RESTART;
--- ALTER SEQUENCE public."DBMaintenanceLogs2_id_seq" RESTART;
 
 
 /* Check counts */

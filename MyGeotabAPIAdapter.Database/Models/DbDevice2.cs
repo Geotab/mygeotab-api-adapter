@@ -31,6 +31,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         [Write(false)]
         public string? CommentOracle { get => Comment; }
         public string DeviceType { get; set; }
+        public string? Groups { get; set; }
         public string LicensePlate { get; set; }
         public string LicenseState { get; set; }
         public string Name { get; set; }

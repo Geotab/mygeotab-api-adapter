@@ -22,7 +22,89 @@ USE [geotabadapterdb]
 GO
 
 /*** [START] SSMS-Generated Script Below ***/ 
-/****** Object:  View [dbo].[vwStatsForLevel1DBMaintenance]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[FaultDataLocations2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[FaultDataLocations2](
+	[id] [bigint] NOT NULL,
+	[DeviceId] [bigint] NOT NULL,
+	[DateTime] [datetime2](7) NOT NULL,
+	[Latitude] [float] NULL,
+	[Longitude] [float] NULL,
+	[Speed] [real] NULL,
+	[Bearing] [real] NULL,
+	[Direction] [nvarchar](3) NULL,
+	[LongLatProcessed] [bit] NOT NULL,
+	[LongLatReason] [tinyint] NULL,
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_FaultDataLocations2] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC,
+	[DateTime] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
+) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
+GO
+/****** Object:  Table [dbo].[StatusDataLocations2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[StatusDataLocations2](
+	[id] [bigint] NOT NULL,
+	[DeviceId] [bigint] NOT NULL,
+	[DateTime] [datetime2](7) NOT NULL,
+	[Latitude] [float] NULL,
+	[Longitude] [float] NULL,
+	[Speed] [real] NULL,
+	[Bearing] [real] NULL,
+	[Direction] [nvarchar](3) NULL,
+	[LongLatProcessed] [bit] NOT NULL,
+	[LongLatReason] [tinyint] NULL,
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_StatusDataLocations2] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC,
+	[DateTime] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
+) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
+GO
+/****** Object:  View [dbo].[vwStatsForLocationInterpolationProgress]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- ==========================================================================================
+-- Description:	Provides information related to location interpolation progress.
+-- ==========================================================================================
+CREATE VIEW [dbo].[vwStatsForLocationInterpolationProgress]
+AS
+SELECT 
+    ROW_NUMBER() OVER (ORDER BY [Table]) AS RowId,
+    [Table],
+    Total,
+    LongLatProcessedTotal,
+    CASE 
+        WHEN Total > 0 THEN (LongLatProcessedTotal * 100.0) / Total 
+        ELSE 0 
+    END AS LongLatProcessedPercentage
+FROM (
+    SELECT 
+        'StatusDataLocations2' AS [Table],
+        COUNT(*) AS Total,
+        SUM(CASE WHEN [LongLatProcessed] = 1 THEN 1 ELSE 0 END) AS LongLatProcessedTotal
+    FROM dbo.StatusDataLocations2 WITH (NOLOCK)
+    UNION ALL
+    SELECT 
+        'FaultDataLocations2' AS [Table],
+        COUNT(*) AS Total,
+        SUM(CASE WHEN [LongLatProcessed] = 1 THEN 1 ELSE 0 END) AS LongLatProcessedTotal
+    FROM dbo.FaultDataLocations2 WITH (NOLOCK)
+) AS InterpolationProgress;
+GO
+/****** Object:  View [dbo].[vwStatsForLevel1DBMaintenance]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -70,7 +152,7 @@ SELECT
 FROM TableStats
 WHERE ModsSinceLastStatsUpdate > 1000;
 GO
-/****** Object:  View [dbo].[vwStatsForLevel2DBMaintenance]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  View [dbo].[vwStatsForLevel2DBMaintenance]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -146,7 +228,7 @@ WHERE
     ps.FragmentationPct > 10
     AND ps.IndexSizeKB > 1;
 GO
-/****** Object:  Table [dbo].[DBMaintenanceLogs2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[DBMaintenanceLogs2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -164,7 +246,7 @@ CREATE TABLE [dbo].[DBMaintenanceLogs2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Devices2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[Devices2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -176,6 +258,7 @@ CREATE TABLE [dbo].[Devices2](
 	[ActiveTo] [datetime2](7) NULL,
 	[Comment] [nvarchar](1024) NULL,
 	[DeviceType] [nvarchar](50) NOT NULL,
+	[Groups] [nvarchar](max) NULL,
 	[LicensePlate] [nvarchar](50) NULL,
 	[LicenseState] [nvarchar](50) NULL,
 	[Name] [nvarchar](100) NOT NULL,
@@ -190,7 +273,7 @@ CREATE TABLE [dbo].[Devices2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[DiagnosticIds2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[DiagnosticIds2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -213,7 +296,7 @@ CREATE TABLE [dbo].[DiagnosticIds2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Diagnostics2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[Diagnostics2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -240,7 +323,7 @@ CREATE TABLE [dbo].[Diagnostics2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[EntityMetadata2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[EntityMetadata2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -260,7 +343,7 @@ CREATE TABLE [dbo].[EntityMetadata2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 ) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Table [dbo].[FaultData2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[FaultData2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -296,31 +379,34 @@ CREATE TABLE [dbo].[FaultData2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 ) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Table [dbo].[FaultDataLocations2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[Groups2]    Script Date: 2025-03-01 4:38:17 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE [dbo].[FaultDataLocations2](
-	[id] [bigint] NOT NULL,
-	[DeviceId] [bigint] NOT NULL,
-	[DateTime] [datetime2](7) NOT NULL,
-	[Latitude] [float] NULL,
-	[Longitude] [float] NULL,
-	[Speed] [real] NULL,
-	[Bearing] [real] NULL,
-	[Direction] [nvarchar](3) NULL,
-	[LongLatProcessed] [bit] NOT NULL,
-	[LongLatReason] [tinyint] NULL,
+CREATE TABLE [dbo].[Groups2](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[GeotabId] [nvarchar](50) NOT NULL,
+	[Children] [nvarchar](max) NULL,
+	[Color] [nvarchar](50) NULL,
+	[Comments] [nvarchar](1024) NULL,
+	[Name] [nvarchar](255) NULL,
+	[Reference] [nvarchar](255) NULL,
+	[EntityStatus] [int] NOT NULL,
 	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
- CONSTRAINT [PK_FaultDataLocations2] PRIMARY KEY CLUSTERED 
+ CONSTRAINT [PK_Groups2] PRIMARY KEY CLUSTERED 
 (
-	[id] ASC,
-	[DateTime] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
-) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[LogRecords2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_Groups2_RecordLastChangedUtc]    Script Date: 2025-03-01 4:38:25 PM ******/
+CREATE NONCLUSTERED INDEX [IX_Groups2_RecordLastChangedUtc] ON [dbo].[Groups2]
+(
+	[RecordLastChangedUtc] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[LogRecords2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -341,7 +427,7 @@ CREATE TABLE [dbo].[LogRecords2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 ) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Table [dbo].[MiddlewareVersionInfo2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[MiddlewareVersionInfo2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -356,7 +442,7 @@ CREATE TABLE [dbo].[MiddlewareVersionInfo2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[MyGeotabVersionInfo2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[MyGeotabVersionInfo2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -372,7 +458,7 @@ CREATE TABLE [dbo].[MyGeotabVersionInfo2](
 	[RecordCreationTimeUtc] [datetime2](7) NOT NULL
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[OServiceTracking2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[OServiceTracking2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -391,7 +477,7 @@ CREATE TABLE [dbo].[OServiceTracking2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[StatusData2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[StatusData2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -411,31 +497,157 @@ CREATE TABLE [dbo].[StatusData2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 ) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Table [dbo].[StatusDataLocations2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[stg_Devices2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE [dbo].[StatusDataLocations2](
+CREATE TABLE [dbo].[stg_Devices2](
 	[id] [bigint] NOT NULL,
-	[DeviceId] [bigint] NOT NULL,
-	[DateTime] [datetime2](7) NOT NULL,
-	[Latitude] [float] NULL,
-	[Longitude] [float] NULL,
-	[Speed] [real] NULL,
-	[Bearing] [real] NULL,
-	[Direction] [nvarchar](3) NULL,
-	[LongLatProcessed] [bit] NOT NULL,
-	[LongLatReason] [tinyint] NULL,
+	[GeotabId] [nvarchar](50) NOT NULL,
+	[ActiveFrom] [datetime2](7) NULL,
+	[ActiveTo] [datetime2](7) NULL,
+	[Comment] [nvarchar](1024) NULL,
+	[DeviceType] [nvarchar](50) NOT NULL,
+	[Groups] [nvarchar](max) NULL,
+	[LicensePlate] [nvarchar](50) NULL,
+	[LicenseState] [nvarchar](50) NULL,
+	[Name] [nvarchar](100) NOT NULL,
+	[ProductId] [int] NULL,
+	[SerialNumber] [nvarchar](12) NULL,
+	[VIN] [nvarchar](50) NULL,
+	[EntityStatus] [int] NOT NULL,
 	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
- CONSTRAINT [PK_StatusDataLocations2] PRIMARY KEY CLUSTERED 
+ CONSTRAINT [PK_stg_Devices2] PRIMARY KEY CLUSTERED 
 (
-	[id] ASC,
-	[DateTime] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
-) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Users2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[stg_Diagnostics2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[stg_Diagnostics2](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[GeotabId] [nvarchar](100) NOT NULL,
+	[GeotabGUIDString] [nvarchar](100) NOT NULL,
+	[HasShimId] [bit] NOT NULL,
+	[FormerShimGeotabGUIDString] [nvarchar](100) NULL,
+	[ControllerId] [nvarchar](100) NULL,
+	[DiagnosticCode] [int] NULL,
+	[DiagnosticName] [nvarchar](255) NOT NULL,
+	[DiagnosticSourceId] [nvarchar](50) NOT NULL,
+	[DiagnosticSourceName] [nvarchar](255) NOT NULL,
+	[DiagnosticUnitOfMeasureId] [nvarchar](50) NOT NULL,
+	[DiagnosticUnitOfMeasureName] [nvarchar](255) NOT NULL,
+	[OBD2DTC] [nvarchar](50) NULL,
+	[EntityStatus] [int] NOT NULL,
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_stg_Diagnostics2] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[stg_Groups2]    Script Date: 2025-03-18 3:00:00 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[stg_Groups2](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[GeotabId] [nvarchar](50) NOT NULL,
+	[Children] [nvarchar](max) NULL,
+	[Color] [nvarchar](50) NULL,
+	[Comments] [nvarchar](1024) NULL,
+	[Name] [nvarchar](255) NULL,
+	[Reference] [nvarchar](255) NULL,
+	[EntityStatus] [int] NOT NULL,
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_stg_Groups2] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+CREATE INDEX IX_stg_Groups2_GeotabId_RecordLastChangedUtc
+ON dbo.stg_Groups2 (GeotabId, RecordLastChangedUtc DESC);
+/****** Object:  Table [dbo].[stg_Users2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[stg_Users2](
+	[id] [bigint] NOT NULL,
+	[GeotabId] [nvarchar](50) NOT NULL,
+	[ActiveFrom] [datetime2](7) NOT NULL,
+	[ActiveTo] [datetime2](7) NOT NULL,
+	[CompanyGroups] [nvarchar](max) NULL,
+	[EmployeeNo] [nvarchar](50) NULL,
+	[FirstName] [nvarchar](255) NULL,
+	[HosRuleSet] [nvarchar](max) NULL,
+	[IsDriver] [bit] NOT NULL,
+	[LastAccessDate] [datetime2](7) NULL,
+	[LastName] [nvarchar](255) NULL,
+	[Name] [nvarchar](255) NOT NULL,
+	[EntityStatus] [int] NOT NULL,
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_stg_Users2] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[stg_Zones2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[stg_Zones2](
+	[id] [bigint] NOT NULL,
+	[GeotabId] [nvarchar](100) NOT NULL,
+	[ActiveFrom] [datetime2](7) NULL,
+	[ActiveTo] [datetime2](7) NULL,
+	[CentroidLatitude] [float] NULL,
+	[CentroidLongitude] [float] NULL,
+	[Comment] [nvarchar](500) NULL,
+	[Displayed] [bit] NULL,
+	[ExternalReference] [nvarchar](255) NULL,
+	[Groups] [nvarchar](max) NULL,
+	[MustIdentifyStops] [bit] NULL,
+	[Name] [nvarchar](255) NOT NULL,
+	[Points] [nvarchar](max) NULL,
+	[ZoneTypeIds] [nvarchar](max) NOT NULL,
+	[Version] [bigint] NULL,
+	[EntityStatus] [int] NOT NULL,
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_stg_Zones2] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[stg_ZoneTypes2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[stg_ZoneTypes2](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[GeotabId] [nvarchar](100) NOT NULL,
+	[Comment] [nvarchar](255) NULL,
+	[Name] [nvarchar](255) NOT NULL,
+	[EntityStatus] [int] NOT NULL,
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_stg_ZoneTypes2] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Users2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -445,6 +657,7 @@ CREATE TABLE [dbo].[Users2](
 	[GeotabId] [nvarchar](50) NOT NULL,
 	[ActiveFrom] [datetime2](7) NOT NULL,
 	[ActiveTo] [datetime2](7) NOT NULL,
+	[CompanyGroups] [nvarchar](max) NULL,
 	[EmployeeNo] [nvarchar](50) NULL,
 	[FirstName] [nvarchar](255) NULL,
 	[HosRuleSet] [nvarchar](max) NULL,
@@ -460,7 +673,7 @@ CREATE TABLE [dbo].[Users2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Zones2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[Zones2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -475,6 +688,7 @@ CREATE TABLE [dbo].[Zones2](
 	[Comment] [nvarchar](500) NULL,
 	[Displayed] [bit] NULL,
 	[ExternalReference] [nvarchar](255) NULL,
+	[Groups] [nvarchar](max) NULL,
 	[MustIdentifyStops] [bit] NULL,
 	[Name] [nvarchar](255) NOT NULL,
 	[Points] [nvarchar](max) NULL,
@@ -488,7 +702,7 @@ CREATE TABLE [dbo].[Zones2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ZoneTypes2]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Table [dbo].[ZoneTypes2]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -506,19 +720,19 @@ CREATE TABLE [dbo].[ZoneTypes2](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_DBMaintenanceLogs2_RecordLastChangedUtc]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_DBMaintenanceLogs2_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_DBMaintenanceLogs2_RecordLastChangedUtc] ON [dbo].[DBMaintenanceLogs2]
 (
 	[RecordLastChangedUtc] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Devices2_RecordLastChangedUtc]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_Devices2_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_Devices2_RecordLastChangedUtc] ON [dbo].[Devices2]
 (
 	[RecordLastChangedUtc] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Diagnostics2_RecordLastChangedUtc]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_Diagnostics2_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_Diagnostics2_RecordLastChangedUtc] ON [dbo].[Diagnostics2]
 (
 	[RecordLastChangedUtc] ASC
@@ -526,13 +740,13 @@ CREATE NONCLUSTERED INDEX [IX_Diagnostics2_RecordLastChangedUtc] ON [dbo].[Diagn
 GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [UI_Diagnostics2_GeotabGUIDString]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [UI_Diagnostics2_GeotabGUIDString]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UI_Diagnostics2_GeotabGUIDString] ON [dbo].[Diagnostics2]
 (
 	[GeotabGUIDString] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [UI_EntityMetadata2_DeviceId_DateTime_EntityType]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [UI_EntityMetadata2_DeviceId_DateTime_EntityType]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [UI_EntityMetadata2_DeviceId_DateTime_EntityType] ON [dbo].[EntityMetadata2]
 (
 	[DeviceId] ASC,
@@ -540,26 +754,26 @@ CREATE NONCLUSTERED INDEX [UI_EntityMetadata2_DeviceId_DateTime_EntityType] ON [
 	[EntityType] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [IX_FaultData2_DateTime]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_FaultData2_DateTime]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_FaultData2_DateTime] ON [dbo].[FaultData2]
 (
 	[DateTime] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [IX_FaultData2_DeviceId_DateTime]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_FaultData2_DeviceId_DateTime]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_FaultData2_DeviceId_DateTime] ON [dbo].[FaultData2]
 (
 	[DeviceId] ASC,
 	[DateTime] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [UI_FaultData2_Id]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [UI_FaultData2_Id]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UI_FaultData2_Id] ON [dbo].[FaultData2]
 (
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_FaultDataLocations2_DateTime_DeviceId_Filtered]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_FaultDataLocations2_DateTime_DeviceId_Filtered]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_FaultDataLocations2_DateTime_DeviceId_Filtered] ON [dbo].[FaultDataLocations2]
 (
 	[DateTime] ASC,
@@ -568,14 +782,14 @@ CREATE NONCLUSTERED INDEX [IX_FaultDataLocations2_DateTime_DeviceId_Filtered] ON
 WHERE ([LongLatProcessed]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [IX_FaultDataLocations2_id_LongLatProcessed]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_FaultDataLocations2_id_LongLatProcessed]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_FaultDataLocations2_id_LongLatProcessed] ON [dbo].[FaultDataLocations2]
 (
 	[id] ASC,
 	[LongLatProcessed] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [IX_FaultDataLocations2_LongLatProcessed_DateTime_id]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_FaultDataLocations2_LongLatProcessed_DateTime_id]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_FaultDataLocations2_LongLatProcessed_DateTime_id] ON [dbo].[FaultDataLocations2]
 (
 	[LongLatProcessed] ASC,
@@ -583,63 +797,63 @@ CREATE NONCLUSTERED INDEX [IX_FaultDataLocations2_LongLatProcessed_DateTime_id] 
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [UI_FaultDataLocations2_Id]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [UI_FaultDataLocations2_Id]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UI_FaultDataLocations2_Id] ON [dbo].[FaultDataLocations2]
 (
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_LogRecords2_DateTime]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_LogRecords2_DateTime]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_LogRecords2_DateTime] ON [dbo].[LogRecords2]
 (
 	[DateTime] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [UI_LogRecords2_DeviceId_DateTime]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [UI_LogRecords2_DeviceId_DateTime]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UI_LogRecords2_DeviceId_DateTime] ON [dbo].[LogRecords2]
 (
 	[DeviceId] ASC,
 	[DateTime] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [UI_LogRecords2_Id]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [UI_LogRecords2_Id]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UI_LogRecords2_Id] ON [dbo].[LogRecords2]
 (
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_MyGeotabVersionInfo2_RecordCreationTimeUtc]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_MyGeotabVersionInfo2_RecordCreationTimeUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_MyGeotabVersionInfo2_RecordCreationTimeUtc] ON [dbo].[MyGeotabVersionInfo2]
 (
 	[RecordCreationTimeUtc] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_OServiceTracking2_RecordLastChangedUtc]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_OServiceTracking2_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_OServiceTracking2_RecordLastChangedUtc] ON [dbo].[OServiceTracking2]
 (
 	[RecordLastChangedUtc] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_StatusData2_DateTime]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_StatusData2_DateTime]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_StatusData2_DateTime] ON [dbo].[StatusData2]
 (
 	[DateTime] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [IX_StatusData2_DeviceId_DateTime]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_StatusData2_DeviceId_DateTime]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_StatusData2_DeviceId_DateTime] ON [dbo].[StatusData2]
 (
 	[DeviceId] ASC,
 	[DateTime] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [UI_StatusData2_Id]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [UI_StatusData2_Id]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UI_StatusData2_Id] ON [dbo].[StatusData2]
 (
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_StatusDataLocations2_DateTime_DeviceId_Filtered]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_StatusDataLocations2_DateTime_DeviceId_Filtered]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_StatusDataLocations2_DateTime_DeviceId_Filtered] ON [dbo].[StatusDataLocations2]
 (
 	[DateTime] ASC,
@@ -648,14 +862,14 @@ CREATE NONCLUSTERED INDEX [IX_StatusDataLocations2_DateTime_DeviceId_Filtered] O
 WHERE ([LongLatProcessed]=(0))
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [IX_StatusDataLocations2_id_LongLatProcessed]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_StatusDataLocations2_id_LongLatProcessed]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_StatusDataLocations2_id_LongLatProcessed] ON [dbo].[StatusDataLocations2]
 (
 	[id] ASC,
 	[LongLatProcessed] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [IX_StatusDataLocations2_LongLatProcessed_DateTime_id]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_StatusDataLocations2_LongLatProcessed_DateTime_id]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_StatusDataLocations2_LongLatProcessed_DateTime_id] ON [dbo].[StatusDataLocations2]
 (
 	[LongLatProcessed] ASC,
@@ -663,25 +877,64 @@ CREATE NONCLUSTERED INDEX [IX_StatusDataLocations2_LongLatProcessed_DateTime_id]
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
 GO
-/****** Object:  Index [UI_StatusDataLocations2_Id]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [UI_StatusDataLocations2_Id]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UI_StatusDataLocations2_Id] ON [dbo].[StatusDataLocations2]
 (
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Users2_RecordLastChangedUtc]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_stg_Devices2_id_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
+CREATE NONCLUSTERED INDEX [IX_stg_Devices2_id_RecordLastChangedUtc] ON [dbo].[stg_Devices2]
+(
+	[id] ASC,
+	[RecordLastChangedUtc] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_stg_Diagnostics2_GeotabGUIDString_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
+CREATE NONCLUSTERED INDEX [IX_stg_Diagnostics2_GeotabGUIDString_RecordLastChangedUtc] ON [dbo].[stg_Diagnostics2]
+(
+	[GeotabGUIDString] ASC,
+	[RecordLastChangedUtc] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_stg_Users2_id_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
+CREATE NONCLUSTERED INDEX [IX_stg_Users2_id_RecordLastChangedUtc] ON [dbo].[stg_Users2]
+(
+	[id] ASC,
+	[RecordLastChangedUtc] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_stg_Zones2_id_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
+CREATE NONCLUSTERED INDEX [IX_stg_Zones2_id_RecordLastChangedUtc] ON [dbo].[stg_Zones2]
+(
+	[id] ASC,
+	[RecordLastChangedUtc] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_stg_ZoneTypes2_GeotabId_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
+CREATE NONCLUSTERED INDEX [IX_stg_ZoneTypes2_GeotabId_RecordLastChangedUtc] ON [dbo].[stg_ZoneTypes2]
+(
+	[GeotabId] ASC,
+	[RecordLastChangedUtc] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_Users2_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_Users2_RecordLastChangedUtc] ON [dbo].[Users2]
 (
 	[RecordLastChangedUtc] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_Zones2_RecordLastChangedUtc]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_Zones2_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_Zones2_RecordLastChangedUtc] ON [dbo].[Zones2]
 (
 	[RecordLastChangedUtc] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
-/****** Object:  Index [IX_ZoneTypes2_RecordLastChangedUtc]    Script Date: 2025-01-03 4:46:55 PM ******/
+/****** Object:  Index [IX_ZoneTypes2_RecordLastChangedUtc]    Script Date: 2025-03-13 3:23:51 PM ******/
 CREATE NONCLUSTERED INDEX [IX_ZoneTypes2_RecordLastChangedUtc] ON [dbo].[ZoneTypes2]
 (
 	[RecordLastChangedUtc] ASC
@@ -695,12 +948,12 @@ ALTER TABLE [dbo].[LogRecords2] ADD  CONSTRAINT [DF_LogRecords2_Longitude]  DEFA
 GO
 ALTER TABLE [dbo].[LogRecords2] ADD  CONSTRAINT [DF_LogRecords2_Speed]  DEFAULT ((0)) FOR [Speed]
 GO
-ALTER TABLE [dbo].[DiagnosticIds2]  WITH NOCHECK ADD  CONSTRAINT [FK_DiagnosticIds2_Diagnostics2] FOREIGN KEY([GeotabGUIDString])
+ALTER TABLE [dbo].[DiagnosticIds2]  WITH CHECK ADD  CONSTRAINT [FK_DiagnosticIds2_Diagnostics2] FOREIGN KEY([GeotabGUIDString])
 REFERENCES [dbo].[Diagnostics2] ([GeotabGUIDString])
 GO
 ALTER TABLE [dbo].[DiagnosticIds2] CHECK CONSTRAINT [FK_DiagnosticIds2_Diagnostics2]
 GO
-ALTER TABLE [dbo].[DiagnosticIds2]  WITH NOCHECK ADD  CONSTRAINT [FK_DiagnosticIds2_Diagnostics21] FOREIGN KEY([FormerShimGeotabGUIDString])
+ALTER TABLE [dbo].[DiagnosticIds2]  WITH CHECK ADD  CONSTRAINT [FK_DiagnosticIds2_Diagnostics21] FOREIGN KEY([FormerShimGeotabGUIDString])
 REFERENCES [dbo].[Diagnostics2] ([GeotabGUIDString])
 GO
 ALTER TABLE [dbo].[DiagnosticIds2] CHECK CONSTRAINT [FK_DiagnosticIds2_Diagnostics21]
@@ -745,41 +998,7 @@ REFERENCES [dbo].[StatusData2] ([id])
 GO
 ALTER TABLE [dbo].[StatusDataLocations2] CHECK CONSTRAINT [FK_StatusDataLocations2_StatusData2]
 GO
-/****** Object:  View [dbo].[vwStatsForLocationInterpolationProgress]    Script Date: 2025-01-25 12:37:21 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- ==========================================================================================
--- Description:	Provides information related to location interpolation progress.
--- ==========================================================================================
-CREATE VIEW [dbo].[vwStatsForLocationInterpolationProgress]
-AS
-SELECT 
-    ROW_NUMBER() OVER (ORDER BY [Table]) AS RowId,
-    [Table],
-    Total,
-    LongLatProcessedTotal,
-    CASE 
-        WHEN Total > 0 THEN (LongLatProcessedTotal * 100.0) / Total 
-        ELSE 0 
-    END AS LongLatProcessedPercentage
-FROM (
-    SELECT 
-        'StatusDataLocations2' AS [Table],
-        COUNT(*) AS Total,
-        SUM(CASE WHEN [LongLatProcessed] = 1 THEN 1 ELSE 0 END) AS LongLatProcessedTotal
-    FROM dbo.StatusDataLocations2 WITH (NOLOCK)
-    UNION ALL
-    SELECT 
-        'FaultDataLocations2' AS [Table],
-        COUNT(*) AS Total,
-        SUM(CASE WHEN [LongLatProcessed] = 1 THEN 1 ELSE 0 END) AS LongLatProcessedTotal
-    FROM dbo.FaultDataLocations2 WITH (NOLOCK)
-) AS InterpolationProgress;
-GO
-/****** Object:  StoredProcedure [dbo].[spFaultData2WithLagLeadLongLatBatch]    Script Date: 2025-01-28 3:58:04 PM ******/
+/****** Object:  StoredProcedure [dbo].[spFaultData2WithLagLeadLongLatBatch]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1316,8 +1535,729 @@ BEGIN
     END CATCH
 END;
 GO
+/****** Object:  StoredProcedure [dbo].[spMerge_stg_Devices2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
-/****** Object:  StoredProcedure [dbo].[spStatusData2WithLagLeadLongLatBatch_ORIGINAL]    Script Date: 2025-01-29 10:40:28 AM ******/
+
+-- ==========================================================================================
+-- Description: 
+--		Upserts records from the stg_Devices2 staging table to the Devices2 table and then
+--		truncates the staging table. If the @SetEntityStatusDeletedForMissingDevices 
+--		parameter is set to 1 (true), the EntityStatus column will be set to 0 (Deleted) for 
+--		any records in the Devices2 table for which there are no corresponding records with 
+--		the same ids in the stg_Devices2 table.
+--
+-- Notes:
+--		- No transaction used as application should manage the transaction.
+-- ==========================================================================================
+CREATE   PROCEDURE [dbo].[spMerge_stg_Devices2]
+	@SetEntityStatusDeletedForMissingDevices BIT = 0
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    -- De-duplicate staging table by selecting the latest record per id. Note that 
+	-- RecordLastChangedUtc is set in the order in which results are retrieved via GetFeed.
+    WITH DeduplicatedStaging AS (
+        SELECT *
+        FROM (
+            SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY id ORDER BY RecordLastChangedUtc DESC) AS rownum
+            FROM dbo.stg_Devices2
+        ) AS sub
+        WHERE rownum = 1
+    )
+
+	-- Perform upsert.
+    MERGE INTO dbo.Devices2 AS d
+    USING DeduplicatedStaging AS s
+    ON d.id = s.id
+    WHEN MATCHED AND (
+        d.GeotabId <> s.GeotabId
+		OR ISNULL(d.ActiveFrom, '2000-01-01') <> ISNULL(s.ActiveFrom, '2000-01-01')
+		OR ISNULL(d.ActiveTo, '2000-01-01') <> ISNULL(s.ActiveTo, '2000-01-01')
+		OR ISNULL(d.Comment, '') <> ISNULL(s.Comment, '')
+        OR d.DeviceType <> s.DeviceType
+		OR ISNULL(d.Groups, '') <> ISNULL(s.Groups, '')
+		OR ISNULL(d.LicensePlate, '') <> ISNULL(s.LicensePlate, '')
+		OR ISNULL(d.LicenseState, '') <> ISNULL(s.LicenseState, '')
+        OR d.Name <> s.Name
+		OR ISNULL(d.ProductId, -1) <> ISNULL(s.ProductId, -1)
+		OR ISNULL(d.SerialNumber, '') <> ISNULL(s.SerialNumber, '')
+		OR ISNULL(d.VIN, '') <> ISNULL(s.VIN, '')
+        OR d.EntityStatus <> s.EntityStatus
+        -- OR d.RecordLastChangedUtc <> s.RecordLastChangedUtc
+    )
+    THEN UPDATE SET
+        d.GeotabId = s.GeotabId,
+        d.ActiveFrom = s.ActiveFrom,
+        d.ActiveTo = s.ActiveTo,
+        d.Comment = s.Comment,
+        d.DeviceType = s.DeviceType,
+		d.Groups = s.Groups,
+        d.LicensePlate = s.LicensePlate,
+        d.LicenseState = s.LicenseState,
+        d.Name = s.Name,
+        d.ProductId = s.ProductId,
+        d.SerialNumber = s.SerialNumber,
+        d.VIN = s.VIN,
+        d.EntityStatus = s.EntityStatus,
+        d.RecordLastChangedUtc = s.RecordLastChangedUtc
+    WHEN NOT MATCHED THEN 
+        INSERT (
+			id, 
+			GeotabId, 
+			ActiveFrom, 
+			ActiveTo, 
+			Comment, 
+			DeviceType, 
+			Groups, 
+			LicensePlate, 
+			LicenseState, 
+			Name, 
+			ProductId, 
+			SerialNumber, 
+			VIN, 
+			EntityStatus, 
+			RecordLastChangedUtc
+		)
+        VALUES (
+			s.id, 
+			s.GeotabId, 
+			s.ActiveFrom, 
+			s.ActiveTo, 
+			s.Comment, 
+			s.DeviceType, 
+			s.Groups, 
+			s.LicensePlate, 
+			s.LicenseState, 
+			s.Name, 
+			s.ProductId, 
+			s.SerialNumber, 
+			s.VIN, 
+			s.EntityStatus, 
+			s.RecordLastChangedUtc
+		);
+
+    -- If @SetEntityStatusDeletedForMissingDevices is 1 (true) set the EntityStatus to 
+	-- 0 (Deleted) for any records in the Devices2 table for which there is no corresponding
+	-- record with the same id in the stg_Devices2 table.
+    IF @SetEntityStatusDeletedForMissingDevices = 1
+    BEGIN
+		UPDATE d
+		SET EntityStatus = 0,
+			RecordLastChangedUtc = GETUTCDATE()
+		FROM dbo.Devices2 d
+		WHERE NOT EXISTS (
+			SELECT 1 FROM dbo.stg_Devices2 s
+			WHERE s.id = d.id
+		);
+    END;
+
+    -- Clear staging table.
+    TRUNCATE TABLE dbo.stg_Devices2;
+END;
+GO
+/****** Object:  StoredProcedure [dbo].[spMerge_stg_Diagnostics2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+-- ==========================================================================================
+-- Description:  
+--      Upserts records from the stg_Diagnostics2 staging table to the Diagnostics2 table and 
+--		then truncates the staging table. If the @SetEntityStatusDeletedForMissingDiagnostics  
+--      parameter is set to 1 (true), the EntityStatus column will be set to 0 (Deleted) for  
+--      any records in the Diagnostics2 table for which there are no corresponding records 
+--		with the same ids in the stg_Diagnostics2 table. Additionally, inserts into 
+--		DiagnosticIds2 for inserts and updates to Diagnostics2 where there isn't already a 
+--		record for the subject GeotabGUIDString + GeotabId combination.
+--
+-- Notes:
+--      - No transaction used as application should manage the transaction.
+-- ==========================================================================================
+CREATE   PROCEDURE [dbo].[spMerge_stg_Diagnostics2]
+    @SetEntityStatusDeletedForMissingDiagnostics BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- Create temporary table to store merge output. Collation specified in case tempdb
+	-- collation differs from that of this database.
+	DROP TABLE IF EXISTS #TMP_MergeOutput;
+    CREATE TABLE #TMP_MergeOutput (
+        Action VARCHAR(10) COLLATE SQL_Latin1_General_CP1_CS_AS,
+        GeotabGUIDString NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CS_AS,
+		GeotabId NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CS_AS,
+        HasShimId BIT,
+        FormerShimGeotabGUIDString NVARCHAR(100) COLLATE SQL_Latin1_General_CP1_CS_AS,
+		RecordLastChangedUtc DATETIME2(7) NOT NULL
+    );
+	CREATE INDEX IX_TMP_MergeOutput_GeotabGUIDString_GeotabId
+	ON #TMP_MergeOutput (GeotabGUIDString, GeotabId);
+
+    -- De-duplicate staging table by selecting the latest record per GeotabGUIDString  
+    -- (GeotabGUIDString is used to uniquely identify MYG Diagnostics). Note that  
+    -- RecordLastChangedUtc is set in the order in which results are retrieved via GetFeed.  
+    WITH DeduplicatedStaging AS (
+        SELECT *
+        FROM (
+            SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY GeotabGUIDString ORDER BY RecordLastChangedUtc DESC) AS rownum
+            FROM dbo.stg_Diagnostics2
+        ) AS sub
+        WHERE rownum = 1
+    )
+    -- Perform upsert and store output in temporary table.
+    MERGE INTO dbo.Diagnostics2 AS d
+    USING DeduplicatedStaging AS s
+    ON d.GeotabGUIDString = s.GeotabGUIDString
+    WHEN MATCHED AND (
+		d.GeotabId <> s.GeotabId
+        OR d.HasShimId <> s.HasShimId
+        OR ISNULL(d.FormerShimGeotabGUIDString, '') <> ISNULL(s.FormerShimGeotabGUIDString, '')
+        OR ISNULL(d.ControllerId, '') <> ISNULL(s.ControllerId, '')
+        OR ISNULL(d.DiagnosticCode, -1) <> ISNULL(s.DiagnosticCode, -1)
+        OR d.DiagnosticName <> s.DiagnosticName
+        OR d.DiagnosticSourceId <> s.DiagnosticSourceId
+        OR d.DiagnosticSourceName <> s.DiagnosticSourceName
+        OR d.DiagnosticUnitOfMeasureId <> s.DiagnosticUnitOfMeasureId
+        OR d.DiagnosticUnitOfMeasureName <> s.DiagnosticUnitOfMeasureName
+        OR ISNULL(d.OBD2DTC, '') <> ISNULL(s.OBD2DTC, '')
+        OR d.EntityStatus <> s.EntityStatus
+		-- OR d.RecordLastChangedUtc = s.RecordLastChangedUtc
+    )
+    THEN UPDATE SET
+		d.GeotabId = s.GeotabId,
+        d.HasShimId = s.HasShimId,
+        d.FormerShimGeotabGUIDString = s.FormerShimGeotabGUIDString,
+        d.ControllerId = s.ControllerId,
+        d.DiagnosticCode = s.DiagnosticCode,
+        d.DiagnosticName = s.DiagnosticName,
+        d.DiagnosticSourceId = s.DiagnosticSourceId,
+        d.DiagnosticSourceName = s.DiagnosticSourceName,
+        d.DiagnosticUnitOfMeasureId = s.DiagnosticUnitOfMeasureId,
+        d.DiagnosticUnitOfMeasureName = s.DiagnosticUnitOfMeasureName,
+        d.OBD2DTC = s.OBD2DTC,
+        d.EntityStatus = s.EntityStatus,
+        d.RecordLastChangedUtc = s.RecordLastChangedUtc
+    WHEN NOT MATCHED THEN  
+        INSERT (
+            GeotabGUIDString,
+			GeotabId,
+            HasShimId,
+            FormerShimGeotabGUIDString,
+            ControllerId,
+            DiagnosticCode,
+            DiagnosticName,
+            DiagnosticSourceId,
+            DiagnosticSourceName,
+            DiagnosticUnitOfMeasureId,
+            DiagnosticUnitOfMeasureName,
+            OBD2DTC,
+            EntityStatus,
+            RecordLastChangedUtc
+        )
+        VALUES (
+            s.GeotabGUIDString,
+			s.GeotabId, 
+            s.HasShimId,
+            s.FormerShimGeotabGUIDString,
+            s.ControllerId,
+            s.DiagnosticCode,
+            s.DiagnosticName,
+            s.DiagnosticSourceId,
+            s.DiagnosticSourceName,
+            s.DiagnosticUnitOfMeasureId,
+            s.DiagnosticUnitOfMeasureName,
+            s.OBD2DTC,
+            s.EntityStatus,
+            s.RecordLastChangedUtc
+        )
+    OUTPUT $action, inserted.GeotabGUIDString, s.GeotabId, inserted.HasShimId, 
+		inserted.FormerShimGeotabGUIDString, inserted.RecordLastChangedUtc INTO #TMP_MergeOutput;
+    
+    -- Insert into DiagnosticIds2 for inserts and updates to Diagnostics2 where there isn't 
+	-- already a record for the subject GeotabGUIDString + GeotabId combination.
+    INSERT INTO dbo.DiagnosticIds2 (GeotabGUIDString, GeotabId, HasShimId, FormerShimGeotabGUIDString, RecordLastChangedUtc)
+    SELECT GeotabGUIDString, GeotabId, HasShimId, FormerShimGeotabGUIDString, RecordLastChangedUtc
+    FROM #TMP_MergeOutput
+    WHERE Action IN ('INSERT', 'UPDATE')
+    AND NOT EXISTS (
+        SELECT 1
+        FROM dbo.DiagnosticIds2 di
+        WHERE di.GeotabGUIDString = #TMP_MergeOutput.GeotabGUIDString 
+			AND di.GeotabId = #TMP_MergeOutput.GeotabId
+    );
+    
+    -- If @SetEntityStatusDeletedForMissingDiagnostics is 1 (true), set EntityStatus to 0 (Deleted)
+    -- for any records in Diagnostics2 where there is no corresponding record with the same GeotabGUIDString
+    -- in stg_Diagnostics2.
+    IF @SetEntityStatusDeletedForMissingDiagnostics = 1
+    BEGIN
+        UPDATE d
+        SET EntityStatus = 0,
+            RecordLastChangedUtc = GETUTCDATE()
+        FROM dbo.Diagnostics2 d
+        WHERE NOT EXISTS (
+            SELECT 1 FROM dbo.stg_Diagnostics2 s
+            WHERE s.GeotabGUIDString = d.GeotabGUIDString
+        );
+    END;
+    
+    -- Clear staging table.
+    TRUNCATE TABLE dbo.stg_Diagnostics2;
+    
+    -- Drop temporary table
+    DROP TABLE IF EXISTS #TMP_MergeOutput;
+END;
+GO
+/****** Object:  StoredProcedure [dbo].[spMerge_stg_Groups2]Table    Script Date: 2025-03-18 3:00:00 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- ==========================================================================================
+-- Description: 
+--		Upserts records from the stg_Groups2 staging table to the Groups2 table and then
+--		truncates the staging table. If the @SetEntityStatusDeletedForMissingGroups 
+--		parameter is set to 1 (true), the EntityStatus column will be set to 0 (Deleted) for 
+--		any records in the Groups2 table for which there are no corresponding records with 
+--		the same ids in the stg_Groups2 table.
+--
+-- Notes:
+--		- No transaction used as application should manage the transaction.
+-- ==========================================================================================
+CREATE OR ALTER PROCEDURE [dbo].[spMerge_stg_Groups2]
+    @SetEntityStatusDeletedForMissingGroups BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- De-duplicate staging table by selecting the latest record per GeotabId (id is 
+	-- auto-generated on insert). Note that RecordLastChangedUtc is set in the order in which 
+	-- results are retrieved via GetFeed.
+    WITH DeduplicatedStaging AS (
+        SELECT *
+        FROM (
+            SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY GeotabId ORDER BY RecordLastChangedUtc DESC) AS rownum
+            FROM dbo.stg_Groups2
+        ) AS sub
+        WHERE rownum = 1
+    )
+    
+    -- Perform upsert.
+    MERGE INTO dbo.Groups2 AS d
+    USING DeduplicatedStaging AS s
+    ON d.GeotabId = s.GeotabId
+    WHEN MATCHED AND (
+        ISNULL(d.Children, '') <> ISNULL(s.Children, '')
+		OR ISNULL(d.Color, '') <> ISNULL(s.Color, '')
+		OR ISNULL(d.Comments, '') <> ISNULL(s.Comments, '')
+		OR ISNULL(d.Name, '') <> ISNULL(s.Name, '')
+		OR ISNULL(d.Reference, '') <> ISNULL(s.Reference, '')
+        OR d.EntityStatus <> s.EntityStatus
+        -- OR d.RecordLastChangedUtc = s.RecordLastChangedUtc
+    )
+    THEN UPDATE SET
+        d.Children = s.Children,
+		d.Color = s.Color,
+		d.Comments = s.Comments,
+        d.Name = s.Name,
+		d.Reference = s.Reference,
+        d.EntityStatus = s.EntityStatus,
+        d.RecordLastChangedUtc = s.RecordLastChangedUtc
+    WHEN NOT MATCHED THEN 
+        INSERT (
+            GeotabId, 
+            Children, 
+			Color, 
+			Comments, 
+            Name, 
+			Reference, 
+            EntityStatus, 
+            RecordLastChangedUtc
+        )
+        VALUES (
+            s.GeotabId, 
+            s.Children, 
+			s.Color, 
+			s.Comments, 
+            s.Name, 
+			s.Reference, 
+            s.EntityStatus, 
+            s.RecordLastChangedUtc
+        );
+    
+    -- If @SetEntityStatusDeletedForMissingGroups is 1 (true), set EntityStatus to 0 (Deleted)
+    -- for any records in Groups2 where there is no corresponding record with the same GeotabId
+	-- in stg_Groups2.
+    IF @SetEntityStatusDeletedForMissingGroups = 1
+    BEGIN
+        UPDATE d
+        SET EntityStatus = 0,
+            RecordLastChangedUtc = GETUTCDATE()
+        FROM dbo.Groups2 d
+        WHERE NOT EXISTS (
+            SELECT 1 FROM dbo.stg_Groups2 s
+            WHERE s.GeotabId = d.GeotabId
+        );
+    END;
+    
+    -- Clear staging table.
+    TRUNCATE TABLE dbo.stg_Groups2;
+END;
+GO
+/****** Object:  StoredProcedure [dbo].[spMerge_stg_Users2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+-- ==========================================================================================
+-- Description: 
+--		Upserts records from the stg_Users2 staging table to the Users2 table and then
+--		truncates the staging table. If the @SetEntityStatusDeletedForMissingUsers 
+--		parameter is set to 1 (true), the EntityStatus column will be set to 0 (Deleted) for 
+--		any records in the Users2 table for which there are no corresponding records with 
+--		the same ids in the stg_Users2 table.
+--
+-- Notes:
+--		- No transaction used as application should manage the transaction.
+-- ==========================================================================================
+CREATE   PROCEDURE [dbo].[spMerge_stg_Users2]
+    @SetEntityStatusDeletedForMissingUsers BIT = 0
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    -- De-duplicate staging table by selecting the latest record per id. Note that 
+	-- RecordLastChangedUtc is set in the order in which results are retrieved via GetFeed.
+    WITH DeduplicatedStaging AS (
+        SELECT *
+        FROM (
+            SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY id ORDER BY RecordLastChangedUtc DESC) AS rownum
+            FROM dbo.stg_Users2
+        ) AS sub
+        WHERE rownum = 1
+    )
+
+    -- Perform upsert.
+    MERGE INTO dbo.Users2 AS d
+    USING DeduplicatedStaging AS s
+    ON d.id = s.id
+    WHEN MATCHED AND (
+        d.GeotabId <> s.GeotabId
+        OR d.ActiveFrom <> s.ActiveFrom
+        OR d.ActiveTo <> s.ActiveTo
+		OR ISNULL(d.CompanyGroups, '') <> ISNULL(s.CompanyGroups, '')
+		OR ISNULL(d.EmployeeNo, '') <> ISNULL(s.EmployeeNo, '')
+		OR ISNULL(d.FirstName, '') <> ISNULL(s.FirstName, '')
+		OR ISNULL(d.HosRuleSet, '') <> ISNULL(s.HosRuleSet, '')
+        OR d.IsDriver <> s.IsDriver
+		OR ISNULL(d.LastAccessDate, '2000-01-01') <> ISNULL(s.LastAccessDate, '2000-01-01')
+		OR ISNULL(d.LastName, '') <> ISNULL(s.LastName, '')
+        OR d.Name <> s.Name
+        OR d.EntityStatus <> s.EntityStatus
+        -- OR d.RecordLastChangedUtc = s.RecordLastChangedUtc
+	)
+	THEN UPDATE SET
+        d.GeotabId = s.GeotabId,
+        d.ActiveFrom = s.ActiveFrom,
+        d.ActiveTo = s.ActiveTo,
+		d.CompanyGroups = s.CompanyGroups,
+        d.EmployeeNo = s.EmployeeNo,
+        d.FirstName = s.FirstName,
+        d.HosRuleSet = s.HosRuleSet,
+        d.IsDriver = s.IsDriver,
+        d.LastAccessDate = s.LastAccessDate,
+        d.LastName = s.LastName,
+        d.Name = s.Name,
+        d.EntityStatus = s.EntityStatus,
+        d.RecordLastChangedUtc = s.RecordLastChangedUtc
+    WHEN NOT MATCHED THEN 
+        INSERT (
+            id, 
+            GeotabId, 
+            ActiveFrom, 
+            ActiveTo, 
+			CompanyGroups, 
+            EmployeeNo, 
+            FirstName, 
+            HosRuleSet, 
+            IsDriver, 
+            LastAccessDate, 
+            LastName, 
+            Name, 
+            EntityStatus, 
+            RecordLastChangedUtc
+        )
+        VALUES (
+            s.id, 
+            s.GeotabId, 
+            s.ActiveFrom, 
+            s.ActiveTo, 
+			s.CompanyGroups, 
+            s.EmployeeNo, 
+            s.FirstName, 
+            s.HosRuleSet, 
+            s.IsDriver, 
+            s.LastAccessDate, 
+            s.LastName, 
+            s.Name, 
+            s.EntityStatus, 
+            s.RecordLastChangedUtc
+        );
+
+    -- If @SetEntityStatusDeletedForMissingUsers is 1 (true) set the EntityStatus to 
+	-- 0 (Deleted) for any records in the Users2 table for which there is no corresponding
+	-- record with the same id in the stg_Users2 table.
+    IF @SetEntityStatusDeletedForMissingUsers = 1
+    BEGIN
+        UPDATE d
+        SET EntityStatus = 0,
+            RecordLastChangedUtc = GETUTCDATE()
+        FROM dbo.Users2 d
+        WHERE NOT EXISTS (
+            SELECT 1 FROM dbo.stg_Users2 s
+            WHERE s.id = d.id
+        );
+    END;
+
+    -- Clear staging table.
+    TRUNCATE TABLE dbo.stg_Users2;
+END;
+GO
+/****** Object:  StoredProcedure [dbo].[spMerge_stg_Zones2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+-- ==========================================================================================
+-- Description: 
+--		Upserts records from the stg_Zones2 staging table to the Zones2 table and then
+--		truncates the staging table. If the @SetEntityStatusDeletedForMissingZones 
+--		parameter is set to 1 (true), the EntityStatus column will be set to 0 (Deleted) for 
+--		any records in the Zones2 table for which there are no corresponding records with 
+--		the same ids in the stg_Zones2 table.
+--
+-- Notes:
+--		- No transaction used as application should manage the transaction.
+-- ==========================================================================================
+CREATE   PROCEDURE [dbo].[spMerge_stg_Zones2]
+	@SetEntityStatusDeletedForMissingZones BIT = 0
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    -- De-duplicate staging table by selecting the latest record per id. Note that 
+	-- RecordLastChangedUtc is set in the order in which results are retrieved via GetFeed.
+    WITH DeduplicatedStaging AS (
+        SELECT *
+        FROM (
+            SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY id ORDER BY RecordLastChangedUtc DESC) AS rownum
+            FROM dbo.stg_Zones2
+        ) AS sub
+        WHERE rownum = 1
+    )
+
+	-- Perform upsert.
+    MERGE INTO dbo.Zones2 AS d
+    USING DeduplicatedStaging AS s
+    ON d.id = s.id
+    WHEN MATCHED AND (
+		d.GeotabId <> s.GeotabId
+		OR ISNULL(d.ActiveFrom, '2000-01-01') <> ISNULL(s.ActiveFrom, '2000-01-01')
+		OR ISNULL(d.ActiveTo, '2000-01-01') <> ISNULL(s.ActiveTo, '2000-01-01')
+		OR ISNULL(d.CentroidLatitude, -1.0) <> ISNULL(s.CentroidLatitude, -1.0)
+		OR ISNULL(d.CentroidLongitude, -1.0) <> ISNULL(s.CentroidLongitude, -1.0)
+		OR ISNULL(d.Comment, '') <> ISNULL(s.Comment, '')
+		OR ISNULL(d.Displayed, 0) <> ISNULL(s.Displayed, 0)
+		OR ISNULL(d.ExternalReference, '') <> ISNULL(s.ExternalReference, '')
+		OR ISNULL(d.Groups, '') <> ISNULL(s.Groups, '')
+		OR ISNULL(d.MustIdentifyStops, 0) <> ISNULL(s.MustIdentifyStops, 0)
+		OR d.Name <> s.Name
+		OR ISNULL(d.Points, '') <> ISNULL(s.Points, '')
+		OR d.ZoneTypeIds <> s.ZoneTypeIds
+		OR ISNULL(d.Version, -1) <> ISNULL(s.Version, -1)
+		OR d.EntityStatus <> s.EntityStatus
+		-- OR d.RecordLastChangedUtc <> s.RecordLastChangedUtc
+	) 
+	THEN UPDATE SET
+		d.GeotabId = s.GeotabId,
+		d.ActiveFrom = s.ActiveFrom,
+		d.ActiveTo = s.ActiveTo,
+		d.CentroidLatitude = s.CentroidLatitude,
+		d.CentroidLongitude = s.CentroidLongitude,
+		d.Comment = s.Comment,
+		d.Displayed = s.Displayed,
+		d.ExternalReference = s.ExternalReference,
+		d.Groups = s.Groups,
+		d.MustIdentifyStops = s.MustIdentifyStops,			
+		d.Name = s.Name,
+		d.Points = s.Points,
+		d.ZoneTypeIds = s.ZoneTypeIds,
+		d.Version = s.Version,
+		d.EntityStatus = s.EntityStatus,
+		d.RecordLastChangedUtc = s.RecordLastChangedUtc
+    WHEN NOT MATCHED THEN 
+        INSERT (
+			id, 
+			GeotabId, 
+			ActiveFrom, 
+			ActiveTo, 
+			CentroidLatitude,
+			CentroidLongitude,
+			Comment, 
+			Displayed, 
+			ExternalReference, 
+			Groups, 
+			MustIdentifyStops, 
+			Name, 
+			Points, 
+			ZoneTypeIds, 
+			Version, 
+			EntityStatus, 
+			RecordLastChangedUtc
+		)
+        VALUES (
+			s.id, 
+			s.GeotabId, 
+			s.ActiveFrom, 
+			s.ActiveTo, 
+			s.CentroidLatitude,
+			s.CentroidLongitude,
+			s.Comment, 
+			s.Displayed, 
+			s.ExternalReference, 
+			s.Groups, 
+			s.MustIdentifyStops, 
+			s.Name, 
+			s.Points, 
+			s.ZoneTypeIds, 
+			s.Version, 
+			s.EntityStatus, 
+			s.RecordLastChangedUtc
+		);
+
+    -- If @SetEntityStatusDeletedForMissingZones is 1 (true) set the EntityStatus to 
+	-- 0 (Deleted) for any records in the Zones2 table for which there is no corresponding
+	-- record with the same id in the stg_Zones2 table.
+    IF @SetEntityStatusDeletedForMissingZones = 1
+    BEGIN
+		UPDATE d
+		SET EntityStatus = 0,
+			RecordLastChangedUtc = GETUTCDATE()
+		FROM dbo.Zones2 d
+		WHERE NOT EXISTS (
+			SELECT 1 FROM dbo.stg_Zones2 s
+			WHERE s.id = d.id
+		);
+    END;
+
+    -- Clear staging table.
+    TRUNCATE TABLE dbo.stg_Zones2;
+END;
+GO
+/****** Object:  StoredProcedure [dbo].[spMerge_stg_ZoneTypes2]    Script Date: 2025-03-13 3:23:51 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- ==========================================================================================
+-- Description: 
+--		Upserts records from the stg_ZoneTypes2 staging table to the ZoneTypes2 table and then
+--		truncates the staging table. If the @SetEntityStatusDeletedForMissingZoneTypes 
+--		parameter is set to 1 (true), the EntityStatus column will be set to 0 (Deleted) for 
+--		any records in the ZoneTypes2 table for which there are no corresponding records with 
+--		the same ids in the stg_ZoneTypes2 table.
+--
+-- Notes:
+--		- No transaction used as application should manage the transaction.
+-- ==========================================================================================
+CREATE   PROCEDURE [dbo].[spMerge_stg_ZoneTypes2]
+    @SetEntityStatusDeletedForMissingZoneTypes BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- De-duplicate staging table by selecting the latest record per GeotabId (id is 
+	-- auto-generated on insert). Note that RecordLastChangedUtc is set in the order in which 
+	-- results are retrieved via GetFeed.
+    WITH DeduplicatedStaging AS (
+        SELECT *
+        FROM (
+            SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY GeotabId ORDER BY RecordLastChangedUtc DESC) AS rownum
+            FROM dbo.stg_ZoneTypes2
+        ) AS sub
+        WHERE rownum = 1
+    )
+    
+    -- Perform upsert.
+    MERGE INTO dbo.ZoneTypes2 AS d
+    USING DeduplicatedStaging AS s
+    ON d.GeotabId = s.GeotabId
+    WHEN MATCHED AND (
+        ISNULL(d.Comment, '') <> ISNULL(s.Comment, '')
+        OR d.Name <> s.Name
+        OR d.EntityStatus <> s.EntityStatus
+        -- OR d.RecordLastChangedUtc = s.RecordLastChangedUtc
+    )
+    THEN UPDATE SET
+        d.Comment = s.Comment,
+        d.Name = s.Name,
+        d.EntityStatus = s.EntityStatus,
+        d.RecordLastChangedUtc = s.RecordLastChangedUtc
+    WHEN NOT MATCHED THEN 
+        INSERT (
+            GeotabId, 
+            Comment, 
+            Name, 
+            EntityStatus, 
+            RecordLastChangedUtc
+        )
+        VALUES (
+            s.GeotabId, 
+            s.Comment, 
+            s.Name, 
+            s.EntityStatus, 
+            s.RecordLastChangedUtc
+        );
+    
+    -- If @SetEntityStatusDeletedForMissingZoneTypes is 1 (true), set EntityStatus to 0 (Deleted)
+    -- for any records in ZoneTypes2 where there is no corresponding record with the same GeotabId
+	-- in stg_ZoneTypes2.
+    IF @SetEntityStatusDeletedForMissingZoneTypes = 1
+    BEGIN
+        UPDATE d
+        SET EntityStatus = 0,
+            RecordLastChangedUtc = GETUTCDATE()
+        FROM dbo.ZoneTypes2 d
+        WHERE NOT EXISTS (
+            SELECT 1 FROM dbo.stg_ZoneTypes2 s
+            WHERE s.GeotabId = d.GeotabId
+        );
+    END;
+    
+    -- Clear staging table.
+    TRUNCATE TABLE dbo.stg_ZoneTypes2;
+END;
+GO
+/****** Object:  StoredProcedure [dbo].[spStatusData2WithLagLeadLongLatBatch]    Script Date: 2025-03-13 3:23:51 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -1864,4 +2804,4 @@ GO
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO [dbo].[MiddlewareVersionInfo2] ([DatabaseVersion], [RecordCreationTimeUtc])
-VALUES ('3.0.0.0', GETUTCDATE());
+VALUES ('3.1.0.0', GETUTCDATE());

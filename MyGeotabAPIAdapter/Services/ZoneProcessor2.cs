@@ -15,7 +15,6 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,12 +36,13 @@ namespace MyGeotabAPIAdapter.Services
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment;
         readonly IBackgroundServiceAwaiter<ZoneProcessor2> awaiter;
+        readonly IBaseRepository<DbStgZone2> dbStgZone2Repo;
         readonly IExceptionHelper exceptionHelper;
         readonly IGenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>> dbZone2ObjectCache;
-        readonly IGenericEntityPersister<DbZone2> dbZone2EntityPersister;
+        readonly IGenericEntityPersister<DbStgZone2> dbStgZone2EntityPersister;
         readonly IGenericGeotabObjectCacher<Zone> zoneGeotabObjectCacher;
         readonly IGeotabIdConverter geotabIdConverter;
-        readonly IGeotabZoneDbZone2ObjectMapper geotabZoneDbZone2ObjectMapper;
+        readonly IGeotabZoneDbStgZone2ObjectMapper geotabZoneDbStgZone2ObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
@@ -53,20 +53,22 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="ZoneProcessor2"/> class.
         /// </summary>
-        public ZoneProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<ZoneProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>> dbZone2ObjectCache, IGenericEntityPersister<DbZone2> dbZone2EntityPersister, IGeotabZoneDbZone2ObjectMapper geotabZoneDbZone2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Zone> zoneGeotabObjectCacher, IGeotabIdConverter geotabIdConverter, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public ZoneProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<ZoneProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>> dbZone2ObjectCache, IGenericEntityPersister<DbStgZone2> dbStgZone2EntityPersister, IGeotabZoneDbStgZone2ObjectMapper geotabZoneDbStgZone2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Zone> zoneGeotabObjectCacher, IGeotabIdConverter geotabIdConverter, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
             this.awaiter = awaiter;
             this.exceptionHelper = exceptionHelper;
             this.dbZone2ObjectCache = dbZone2ObjectCache;
-            this.dbZone2EntityPersister = dbZone2EntityPersister;
-            this.geotabZoneDbZone2ObjectMapper = geotabZoneDbZone2ObjectMapper;
+            this.dbStgZone2EntityPersister = dbStgZone2EntityPersister;
+            this.geotabZoneDbStgZone2ObjectMapper = geotabZoneDbStgZone2ObjectMapper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
             this.zoneGeotabObjectCacher = zoneGeotabObjectCacher;
             this.geotabIdConverter = geotabIdConverter;
+
+            dbStgZone2Repo = new BaseRepository<DbStgZone2>(adapterContext);
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -82,6 +84,11 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            const string MergeFunctionSQL_Postgres = @"SELECT public.""spMerge_stg_Zones2""(@SetEntityStatusDeletedForMissingZones::boolean);";
+            const string MergeProcedureSQL_SQLServer = @"EXEC [dbo].[spMerge_stg_Zones2] @SetEntityStatusDeletedForMissingZones = @SetEntityStatusDeletedForMissingZones;";
+            const string TruncateStagingTableSQL_Postgres = @"TRUNCATE TABLE public.""stg_Zones2"";";
+            const string TruncateStagingTableSQL_SQLServer = @"TRUNCATE TABLE [dbo].[stg_Zones2];";
+
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             var delayTimeSpan = TimeSpan.FromMinutes(adapterConfiguration.ZoneCacheUpdateIntervalMinutes);
 
@@ -101,63 +108,16 @@ namespace MyGeotabAPIAdapter.Services
                     {
                         await InitializeOrUpdateCachesAsync(cancellationTokenSource);
 
-                        var dbZone2sToPersist = new List<DbZone2>();
-                        var newDbZone2sToPersistDictionary = new Dictionary<long, Common.DatabaseWriteOperationType>();
+                        var dbStgZone2sToPersist = new List<DbStgZone2>();
+
                         // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
                         if (zoneGeotabObjectCacher.LastUpdatedTimeUTC > zoneGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
                         {
-                            DateTime recordChangedTimestampUtc = DateTime.UtcNow;
-
-                            // Find any zones that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
-                            var dbZone2s = await dbZone2ObjectCache.GetObjectsAsync();
-                            foreach (var dbZone2 in dbZone2s)
+                            // Iterate through the in-memory cache of Geotab Zone objects that were added or updated in the last cache update, mapping them to corresponding DbStgZone2 entities and adding them to the list of DbStgZone2 objects to persist. Note that deduplication logic is contained in the database.
+                            foreach (var zone in zoneGeotabObjectCacher.GeotabObjectsChangedInLastUpdate)
                             {
-                                if (dbZone2.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
-                                {
-                                    bool zoneExistsInCache = zoneGeotabObjectCacher.GeotabObjectCache.ContainsKey(Id.Create(dbZone2.GeotabId));
-                                    if (!zoneExistsInCache)
-                                    {
-                                        logger.Debug($"Zone '{dbZone2.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
-                                        dbZone2.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
-                                        dbZone2.RecordLastChangedUtc = recordChangedTimestampUtc;
-                                        dbZone2.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                        dbZone2sToPersist.Add(dbZone2);
-                                    }
-                                }
-                            }
-
-                            // Iterate through the in-memory cache of Geotab Zone objects.
-                            foreach (var zone in zoneGeotabObjectCacher.GeotabObjectCache.Values)
-                            {
-                                // Try to find the existing database record for the cached zone.
-                                long zoneId = geotabIdConverter.ToLong(zone.Id);
-                                var dbZone2 = await dbZone2ObjectCache.GetObjectAsync(zoneId);
-                                if (dbZone2 != null)
-                                {
-                                    // The zone has already been added to the database.
-                                    if (geotabZoneDbZone2ObjectMapper.EntityRequiresUpdate(dbZone2, zone))
-                                    {
-                                        DbZone2 updatedDbZone2 = geotabZoneDbZone2ObjectMapper.UpdateEntity(dbZone2, zone);
-                                        dbZone2sToPersist.Add(updatedDbZone2);
-                                    }
-                                }
-                                else
-                                {
-                                    // The zone has not yet been added to the database. Create a DbZone2, set its properties and add it to the cache.
-                                    var newDbZone2 = geotabZoneDbZone2ObjectMapper.CreateEntity(zone);
-
-                                    // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (newDbZone2sToPersistDictionary.ContainsKey(newDbZone2.id))
-                                    {
-                                        newDbZone2.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                    }
-
-                                    dbZone2sToPersist.Add(newDbZone2);
-                                    if (newDbZone2.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
-                                    {
-                                        newDbZone2sToPersistDictionary.Add(newDbZone2.id, newDbZone2.DatabaseWriteOperationType);
-                                    }
-                                }
+                                var newdbStgZone2 = geotabZoneDbStgZone2ObjectMapper.CreateEntity(zone);
+                                dbStgZone2sToPersist.Add(newdbStgZone2);
                             }
 
                             stoppingToken.ThrowIfCancellationRequested();
@@ -167,15 +127,71 @@ namespace MyGeotabAPIAdapter.Services
                             logger.Debug($"Zone cache in database is up-to-date.");
                         }
 
-                        // Persist changes to database.
+                        // Persist changes to database. Step 1: Persist the DbStgZone2 entities.
+                        if (dbStgZone2sToPersist.Count != 0)
+                        {
+                            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                            {
+                                using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
+                                {
+                                    try
+                                    {
+                                        // Truncate staging table in case it contains any data:
+                                        var sql = adapterContext.ProviderType switch
+                                        {
+                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => TruncateStagingTableSQL_Postgres,
+                                            ConnectionInfo.DataAccessProviderType.SQLServer => TruncateStagingTableSQL_SQLServer,
+                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
+                                        };
+                                        await dbStgZone2Repo.ExecuteAsync(sql, null, cancellationTokenSource, true, adapterContext);
+
+                                        // DbStgZone2:
+                                        await dbStgZone2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStgZone2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                        // Commit transactions:
+                                        await adapterUOW.CommitAsync();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                        await adapterUOW.RollBackAsync();
+                                        throw;
+                                    }
+                                }
+                            }, new Context());
+                        }
+
+                        // Persist changes to database. Step 2: Merge the DbStgZone2 entities into the DbZone2 table and update the DbOServiceTracking table.
                         await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                         {
                             using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                             {
                                 try
                                 {
-                                    // DbZone2:
-                                    await dbZone2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbZone2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                    if (dbStgZone2sToPersist.Count != 0)
+                                    {
+                                        // Define parameters for the merge procedure.
+                                        var setEntityStatusDeletedForMissingZones = false;
+                                        if (zoneGeotabObjectCacher.LastCacheOperationType == CacheOperationType.Refresh)
+                                        {
+                                            setEntityStatusDeletedForMissingZones = true;
+                                        }
+                                        var parameters = new[]
+                                        {
+                                        new { SetEntityStatusDeletedForMissingZones = setEntityStatusDeletedForMissingZones }
+                                    };
+
+                                        // Build the SQL statement to execute the merge procedure.
+                                        var sql = adapterContext.ProviderType switch
+                                        {
+                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => MergeFunctionSQL_Postgres,
+                                            ConnectionInfo.DataAccessProviderType.SQLServer => MergeProcedureSQL_SQLServer,
+                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
+                                        };
+
+                                        // Execute the merge procedure.
+                                        await dbStgZone2Repo.ExecuteAsync(sql, parameters, cancellationTokenSource);
+                                    }
 
                                     // DbOServiceTracking:
                                     await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.ZoneProcessor2, DateTime.UtcNow);
@@ -193,7 +209,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // If there were any changes, force the DbZone2 cache to be updated so that the changes are immediately available to other consumers.
-                        if (dbZone2sToPersist.Any())
+                        if (dbStgZone2sToPersist.Count != 0)
                         {
                             await dbZone2ObjectCache.UpdateAsync(true);
                         }

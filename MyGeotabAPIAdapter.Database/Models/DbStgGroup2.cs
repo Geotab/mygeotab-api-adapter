@@ -4,12 +4,12 @@ using System;
 
 namespace MyGeotabAPIAdapter.Database.Models
 {
-    [Table("Groups")]
-    public class DbGroup : IDbEntity, IIdCacheableDbEntity, IStatusableDbEntity
+    [Table("stg_Groups2")]
+    public class DbStgGroup2 : IDbEntity, IIdCacheableDbEntity, IStatusableDbEntity
     {
         /// <inheritdoc/>
         [Write(false)]
-        public string DatabaseTableName => "Groups";
+        public string DatabaseTableName => "stg_Groups2";
 
         /// <inheritdoc/>
         [Write(false)]

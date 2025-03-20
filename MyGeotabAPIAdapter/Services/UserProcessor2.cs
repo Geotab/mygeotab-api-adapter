@@ -15,7 +15,6 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,12 +36,13 @@ namespace MyGeotabAPIAdapter.Services
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment;
         readonly IBackgroundServiceAwaiter<UserProcessor2> awaiter;
+        readonly IBaseRepository<DbStgUser2> dbStgUser2Repo;
         readonly IExceptionHelper exceptionHelper;
         readonly IGenericGenericDbObjectCache<DbUser2, AdapterGenericDbObjectCache<DbUser2>> dbUser2ObjectCache;
-        readonly IGenericEntityPersister<DbUser2> dbUser2EntityPersister;
+        readonly IGenericEntityPersister<DbStgUser2> dbStgUser2EntityPersister;
         readonly IGenericGeotabObjectCacher<User> userGeotabObjectCacher;
         readonly IGeotabIdConverter geotabIdConverter;
-        readonly IGeotabUserDbUser2ObjectMapper geotabUserDbUser2ObjectMapper;
+        readonly IGeotabUserDbStgUser2ObjectMapper geotabUserDbStgUser2ObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
@@ -53,20 +53,22 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="UserProcessor2"/> class.
         /// </summary>
-        public UserProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<UserProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbUser2, AdapterGenericDbObjectCache<DbUser2>> dbUser2ObjectCache, IGenericEntityPersister<DbUser2> dbUser2EntityPersister, IGeotabUserDbUser2ObjectMapper geotabUserDbUser2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<User> userGeotabObjectCacher, IGeotabIdConverter geotabIdConverter, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public UserProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<UserProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbUser2, AdapterGenericDbObjectCache<DbUser2>> dbUser2ObjectCache, IGenericEntityPersister<DbStgUser2> dbStgUser2EntityPersister, IGeotabUserDbStgUser2ObjectMapper geotabUserDbStgUser2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<User> userGeotabObjectCacher, IGeotabIdConverter geotabIdConverter, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
             this.awaiter = awaiter;
             this.exceptionHelper = exceptionHelper;
             this.dbUser2ObjectCache = dbUser2ObjectCache;
-            this.dbUser2EntityPersister = dbUser2EntityPersister;
-            this.geotabUserDbUser2ObjectMapper = geotabUserDbUser2ObjectMapper;
+            this.dbStgUser2EntityPersister = dbStgUser2EntityPersister;
+            this.geotabUserDbStgUser2ObjectMapper = geotabUserDbStgUser2ObjectMapper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
             this.userGeotabObjectCacher = userGeotabObjectCacher;
             this.geotabIdConverter = geotabIdConverter;
+
+            dbStgUser2Repo = new BaseRepository<DbStgUser2>(adapterContext);
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -82,6 +84,11 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            const string MergeFunctionSQL_Postgres = @"SELECT public.""spMerge_stg_Users2""(@SetEntityStatusDeletedForMissingUsers::boolean);";
+            const string MergeProcedureSQL_SQLServer = @"EXEC [dbo].[spMerge_stg_Users2] @SetEntityStatusDeletedForMissingUsers = @SetEntityStatusDeletedForMissingUsers;";
+            const string TruncateStagingTableSQL_Postgres = @"TRUNCATE TABLE public.""stg_Users2"";";
+            const string TruncateStagingTableSQL_SQLServer = @"TRUNCATE TABLE [dbo].[stg_Users2];";
+
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             var delayTimeSpan = TimeSpan.FromMinutes(adapterConfiguration.UserCacheUpdateIntervalMinutes);
 
@@ -101,63 +108,18 @@ namespace MyGeotabAPIAdapter.Services
                     {
                         await InitializeOrUpdateCachesAsync(cancellationTokenSource);
 
-                        var dbUser2sToPersist = new List<DbUser2>();
-                        var newDbUser2sToPersistDictionary = new Dictionary<long, Common.DatabaseWriteOperationType>();
+                        var dbStgUser2sToPersist = new List<DbStgUser2>();
+
                         // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
                         if (userGeotabObjectCacher.LastUpdatedTimeUTC > userGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
                         {
                             DateTime recordChangedTimestampUtc = DateTime.UtcNow;
 
-                            // Find any users that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
-                            var dbUser2s = await dbUser2ObjectCache.GetObjectsAsync();
-                            foreach (var dbUser2 in dbUser2s)
+                            // Iterate through the in-memory cache of Geotab User objects that were added or updated in the last cache update, mapping them to corresponding DbStgUser2 entities and adding them to the list of DbStgUser2 objects to persist. Note that deduplication logic is contained in the database.
+                            foreach (var user in userGeotabObjectCacher.GeotabObjectsChangedInLastUpdate)
                             {
-                                if (dbUser2.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
-                                {
-                                    bool userExistsInCache = userGeotabObjectCacher.GeotabObjectCache.ContainsKey(Id.Create(dbUser2.GeotabId));
-                                    if (!userExistsInCache)
-                                    {
-                                        logger.Debug($"User '{dbUser2.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
-                                        dbUser2.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
-                                        dbUser2.RecordLastChangedUtc = recordChangedTimestampUtc;
-                                        dbUser2.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                        dbUser2sToPersist.Add(dbUser2);
-                                    }
-                                }
-                            }
-
-                            // Iterate through the in-memory cache of Geotab User objects.
-                            foreach (var user in userGeotabObjectCacher.GeotabObjectCache.Values)
-                            {
-                                // Try to find the existing database record for the cached user.
-                                long userId = geotabIdConverter.ToLong(user.Id);
-                                var dbUser2 = await dbUser2ObjectCache.GetObjectAsync(userId);
-                                if (dbUser2 != null)
-                                {
-                                    // The user has already been added to the database.
-                                    if (geotabUserDbUser2ObjectMapper.EntityRequiresUpdate(dbUser2, user))
-                                    {
-                                        DbUser2 updatedDbUser2 = geotabUserDbUser2ObjectMapper.UpdateEntity(dbUser2, user);
-                                        dbUser2sToPersist.Add(updatedDbUser2);
-                                    }
-                                }
-                                else
-                                {
-                                    // The user has not yet been added to the database. Create a DbUser2, set its properties and add it to the cache.
-                                    var newDbUser2 = geotabUserDbUser2ObjectMapper.CreateEntity(user);
-
-                                    // There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (newDbUser2sToPersistDictionary.ContainsKey(newDbUser2.id))
-                                    {
-                                        newDbUser2.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                    }
-
-                                    dbUser2sToPersist.Add(newDbUser2);
-                                    if (newDbUser2.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
-                                    {
-                                        newDbUser2sToPersistDictionary.Add(newDbUser2.id, newDbUser2.DatabaseWriteOperationType);
-                                    }
-                                }
+                                var newdbStgUser2 = geotabUserDbStgUser2ObjectMapper.CreateEntity(user);
+                                dbStgUser2sToPersist.Add(newdbStgUser2);
                             }
 
                             stoppingToken.ThrowIfCancellationRequested();
@@ -167,15 +129,71 @@ namespace MyGeotabAPIAdapter.Services
                             logger.Debug($"User cache in database is up-to-date.");
                         }
 
-                        // Persist changes to database.
+                        // Persist changes to database. Step 1: Persist the DbStgUser2 entities.
+                        if (dbStgUser2sToPersist.Count != 0)
+                        {
+                            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                            {
+                                using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
+                                {
+                                    try
+                                    {
+                                        // Truncate staging table in case it contains any data:
+                                        var sql = adapterContext.ProviderType switch
+                                        {
+                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => TruncateStagingTableSQL_Postgres,
+                                            ConnectionInfo.DataAccessProviderType.SQLServer => TruncateStagingTableSQL_SQLServer,
+                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
+                                        };
+                                        await dbStgUser2Repo.ExecuteAsync(sql, null, cancellationTokenSource, true, adapterContext);
+
+                                        // DbStgUser2:
+                                        await dbStgUser2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStgUser2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                        // Commit transactions:
+                                        await adapterUOW.CommitAsync();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                        await adapterUOW.RollBackAsync();
+                                        throw;
+                                    }
+                                }
+                            }, new Context());
+                        }
+
+                        // Persist changes to database. Step 2: Merge the DbStgUser2 entities into the DbUser2 table and update the DbOServiceTracking table.
                         await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                         {
                             using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                             {
                                 try
                                 {
-                                    // DbUser2:
-                                    await dbUser2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbUser2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                    if (dbStgUser2sToPersist.Count != 0)
+                                    {
+                                        // Define parameters for the merge procedure.
+                                        var setEntityStatusDeletedForMissingUsers = false;
+                                        if (userGeotabObjectCacher.LastCacheOperationType == CacheOperationType.Refresh)
+                                        {
+                                            setEntityStatusDeletedForMissingUsers = true;
+                                        }
+                                        var parameters = new[]
+                                        {
+                                        new { SetEntityStatusDeletedForMissingUsers = setEntityStatusDeletedForMissingUsers }
+                                    };
+
+                                        // Build the SQL statement to execute the merge procedure.
+                                        var sql = adapterContext.ProviderType switch
+                                        {
+                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => MergeFunctionSQL_Postgres,
+                                            ConnectionInfo.DataAccessProviderType.SQLServer => MergeProcedureSQL_SQLServer,
+                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
+                                        };
+
+                                        // Execute the merge procedure.
+                                        await dbStgUser2Repo.ExecuteAsync(sql, parameters, cancellationTokenSource);
+                                    }
 
                                     // DbOServiceTracking:
                                     await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.UserProcessor2, DateTime.UtcNow);
@@ -193,7 +211,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // If there were any changes, force the DbUser2 cache to be updated so that the changes are immediately available to other consumers.
-                        if (dbUser2sToPersist.Any())
+                        if (dbStgUser2sToPersist.Count != 0)
                         {
                             await dbUser2ObjectCache.UpdateAsync(true);
                         }

@@ -1,4 +1,4 @@
-# MyGeotab API Adapter
+﻿# MyGeotab API Adapter
 
 The MyGeotab API Adapter solution serves as both an example of proper integration via data feeds and the potential foundation for those seeking to develop new integrations with the Geotab platform. It is a collection of .NET 8.0 (C#) Background Services that use the MyGeotab API data feeds to pull the most common data sets from a MyGeotab database and stream the data into tables within a SQL Server or PostgreSQL database; this could account for half the work in terms of a unidirectional integration where the data from the database is further processed for integration into an external system.
 

@@ -197,7 +197,7 @@ namespace MyGeotabAPIAdapter.Configuration
         const int MaxTimeoutSeconds = 10800;
 
         // Database maintenance limits:
-        const int MinDatabaseMaintenanceIntervalMinutes = 30;
+        const int MinDatabaseMaintenanceIntervalMinutes = 10;
         const int MaxDatabaseMaintenanceIntervalMinutes = 43200; // 43200 min = 30 days
         const int DefaultLevel1DatabaseMaintenanceIntervalMinutes = 30;
         const int DefaultLevel2DatabaseMaintenanceIntervalMinutes = 1440; // 1440 min = 1 day

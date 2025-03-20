@@ -6,6 +6,7 @@ using MyGeotabAPIAdapter.MyGeotabAPI;
 using NLog;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,6 +38,8 @@ namespace MyGeotabAPIAdapter
         int feedResultsLimit = DefaultFeedResultsLimit;
         bool useGetFeed = true;
 
+        readonly List<T> geotabObjectsChangedInLastUpdate = new();
+
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IDateTimeHelper dateTimeHelper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
@@ -63,6 +66,9 @@ namespace MyGeotabAPIAdapter
         public ConcurrentDictionary<Id, T> GeotabObjectCache { get; private set; }
 
         /// <inheritdoc/>
+        public IEnumerable<T> GeotabObjectsChangedInLastUpdate { get => geotabObjectsChangedInLastUpdate; }
+
+        /// <inheritdoc/>
         public string Id { get; private set; }
 
         /// <inheritdoc/>
@@ -80,6 +86,9 @@ namespace MyGeotabAPIAdapter
 
         /// <inheritdoc/>
         public bool IsUpdating { get => isUpdating; }
+
+        /// <inheritdoc/>
+        public CacheOperationType LastCacheOperationType { get; set; }
 
         /// <inheritdoc/>
         public long? LastFeedVersion { get; set; }
@@ -109,6 +118,7 @@ namespace MyGeotabAPIAdapter
             this.dateTimeHelper = dateTimeHelper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             GeotabObjectCache = new ConcurrentDictionary<Id, T>();
+            this.LastCacheOperationType = CacheOperationType.None;
 
             Id = Guid.NewGuid().ToString();
             logger.Debug($"{nameof(GenericGeotabObjectCacher<T>)}<{typeParameterType}> [Id: {Id}] created.");
@@ -223,6 +233,9 @@ namespace MyGeotabAPIAdapter
                 ValidateInitialized();
                 isUpdating = true;
 
+                // Clear the list of Geotab objects that have changed in the last update.
+                geotabObjectsChangedInLastUpdate.Clear();
+
                 // Process cache based on required cache operation type:
                 CacheOperationType requiredCacheOperationType = GetRequiredCacheOperationType();
                 if (requiredCacheOperationType == CacheOperationType.None)
@@ -321,6 +334,9 @@ namespace MyGeotabAPIAdapter
                                     {
                                         cacheRecordsAdded += 1;
                                     }
+
+                                    // Add the object to the list of Geotab objects that have changed in the last update.
+                                    geotabObjectsChangedInLastUpdate.Add(feedResultItem);
                                 }
                             }
                             if (feedResult.Data.Count < FeedResultsLimit)
@@ -338,6 +354,7 @@ namespace MyGeotabAPIAdapter
                         }
                     }
                     DateTime currentDateTime = DateTime.UtcNow;
+                    
                     // The LastUpdatedTimeUtc is always updated because a refresh encompasses everyting that is done during an update.
                     LastUpdatedTimeUTC = currentDateTime;
                     logger.Info($"{typeParameterType.Name} cache updated with {cacheRecordsAdded} records added.");
@@ -346,6 +363,9 @@ namespace MyGeotabAPIAdapter
                         LastRefreshedTimeUTC = currentDateTime;
                         logger.Info($"{typeParameterType.Name} cache refresh completed.");
                     }
+
+                    // Set LastCacheOperationType so that consumers can know what operation was last performed on the cache.
+                    LastCacheOperationType = requiredCacheOperationType;
                 }
                 isUpdating = false;
             }

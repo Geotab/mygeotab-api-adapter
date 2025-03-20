@@ -1,5 +1,4 @@
-﻿using Geotab.Checkmate.ObjectModel;
-using Geotab.Checkmate.ObjectModel.Engine;
+﻿using Geotab.Checkmate.ObjectModel.Engine;
 using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
@@ -16,7 +15,6 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,14 +36,13 @@ namespace MyGeotabAPIAdapter.Services
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment;
         readonly IBackgroundServiceAwaiter<DiagnosticProcessor2> awaiter;
+        readonly IBaseRepository<DbStgDiagnostic2> dbStgDiagnostic2Repo;
         readonly IExceptionHelper exceptionHelper;
         readonly IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache;
         readonly IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnostic2, AdapterDatabaseUnitOfWorkContext> dbDiagnostic2ObjectCache;
-        readonly IGenericEntityPersister<DbDiagnostic2> dbDiagnostic2EntityPersister;
-        readonly IGenericEntityPersister<DbDiagnosticId2> dbDiagnosticId2EntityPersister;
+        readonly IGenericEntityPersister<DbStgDiagnostic2> dbStgDiagnostic2EntityPersister;
         readonly IGenericGeotabObjectCacher<Diagnostic> diagnosticGeotabObjectCacher;
-        readonly IGeotabDiagnosticDbDiagnostic2ObjectMapper geotabDiagnosticDbDiagnostic2ObjectMapper;
-        readonly IGeotabDiagnosticDbDiagnosticId2ObjectMapper geotabDiagnosticDbDiagnosticId2ObjectMapper;
+        readonly IGeotabDiagnosticDbStgDiagnostic2ObjectMapper geotabDiagnosticDbStgDiagnostic2ObjectMapper;
         readonly IGeotabIdConverter geotabIdConverter;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
@@ -57,7 +54,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="DiagnosticProcessor2"/> class.
         /// </summary>
-        public DiagnosticProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<DiagnosticProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnostic2, AdapterDatabaseUnitOfWorkContext> dbDiagnostic2ObjectCache, IGenericEntityPersister<DbDiagnostic2> dbDiagnostic2EntityPersister, IGenericEntityPersister<DbDiagnosticId2> dbDiagnosticId2EntityPersister, IGeotabDiagnosticDbDiagnostic2ObjectMapper geotabDiagnosticDbDiagnostic2ObjectMapper, IGeotabDiagnosticDbDiagnosticId2ObjectMapper geotabDiagnosticDbDiagnosticId2ObjectMapper, IGeotabIdConverter geotabIdConverter, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Diagnostic> diagnosticGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DiagnosticProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<DiagnosticProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnostic2, AdapterDatabaseUnitOfWorkContext> dbDiagnostic2ObjectCache, IGenericEntityPersister<DbStgDiagnostic2> dbStgDiagnostic2EntityPersister, IGeotabDiagnosticDbStgDiagnostic2ObjectMapper geotabDiagnosticDbStgDiagnostic2ObjectMapper, IGeotabIdConverter geotabIdConverter, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Diagnostic> diagnosticGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
@@ -65,15 +62,15 @@ namespace MyGeotabAPIAdapter.Services
             this.exceptionHelper = exceptionHelper;
             this.dbDiagnosticId2ObjectCache = dbDiagnosticId2ObjectCache;
             this.dbDiagnostic2ObjectCache = dbDiagnostic2ObjectCache;
-            this.dbDiagnostic2EntityPersister = dbDiagnostic2EntityPersister;
-            this.dbDiagnosticId2EntityPersister = dbDiagnosticId2EntityPersister;
-            this.geotabDiagnosticDbDiagnostic2ObjectMapper = geotabDiagnosticDbDiagnostic2ObjectMapper;
-            this.geotabDiagnosticDbDiagnosticId2ObjectMapper = geotabDiagnosticDbDiagnosticId2ObjectMapper;
+            this.dbStgDiagnostic2EntityPersister = dbStgDiagnostic2EntityPersister;
+            this.geotabDiagnosticDbStgDiagnostic2ObjectMapper = geotabDiagnosticDbStgDiagnostic2ObjectMapper;
             this.geotabIdConverter = geotabIdConverter;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
             this.diagnosticGeotabObjectCacher = diagnosticGeotabObjectCacher;
+
+            dbStgDiagnostic2Repo = new BaseRepository<DbStgDiagnostic2>(adapterContext);
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -89,6 +86,11 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            const string MergeFunctionSQL_Postgres = @"SELECT public.""spMerge_stg_Diagnostics2""(@SetEntityStatusDeletedForMissingDiagnostics::boolean);";
+            const string MergeProcedureSQL_SQLServer = @"EXEC [dbo].[spMerge_stg_Diagnostics2] @SetEntityStatusDeletedForMissingDiagnostics = @SetEntityStatusDeletedForMissingDiagnostics;";
+            const string TruncateStagingTableSQL_Postgres = @"TRUNCATE TABLE public.""stg_Diagnostics2"";";
+            const string TruncateStagingTableSQL_SQLServer = @"TRUNCATE TABLE [dbo].[stg_Diagnostics2];";
+
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             var delayTimeSpan = TimeSpan.FromMinutes(adapterConfiguration.DiagnosticCacheUpdateIntervalMinutes);
 
@@ -108,91 +110,16 @@ namespace MyGeotabAPIAdapter.Services
                     {
                         await InitializeOrUpdateCachesAsync(cancellationTokenSource);
 
-                        var dbDiagnostic2sToPersist = new List<DbDiagnostic2>();
-                        var newDbDiagnostic2sToPersistDictionary = new Dictionary<string, Common.DatabaseWriteOperationType>();
-                        var dbDiagnosticId2sToPersist = new List<DbDiagnosticId2>();
-                        var newDbDiagnosticId2sToPersistDictionary = new Dictionary<string, Common.DatabaseWriteOperationType>();
+                        var dbStgDiagnostic2sToPersist = new List<DbStgDiagnostic2>();
+
                         // Only propagate the cache to database if the cache has been updated since the last time it was propagated to database.
                         if (diagnosticGeotabObjectCacher.LastUpdatedTimeUTC > diagnosticGeotabObjectCacher.LastPropagatedToDatabaseTimeUtc)
                         {
-                            DateTime recordChangedTimestampUtc = DateTime.UtcNow;
-
-                            // Find any diagnostics that have been deleted in MyGeotab but exist in the database and have not yet been flagged as deleted. Update them so that they will be flagged as deleted in the database.
-                            var dbDiagnostic2s = await dbDiagnostic2ObjectCache.GetObjectsAsync();
-                            foreach (var dbDiagnostic2 in dbDiagnostic2s)
+                            // Iterate through the in-memory cache of Geotab Diagnostic objects that were added or updated in the last cache update, mapping them to corresponding DbStgDiagnostic2 entities and adding them to the list of DbStgDiagnostic2 objects to persist. Note that deduplication logic is contained in the database.
+                            foreach (var diagnostic in diagnosticGeotabObjectCacher.GeotabObjectsChangedInLastUpdate)
                             {
-                                if (dbDiagnostic2.EntityStatus == (int)Common.DatabaseRecordStatus.Active)
-                                {
-                                    bool diagnosticExistsInCache = diagnosticGeotabObjectCacher.GeotabObjectCache.ContainsKey(Id.Create(dbDiagnostic2.GeotabId));
-                                    if (!diagnosticExistsInCache)
-                                    {
-                                        logger.Debug($"Diagnostic '{dbDiagnostic2.GeotabId}' no longer exists in MyGeotab and is being marked as deleted.");
-                                        dbDiagnostic2.EntityStatus = (int)Common.DatabaseRecordStatus.Deleted;
-                                        dbDiagnostic2.RecordLastChangedUtc = recordChangedTimestampUtc;
-                                        dbDiagnostic2.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                        dbDiagnostic2sToPersist.Add(dbDiagnostic2);
-                                    }
-                                }
-                            }
-
-                            // Iterate through the in-memory cache of Geotab Diagnostic objects.
-                            foreach (var diagnostic in diagnosticGeotabObjectCacher.GeotabObjectCache.Values)
-                            {
-                                // Get the underlying GUID (in string format due to the presence of ShimIds with Diagnostics) of the Geotab Diagnostic object.
-                                string diagnosticGeotabGuid = geotabIdConverter.ToGuidString(diagnostic.Id);
-
-                                // Try to find the existing database record for the cached diagnostic.
-                                //var diagnosticGeotabGuid = await dbDiagnostic2ObjectCache.GetObjectGeotabGUIDByGeotabIdAsync(diagnostic.Id.ToString());
-                                var dbDiagnostic2 = await dbDiagnostic2ObjectCache.GetObjectByGeotabGUIDAsync(diagnosticGeotabGuid);
-                                if (dbDiagnostic2 != null)
-                                {
-                                    // The DbDiagnostic2 has already been added to the database. Update it if required.
-                                    if (geotabDiagnosticDbDiagnostic2ObjectMapper.EntityRequiresUpdate(dbDiagnostic2, diagnostic))
-                                    {
-                                        DbDiagnostic2 updatedDbDiagnostic2 = geotabDiagnosticDbDiagnostic2ObjectMapper.UpdateEntity(dbDiagnostic2, diagnostic);
-                                        dbDiagnostic2sToPersist.Add(updatedDbDiagnostic2);
-                                    }
-
-                                    // Check whether the diagnostic Id has changed and, if so, add a new DbDiagnosticId2.
-                                    var dbDiagnosticId2s = await dbDiagnosticId2ObjectCache.GetObjectsAsync(diagnosticGeotabGuid, diagnostic.Id.ToString());
-                                    if ( dbDiagnosticId2s.Any() == false)
-                                    {
-                                        var newDbDiagnosticId2 = geotabDiagnosticDbDiagnosticId2ObjectMapper.CreateEntity(diagnostic);
-                                        dbDiagnosticId2sToPersist.Add(newDbDiagnosticId2);
-                                    }
-                                }
-                                else
-                                {
-                                    // The diagnostic has not yet been added to the database.
-                                    
-                                    // Create a DbDiagnostic2, set its properties and add it to the cache. Also create a corresponding DbDiagnosticId2.
-                                    var newDbDiagnostic2 = geotabDiagnosticDbDiagnostic2ObjectMapper.CreateEntity(diagnostic);
-                                    var newDbDiagnosticId2 = geotabDiagnosticDbDiagnosticId2ObjectMapper.CreateEntity(diagnostic);
-
-                                    // DbDiagnostic2: There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (newDbDiagnostic2sToPersistDictionary.ContainsKey(newDbDiagnostic2.GeotabId))
-                                    {
-                                        newDbDiagnostic2.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                    }
-
-                                    dbDiagnostic2sToPersist.Add(newDbDiagnostic2);
-                                    if (newDbDiagnostic2.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
-                                    {
-                                        newDbDiagnostic2sToPersistDictionary.Add(newDbDiagnostic2.GeotabId, newDbDiagnostic2.DatabaseWriteOperationType);
-                                    }
-
-                                    // DbDiagnosticId2: There may be multiple records for the same entity in the batch of entities retrieved from Geotab. If there are, make sure that duplicates are set to be updated instead of inserted.
-                                    if (newDbDiagnosticId2sToPersistDictionary.ContainsKey(newDbDiagnosticId2.GeotabId))
-                                    {
-                                        newDbDiagnosticId2.DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Update;
-                                    }
-
-                                    dbDiagnosticId2sToPersist.Add(newDbDiagnosticId2);
-                                    if (newDbDiagnosticId2.DatabaseWriteOperationType == Common.DatabaseWriteOperationType.Insert)
-                                    {
-                                        newDbDiagnosticId2sToPersistDictionary.Add(newDbDiagnosticId2.GeotabId, newDbDiagnosticId2.DatabaseWriteOperationType);
-                                    }
-                                }
+                                var newdbStgDiagnostic2 = geotabDiagnosticDbStgDiagnostic2ObjectMapper.CreateEntity(diagnostic);
+                                dbStgDiagnostic2sToPersist.Add(newdbStgDiagnostic2);
                             }
 
                             stoppingToken.ThrowIfCancellationRequested();
@@ -202,20 +129,71 @@ namespace MyGeotabAPIAdapter.Services
                             logger.Debug($"Diagnostic cache in database is up-to-date.");
                         }
 
-                        // Persist changes to database.
+                        // Persist changes to database. Step 1: Persist the DbStgDiagnostic2 entities.
+                        if (dbStgDiagnostic2sToPersist.Count != 0)
+                        {
+                            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                            {
+                                using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
+                                {
+                                    try
+                                    {
+                                        // Truncate staging table in case it contains any data:
+                                        var sql = adapterContext.ProviderType switch
+                                        {
+                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => TruncateStagingTableSQL_Postgres,
+                                            ConnectionInfo.DataAccessProviderType.SQLServer => TruncateStagingTableSQL_SQLServer,
+                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
+                                        };
+                                        await dbStgDiagnostic2Repo.ExecuteAsync(sql, null, cancellationTokenSource, true, adapterContext);
+
+                                        // DbStgDiagnostic2:
+                                        await dbStgDiagnostic2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStgDiagnostic2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+
+                                        // Commit transactions:
+                                        await adapterUOW.CommitAsync();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                        await adapterUOW.RollBackAsync();
+                                        throw;
+                                    }
+                                }
+                            }, new Context());
+                        }
+
+                        // Persist changes to database. Step 2: Merge the DbStgDiagnostic2 entities into the DbDiagnostic2 table and update the DbOServiceTracking table.
                         await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                         {
                             using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                             {
                                 try
                                 {
-                                    // NOTE: DbDiagnostic2 entities must be upserted before DbDiagnosticId2 entities, so these need to be awaited in order vs. run in parallel.
+                                    if (dbStgDiagnostic2sToPersist.Count != 0)
+                                    {
+                                        // Define parameters for the merge procedure.
+                                        var setEntityStatusDeletedForMissingDiagnostics = false;
+                                        if (diagnosticGeotabObjectCacher.LastCacheOperationType == CacheOperationType.Refresh)
+                                        {
+                                            setEntityStatusDeletedForMissingDiagnostics = true;
+                                        }
+                                        var parameters = new[]
+                                        {
+                                        new { SetEntityStatusDeletedForMissingDiagnostics = setEntityStatusDeletedForMissingDiagnostics }
+                                    };
 
-                                    // DbDiagnostic2:
-                                    await dbDiagnostic2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDiagnostic2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                        // Build the SQL statement to execute the merge procedure.
+                                        var sql = adapterContext.ProviderType switch
+                                        {
+                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => MergeFunctionSQL_Postgres,
+                                            ConnectionInfo.DataAccessProviderType.SQLServer => MergeProcedureSQL_SQLServer,
+                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
+                                        };
 
-                                    // DbDiagnosticId2:
-                                    await dbDiagnosticId2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDiagnosticId2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                        // Execute the merge procedure.
+                                        await dbStgDiagnostic2Repo.ExecuteAsync(sql, parameters, cancellationTokenSource);
+                                    }
 
                                     // DbOServiceTracking:
                                     await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DiagnosticProcessor2, DateTime.UtcNow);
@@ -234,11 +212,11 @@ namespace MyGeotabAPIAdapter.Services
 
                         // If there were any changes, force the DbDiagnostic2 and DbDiagnosticId2 caches to be updated so that the changes are immediately available to other consumers. Run tasks in parallel.
                         var dbDiagnosticCacheUpdateTasks = new List<Task>();
-                        if (dbDiagnostic2sToPersist.Any())
+                        if (dbStgDiagnostic2sToPersist.Count != 0)
                         {
                             dbDiagnosticCacheUpdateTasks.Add(dbDiagnostic2ObjectCache.UpdateAsync(true));
                         }
-                        if (dbDiagnostic2sToPersist.Any())
+                        if (dbStgDiagnostic2sToPersist.Count != 0)
                         {
                             dbDiagnosticCacheUpdateTasks.Add(dbDiagnosticId2ObjectCache.UpdateAsync(true));
                         }

@@ -151,7 +151,18 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            {
+                try
+                {
+                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                }
+                catch (Exception ex)
+                {
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                    throw;
+                }
+            }, new Context());
             var duration = DateTime.UtcNow - startTimeUtc;
 
             logger.Info($"Analyzed table {dbvwStatForLevel1DBMaintenance_PG.SchemaName}.{dbvwStatForLevel1DBMaintenance_PG.TableName} in {duration.TotalSeconds} seconds.");
@@ -758,7 +769,18 @@ namespace MyGeotabAPIAdapter.Services
                 var startTimeUtc = DateTime.UtcNow;
 
                 // Execute the partition function.
-                await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, parameters, methodCancellationTokenSource, true, adapterContext);
+                await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                {
+                    try
+                    {
+                        await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, parameters, methodCancellationTokenSource, true, adapterContext);
+                    }
+                    catch (Exception ex)
+                    {
+                        exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                        throw;
+                    }
+                }, new Context());
 
                 logger.Info($"Database partition maintenance completed successfully.");
 
@@ -862,7 +884,18 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            {
+                try
+                {
+                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                }
+                catch (Exception ex)
+                {
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                    throw;
+                }
+            }, new Context());
             var duration = DateTime.UtcNow - startTimeUtc;
 
             logger.Info($"Rebuilt index {dbvwStatForLevel2DBMaintenance_MSSQL.IndexName} on table {dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel2DBMaintenance_MSSQL.TableName} in {duration.TotalSeconds} seconds.");
@@ -898,7 +931,18 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            {
+                try
+                {
+                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                }
+                catch (Exception ex)
+                {
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                    throw;
+                }
+            }, new Context());
             var duration = DateTime.UtcNow - startTimeUtc;
 
             logger.Info($"Rebuilt index {dbvwStatForLevel2DBMaintenance_MSSQL.IndexName} partition {dbvwStatForLevel2DBMaintenance_MSSQL.PartitionNumber} on table {dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel2DBMaintenance_MSSQL.TableName} in {duration.TotalSeconds} seconds.");
@@ -934,7 +978,18 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            {
+                try
+                {
+                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                }
+                catch (Exception ex)
+                {
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                    throw;
+                }
+            }, new Context());
             var duration = DateTime.UtcNow - startTimeUtc;
 
             logger.Info($"Reindexed index {dbvwStatForLevel2DBMaintenance_PG.SchemaName}.{dbvwStatForLevel2DBMaintenance_PG.IndexName} in {duration.TotalSeconds} seconds.");
@@ -980,7 +1035,18 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            {
+                try
+                {
+                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                }
+                catch (Exception ex)
+                {
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                    throw;
+                }
+            }, new Context());
             var duration = DateTime.UtcNow - startTimeUtc;
 
             logger.Info($"Reorganized index {dbvwStatForLevel2DBMaintenance_MSSQL.IndexName} partition {dbvwStatForLevel2DBMaintenance_MSSQL.PartitionNumber} on table {dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel2DBMaintenance_MSSQL.TableName} in {duration.TotalSeconds} seconds.");
@@ -1068,7 +1134,18 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            {
+                try
+                {
+                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                }
+                catch (Exception ex)
+                {
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                    throw;
+                }
+            }, new Context());
             var duration = DateTime.UtcNow - startTimeUtc;
 
             logger.Info($"Updated statistics on table {dbvwStatForLevel1DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel1DBMaintenance_MSSQL.TableName} in {duration.TotalSeconds} seconds.");
@@ -1104,7 +1181,18 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            {
+                try
+                {
+                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                }
+                catch (Exception ex)
+                {
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                    throw;
+                }
+            }, new Context());
             var duration = DateTime.UtcNow - startTimeUtc;
 
             logger.Info($"Vacuumed table {dbvwStatForLevel1DBMaintenance.SchemaName}.{dbvwStatForLevel1DBMaintenance.TableName} in {duration.TotalSeconds} seconds.");
