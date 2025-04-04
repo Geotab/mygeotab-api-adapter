@@ -211,6 +211,25 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                         }
                     }, new Context());
                 }
+                else if (typeParameterType.Name == nameof(Trip))
+                {
+                    // Use a TripSearch to enrure that deleted Trips will be included in the data feed (since they are not by default).
+                    await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                    {
+                        using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                        {
+                            result = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                            {
+                                search = new TripSearch
+                                {
+                                    FromDate = fromDate,
+                                    IncludeDeleted = true
+                                },
+                                resultsLimit
+                            }, cancellationTokenSource.Token);
+                        }
+                    }, new Context());
+                }
                 else
                 {
                     // Use the default search that includes FromDate only.
@@ -297,6 +316,25 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                                 search = new ExceptionEventSearch
                                 {
                                     IncludeInvalidated = true
+                                },
+                                fromVersion,
+                                resultsLimit
+                            }, cancellationTokenSource.Token);
+                        }
+                    }, new Context());
+                }
+                else if (typeParameterType.Name == nameof(Trip))
+                {
+                    // Use an TripSearch to enrure that deleted Trips are included in the data feed (since they are not by default).
+                    await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                    {
+                        using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                        {
+                            result = await MyGeotabAPI.CallAsync<FeedResult<T>>("GetFeed", typeof(T), new
+                            {
+                                search = new TripSearch
+                                {
+                                    IncludeDeleted = true
                                 },
                                 fromVersion,
                                 resultsLimit

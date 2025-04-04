@@ -174,6 +174,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbRuleTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbRule2"/> entities.
+        /// </summary>
+        string DbRule2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbStatusData"/> entities.
         /// </summary>
         string DbStatusDataTableName { get; }
@@ -214,6 +219,16 @@ namespace MyGeotabAPIAdapter.Database
         string DbStgGroup2TableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbStgRule2"/> entities.
+        /// </summary>
+        string DbStgRule2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgTrip2"/> entities.
+        /// </summary>
+        string DbStgTrip2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbStgUser2"/> entities.
         /// </summary>
         string DbStgUser2TableName { get; }
@@ -232,6 +247,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the database table associated with <see cref="DbTrip"/> entities.
         /// </summary>
         string DbTripTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbTrip2"/> entities.
+        /// </summary>
+        string DbTrip2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbUser"/> entities.
@@ -282,6 +302,16 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the stored procedure or function responsible for merging staging Groups into the main Groups2 table.
         /// </summary>
         string MergeStagingGroupsProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging Rules into the main Rules2 table.
+        /// </summary>
+        string MergeStagingRulesProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging Trips into the main Trips2 table.
+        /// </summary>
+        string MergeStagingTripsProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging Users into the main Users2 table.

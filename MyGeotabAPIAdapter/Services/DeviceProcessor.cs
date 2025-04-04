@@ -192,7 +192,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // If there were any changes, force the DbDevice cache to be updated so that the changes are immediately available to other consumers.
-                        if (dbDevicesToPersist.Any())
+                        if (dbDevicesToPersist.Count != 0)
                         {
                             await dbDeviceObjectCache.UpdateAsync(true);
                         }

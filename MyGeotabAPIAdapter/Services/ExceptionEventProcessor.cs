@@ -128,7 +128,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned ExceptionEvents.
                         var exceptionEvents = exceptionEventGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbExceptionEventsToPersist = new List<DbExceptionEvent>();
-                        if (exceptionEvents.Any())
+                        if (exceptionEvents.Count != 0)
                         {
                             // Apply rule filter. This will filter-out any ZoneStop rules if those are not configured to be tracked, since ZoneStop rules will be filtered-out by the ruleGeotabObjectCacher.
                             var filteredExceptionEvents = new List<ExceptionEvent>();
@@ -160,7 +160,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbExceptionEventEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbExceptionEventsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbExceptionEventsToPersist.Any())
+                                    if (dbExceptionEventsToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.ExceptionEventProcessor, exceptionEventGeotabObjectFeeder.LastFeedRetrievalTimeUtc, exceptionEventGeotabObjectFeeder.LastFeedVersion);
                                     }

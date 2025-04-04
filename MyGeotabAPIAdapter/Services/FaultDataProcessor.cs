@@ -130,7 +130,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned FaultDatas.
                         var faultDatas = faultDataGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbFaultDatasToPersist = new List<DbFaultData>();
-                        if (faultDatas.Any())
+                        if (faultDatas.Count != 0)
                         {
                             // Apply tracked device filter and/or tracked diagnostic filter (if configured in appsettings.json).
                             var filteredFaultDatas = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, faultDatas);
@@ -162,7 +162,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbFaultDataEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbFaultDatasToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbFaultDatasToPersist.Any())
+                                    if (dbFaultDatasToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.FaultDataProcessor, faultDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc, faultDataGeotabObjectFeeder.LastFeedVersion);
                                     }

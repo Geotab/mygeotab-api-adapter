@@ -124,7 +124,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned DebugDatas.
                         var debugDatas = debugDataGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbDebugDatasToPersist = new List<DbDebugData>();
-                        if (debugDatas.Any())
+                        if (debugDatas.Count != 0)
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredDebugDatas = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, debugDatas);
@@ -146,7 +146,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbDebugDataEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDebugDatasToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbDebugDatasToPersist.Any())
+                                    if (dbDebugDatasToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DebugDataProcessor, debugDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc, debugDataGeotabObjectFeeder.LastFeedVersion);
                                     }

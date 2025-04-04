@@ -124,7 +124,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned Trips.
                         var trips = tripGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbTripsToPersist = new List<DbTrip>();
-                        if (trips.Any())
+                        if (trips.Count != 0)
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredTrips = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, trips);
@@ -146,7 +146,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbTripEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbTripsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbTripsToPersist.Any())
+                                    if (dbTripsToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.TripProcessor, tripGeotabObjectFeeder.LastFeedRetrievalTimeUtc, tripGeotabObjectFeeder.LastFeedVersion);
                                     }

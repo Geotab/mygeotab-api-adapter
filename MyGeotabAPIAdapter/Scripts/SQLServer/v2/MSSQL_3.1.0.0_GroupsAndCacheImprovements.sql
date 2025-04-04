@@ -103,11 +103,7 @@ CREATE TABLE [dbo].[stg_Devices2](
 	[SerialNumber] [nvarchar](12) NULL,
 	[VIN] [nvarchar](50) NULL,
 	[EntityStatus] [int] NOT NULL,
-	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
- CONSTRAINT [PK_stg_Devices2] PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL
 ) ON [PRIMARY]
 GO
 
@@ -478,11 +474,7 @@ CREATE TABLE [dbo].[stg_Users2](
 	[LastName] [nvarchar](255) NULL,
 	[Name] [nvarchar](255) NOT NULL,
 	[EntityStatus] [int] NOT NULL,
-	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
- CONSTRAINT [PK_stg_Users2] PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
@@ -849,11 +841,7 @@ CREATE TABLE [dbo].[stg_Zones2](
 	[ZoneTypeIds] [nvarchar](max) NOT NULL,
 	[Version] [bigint] NULL,
 	[EntityStatus] [int] NOT NULL,
-	[RecordLastChangedUtc] [datetime2](7) NOT NULL,
- CONSTRAINT [PK_stg_Zones2] PRIMARY KEY CLUSTERED 
-(
-	[id] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+	[RecordLastChangedUtc] [datetime2](7) NOT NULL
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 

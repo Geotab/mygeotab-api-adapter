@@ -192,7 +192,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // If there were any changes, force the DbZone cache to be updated so that the changes are immediately available to other consumers.
-                        if (dbZonesToPersist.Any())
+                        if (dbZonesToPersist.Count != 0)
                         {
                             await dbZoneObjectCache.UpdateAsync(true);
                         }

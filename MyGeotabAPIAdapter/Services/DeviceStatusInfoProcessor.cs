@@ -129,7 +129,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned DeviceStatusInfos.
                         var deviceStatusInfos = deviceStatusInfoGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbDeviceStatusInfosToPersist = new List<DbDeviceStatusInfo>();
-                        if (deviceStatusInfos.Any())
+                        if (deviceStatusInfos.Count != 0)
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredDeviceStatusInfos = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, deviceStatusInfos);
@@ -178,7 +178,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbDeviceStatusInfoEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDeviceStatusInfosToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbDeviceStatusInfosToPersist.Any())
+                                    if (dbDeviceStatusInfosToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DeviceStatusInfoProcessor, deviceStatusInfoGeotabObjectFeeder.LastFeedRetrievalTimeUtc, deviceStatusInfoGeotabObjectFeeder.LastFeedVersion);
                                     }
@@ -201,7 +201,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // If any DbDeviceStatusInfos were added or updated, force the DbDeviceStatusInfo cache to be updated so that the changes are immediately available to other consumers.
-                        if (dbDeviceStatusInfosToPersist.Any())
+                        if (dbDeviceStatusInfosToPersist.Count != 0)
                         {
                             await dbDeviceStatusInfoObjectCache.UpdateAsync(true);
                         }

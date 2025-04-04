@@ -22,6 +22,9 @@
 -- delete from public."MyGeotabVersionInfo2";
 -- delete from public."DBMaintenanceLogs2";
 -- delete from public."OServiceTracking2";
+-- ALTER TABLE public."Trips2" DISABLE TRIGGER ALL;
+-- delete from public."Trips2";
+-- ALTER TABLE public."Trips2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."StatusDataLocations2" DISABLE TRIGGER ALL;
 -- delete from public."StatusDataLocations2";
 -- ALTER TABLE public."StatusDataLocations2" ENABLE TRIGGER ALL;
@@ -52,6 +55,9 @@
 -- ALTER TABLE public."Groups2" DISABLE TRIGGER ALL;
 -- delete from public."Groups2";
 -- ALTER TABLE public."Groups2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."Rules2" DISABLE TRIGGER ALL;
+-- delete from public."Rules2";
+-- ALTER TABLE public."Rules2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."Users2" DISABLE TRIGGER ALL;
 -- delete from public."Users2";
 -- ALTER TABLE public."Users2" ENABLE TRIGGER ALL;
@@ -66,6 +72,8 @@
 -- ALTER SEQUENCE public."Diagnostics2_id_seq" RESTART;
 -- ALTER SEQUENCE public."EntityMetadata2_id_seq" RESTART;
 -- ALTER SEQUENCE public."Groups2_id_seq" RESTART;
+-- ALTER SEQUENCE public."Rules2_id_seq" RESTART;
+-- ALTER SEQUENCE public."Trips2_id_seq" RESTART;
 -- ALTER SEQUENCE public."ZoneTypes2_id_seq" RESTART;
 -- ALTER SEQUENCE public."OServiceTracking2_id_seq" RESTART;
 
@@ -80,9 +88,11 @@ WITH partitioned_tables AS (
     JOIN pg_inherits i ON part.oid = i.inhparent
     JOIN pg_class child ON i.inhrelid = child.oid
     WHERE part.relname NOT LIKE 'pg_%' 
-		AND part.relname NOT LIKE 'sql_%' 
+		AND part.relname NOT LIKE 'sql_%'
+		AND part.relname NOT LIKE 'stg_%' 
 		AND child.relname NOT LIKE 'pg_%'
 		AND child.relname NOT LIKE 'sql_%'
+		AND child.relname NOT LIKE 'stg_%'
 ),
 table_counts AS (
     SELECT relname AS table_name,
@@ -90,6 +100,7 @@ table_counts AS (
     FROM pg_stat_all_tables
     WHERE relname NOT LIKE 'pg_%'
 		AND relname NOT LIKE 'sql_%'
+		AND relname NOT LIKE 'stg_%'
     GROUP BY relname
 )
 SELECT

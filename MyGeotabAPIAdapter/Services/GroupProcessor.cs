@@ -191,7 +191,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // If there were any changes, force the DbGroup cache to be updated so that the changes are immediately available to other consumers.
-                        if (dbGroupsToPersist.Any())
+                        if (dbGroupsToPersist.Count != 0)
                         {
                             await dbGroupObjectCache.UpdateAsync(true);
                         }

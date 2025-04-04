@@ -193,7 +193,7 @@ namespace MyGeotabAPIAdapter.Services
 
                         // If there were any changes, force the DbZoneType cache to be updated so that the changes are immediately available to other consumers.
 
-                        if (dbZoneTypesToPersist.Any())
+                        if (dbZoneTypesToPersist.Count != 0)
                         {
                             await dbZoneTypeObjectCache.UpdateAsync(true);
                         }

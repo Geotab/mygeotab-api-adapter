@@ -104,6 +104,9 @@
         public string DbRuleTableName => "Rules";
 
         /// <inheritdoc/>
+        public string DbRule2TableName => "Rules2";
+
+        /// <inheritdoc/>
         public string DbStatusDataTableName => "StatusData";
 
         /// <inheritdoc/>
@@ -128,6 +131,12 @@
         public string DbStgGroup2TableName => "stg_Groups2";
 
         /// <inheritdoc/>
+        public string DbStgRule2TableName => "stg_Rules2";
+
+        /// <inheritdoc/>
+        public string DbStgTrip2TableName => "stg_Trips2";
+
+        /// <inheritdoc/>
         public string DbStgUser2TableName => "stg_Users2";
 
         /// <inheritdoc/>
@@ -138,6 +147,9 @@
 
         /// <inheritdoc/>
         public string DbTripTableName => "Trips";
+
+        /// <inheritdoc/>
+        public string DbTrip2TableName => "Trips2";
 
         /// <inheritdoc/>
         public string DbUserTableName => "Users";
@@ -168,6 +180,12 @@
 
         /// <inheritdoc/>
         public string MergeStagingGroupsProcedureName => "spMerge_stg_Groups2";
+
+        /// <inheritdoc/>
+        public string MergeStagingRulesProcedureName => "spMerge_stg_Rules2";
+
+        /// <inheritdoc/>
+        public string MergeStagingTripsProcedureName => "spMerge_stg_Trips2";
 
         /// <inheritdoc/>
         public string MergeStagingUsersProcedureName => "spMerge_stg_Users2";

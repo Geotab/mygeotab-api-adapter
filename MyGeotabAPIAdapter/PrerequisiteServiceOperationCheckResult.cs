@@ -74,7 +74,7 @@ namespace MyGeotabAPIAdapter
                 ServicesNeverRun = servicesNeverRun;
             }
 
-            if (servicesNeverRun != null && servicesNeverRun.Any())
+            if (servicesNeverRun != null && servicesNeverRun.Count != 0)
             {
                 if (servicesNeverRun.Count == 1)
                 {
@@ -115,7 +115,7 @@ namespace MyGeotabAPIAdapter
                 ServicesNotRunning = servicesNotRunning;
             }
 
-            if (servicesNotRunning != null && servicesNotRunning.Any())
+            if (servicesNotRunning != null && servicesNotRunning.Count != 0)
             {
                 if (servicesNotRunning.Count == 1)
                 {
@@ -156,7 +156,7 @@ namespace MyGeotabAPIAdapter
                 ServicesWithNoDataProcessed = servicesWithNoDataProcessed;
             }
 
-            if (servicesWithNoDataProcessed != null && servicesWithNoDataProcessed.Any())
+            if (servicesWithNoDataProcessed != null && servicesWithNoDataProcessed.Count != 0)
             {
                 if (servicesWithNoDataProcessed.Count == 1)
                 {

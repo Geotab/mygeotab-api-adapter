@@ -124,7 +124,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned DriverChanges.
                         var driverChanges = driverChangeGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbDriverChangesToPersist = new List<DbDriverChange>();
-                        if (driverChanges.Any())
+                        if (driverChanges.Count != 0)
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredDriverChanges = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, driverChanges);
@@ -146,7 +146,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbDriverChangeEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDriverChangesToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbDriverChangesToPersist.Any())
+                                    if (dbDriverChangesToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DriverChangeProcessor, driverChangeGeotabObjectFeeder.LastFeedRetrievalTimeUtc, driverChangeGeotabObjectFeeder.LastFeedVersion);
                                     }

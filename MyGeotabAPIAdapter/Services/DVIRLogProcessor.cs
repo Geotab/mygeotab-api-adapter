@@ -182,7 +182,7 @@ namespace MyGeotabAPIAdapter.Services
                         var dbDVIRLogsToPersist = new List<DbDVIRLog>();
                         var dbDVIRDefectsToPersist = new List<DbDVIRDefect>();
                         var dbDVIRDefectRemarksToPersist = new List<DbDVIRDefectRemark>();
-                        if (dvirLogs.Any())
+                        if (dvirLogs.Count != 0)
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredDVIRLogs = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, dvirLogs);
@@ -287,7 +287,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbDVIRDefectRemarkEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDVIRDefectRemarksToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbDVIRLogsToPersist.Any())
+                                    if (dbDVIRLogsToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DVIRLogProcessor, dvirLogGeotabObjectFeeder.LastFeedRetrievalTimeUtc, dvirLogGeotabObjectFeeder.LastFeedVersion);
                                     }

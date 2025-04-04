@@ -124,7 +124,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned ChargeEvents.
                         var chargeEvents = chargeEventGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbChargeEventsToPersist = new List<DbChargeEvent>();
-                        if (chargeEvents.Any())
+                        if (chargeEvents.Count != 0)
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredChargeEvents = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, chargeEvents);
@@ -146,7 +146,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbChargeEventEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbChargeEventsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbChargeEventsToPersist.Any())
+                                    if (dbChargeEventsToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.ChargeEventProcessor, chargeEventGeotabObjectFeeder.LastFeedRetrievalTimeUtc, chargeEventGeotabObjectFeeder.LastFeedVersion);
                                     }

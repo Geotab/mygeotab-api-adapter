@@ -124,7 +124,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned DutyStatusLogs.
                         var dutyStatusLogs = dutyStatusLogGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbDutyStatusLogsToPersist = new List<DbDutyStatusLog>();
-                        if (dutyStatusLogs.Any())
+                        if (dutyStatusLogs.Count != 0)
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredDutyStatusLogs = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, dutyStatusLogs);
@@ -146,7 +146,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbDutyStatusLogEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbDutyStatusLogsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbDutyStatusLogsToPersist.Any())
+                                    if (dbDutyStatusLogsToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DutyStatusLogProcessor, dutyStatusLogGeotabObjectFeeder.LastFeedRetrievalTimeUtc, dutyStatusLogGeotabObjectFeeder.LastFeedVersion);
                                     }

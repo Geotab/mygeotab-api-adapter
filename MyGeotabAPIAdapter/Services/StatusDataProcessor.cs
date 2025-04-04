@@ -148,7 +148,7 @@ namespace MyGeotabAPIAdapter.Services
                         var statusDatas = statusDataGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbStatusDatasToPersist = new List<DbStatusData>();
                         var dbOVDSServerCommandsToPersist = new List<DbOVDSServerCommand>();
-                        if (statusDatas.Any())
+                        if (statusDatas.Count != 0)
                         {
                             // Apply tracked device filter and/or tracked diagnostic filter and/or interval sampling (if configured in appsettings.json) and then map the StatusDatas to DbStatusDatas.
                             var filteredStatusDatas = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, statusDatas);
@@ -185,7 +185,7 @@ namespace MyGeotabAPIAdapter.Services
                                     }
 
                                     // DbOServiceTracking (for StatusDataProcessor):
-                                    if (dbStatusDatasToPersist.Any())
+                                    if (dbStatusDatasToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.StatusDataProcessor, statusDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc, statusDataGeotabObjectFeeder.LastFeedVersion);
                                     }

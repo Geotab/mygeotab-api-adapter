@@ -297,6 +297,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
+        public async Task<T> GetRuleService2InfoAsync()
+        {
+            await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
+            var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.RuleProcessor2.ToString());
+            return dbOServiceTracking;
+        }
+
+        /// <inheritdoc/>
         public async Task<T> GetStatusDataLocationService2InfoAsync()
         {
             await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
@@ -325,6 +333,14 @@ namespace MyGeotabAPIAdapter
         {
             await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
             var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.TripProcessor.ToString());
+            return dbOServiceTracking;
+        }
+
+        /// <inheritdoc/>
+        public async Task<T> GetTripService2InfoAsync()
+        {
+            await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
+            var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.TripProcessor2.ToString());
             return dbOServiceTracking;
         }
 
@@ -399,7 +415,7 @@ namespace MyGeotabAPIAdapter
                 }
             }
 
-            if (dbOServiceTrackingsToPersist.Any())
+            if (dbOServiceTrackingsToPersist.Count != 0)
             {
                 using (var cancellationTokenSource = new CancellationTokenSource())
                 {
@@ -435,7 +451,7 @@ namespace MyGeotabAPIAdapter
         /// <returns></returns>
         async Task PersistDbOServiceTrackingRecordsToDatabaseAsync(IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> context, List<T> dbOServiceTrackingsToPersist)
         {
-            if (dbOServiceTrackingsToPersist.Any())
+            if (dbOServiceTrackingsToPersist.Count != 0)
             {
                 using (var cancellationTokenSource = new CancellationTokenSource())
                 {

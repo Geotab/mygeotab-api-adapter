@@ -248,7 +248,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // If there were any changes, force the DbRule and/or DbCondition caches to be updated so that the changes are immediately available to other consumers. Run the associated tasks in parallel.
-                        if (dbRulesToPersist.Any() || dbConditionsToPersist.Any())
+                        if (dbRulesToPersist.Count != 0 || dbConditionsToPersist.Count != 0)
                         {
                             var dbObjectCacheUpdateTasks = new List<Task>
                             {

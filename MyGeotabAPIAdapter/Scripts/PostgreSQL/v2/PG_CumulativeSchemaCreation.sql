@@ -469,6 +469,45 @@ ALTER SEQUENCE public."OServiceTracking2_id_seq" OWNED BY public."OServiceTracki
 
 
 --
+-- Name: Rules2; Type: TABLE; Schema: public; Owner: geotabadapter_client
+--
+CREATE TABLE public."Rules2"
+(
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "ActiveFrom" timestamp without time zone,
+    "ActiveTo" timestamp without time zone,
+    "BaseType" character varying(50),
+    "Comment" character varying,
+    "Groups" text,
+    "Name" character varying(255),
+    "Version" bigint NOT NULL,
+    "EntityStatus" integer NOT NULL,
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL,	
+    CONSTRAINT "PK_Rules2" PRIMARY KEY (id)
+);
+
+ALTER TABLE IF EXISTS public."Rules2"
+    OWNER to geotabadapter_client;
+
+--
+-- Name: Rules2_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_client
+--
+CREATE SEQUENCE public."Rules2_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER SEQUENCE public."Rules2_id_seq" OWNER TO geotabadapter_client;
+
+--
+-- Name: Rules2_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_client
+--
+ALTER SEQUENCE public."Rules2_id_seq" OWNED BY public."Rules2".id;
+
+
+--
 -- Name: StatusData2; Type: TABLE; Schema: public; Owner: geotabadapter_client
 --
 
@@ -531,6 +570,67 @@ CREATE TABLE public."Users2" (
 
 
 ALTER TABLE public."Users2" OWNER TO geotabadapter_client;
+
+--
+-- Name: Trips2; Type: TABLE; Schema: public; Owner: geotabadapter_client
+--
+CREATE TABLE public."Trips2" (
+    "id" bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "AfterHoursDistance" real,
+    "AfterHoursDrivingDurationTicks" bigint,
+    "AfterHoursEnd" boolean,
+    "AfterHoursStart" boolean,
+    "AfterHoursStopDurationTicks" bigint,
+    "AverageSpeed" real,
+    "DeletedDateTime" timestamp without time zone,
+    "DeviceId" bigint NOT NULL,
+    "Distance" real NOT NULL,
+    "DriverId" bigint,
+    "DrivingDurationTicks" bigint NOT NULL,
+    "IdlingDurationTicks" bigint,
+    "MaximumSpeed" real,
+    "NextTripStart" timestamp without time zone NOT NULL,
+    "SpeedRange1" integer,
+    "SpeedRange1DurationTicks" bigint,
+    "SpeedRange2" integer,
+    "SpeedRange2DurationTicks" bigint,
+    "SpeedRange3" integer,
+    "SpeedRange3DurationTicks" bigint,
+    "Start" timestamp without time zone NOT NULL,
+    "Stop" timestamp without time zone NOT NULL,
+    "StopDurationTicks" bigint NOT NULL,
+    "StopPointX" double precision,
+    "StopPointY" double precision,
+    "WorkDistance" real,
+    "WorkDrivingDurationTicks" bigint,
+    "WorkStopDurationTicks" bigint,
+    "EntityStatus" integer NOT NULL,
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_Trips2" PRIMARY KEY ("Start", "id"),
+    CONSTRAINT "UK_Trips2_DeviceId_Start_EntityStatus" UNIQUE ("DeviceId", "Start", "EntityStatus")
+) 
+PARTITION BY RANGE ("Start");
+
+ALTER TABLE IF EXISTS public."Trips2"
+    OWNER TO geotabadapter_client;
+
+--
+-- Name: Trips2_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_client
+--
+CREATE SEQUENCE public."Trips2_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public."Trips2_id_seq" OWNER TO geotabadapter_client;
+
+--
+-- Name: Trips2_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_client
+--
+ALTER SEQUENCE public."Trips2_id_seq" OWNED BY public."Trips2"."id";
 
 --
 -- Name: ZoneTypes2; Type: TABLE; Schema: public; Owner: geotabadapter_client
@@ -701,6 +801,107 @@ ALTER SEQUENCE public."stg_Groups2_id_seq" OWNER TO geotabadapter_client;
 --
 ALTER SEQUENCE public."stg_Groups2_id_seq" OWNED BY public."stg_Groups2".id;
 
+
+--
+-- Name: stg_Rules2; Type: TABLE; Schema: public; Owner: geotabadapter_client
+--
+
+CREATE TABLE public."stg_Rules2"
+(
+    id bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "ActiveFrom" timestamp without time zone,
+    "ActiveTo" timestamp without time zone,
+    "BaseType" character varying(50),
+    "Comment" character varying,
+    "Groups" text,
+    "Name" character varying(255),
+    "Version" bigint NOT NULL,
+    "EntityStatus" integer NOT NULL,
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL,	
+    CONSTRAINT "PK_stg_Rules2" PRIMARY KEY (id)
+);
+
+ALTER TABLE IF EXISTS public."stg_Rules2"
+    OWNER to geotabadapter_client;
+
+--
+-- Name: stg_Rules2_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_client
+--
+CREATE SEQUENCE public."stg_Rules2_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public."stg_Rules2_id_seq" OWNER TO geotabadapter_client;
+
+--
+-- Name: stg_Rules2_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_client
+--
+ALTER SEQUENCE public."stg_Rules2_id_seq" OWNED BY public."stg_Rules2".id;
+
+
+--
+-- Name: stg_Trips2; Type: TABLE; Schema: public; Owner: geotabadapter_client
+--
+
+CREATE TABLE public."stg_Trips2" (
+    "id" bigint NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "AfterHoursDistance" real,
+    "AfterHoursDrivingDurationTicks" bigint,
+    "AfterHoursEnd" boolean,
+    "AfterHoursStart" boolean,
+    "AfterHoursStopDurationTicks" bigint,
+    "AverageSpeed" real,
+    "DeletedDateTime" timestamp without time zone,
+    "DeviceId" bigint NOT NULL,
+    "Distance" real NOT NULL,
+    "DriverId" bigint,
+    "DrivingDurationTicks" bigint NOT NULL,
+    "IdlingDurationTicks" bigint,
+    "MaximumSpeed" real,
+    "NextTripStart" timestamp without time zone NOT NULL,
+    "SpeedRange1" integer,
+    "SpeedRange1DurationTicks" bigint,
+    "SpeedRange2" integer,
+    "SpeedRange2DurationTicks" bigint,
+    "SpeedRange3" integer,
+    "SpeedRange3DurationTicks" bigint,
+    "Start" timestamp without time zone NOT NULL,
+    "Stop" timestamp without time zone NOT NULL,
+    "StopDurationTicks" bigint NOT NULL,
+    "StopPointX" double precision,
+    "StopPointY" double precision,
+    "WorkDistance" real,
+    "WorkDrivingDurationTicks" bigint,
+    "WorkStopDurationTicks" bigint,
+    "EntityStatus" integer NOT NULL,
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_stg_Trips2" PRIMARY KEY ("id")
+);
+
+ALTER TABLE IF EXISTS public."stg_Trips2"
+    OWNER TO geotabadapter_client;
+
+--
+-- Name: stg_Trips2_id_seq; Type: SEQUENCE; Schema: public; Owner: geotabadapter_client
+--
+CREATE SEQUENCE public."stg_Trips2_id_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+	
+ALTER SEQUENCE public."stg_Trips2_id_seq" OWNER TO geotabadapter_client;
+
+--
+-- Name: stg_Trips2_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: geotabadapter_client
+--
+ALTER SEQUENCE public."stg_Trips2_id_seq" OWNED BY public."stg_Trips2"."id";
 
 --
 -- Name: stg_Users2; Type: TABLE; Schema: public; Owner: geotabadapter_client
@@ -964,6 +1165,19 @@ ALTER TABLE ONLY public."OServiceTracking2" ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: Rules2 id; Type: DEFAULT; Schema: public; Owner: geotabadapter_client
+--
+
+ALTER TABLE ONLY public."Rules2" ALTER COLUMN id SET DEFAULT nextval('public."Rules2_id_seq"'::regclass);
+
+
+--
+-- Name: Trips2 id; Type: DEFAULT; Schema: public; Owner: geotabadapter_client
+--
+ALTER TABLE ONLY public."Trips2" ALTER COLUMN "id" SET DEFAULT nextval('public."Trips2_id_seq"'::regclass);
+
+
+--
 -- Name: ZoneTypes2 id; Type: DEFAULT; Schema: public; Owner: geotabadapter_client
 --
 
@@ -981,6 +1195,18 @@ ALTER TABLE ONLY public."stg_Diagnostics2" ALTER COLUMN id SET DEFAULT nextval('
 -- Name: stg_Groups2 id; Type: DEFAULT; Schema: public; Owner: geotabadapter_client
 --
 ALTER TABLE ONLY public."stg_Groups2" ALTER COLUMN id SET DEFAULT nextval('public."stg_Groups2_id_seq"'::regclass);
+
+
+--
+-- Name: stg_Rules2 id; Type: DEFAULT; Schema: public; Owner: geotabadapter_client
+--
+ALTER TABLE ONLY public."stg_Rules2" ALTER COLUMN id SET DEFAULT nextval('public."stg_Rules2_id_seq"'::regclass);
+
+
+--
+-- Name: stg_Trips2 id; Type: DEFAULT; Schema: public; Owner: geotabadapter_client
+--
+ALTER TABLE ONLY public."stg_Trips2" ALTER COLUMN "id" SET DEFAULT nextval('public."stg_Trips2_id_seq"'::regclass);
 
 
 --
@@ -1061,6 +1287,7 @@ ALTER TABLE ONLY public."FaultData2"
 ALTER TABLE ONLY public."FaultDataLocations2"
     ADD CONSTRAINT "PK_FaultDataLocations2" PRIMARY KEY ("DateTime", id);
 
+
 --
 -- Name: Groups2 PK_Groups2; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
 --
@@ -1068,12 +1295,6 @@ ALTER TABLE ONLY public."FaultDataLocations2"
 ALTER TABLE ONLY public."Groups2"
     ADD CONSTRAINT "PK_Groups2" PRIMARY KEY (id);
 
---
--- Name: Groups2 UK_Groups2_GeotabId; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
---
-
-ALTER TABLE public."Groups2"
-ADD CONSTRAINT "UK_Groups2_GeotabId" UNIQUE ("GeotabId");
 
 --
 -- Name: LogRecords2 PK_LogRecords2; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
@@ -1132,14 +1353,6 @@ ALTER TABLE ONLY public."Zones2"
 
 
 --
--- Name: stg_Devices2 PK_stg_Devices2; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
---
-
-ALTER TABLE ONLY public."stg_Devices2"
-    ADD CONSTRAINT "PK_stg_Devices2" PRIMARY KEY (id);
-
-
---
 -- Name: stg_Diagnostics2 PK_stg_Diagnostics2; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
 --
 
@@ -1155,27 +1368,11 @@ ALTER TABLE ONLY public."stg_Groups2"
 
 
 --
--- Name: stg_Users2 PK_stg_Users2; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
---
-
-ALTER TABLE ONLY public."stg_Users2"
-    ADD CONSTRAINT "PK_stg_Users2" PRIMARY KEY (id);
-
-
---
 -- Name: stg_ZoneTypes2 PK_stg_ZoneTypes2; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
 --
 
 ALTER TABLE ONLY public."stg_ZoneTypes2"
     ADD CONSTRAINT "PK_stg_ZoneTypes2" PRIMARY KEY (id);
-
-
---
--- Name: stg_Zones2 PK_stg_Zones2; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
---
-
-ALTER TABLE ONLY public."stg_Zones2"
-    ADD CONSTRAINT "PK_stg_Zones2" PRIMARY KEY (id);
 
 
 --
@@ -1187,11 +1384,33 @@ ALTER TABLE ONLY public."DiagnosticIds2"
 
 
 --
+-- Name: Groups2 UK_Groups2_GeotabId; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
+--
+
+ALTER TABLE public."Groups2"
+	ADD CONSTRAINT "UK_Groups2_GeotabId" UNIQUE ("GeotabId");
+
+
+--
+-- Name: Groups2 UK_Rules2_GeotabId; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
+--
+
+ALTER TABLE public."Rules2"
+	ADD CONSTRAINT "UK_Rules2_GeotabId" UNIQUE ("GeotabId");
+
+
+--
 -- Name: ZoneTypes2 UK_ZoneTypes2_GeotabId; Type: CONSTRAINT; Schema: public; Owner: geotabadapter_client
 --
 
 ALTER TABLE ONLY public."ZoneTypes2"
     ADD CONSTRAINT "UK_ZoneTypes2_GeotabId" UNIQUE ("GeotabId");
+
+
+--
+-- Name: CI_Trips2_Start_Id; Type: INDEX; Schema: public; Owner: geotabadapter_client
+--
+CREATE INDEX "CI_Trips2_Start_Id" ON public."Trips2" ("Start", "id");
 
 
 --
@@ -1326,6 +1545,13 @@ CREATE INDEX "IX_OServiceTracking2_RecordLastChangedUtc" ON public."OServiceTrac
 
 
 --
+-- Name: IX_Rules2_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_client
+--
+
+CREATE INDEX "IX_Rules2_RecordLastChangedUtc" ON public."Rules2" USING btree ("RecordLastChangedUtc");
+
+
+--
 -- Name: IX_StatusData2_DateTime; Type: INDEX; Schema: public; Owner: geotabadapter_client
 --
 
@@ -1375,6 +1601,19 @@ CREATE INDEX "IX_StatusDataLocations2_id_LongLatProcessed" ON ONLY public."Statu
 
 
 --
+-- Name: IX_Trips2_NextTripStart; Type: INDEX; Schema: public; Owner: geotabadapter_client
+--
+
+CREATE INDEX "IX_Trips2_NextTripStart" ON public."Trips2" ("NextTripStart");
+
+
+--
+-- Name: IX_Trips2_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_client
+--
+CREATE INDEX "IX_Trips2_RecordLastChangedUtc" ON public."Trips2" ("RecordLastChangedUtc");
+
+
+--
 -- Name: IX_Users2_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_client
 --
 
@@ -1410,9 +1649,23 @@ CREATE INDEX "IX_stg_Diagnostics2_GeotabGUIDString_RecordLastChangedUtc" ON publ
 
 
 --
--- Name: IX_stg_Groups2_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_client
+-- Name: IX_stg_Groups2_GeotabId_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_client
 --
-CREATE INDEX "IX_stg_Groups2_RecordLastChangedUtc" ON public."stg_Groups2" USING btree ("RecordLastChangedUtc");
+
+CREATE INDEX "IX_stg_Groups2_GeotabId_RecordLastChangedUtc" ON public."stg_Groups2" USING btree ("GeotabId", "RecordLastChangedUtc" DESC);
+
+
+--
+-- Name: IX_stg_Rules2_GeotabId_RecordLastChangedUtc; Type: INDEX; Schema: public; Owner: geotabadapter_client
+--
+
+CREATE INDEX "IX_stg_Rules2_GeotabId_RecordLastChangedUtc" ON public."stg_Rules2" USING btree ("GeotabId", "RecordLastChangedUtc" DESC);
+
+
+--
+-- Name: IX_stg_Trips2_DeviceId_Start_EntityStatus; Type: INDEX; Schema: public; Owner: geotabadapter_client
+--
+CREATE INDEX "IX_stg_Trips2_DeviceId_Start_EntityStatus" ON public."stg_Trips2" ("DeviceId", "Start", "EntityStatus");
 
 
 --
@@ -1520,6 +1773,22 @@ ALTER TABLE public."StatusData2"
 ALTER TABLE public."StatusData2"
     ADD CONSTRAINT "FK_StatusData2_DiagnosticIds2" FOREIGN KEY ("DiagnosticId") REFERENCES public."DiagnosticIds2"(id);
 
+
+--
+-- Name: Trips2 FK_Trips2_Devices2; Type: FK CONSTRAINT; Schema: public; Owner: geotabadapter_client
+--
+
+ALTER TABLE public."Trips2"
+    ADD CONSTRAINT "FK_Trips2_Devices2" FOREIGN KEY ("DeviceId")
+    REFERENCES public."Devices2" ("id");
+
+
+--
+-- Name: Trips2 FK_Trips2_Users2; Type: FK CONSTRAINT; Schema: public; Owner: geotabadapter_client
+--
+ALTER TABLE public."Trips2"
+    ADD CONSTRAINT "FK_Trips2_Users2" FOREIGN KEY ("DriverId")
+    REFERENCES public."Users2" ("id");
 
 --
 -- PostgreSQL database dump complete
@@ -2428,6 +2697,278 @@ REVOKE ALL ON FUNCTION public."spMerge_stg_Groups2"(boolean) FROM PUBLIC;
 
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Create spMerge_stg_Rules2 function:
+CREATE OR REPLACE FUNCTION public."spMerge_stg_Rules2"(
+	"SetEntityStatusDeletedForMissingRules" boolean DEFAULT false)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+-- ==========================================================================================
+-- Description: 
+--   Upserts records from the stg_Rules2 staging table to the Rules2 table and then
+--   truncates the staging table. If the SetEntityStatusDeletedForMissingRules 
+--   parameter is set to true, the EntityStatus column will be set to 0 (Deleted) for 
+--   any records in the Rules2 table for which there are no corresponding records 
+--   with the same GeotabId in the stg_Rules2 table.
+--
+-- Notes:
+--   - No transaction used as application should manage the transaction.
+-- ==========================================================================================
+BEGIN
+    -- De-duplicate staging table by selecting the latest record per natural key (DeviceId, Start).
+	-- Uses DISTINCT ON to keep only the latest record per DeviceId + Start.
+    DROP TABLE IF EXISTS "TMP_DeduplicatedStaging";
+    CREATE TEMP TABLE "TMP_DeduplicatedStaging" AS
+	SELECT DISTINCT ON ("GeotabId") *
+	FROM public."stg_Rules2"
+	ORDER BY "GeotabId", "RecordLastChangedUtc" DESC;
+    CREATE INDEX ON "TMP_DeduplicatedStaging" ("GeotabId");
+
+    -- Perform upsert.
+    INSERT INTO public."Rules2" AS d (
+        "GeotabId",
+        "ActiveFrom",
+        "ActiveTo",
+        "BaseType",
+        "Comment",
+        "Groups",
+        "Name",
+        "Version",        
+        "EntityStatus",
+        "RecordLastChangedUtc"
+    )
+    SELECT 
+        s."GeotabId",
+        s."ActiveFrom",
+        s."ActiveTo",
+        s."BaseType",
+        s."Comment",
+        s."Groups",
+        s."Name",
+        s."Version",   
+        s."EntityStatus",
+        s."RecordLastChangedUtc"
+    FROM "TMP_DeduplicatedStaging" s
+    ON CONFLICT ("GeotabId") 
+    DO UPDATE SET
+        "ActiveFrom" = EXCLUDED."ActiveFrom",
+        "ActiveTo" = EXCLUDED."ActiveTo",
+        "BaseType" = EXCLUDED."BaseType",
+        "Comment" = EXCLUDED."Comment",
+        "Groups" = EXCLUDED."Groups",
+        "Name" = EXCLUDED."Name",
+        "Version" = EXCLUDED."Version",
+        "EntityStatus" = EXCLUDED."EntityStatus",        
+        "RecordLastChangedUtc" = EXCLUDED."RecordLastChangedUtc"
+    WHERE
+        d."ActiveFrom" IS DISTINCT FROM EXCLUDED."ActiveFrom"
+        OR d."ActiveTo" IS DISTINCT FROM EXCLUDED."ActiveTo"
+        OR d."BaseType" IS DISTINCT FROM EXCLUDED."BaseType"
+        OR d."Comment" IS DISTINCT FROM EXCLUDED."Comment"
+        OR d."Groups" IS DISTINCT FROM EXCLUDED."Groups"
+        OR d."Name" IS DISTINCT FROM EXCLUDED."Name"
+        OR d."Version" IS DISTINCT FROM EXCLUDED."Version"
+        OR d."EntityStatus" IS DISTINCT FROM EXCLUDED."EntityStatus";        
+        -- OR d."RecordLastChangedUtc" IS DISTINCT FROM EXCLUDED."RecordLastChangedUtc";
+
+    -- If SetEntityStatusDeletedForMissingRules is TRUE, mark missing Rules as deleted.
+    IF "SetEntityStatusDeletedForMissingRules" THEN
+        UPDATE public."Rules2" d
+        SET "EntityStatus" = 0,
+            "RecordLastChangedUtc" = clock_timestamp() AT TIME ZONE 'UTC'
+        WHERE NOT EXISTS (
+            SELECT 1 FROM public."stg_Rules2" s
+            WHERE s."GeotabId" = d."GeotabId"
+        );
+    END IF;
+	
+    -- Clear staging table.
+    TRUNCATE TABLE public."stg_Rules2";
+
+    -- Drop temporary table.
+    DROP TABLE "TMP_DeduplicatedStaging";
+END;
+$BODY$;
+
+ALTER FUNCTION public."spMerge_stg_Rules2"(boolean)
+    OWNER TO geotabadapter_client;
+
+GRANT EXECUTE ON FUNCTION public."spMerge_stg_Rules2"(boolean) TO geotabadapter_client;
+
+REVOKE ALL ON FUNCTION public."spMerge_stg_Rules2"(boolean) FROM PUBLIC;
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Create spMerge_stg_Trips2 function:
+CREATE OR REPLACE FUNCTION public."spMerge_stg_Trips2"()
+	RETURNS void
+	LANGUAGE plpgsql
+	COST 100
+	VOLATILE PARALLEL UNSAFE
+AS $BODY$
+-- ==========================================================================================
+-- Description: 
+--	 Upserts records from the stg_Trips2 staging table to the Trips2 table and then
+--	 truncates the staging table. 
+--
+-- Notes:
+--   - No transaction used as application should manage the transaction.
+-- ==========================================================================================
+BEGIN
+    -- De-duplicate staging table by selecting the latest record per natural key (DeviceId, Start).
+	-- Uses DISTINCT ON to keep only the latest record per DeviceId + Start.
+    DROP TABLE IF EXISTS "TMP_DeduplicatedStaging";
+    CREATE TEMP TABLE "TMP_DeduplicatedStaging" AS
+	SELECT DISTINCT ON ("DeviceId", "Start") *
+	FROM public."stg_Trips2"
+	ORDER BY "DeviceId", "Start", "RecordLastChangedUtc" DESC;
+    CREATE INDEX ON "TMP_DeduplicatedStaging" ("DeviceId", "Start");
+
+    -- Perform upsert.
+    INSERT INTO public."Trips2" AS d (
+        "GeotabId",
+        "AfterHoursDistance",
+        "AfterHoursDrivingDurationTicks",
+        "AfterHoursEnd",
+        "AfterHoursStart",
+        "AfterHoursStopDurationTicks",
+        "AverageSpeed",
+        "DeletedDateTime",
+        "DeviceId",
+        "Distance",
+        "DriverId",
+        "DrivingDurationTicks",
+        "IdlingDurationTicks",
+        "MaximumSpeed",
+        "NextTripStart",
+        "SpeedRange1",
+        "SpeedRange1DurationTicks",
+        "SpeedRange2",
+        "SpeedRange2DurationTicks",
+        "SpeedRange3",
+        "SpeedRange3DurationTicks",
+        "Start",
+        "Stop",
+        "StopDurationTicks",
+        "StopPointX",
+        "StopPointY",
+        "WorkDistance",
+        "WorkDrivingDurationTicks",
+        "WorkStopDurationTicks",
+        "EntityStatus",
+        "RecordLastChangedUtc"
+    )
+    SELECT 
+        s."GeotabId",
+        s."AfterHoursDistance",
+        s."AfterHoursDrivingDurationTicks",
+        s."AfterHoursEnd",
+        s."AfterHoursStart",
+        s."AfterHoursStopDurationTicks",
+        s."AverageSpeed",
+        s."DeletedDateTime",
+        s."DeviceId",
+        s."Distance",
+        s."DriverId",
+        s."DrivingDurationTicks",
+        s."IdlingDurationTicks",
+        s."MaximumSpeed",
+        s."NextTripStart",
+        s."SpeedRange1",
+        s."SpeedRange1DurationTicks",
+        s."SpeedRange2",
+        s."SpeedRange2DurationTicks",
+        s."SpeedRange3",
+        s."SpeedRange3DurationTicks",
+        s."Start",
+        s."Stop",
+        s."StopDurationTicks",
+        s."StopPointX",
+        s."StopPointY",
+        s."WorkDistance",
+        s."WorkDrivingDurationTicks",
+        s."WorkStopDurationTicks",
+        s."EntityStatus",
+        s."RecordLastChangedUtc"
+    FROM "TMP_DeduplicatedStaging" s
+    ON CONFLICT ("DeviceId", "Start", "EntityStatus")
+    DO UPDATE SET
+        "GeotabId" = EXCLUDED."GeotabId",
+        "AfterHoursDistance" = EXCLUDED."AfterHoursDistance",
+        "AfterHoursDrivingDurationTicks" = EXCLUDED."AfterHoursDrivingDurationTicks",
+        "AfterHoursEnd" = EXCLUDED."AfterHoursEnd",
+        "AfterHoursStart" = EXCLUDED."AfterHoursStart",
+        "AfterHoursStopDurationTicks" = EXCLUDED."AfterHoursStopDurationTicks",
+        "AverageSpeed" = EXCLUDED."AverageSpeed",
+        "DeletedDateTime" = EXCLUDED."DeletedDateTime",
+        "DriverId" = EXCLUDED."DriverId",
+        "DrivingDurationTicks" = EXCLUDED."DrivingDurationTicks",
+        "IdlingDurationTicks" = EXCLUDED."IdlingDurationTicks",
+        "MaximumSpeed" = EXCLUDED."MaximumSpeed",
+        "NextTripStart" = EXCLUDED."NextTripStart",
+        "SpeedRange1" = EXCLUDED."SpeedRange1",
+        "SpeedRange1DurationTicks" = EXCLUDED."SpeedRange1DurationTicks",
+        "SpeedRange2" = EXCLUDED."SpeedRange2",
+        "SpeedRange2DurationTicks" = EXCLUDED."SpeedRange2DurationTicks",
+        "SpeedRange3" = EXCLUDED."SpeedRange3",
+        "SpeedRange3DurationTicks" = EXCLUDED."SpeedRange3DurationTicks",
+        "Stop" = EXCLUDED."Stop",
+        "StopDurationTicks" = EXCLUDED."StopDurationTicks",
+        "StopPointX" = EXCLUDED."StopPointX",
+        "StopPointY" = EXCLUDED."StopPointY",
+        "WorkDistance" = EXCLUDED."WorkDistance",
+        "WorkDrivingDurationTicks" = EXCLUDED."WorkDrivingDurationTicks",
+        "WorkStopDurationTicks" = EXCLUDED."WorkStopDurationTicks",
+        "RecordLastChangedUtc" = EXCLUDED."RecordLastChangedUtc"
+    WHERE
+        d."GeotabId" IS DISTINCT FROM EXCLUDED."GeotabId"
+        OR d."AfterHoursDistance" IS DISTINCT FROM EXCLUDED."AfterHoursDistance"
+        OR d."AfterHoursDrivingDurationTicks" IS DISTINCT FROM EXCLUDED."AfterHoursDrivingDurationTicks"
+        OR d."AfterHoursEnd" IS DISTINCT FROM EXCLUDED."AfterHoursEnd"
+        OR d."AfterHoursStart" IS DISTINCT FROM EXCLUDED."AfterHoursStart"
+        OR d."AfterHoursStopDurationTicks" IS DISTINCT FROM EXCLUDED."AfterHoursStopDurationTicks"
+        OR d."AverageSpeed" IS DISTINCT FROM EXCLUDED."AverageSpeed"
+        OR d."DeletedDateTime" IS DISTINCT FROM EXCLUDED."DeletedDateTime"
+        OR d."Distance" IS DISTINCT FROM EXCLUDED."Distance"
+        OR d."DriverId" IS DISTINCT FROM EXCLUDED."DriverId"
+        OR d."DrivingDurationTicks" IS DISTINCT FROM EXCLUDED."DrivingDurationTicks"
+        OR d."IdlingDurationTicks" IS DISTINCT FROM EXCLUDED."IdlingDurationTicks"
+        OR d."MaximumSpeed" IS DISTINCT FROM EXCLUDED."MaximumSpeed"
+        OR d."NextTripStart" IS DISTINCT FROM EXCLUDED."NextTripStart"
+        OR d."SpeedRange1" IS DISTINCT FROM EXCLUDED."SpeedRange1"
+        OR d."SpeedRange1DurationTicks" IS DISTINCT FROM EXCLUDED."SpeedRange1DurationTicks"
+        OR d."SpeedRange2" IS DISTINCT FROM EXCLUDED."SpeedRange2"
+        OR d."SpeedRange2DurationTicks" IS DISTINCT FROM EXCLUDED."SpeedRange2DurationTicks"
+        OR d."SpeedRange3" IS DISTINCT FROM EXCLUDED."SpeedRange3"
+        OR d."SpeedRange3DurationTicks" IS DISTINCT FROM EXCLUDED."SpeedRange3DurationTicks"
+        OR d."Stop" IS DISTINCT FROM EXCLUDED."Stop"
+        OR d."StopDurationTicks" IS DISTINCT FROM EXCLUDED."StopDurationTicks"
+        OR d."StopPointX" IS DISTINCT FROM EXCLUDED."StopPointX"
+        OR d."StopPointY" IS DISTINCT FROM EXCLUDED."StopPointY"
+        OR d."WorkDistance" IS DISTINCT FROM EXCLUDED."WorkDistance"
+        OR d."WorkDrivingDurationTicks" IS DISTINCT FROM EXCLUDED."WorkDrivingDurationTicks"
+        OR d."WorkStopDurationTicks" IS DISTINCT FROM EXCLUDED."WorkStopDurationTicks";
+        -- OR d."RecordLastChangedUtc" IS DISTINCT FROM EXCLUDED."RecordLastChangedUtc";
+
+    -- Clear staging table.
+    TRUNCATE TABLE public."stg_Trips2";
+
+    -- Drop temporary table.
+    DROP TABLE "TMP_DeduplicatedStaging";
+END;
+$BODY$;
+
+ALTER FUNCTION public."spMerge_stg_Trips2"()
+    OWNER TO geotabadapter_client;
+
+GRANT EXECUTE ON FUNCTION public."spMerge_stg_Trips2"() TO geotabadapter_client;
+
+REVOKE ALL ON FUNCTION public."spMerge_stg_Trips2"() FROM PUBLIC;
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- Create spMerge_stg_Users2 function:
 CREATE OR REPLACE FUNCTION public."spMerge_stg_Users2"(
 	"SetEntityStatusDeletedForMissingUsers" boolean DEFAULT false)
@@ -3281,5 +3822,5 @@ REVOKE ALL ON FUNCTION public."spStatusData2WithLagLeadLongLatBatch"(integer, in
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO public."MiddlewareVersionInfo2" ("DatabaseVersion", "RecordCreationTimeUtc") 
-VALUES ('3.1.0.0', timezone('UTC', NOW())); 
+VALUES ('3.2.0.0', timezone('UTC', NOW())); 
 /*** [END] Part 4 of 4: Database Version Update ***/

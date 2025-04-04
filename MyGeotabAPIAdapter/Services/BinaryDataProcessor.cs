@@ -124,7 +124,7 @@ namespace MyGeotabAPIAdapter.Services
                         // Process any returned BinaryDatas.
                         var binaryDatas = binaryDataGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbBinaryDatasToPersist = new List<DbBinaryData>();
-                        if (binaryDatas.Any())
+                        if (binaryDatas.Count != 0)
                         {
                             // Apply tracked device filter (if configured in appsettings.json).
                             var filteredBinaryDatas = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, binaryDatas);
@@ -146,7 +146,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbBinaryDataEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbBinaryDatasToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbBinaryDatasToPersist.Any())
+                                    if (dbBinaryDatasToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.BinaryDataProcessor, binaryDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc, binaryDataGeotabObjectFeeder.LastFeedVersion);
                                     }

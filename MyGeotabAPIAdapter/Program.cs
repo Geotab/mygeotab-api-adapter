@@ -106,6 +106,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<DbOServiceTracking>()
                         .AddTransient<DbOServiceTracking2>()
                         .AddTransient<DbRule>()
+                        .AddTransient<DbRule2>()
                         .AddTransient<DbUser>()
                         .AddTransient<DbUser2>()
                         .AddTransient<DbZone>()
@@ -173,9 +174,11 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGeotabLogRecordDbLogRecordObjectMapper, GeotabLogRecordDbLogRecordObjectMapper>()
                         .AddTransient<IGeotabLogRecordDbLogRecord2ObjectMapper, GeotabLogRecordDbLogRecord2ObjectMapper>()
                         .AddTransient<IGeotabRuleDbRuleObjectMapper, GeotabRuleDbRuleObjectMapper>()
+                        .AddTransient<IGeotabRuleDbStgRule2ObjectMapper, GeotabRuleDbStgRule2ObjectMapper>()
                         .AddTransient<IGeotabStatusDataDbStatusDataObjectMapper, GeotabStatusDataDbStatusDataObjectMapper>()
                         .AddTransient<IGeotabStatusDataDbStatusData2ObjectMapper, GeotabStatusDataDbStatusData2ObjectMapper>()
                         .AddTransient<IGeotabTripDbTripObjectMapper, GeotabTripDbTripObjectMapper>()
+                        .AddTransient<IGeotabTripDbStgTrip2ObjectMapper, GeotabTripDbStgTrip2ObjectMapper>()
                         .AddTransient<IGeotabUserDbUserObjectMapper, GeotabUserDbUserObjectMapper>()
                         .AddTransient<IGeotabUserDbStgUser2ObjectMapper, GeotabUserDbStgUser2ObjectMapper>()
                         .AddTransient<IGeotabZoneDbZoneObjectMapper, GeotabZoneDbZoneObjectMapper>()
@@ -220,16 +223,20 @@ namespace MyGeotabAPIAdapter
                         .AddSingleton<IGenericEntityPersister<DbOServiceTracking2>, GenericEntityPersister<DbOServiceTracking2>>()
                         .AddTransient<IGenericEntityPersister<DbOVDSServerCommand>, GenericEntityPersister<DbOVDSServerCommand>>()
                         .AddTransient<IGenericEntityPersister<DbRule>, GenericEntityPersister<DbRule>>()
+                        .AddTransient<IGenericEntityPersister<DbRule2>, GenericEntityPersister<DbRule2>>()
                         .AddTransient<IGenericEntityPersister<DbStatusData>, GenericEntityPersister<DbStatusData>>()
                         .AddTransient<IGenericEntityPersister<DbStatusData2>, GenericEntityPersister<DbStatusData2>>()
                         .AddTransient<IGenericEntityPersister<DbStatusDataLocation2>, GenericEntityPersister<DbStatusDataLocation2>>()
                         .AddTransient<IGenericEntityPersister<DbStgDevice2>, GenericEntityPersister<DbStgDevice2>>()
                         .AddTransient<IGenericEntityPersister<DbStgDiagnostic2>, GenericEntityPersister<DbStgDiagnostic2>>()
                         .AddTransient<IGenericEntityPersister<DbStgGroup2>, GenericEntityPersister<DbStgGroup2>>()
+                        .AddTransient<IGenericEntityPersister<DbStgRule2>, GenericEntityPersister<DbStgRule2>>()
+                        .AddTransient<IGenericEntityPersister<DbStgTrip2>, GenericEntityPersister<DbStgTrip2>>()
                         .AddTransient<IGenericEntityPersister<DbStgUser2>, GenericEntityPersister<DbStgUser2>>()
                         .AddTransient<IGenericEntityPersister<DbStgZone2>, GenericEntityPersister<DbStgZone2>>()
                         .AddTransient<IGenericEntityPersister<DbStgZoneType2>, GenericEntityPersister<DbStgZoneType2>>()
                         .AddTransient<IGenericEntityPersister<DbTrip>, GenericEntityPersister<DbTrip>>()
+                        .AddTransient<IGenericEntityPersister<DbTrip2>, GenericEntityPersister<DbTrip2>>()
                         .AddTransient<IGenericEntityPersister<DbUser>, GenericEntityPersister<DbUser>>()
                         .AddTransient<IGenericEntityPersister<DbUser2>, GenericEntityPersister<DbUser2>>()
                         .AddTransient<IGenericEntityPersister<DbZone>, GenericEntityPersister<DbZone>>()
@@ -262,6 +269,8 @@ namespace MyGeotabAPIAdapter
                         .AddSingleton<IGenericGenericDbObjectCache<DbOServiceTracking2, AdapterGenericDbObjectCache<DbOServiceTracking2>>, GenericGenericDbObjectCache<DbOServiceTracking2, AdapterGenericDbObjectCache<DbOServiceTracking2>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbRule>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbRule, AdapterGenericDbObjectCache<DbRule>>, GenericGenericDbObjectCache<DbRule, AdapterGenericDbObjectCache<DbRule>>>()
+                        .AddSingleton<AdapterGenericDbObjectCache<DbRule2>>()
+                        .AddSingleton<IGenericGenericDbObjectCache<DbRule2, AdapterGenericDbObjectCache<DbRule2>>, GenericGenericDbObjectCache<DbRule2, AdapterGenericDbObjectCache<DbRule2>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbUser>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>>, GenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbUser2>>()
@@ -332,7 +341,7 @@ namespace MyGeotabAPIAdapter
                         databaseValidator.ValidateDatabaseVersion();
 
                         // Configure options for the services. This is necessary because the services are registered as hosted services and the options are used to determine whether the individual services should pause for database maintenance windows wherein operations such as reindexing could potentially cause exceptions.
-                        var serviceNames = new string[] { nameof(Orchestrator2), nameof(ControllerProcessor2), nameof(DeviceProcessor2), nameof(DiagnosticProcessor2), nameof(FailureModeProcessor2), nameof(FaultDataLocationService2), nameof(FaultDataProcessor2), nameof(GroupProcessor2), nameof(LogRecordProcessor2), nameof(StatusDataLocationService2), nameof(StatusDataProcessor2), nameof(UnitOfMeasureProcessor2), nameof(UserProcessor2), nameof(ZoneProcessor2), nameof(ZoneTypeProcessor2) };
+                        var serviceNames = new string[] { nameof(Orchestrator2), nameof(ControllerProcessor2), nameof(DeviceProcessor2), nameof(DiagnosticProcessor2), nameof(FailureModeProcessor2), nameof(FaultDataLocationService2), nameof(FaultDataProcessor2), nameof(GroupProcessor2), nameof(LogRecordProcessor2), nameof(RuleProcessor2), nameof(StatusDataLocationService2), nameof(StatusDataProcessor2), nameof(TripProcessor2), nameof(UnitOfMeasureProcessor2), nameof(UserProcessor2), nameof(ZoneProcessor2), nameof(ZoneTypeProcessor2) };
 
                         // Register the ServiceOprionsProvider.
                         services.AddSingleton<IServiceOptionsProvider, ServiceOptionsProvider>();
@@ -363,7 +372,7 @@ namespace MyGeotabAPIAdapter
                                 options.ServiceName = serviceName;
 
                                 // Any services that don't interact with the adapter database should not pause for database maintenance and can be added to the to the line below. The rest should pause for database maintenance.
-                                if (serviceName == nameof(Orchestrator2) || serviceName == nameof(ControllerProcessor2) || serviceName == nameof(GroupProcessor2) || serviceName == nameof(UnitOfMeasureProcessor2))
+                                if (serviceName == nameof(Orchestrator2) || serviceName == nameof(ControllerProcessor2) || serviceName == nameof(UnitOfMeasureProcessor2))
                                 {
                                     options.PauseForDatabaseMaintenance = false;
                                 }
@@ -404,8 +413,10 @@ namespace MyGeotabAPIAdapter
                         .AddHostedService<FaultDataProcessor2>()
                         .AddHostedService<GroupProcessor2>()
                         .AddHostedService<LogRecordProcessor2>()
+                        .AddHostedService<RuleProcessor2>()
                         .AddHostedService<StatusDataLocationService2>()
                         .AddHostedService<StatusDataProcessor2>()
+                        .AddHostedService<TripProcessor2>()
                         .AddHostedService<UnitOfMeasureProcessor2>()
                         .AddHostedService<UserProcessor2>()
                         .AddHostedService<ZoneProcessor2>()
@@ -424,8 +435,10 @@ namespace MyGeotabAPIAdapter
                         .AddSingleton<IBackgroundServiceAwaiter<FaultDataProcessor2>, BackgroundServiceAwaiter<FaultDataProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<GroupProcessor2>, BackgroundServiceAwaiter<GroupProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<LogRecordProcessor2>, BackgroundServiceAwaiter<LogRecordProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<RuleProcessor2>, BackgroundServiceAwaiter<RuleProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<StatusDataLocationService2>, BackgroundServiceAwaiter<StatusDataLocationService2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<StatusDataProcessor2>, BackgroundServiceAwaiter<StatusDataProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<TripProcessor2>, BackgroundServiceAwaiter<TripProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<UnitOfMeasureProcessor2>, BackgroundServiceAwaiter<UnitOfMeasureProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<UserProcessor2>, BackgroundServiceAwaiter<UserProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<ZoneProcessor2>, BackgroundServiceAwaiter<ZoneProcessor2>>()

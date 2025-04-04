@@ -151,7 +151,7 @@ namespace MyGeotabAPIAdapter.Services
                         var dbFaultData2sToPersist = new List<DbFaultData2>();
                         var dbFaultDataLocation2sToPersist = new List<DbFaultDataLocation2>();
                         var faultData2DbEntityMetadata2sToPersist = new List<DbEntityMetadata2>();
-                        if (faultDatas.Any())
+                        if (faultDatas.Count != 0)
                         {
                             // Apply tracked device filter and/or tracked diagnostic filter (if configured in appsettings.json).
                             var filteredFaultDatas = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, faultDatas);
@@ -227,7 +227,7 @@ namespace MyGeotabAPIAdapter.Services
 
                         stoppingToken.ThrowIfCancellationRequested();
 
-                        if (dbFaultData2sToPersist.Any())
+                        if (dbFaultData2sToPersist.Count != 0)
                         {
                             faultData2DbEntityMetadata2sToPersist = dbFaultData2DbEntityMetadata2EntityMapper.CreateEntities(dbFaultData2sToPersist);
                         }
@@ -247,7 +247,7 @@ namespace MyGeotabAPIAdapter.Services
                                     await dbEntityMetadata2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, faultData2DbEntityMetadata2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking:
-                                    if (dbFaultData2sToPersist.Any())
+                                    if (dbFaultData2sToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.FaultDataProcessor2, faultDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc, faultDataGeotabObjectFeeder.LastFeedVersion);
                                     }
@@ -301,7 +301,7 @@ namespace MyGeotabAPIAdapter.Services
                 // If the feed is up-to-date, add a delay equivalent to the configured interval.
                 if (faultDataGeotabObjectFeeder.FeedCurrent == true)
                 {
-                    await awaiter.WaitForConfiguredIntervalAsync(delayTimeSpan, DelayIntervalType.Update, stoppingToken);
+                    await awaiter.WaitForConfiguredIntervalAsync(delayTimeSpan, DelayIntervalType.Feed, stoppingToken);
                 }
             }
         }

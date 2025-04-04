@@ -157,7 +157,7 @@ namespace MyGeotabAPIAdapter.Services
                                         // Iterate through the returned DutyStatusAvailability entities.
                                         foreach (var result in results)
                                         {
-                                            if (result is List<DutyStatusAvailability> resultDutyStatusAvailabilityList && resultDutyStatusAvailabilityList.Any())
+                                            if (result is List<DutyStatusAvailability> resultDutyStatusAvailabilityList && resultDutyStatusAvailabilityList.Count != 0)
                                             {
                                                 var dutyStatusAvailability = resultDutyStatusAvailabilityList[0];
                                                 var dutyStatusAvailabilityDriver = dutyStatusAvailability.Driver;
@@ -215,7 +215,7 @@ namespace MyGeotabAPIAdapter.Services
                                         }, new Context());
 
                                         // If there were any changes, force the DutyStatusAvailability cache to be updated so that the changes are immediately available to other consumers.
-                                        if (dbDutyStatusAvailabilityEntitiesToPersist.Any())
+                                        if (dbDutyStatusAvailabilityEntitiesToPersist.Count != 0)
                                         {
                                             await dbDutyStatusAvailabilityObjectCache.UpdateAsync(true);
                                         }

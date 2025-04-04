@@ -119,9 +119,6 @@ CREATE TABLE public."stg_Devices2" (
 
 ALTER TABLE public."stg_Devices2" OWNER TO geotabadapter_client;
 
-ALTER TABLE ONLY public."stg_Devices2"
-    ADD CONSTRAINT "PK_stg_Devices2" PRIMARY KEY (id);
-
 CREATE INDEX IF NOT EXISTS "IX_stg_Devices2_id_RecordLastChangedUtc"
     ON public."stg_Devices2" ("id", "RecordLastChangedUtc" DESC);
 
@@ -613,9 +610,6 @@ CREATE TABLE public."stg_Users2" (
 
 ALTER TABLE public."stg_Users2" OWNER TO geotabadapter_client;
 
-ALTER TABLE ONLY public."stg_Users2"
-    ADD CONSTRAINT "PK_stg_Users2" PRIMARY KEY (id);
-
 CREATE INDEX IF NOT EXISTS "IX_stg_Users2_id_RecordLastChangedUtc"
 ON public."stg_Users2" ("id", "RecordLastChangedUtc" DESC);
 
@@ -889,9 +883,6 @@ CREATE TABLE public."stg_Zones2" (
 );
 
 ALTER TABLE public."stg_Zones2" OWNER TO geotabadapter_client;
-
-ALTER TABLE ONLY public."stg_Zones2"
-    ADD CONSTRAINT "PK_stg_Zones2" PRIMARY KEY (id);
 
 CREATE INDEX IF NOT EXISTS "IX_stg_Zones2_id_RecordLastChangedUtc"
 ON public."stg_Zones2" ("id", "RecordLastChangedUtc" DESC);

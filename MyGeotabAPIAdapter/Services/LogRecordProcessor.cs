@@ -146,7 +146,7 @@ namespace MyGeotabAPIAdapter.Services
                         var logRecords = logRecordGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbLogRecordsToPersist = new List<DbLogRecord>();
                         var dbOVDSServerCommandsToPersist = new List<DbOVDSServerCommand>();
-                        if (logRecords.Any())
+                        if (logRecords.Count != 0)
                         {
                             // Apply tracked device filter and/or interval sampling (if configured in appsettings.json) and then map the LogRecords to DbLogRecords.
                             var filteredLogRecords = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, logRecords);
@@ -182,7 +182,7 @@ namespace MyGeotabAPIAdapter.Services
                                     }
 
                                     // DbOServiceTracking (for LogRecordProcessor):
-                                    if (dbLogRecordsToPersist.Any())
+                                    if (dbLogRecordsToPersist.Count != 0)
                                     {
                                         await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.LogRecordProcessor, logRecordGeotabObjectFeeder.LastFeedRetrievalTimeUtc, logRecordGeotabObjectFeeder.LastFeedVersion);
                                     }
