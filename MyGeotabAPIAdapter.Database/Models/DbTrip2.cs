@@ -122,7 +122,6 @@ namespace MyGeotabAPIAdapter.Database.Models
         }
         public long? SpeedRange3DurationTicks { get; set; }
         public DateTime? Start { get; set; }
-        [Write(false)]
         public DateTime? Stop { get; set; }
         [Write(false)]
         public TimeSpan? StopDuration

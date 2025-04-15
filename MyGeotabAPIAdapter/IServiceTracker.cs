@@ -114,6 +114,11 @@ namespace MyGeotabAPIAdapter
         Task<T> GetExceptionEventServiceInfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ExceptionEventProcessor2"/>.
+        /// </summary>
+        Task<T> GetExceptionEventService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.FaultDataLocationService2"/>.
         /// </summary>
         Task<T> GetFaultDataLocationService2InfoAsync();

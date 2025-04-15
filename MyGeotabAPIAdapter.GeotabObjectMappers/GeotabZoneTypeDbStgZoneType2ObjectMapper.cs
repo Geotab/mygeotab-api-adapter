@@ -5,7 +5,7 @@ using MyGeotabAPIAdapter.Database.Models;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="ZoneType"/> and <see cref="DbStgZoneType2"/> entities.
+    /// A class with methods involving mapping between <see cref="ZoneType"/> and <see cref="DbStgZoneType2"/> entities.
     /// </summary>
     public class GeotabZoneTypeDbStgZoneType2ObjectMapper : IGeotabZoneTypeDbStgZoneType2ObjectMapper
     {

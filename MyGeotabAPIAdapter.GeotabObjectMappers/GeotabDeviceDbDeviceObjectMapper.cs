@@ -9,7 +9,7 @@ using System.Text;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="Device"/> and <see cref="DbDevice"/> entities.
+    /// A class with methods involving mapping between <see cref="Device"/> and <see cref="DbDevice"/> entities.
     /// </summary>
     public class GeotabDeviceDbDeviceObjectMapper : IGeotabDeviceDbDeviceObjectMapper
     {

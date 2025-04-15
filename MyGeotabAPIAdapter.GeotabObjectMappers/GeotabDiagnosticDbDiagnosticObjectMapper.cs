@@ -7,7 +7,7 @@ using MyGeotabAPIAdapter.Helpers;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="Diagnostic"/> and <see cref="DbDiagnostic"/> entities.
+    /// A class with methods involving mapping between <see cref="Diagnostic"/> and <see cref="DbDiagnostic"/> entities.
     /// </summary>
     public class GeotabDiagnosticDbDiagnosticObjectMapper : IGeotabDiagnosticDbDiagnosticObjectMapper
     {

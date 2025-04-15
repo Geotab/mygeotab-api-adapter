@@ -63,6 +63,9 @@
         public string DbExceptionEventTableName => "ExceptionEvents";
 
         /// <inheritdoc/>
+        public string DbExceptionEvent2TableName => "ExceptionEvents2";
+
+        /// <inheritdoc/>
         public string DbFailedDVIRDefectUpdatesTableName => "FailedDVIRDefectUpdates";
 
         /// <inheritdoc/>
@@ -128,6 +131,9 @@
         public string DbStgDiagnostic2TableName => "stg_Diagnostics2";
 
         /// <inheritdoc/>
+        public string DbStgExceptionEvent2TableName => "stg_ExceptionEvents2";
+
+        /// <inheritdoc/>
         public string DbStgGroup2TableName => "stg_Groups2";
 
         /// <inheritdoc/>
@@ -177,6 +183,9 @@
 
         /// <inheritdoc/>
         public string MergeStagingDiagnosticsProcedureName => "spMerge_stg_Diagnostics2";
+
+        /// <inheritdoc/>
+        public string MergeStagingExceptionEventsProcedureName => "spMerge_stg_ExceptionEvents2";
 
         /// <inheritdoc/>
         public string MergeStagingGroupsProcedureName => "spMerge_stg_Groups2";

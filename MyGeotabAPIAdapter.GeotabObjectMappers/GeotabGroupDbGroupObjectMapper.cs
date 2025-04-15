@@ -8,7 +8,7 @@ using System.Text;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="Group"/> and <see cref="DbGroup"/> entities.
+    /// A class with methods involving mapping between <see cref="Group"/> and <see cref="DbGroup"/> entities.
     /// </summary>
     public class GeotabGroupDbGroupObjectMapper : IGeotabGroupDbGroupObjectMapper
     {

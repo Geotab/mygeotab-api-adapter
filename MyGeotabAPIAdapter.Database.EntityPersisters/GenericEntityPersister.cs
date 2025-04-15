@@ -760,6 +760,10 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
             {
                 return NpgsqlDbType.Interval;
             }
+            else if (type == typeof(Guid))
+            {
+                return NpgsqlDbType.Uuid;
+            }
             // Add more type mappings as needed.
 
             throw new NotSupportedException($"No {nameof(NpgsqlDbType)} mapping was found for .NET {nameof(Type)} {type.Name}.");

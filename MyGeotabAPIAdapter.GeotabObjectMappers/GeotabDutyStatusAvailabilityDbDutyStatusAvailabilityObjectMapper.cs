@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="DutyStatusAvailability"/> and <see cref="DbDutyStatusAvailability"/> entities.
+    /// A class with methods involving mapping between <see cref="DutyStatusAvailability"/> and <see cref="DbDutyStatusAvailability"/> entities.
     /// </summary>
     public class GeotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper : IGeotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper
     {

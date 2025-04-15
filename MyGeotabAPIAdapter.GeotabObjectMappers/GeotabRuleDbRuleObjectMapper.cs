@@ -8,7 +8,7 @@ using System.Text;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="Rule"/> and <see cref="DbRule"/> entities.
+    /// A class with methods involving mapping between <see cref="Rule"/> and <see cref="DbRule"/> entities.
     /// </summary>
     public class GeotabRuleDbRuleObjectMapper : IGeotabRuleDbRuleObjectMapper
     {

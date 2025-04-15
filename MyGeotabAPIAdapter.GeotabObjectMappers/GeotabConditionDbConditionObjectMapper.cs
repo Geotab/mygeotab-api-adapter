@@ -5,7 +5,7 @@ using MyGeotabAPIAdapter.Database.Models;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="Condition"/> and <see cref="DbCondition"/> entities.
+    /// A class with methods involving mapping between <see cref="Condition"/> and <see cref="DbCondition"/> entities.
     /// </summary>
     public class GeotabConditionDbConditionObjectMapper : IGeotabConditionDbConditionObjectMapper
     {

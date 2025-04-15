@@ -5,7 +5,7 @@ using MyGeotabAPIAdapter.Database.Models;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="Trip"/> and <see cref="DbTrip"/> entities.
+    /// A class with methods involving mapping between <see cref="Trip"/> and <see cref="DbTrip"/> entities.
     /// </summary>
     public class GeotabTripDbTripObjectMapper : IGeotabTripDbTripObjectMapper
     {

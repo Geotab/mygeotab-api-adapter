@@ -104,6 +104,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbExceptionEventTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbExceptionEvent2"/> entities.
+        /// </summary>
+        string DbExceptionEvent2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbFailedDVIRDefectUpdate"/> entities.
         /// </summary>
         string DbFailedDVIRDefectUpdatesTableName { get; }
@@ -214,6 +219,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbStgDiagnostic2TableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbStgExceptionEvent2"/> entities.
+        /// </summary>
+        string DbStgExceptionEvent2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbStgGroup2"/> entities.
         /// </summary>
         string DbStgGroup2TableName { get; }
@@ -297,6 +307,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the stored procedure or function responsible for merging staging Diagnostics into the main Diagnostics2 table.
         /// </summary>
         string MergeStagingDiagnosticsProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging ExceptionEvents into the main ExceptionEvents2 table.
+        /// </summary>
+        string MergeStagingExceptionEventsProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging Groups into the main Groups2 table.

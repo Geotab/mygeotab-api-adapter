@@ -10,8 +10,6 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -229,6 +227,14 @@ namespace MyGeotabAPIAdapter
         {
             await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
             var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.ExceptionEventProcessor.ToString());
+            return dbOServiceTracking;
+        }
+
+        /// <inheritdoc/>
+        public async Task<T> GetExceptionEventService2InfoAsync()
+        {
+            await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
+            var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.ExceptionEventProcessor2.ToString());
             return dbOServiceTracking;
         }
 

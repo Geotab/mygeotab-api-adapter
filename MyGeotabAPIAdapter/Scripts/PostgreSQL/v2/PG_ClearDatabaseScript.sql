@@ -22,6 +22,9 @@
 -- delete from public."MyGeotabVersionInfo2";
 -- delete from public."DBMaintenanceLogs2";
 -- delete from public."OServiceTracking2";
+-- ALTER TABLE public."ExceptionEvents2" DISABLE TRIGGER ALL;
+-- delete from public."ExceptionEvents2";
+-- ALTER TABLE public."ExceptionEvents2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."Trips2" DISABLE TRIGGER ALL;
 -- delete from public."Trips2";
 -- ALTER TABLE public."Trips2" ENABLE TRIGGER ALL;

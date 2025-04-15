@@ -6,7 +6,7 @@ using BinaryData = Geotab.Checkmate.ObjectModel.BinaryData;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="BinaryData"/> and <see cref="DbBinaryData"/> entities.
+    /// A class with methods involving mapping between <see cref="BinaryData"/> and <see cref="DbBinaryData"/> entities.
     /// </summary>
     public class GeotabBinaryDataDbBinaryDataObjectMapper : IGeotabBinaryDataDbBinaryDataObjectMapper
     {

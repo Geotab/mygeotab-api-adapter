@@ -5,7 +5,7 @@ using MyGeotabAPIAdapter.Database.Models;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="DriverChange"/> and <see cref="DbDriverChange"/> entities.
+    /// A class with methods involving mapping between <see cref="DriverChange"/> and <see cref="DbDriverChange"/> entities.
     /// </summary>
     public class GeotabDriverChangeDbDriverChangeObjectMapper : IGeotabDriverChangeDbDriverChangeObjectMapper
     {

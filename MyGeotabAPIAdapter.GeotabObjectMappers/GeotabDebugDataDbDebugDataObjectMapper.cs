@@ -5,7 +5,7 @@ using MyGeotabAPIAdapter.Database.Models;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="DebugData"/> and <see cref="DbDebugData"/> entities.
+    /// A class with methods involving mapping between <see cref="DebugData"/> and <see cref="DbDebugData"/> entities.
     /// </summary>
     public class GeotabDebugDataDbDebugDataObjectMapper : IGeotabDebugDataDbDebugDataObjectMapper
     {

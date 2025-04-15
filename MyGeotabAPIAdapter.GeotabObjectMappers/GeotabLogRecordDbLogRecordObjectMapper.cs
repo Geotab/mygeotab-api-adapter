@@ -5,7 +5,7 @@ using MyGeotabAPIAdapter.Database.Models;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="LogRecord"/> and <see cref="DbLogRecord"/> entities.
+    /// A class with methods involving mapping between <see cref="LogRecord"/> and <see cref="DbLogRecord"/> entities.
     /// </summary>
     public class GeotabLogRecordDbLogRecordObjectMapper : IGeotabLogRecordDbLogRecordObjectMapper
     {

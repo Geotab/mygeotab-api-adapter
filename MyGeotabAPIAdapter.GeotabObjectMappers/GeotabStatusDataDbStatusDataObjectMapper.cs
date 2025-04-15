@@ -6,7 +6,7 @@ using MyGeotabAPIAdapter.Database.Models;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="StatusData"/> and <see cref="DbStatusData"/> entities.
+    /// A class with methods involving mapping between <see cref="StatusData"/> and <see cref="DbStatusData"/> entities.
     /// </summary>
     public class GeotabStatusDataDbStatusDataObjectMapper : IGeotabStatusDataDbStatusDataObjectMapper
     {

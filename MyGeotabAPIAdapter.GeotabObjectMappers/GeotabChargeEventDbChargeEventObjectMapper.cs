@@ -6,7 +6,7 @@ using ChargeEvent = Geotab.Checkmate.ObjectModel.Charging.ChargeEvent;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="ChargeEvent"/> and <see cref="DbChargeEvent"/> entities.
+    /// A class with methods involving mapping between <see cref="ChargeEvent"/> and <see cref="DbChargeEvent"/> entities.
     /// </summary>
     public class GeotabChargeEventDbChargeEventObjectMapper : IGeotabChargeEventDbChargeEventObjectMapper
     {

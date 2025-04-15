@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Authors>Geotab Inc.</Authors>
     <Product>MyGeotab API Adapter</Product>
   </PropertyGroup>
@@ -13,7 +13,7 @@
     <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.13.61" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.4.0" />
     <PackageReference Include="Npgsql" Version="9.0.3" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.7.0" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.8.0" />
     <PackageReference Include="Polly" Version="8.5.2" />
   </ItemGroup>
 

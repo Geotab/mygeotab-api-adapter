@@ -1,6 +1,6 @@
 ﻿﻿# MyGeotab API Adapter
 
-The MyGeotab API Adapter solution serves as both an example of proper integration via data feeds and the potential foundation for those seeking to develop new integrations with the Geotab platform. It is a collection of .NET 8.0 (C#) Background Services that use the MyGeotab API data feeds to pull the most common data sets from a MyGeotab database and stream the data into tables within a SQL Server or PostgreSQL database; this could account for half the work in terms of a unidirectional integration where the data from the database is further processed for integration into an external system.
+The MyGeotab API Adapter solution serves as both an example of proper integration via data feeds and the potential foundation for those seeking to develop new integrations with the Geotab platform. It is a collection of .NET 9.0 (C#) Background Services that use the MyGeotab API data feeds to pull the most common data sets from a MyGeotab database and stream the data into tables within a SQL Server or PostgreSQL database; this could account for half the work in terms of a unidirectional integration where the data from the database is further processed for integration into an external system.
 
 - A good overview can be found in the [MyGeotab API Adapter](https://docs.google.com/presentation/d/1PhsDhZwj23i2oWXrqZozf4h0svUEHZLnFXtzMYyk4kQ/edit?usp=sharing) presentation.
 - For detailed information, refer to:
@@ -23,7 +23,7 @@ The MyGeotab API Adapter solution serves as both an example of proper integratio
 
 The solution requires:
 
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download) or higher. Note: If simply deploying a published release, the deployment package is self-contained (including all dependencies), so .NET version(s) of the host machine should not be a concern.
+- [.NET 9.0 SDK](https://dotnet.microsoft.com/download) or higher. Note: If simply deploying a published release, the deployment package is self-contained (including all dependencies), so .NET version(s) of the host machine should not be a concern.
 - The following (included via NuGet packages):
 	- Geotab.Checkmate.ObjectModel
 	- Dapper

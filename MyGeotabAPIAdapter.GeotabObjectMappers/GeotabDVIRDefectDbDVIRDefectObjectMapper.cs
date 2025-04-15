@@ -6,7 +6,7 @@ using MyGeotabAPIAdapter.Helpers;
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {
     /// <summary>
-    /// Interface for a class with methods involving mapping between <see cref="DVIRDefect"/> and <see cref="DbDVIRDefect"/> entities.
+    /// A class with methods involving mapping between <see cref="DVIRDefect"/> and <see cref="DbDVIRDefect"/> entities.
     /// </summary>
     public class GeotabDVIRDefectDbDVIRDefectObjectMapper : IGeotabDVIRDefectDbDVIRDefectObjectMapper
     {
