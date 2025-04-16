@@ -279,7 +279,7 @@ namespace MyGeotabAPIAdapter.Services
                 // If the feed is up-to-date, add a delay equivalent to the configured interval.
                 if (exceptionEventGeotabObjectFeeder.FeedCurrent == true)
                 {
-                    await awaiter.WaitForConfiguredIntervalAsync(delayTimeSpan, DelayIntervalType.Update, stoppingToken);
+                    await awaiter.WaitForConfiguredIntervalAsync(delayTimeSpan, DelayIntervalType.Feed, stoppingToken);
                 }
             }
         }

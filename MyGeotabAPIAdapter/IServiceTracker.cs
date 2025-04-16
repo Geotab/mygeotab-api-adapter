@@ -37,6 +37,11 @@ namespace MyGeotabAPIAdapter
         Task<T> GetBinaryDataServiceInfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.BinaryDataProcessor2"/>.
+        /// </summary>
+        Task<T> GetBinaryDataService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ChargeEventProcessor"/>.
         /// </summary>
         Task<T> GetChargeEventServiceInfoAsync();

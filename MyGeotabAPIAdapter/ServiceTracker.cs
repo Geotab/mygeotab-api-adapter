@@ -111,6 +111,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
+        public async Task<T> GetBinaryDataService2InfoAsync()
+        {
+            await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
+            var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.BinaryDataProcessor2.ToString());
+            return dbOServiceTracking;
+        }
+
+        /// <inheritdoc/>
         public async Task<T> GetChargeEventServiceInfoAsync()
         {
             await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();

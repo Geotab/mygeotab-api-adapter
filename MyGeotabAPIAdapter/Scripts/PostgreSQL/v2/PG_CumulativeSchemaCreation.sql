@@ -4061,9 +4061,37 @@ REVOKE ALL ON FUNCTION public."spMerge_stg_ExceptionEvents2"() FROM PUBLIC;
 
 
 
+/*** [START] v3.4.0.0 Updates ***/
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Create BinaryData2 table:
+CREATE TABLE public."BinaryData2" (
+    "id" uuid NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "BinaryType" character varying(50) NULL,
+    "ControllerId" character varying(50) NOT NULL,
+    "Data" bytea NOT NULL,
+    "DateTime" timestamp without time zone NOT NULL,
+    "DeviceId" bigint NOT NULL,
+    "Version" bigint NULL,
+    "RecordCreationTimeUtc" timestamp without time zone NOT NULL
+)
+PARTITION BY RANGE ("DateTime");
+
+ALTER TABLE public."BinaryData2" OWNER to geotabadapter_client;
+
+ALTER TABLE ONLY public."BinaryData2"
+    ADD CONSTRAINT "PK_BinaryData2" PRIMARY KEY ("DateTime", "id");
+
+ALTER TABLE public."BinaryData2"
+    ADD CONSTRAINT "FK_BinaryData2_Devices2" FOREIGN KEY ("DeviceId")
+        REFERENCES public."Devices2" ("id");
+/*** [END] v3.4.0.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/  
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO public."MiddlewareVersionInfo2" ("DatabaseVersion", "RecordCreationTimeUtc") 
-VALUES ('3.3.0.0', timezone('UTC', NOW())); 
+VALUES ('3.4.0.0', timezone('UTC', NOW())); 
 /*** [END] Database Version Update ***/

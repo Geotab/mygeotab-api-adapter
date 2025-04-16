@@ -61,6 +61,7 @@ GO
 
 ---- Step 3: Truncate tables and reseed indexes: 
 --truncate table [dbo].[DBMaintenanceLogs2];
+--truncate table [dbo].[BinaryData2];
 --truncate table [dbo].[Devices2];
 --truncate table [dbo].[DiagnosticIds2];
 --truncate table [dbo].[Diagnostics2];

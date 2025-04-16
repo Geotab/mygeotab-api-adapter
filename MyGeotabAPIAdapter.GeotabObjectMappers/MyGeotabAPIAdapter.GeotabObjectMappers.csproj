@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="11.62.237" />
+    <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="11.68.266" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.4.0" />
   </ItemGroup>

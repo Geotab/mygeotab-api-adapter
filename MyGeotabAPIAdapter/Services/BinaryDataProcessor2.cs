@@ -1,4 +1,4 @@
-﻿using Geotab.Checkmate.ObjectModel;
+﻿using Geotab.Checkmate.ObjectModel.Exceptions;
 using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
@@ -17,13 +17,14 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using BinaryData = Geotab.Checkmate.ObjectModel.BinaryData;
 
 namespace MyGeotabAPIAdapter.Services
 {
     /// <summary>
-    /// A <see cref="BackgroundService"/> that extracts <see cref="Trip"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database. 
+    /// A <see cref="BackgroundService"/> that extracts <see cref="BinaryData"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database. 
     /// </summary>
-    class TripProcessor2 : BackgroundService
+    class BinaryDataProcessor2 : BackgroundService
     {
         bool feedVersionRollbackRequired = false;
 
@@ -36,14 +37,13 @@ namespace MyGeotabAPIAdapter.Services
 
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment;
-        readonly IBackgroundServiceAwaiter<TripProcessor2> awaiter;
-        readonly IBaseRepository<DbStgTrip2> dbStgTrip2Repo;
+        readonly IBackgroundServiceAwaiter<BinaryDataProcessor2> awaiter;
         readonly IExceptionHelper exceptionHelper;
-        readonly IGenericEntityPersister<DbStgTrip2> dbStgTrip2EntityPersister;
-        readonly IGenericGeotabObjectFeeder<Trip> tripGeotabObjectFeeder;
+        readonly IGenericEntityPersister<DbBinaryData2> dbBinaryData2EntityPersister;
+        readonly IGenericGeotabObjectFeeder<BinaryData> binaryDataGeotabObjectFeeder;
+        readonly IGeotabBinaryDataDbBinaryData2ObjectMapper geotabBinaryDataDbBinaryData2ObjectMapper;
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
         readonly IGeotabIdConverter geotabIdConverter;
-        readonly IGeotabTripDbStgTrip2ObjectMapper geotabTripDbStgTrip2ObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
@@ -52,24 +52,22 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="TripProcessor2"/> class.
+        /// Initializes a new instance of the <see cref="BinaryDataProcessor"/> class.
         /// </summary>
-        public TripProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<TripProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbStgTrip2> dbStgTrip2EntityPersister, IGenericGeotabObjectFeeder<Trip> tripGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabIdConverter geotabIdConverter, IGeotabTripDbStgTrip2ObjectMapper geotabTripDbStgTrip2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine,   IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public BinaryDataProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<BinaryDataProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister, IGenericEntityPersister<DbBinaryData2> dbBinaryData2EntityPersister, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabIdConverter geotabIdConverter, IGenericGeotabObjectFeeder<BinaryData> binaryDataGeotabObjectFeeder, IGeotabBinaryDataDbBinaryData2ObjectMapper geotabBinaryDataDbBinaryData2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
             this.awaiter = awaiter;
             this.exceptionHelper = exceptionHelper;
-            this.dbStgTrip2EntityPersister = dbStgTrip2EntityPersister;
-            this.tripGeotabObjectFeeder = tripGeotabObjectFeeder;
+            this.dbBinaryData2EntityPersister = dbBinaryData2EntityPersister;
             this.geotabDeviceFilterer = geotabDeviceFilterer;
             this.geotabIdConverter = geotabIdConverter;
-            this.geotabTripDbStgTrip2ObjectMapper = geotabTripDbStgTrip2ObjectMapper;
+            this.binaryDataGeotabObjectFeeder = binaryDataGeotabObjectFeeder;
+            this.geotabBinaryDataDbBinaryData2ObjectMapper = geotabBinaryDataDbBinaryData2ObjectMapper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
-
-            dbStgTrip2Repo = new BaseRepository<DbStgTrip2>(adapterContext);
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -85,21 +83,15 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            const string MergeFunctionSQL_Postgres = @"SELECT public.""spMerge_stg_Trips2""();";
-            const string MergeProcedureSQL_SQLServer = @"EXEC [dbo].[spMerge_stg_Trips2];";
-            const string TruncateStagingTableSQL_Postgres = @"TRUNCATE TABLE public.""stg_Trips2"";";
-            const string TruncateStagingTableSQL_SQLServer = @"TRUNCATE TABLE [dbo].[stg_Trips2];";
-
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            var delayTimeSpan = TimeSpan.FromSeconds(adapterConfiguration.TripFeedIntervalSeconds);
+            var delayTimeSpan = TimeSpan.FromSeconds(adapterConfiguration.BinaryDataFeedIntervalSeconds);
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 // Wait if necessary.
-                var prerequisiteServices = new List<AdapterService> 
-                { 
-                    AdapterService.DeviceProcessor2, 
-                    AdapterService.UserProcessor2 
+                var prerequisiteServices = new List<AdapterService>
+                {
+                    AdapterService.DeviceProcessor2
                 };
                 await awaiter.WaitForPrerequisiteServicesIfNeededAsync(prerequisiteServices, stoppingToken);
                 await awaiter.WaitForDatabaseMaintenanceCompletionIfNeededAsync(stoppingToken);
@@ -111,126 +103,75 @@ namespace MyGeotabAPIAdapter.Services
 
                     using (var cancellationTokenSource = new CancellationTokenSource())
                     {
-                        var dbOServiceTracking = await serviceTracker.GetTripService2InfoAsync();
+                        var dbOServiceTracking = await serviceTracker.GetBinaryDataService2InfoAsync();
 
                         // Initialize the Geotab object feeder.
-                        if (tripGeotabObjectFeeder.IsInitialized == false)
+                        if (binaryDataGeotabObjectFeeder.IsInitialized == false)
                         {
-                            await tripGeotabObjectFeeder.InitializeAsync(cancellationTokenSource, adapterConfiguration.TripFeedIntervalSeconds, myGeotabAPIHelper.GetFeedResultLimitDefault, (long?)dbOServiceTracking.LastProcessedFeedVersion);
+                            await binaryDataGeotabObjectFeeder.InitializeAsync(cancellationTokenSource, adapterConfiguration.BinaryDataFeedIntervalSeconds, myGeotabAPIHelper.GetFeedResultLimitDefault, (long?)dbOServiceTracking.LastProcessedFeedVersion);
                         }
 
                         // If this is the first iteration after a connectivity disruption, roll-back the LastFeedVersion of the GeotabObjectFeeder to the last processed feed version that was committed to the database and set the LastFeedRetrievalTimeUtc to DateTime.MinValue to start processing without further delay.
                         if (feedVersionRollbackRequired == true)
                         {
-                            tripGeotabObjectFeeder.LastFeedVersion = dbOServiceTracking.LastProcessedFeedVersion;
-                            tripGeotabObjectFeeder.LastFeedRetrievalTimeUtc = DateTime.MinValue;
+                            binaryDataGeotabObjectFeeder.LastFeedVersion = dbOServiceTracking.LastProcessedFeedVersion;
+                            binaryDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc = DateTime.MinValue;
                             feedVersionRollbackRequired = false;
                         }
 
-                        // Get a batch of Trip objects from Geotab.
-                        await tripGeotabObjectFeeder.GetFeedDataBatchAsync(cancellationTokenSource);
+                        // Get a batch of BinaryData objects from Geotab.
+                        await binaryDataGeotabObjectFeeder.GetFeedDataBatchAsync(cancellationTokenSource);
                         stoppingToken.ThrowIfCancellationRequested();
 
-                        // Process any returned Trips.
-                        var trips = tripGeotabObjectFeeder.GetFeedResultDataValuesList();
-                        var dbStgTrip2sToPersist = new List<DbStgTrip2>();
-                        if (trips.Count != 0)
+                        // Process any returned BinaryDatas.
+                        var binaryDatas = binaryDataGeotabObjectFeeder.GetFeedResultDataValuesList();
+                        var dbBinaryData2sToPersist = new List<DbBinaryData2>();
+                        if (binaryDatas.Count != 0)
                         {
-                            // Apply tracked device filter and/or tracked diagnostic filter (if configured in appsettings.json).
-                            var filteredTrips = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, trips);
+                            // Apply tracked device filter (if configured in appsettings.json).
+                            var filteredBinaryDatas = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, binaryDatas);
 
-                            // Map the Trip objects to DbTrip2 entities.
-                            foreach (var trip in filteredTrips)
+                            // Map the BinaryDatas to DbBinaryData2s.
+                            foreach (var binaryData in filteredBinaryDatas)
                             {
-                                long? tripDeviceId = null;
-                                if (trip.Device != null && trip.Device.Id != null)
+                                long? binaryDataDeviceId = null;
+                                if (binaryData.Device != null && binaryData.Device.Id != null)
                                 {
-                                    tripDeviceId = geotabIdConverter.ToLong(trip.Device.Id);
+                                    binaryDataDeviceId = geotabIdConverter.ToLong(binaryData.Device.Id);
                                 }
 
-                                long? tripDriverId = null;
-                                if (trip.Driver != null && trip.Driver.Id != null && trip.Driver.GetType() != typeof(UnknownDriver))
+                                if (binaryDataDeviceId == null)
                                 {
-                                    tripDriverId = geotabIdConverter.ToLong(trip.Driver.Id);
-                                }
-
-                                if (tripDeviceId == null)
-                                {
-                                    logger.Warn($"Could not process {nameof(Trip)} with GeotabId {trip.Id}' because its {nameof(Trip.Device)} is null.");
+                                    logger.Warn($"Could not process {nameof(BinaryData)} with GeotabId {binaryData.Id}' because its {nameof(BinaryData.Device)} is null.");
                                     continue;
                                 }
 
-                                var dbStgTrip2 = geotabTripDbStgTrip2ObjectMapper.CreateEntity(trip, (long)tripDeviceId, tripDriverId);
-                                dbStgTrip2sToPersist.Add(dbStgTrip2);
+                                var dbBinaryData2 = geotabBinaryDataDbBinaryData2ObjectMapper.CreateEntity(binaryData, binaryDataDeviceId.Value);
+                                dbBinaryData2sToPersist.Add(dbBinaryData2);
                             }
                         }
 
                         stoppingToken.ThrowIfCancellationRequested();
 
-                        // Persist changes to database. Step 1: Persist the DbStgTrip2 entities.
-                        if (dbStgTrip2sToPersist.Count != 0)
-                        {
-                            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
-                            {
-                                using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
-                                {
-                                    try
-                                    {
-                                        // Truncate staging table in case it contains any data:
-                                        var sql = adapterContext.ProviderType switch
-                                        {
-                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => TruncateStagingTableSQL_Postgres,
-                                            ConnectionInfo.DataAccessProviderType.SQLServer => TruncateStagingTableSQL_SQLServer,
-                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
-                                        };
-                                        await dbStgTrip2Repo.ExecuteAsync(sql, null, cancellationTokenSource, true, adapterContext);
-
-                                        // DbStgTrip2:
-                                        await dbStgTrip2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStgTrip2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
-
-                                        // Commit transactions:
-                                        await adapterUOW.CommitAsync();
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
-                                        await adapterUOW.RollBackAsync();
-                                        throw;
-                                    }
-                                }
-                            }, new Context());
-                        }
-
-                        // Persist changes to database. Step 2: Merge the DbStgTrip2 entities into the DbTrip2 table and update the DbOServiceTracking table.
+                        // Persist changes to database.
                         await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                         {
                             using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                             {
                                 try
                                 {
-                                    if (dbStgTrip2sToPersist.Count != 0)
-                                    {
-                                        // Build the SQL statement to execute the merge procedure.
-                                        var sql = adapterContext.ProviderType switch
-                                        {
-                                            ConnectionInfo.DataAccessProviderType.PostgreSQL => MergeFunctionSQL_Postgres,
-                                            ConnectionInfo.DataAccessProviderType.SQLServer => MergeProcedureSQL_SQLServer,
-                                            _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
-                                        };
+                                    // DbBinaryData2:
+                                    await dbBinaryData2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbBinaryData2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
-                                        // Execute the merge procedure.
-                                        await dbStgTrip2Repo.ExecuteAsync(sql, null, cancellationTokenSource);
-                                    }
-                                  
                                     // DbOServiceTracking:
-                                    if (dbStgTrip2sToPersist.Count != 0)
+                                    if (dbBinaryData2sToPersist.Count != 0)
                                     {
-                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.TripProcessor2, tripGeotabObjectFeeder.LastFeedRetrievalTimeUtc, tripGeotabObjectFeeder.LastFeedVersion);
+                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.BinaryDataProcessor2, binaryDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc, binaryDataGeotabObjectFeeder.LastFeedVersion);
                                     }
                                     else
                                     {
-                                        // No Trips were returned, but the OServiceTracking record for this service still needs to be updated to show that the service is operating.
-                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.TripProcessor2, DateTime.UtcNow);
+                                        // No BinaryDatas were returned, but the OServiceTracking record for this service still needs to be updated to show that the service is operating.
+                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.BinaryDataProcessor2, DateTime.UtcNow);
                                     }
 
                                     // Commit transactions:
@@ -246,7 +187,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // Clear FeedResultData.
-                        tripGeotabObjectFeeder.FeedResultData.Clear();
+                        binaryDataGeotabObjectFeeder.FeedResultData.Clear();
                     }
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -275,29 +216,30 @@ namespace MyGeotabAPIAdapter.Services
                 }
 
                 // If the feed is up-to-date, add a delay equivalent to the configured interval.
-                if (tripGeotabObjectFeeder.FeedCurrent == true)
+                if (binaryDataGeotabObjectFeeder.FeedCurrent == true)
                 {
+                    // Add a delay equivalent to the configured interval.
                     await awaiter.WaitForConfiguredIntervalAsync(delayTimeSpan, DelayIntervalType.Feed, stoppingToken);
                 }
             }
         }
 
         /// <summary>
-        /// Starts the current <see cref="TripProcessor2"/> instance.
+        /// Starts the current <see cref="BinaryDataProcessor2"/> instance.
         /// </summary>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
-            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.TripProcessor2, adapterConfiguration.DisableMachineNameValidation);
+            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.BinaryDataProcessor, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
             {
                 using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                 {
                     try
                     {
-                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.TripProcessor2, adapterEnvironment.AdapterVersion.ToString(), adapterEnvironment.AdapterMachineName);
+                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.BinaryDataProcessor2, adapterEnvironment.AdapterVersion.ToString(), adapterEnvironment.AdapterMachineName);
                         await adapterUOW.CommitAsync();
                     }
                     catch (Exception ex)
@@ -312,11 +254,11 @@ namespace MyGeotabAPIAdapter.Services
             // Register this service with the StateMachine. Set mustPauseForDatabaseMaintenance to true if the service is enabled or false otherwise.
             if (adapterConfiguration.UseDataModel2 == true)
             {
-                stateMachine.RegisterService(nameof(TripProcessor2), adapterConfiguration.EnableTripFeed);
+                stateMachine.RegisterService(nameof(BinaryDataProcessor2), adapterConfiguration.EnableBinaryDataFeed);
             }
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.UseDataModel2 == true && adapterConfiguration.EnableTripFeed == true)
+            if (adapterConfiguration.UseDataModel2 == true && adapterConfiguration.EnableBinaryDataFeed == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -328,7 +270,7 @@ namespace MyGeotabAPIAdapter.Services
         }
 
         /// <summary>
-        /// Stops the current <see cref="TripProcessor2"/> instance.
+        /// Stops the current <see cref="BinaryDataProcessor2"/> instance.
         /// </summary>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
         /// <returns></returns>
@@ -337,7 +279,7 @@ namespace MyGeotabAPIAdapter.Services
             // Update the registration of this service with the StateMachine. Set mustPauseForDatabaseMaintenance to false since it is stopping and will no longer be able to participate in pauses for database mainteance.
             if (adapterConfiguration.UseDataModel2 == true)
             {
-                stateMachine.RegisterService(nameof(TripProcessor2), false);
+                stateMachine.RegisterService(nameof(BinaryDataProcessor2), false);
             }
 
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");

@@ -3525,9 +3525,44 @@ GRANT EXECUTE ON [dbo].[spStatusData2WithLagLeadLongLatBatch] TO geotabadapter_c
 
 
 
+/*** [START] v3.4.0.0 Updates ***/
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Create BinaryData2 table:
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[BinaryData2](
+	[id] [uniqueidentifier] NOT NULL,
+	[GeotabId] [nvarchar](50) NOT NULL,
+	[BinaryType] [nvarchar](50) NULL,
+	[ControllerId] [nvarchar](50) NOT NULL,
+	[Data] [varbinary](max) NOT NULL,
+	[DateTime] [datetime2](7) NOT NULL,
+	[DeviceId] [bigint] NOT NULL,
+	[Version] [bigint] NULL,
+	[RecordCreationTimeUtc] [datetime2](7) NOT NULL,
+	CONSTRAINT [PK_BinaryData2] PRIMARY KEY CLUSTERED
+	(
+		[DateTime] ASC,
+	    [id] ASC
+	) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF)
+	  ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
+) ON [DateTimePartitionScheme_MyGeotabApiAdapter]([DateTime])
+GO
+
+ALTER TABLE [dbo].[BinaryData2] WITH NOCHECK ADD CONSTRAINT [FK_BinaryData2_Devices2] FOREIGN KEY([DeviceId])
+REFERENCES [dbo].[Devices2] ([id])
+GO
+ALTER TABLE [dbo].[BinaryData2] CHECK CONSTRAINT [FK_BinaryData2_Devices2]
+GO
+/*** [END] v3.4.0.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO [dbo].[MiddlewareVersionInfo2] ([DatabaseVersion], [RecordCreationTimeUtc])
-VALUES ('3.3.0.0', GETUTCDATE());
+VALUES ('3.4.0.0', GETUTCDATE());
 /*** [END] Database Version Update ***/

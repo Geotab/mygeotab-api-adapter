@@ -12,6 +12,9 @@
         public string DbBinaryDataTableName => "BinaryData";
 
         /// <inheritdoc/>
+        public string DbBinaryData2TableName => "BinaryData2";
+
+        /// <inheritdoc/>
         public string DbChargeEventsTableName => "ChargeEvents";
 
         /// <inheritdoc/>

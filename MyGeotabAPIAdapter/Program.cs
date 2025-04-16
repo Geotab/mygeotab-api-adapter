@@ -152,6 +152,7 @@ namespace MyGeotabAPIAdapter
 
                         // Geotab Object to Database Entity Mappers:
                         .AddTransient<IGeotabBinaryDataDbBinaryDataObjectMapper, GeotabBinaryDataDbBinaryDataObjectMapper>()
+                        .AddTransient<IGeotabBinaryDataDbBinaryData2ObjectMapper, GeotabBinaryDataDbBinaryData2ObjectMapper>()
                         .AddTransient<IGeotabChargeEventDbChargeEventObjectMapper, GeotabChargeEventDbChargeEventObjectMapper>()
                         .AddTransient<IGeotabDebugDataDbDebugDataObjectMapper, GeotabDebugDataDbDebugDataObjectMapper>()
                         .AddTransient<IGeotabConditionDbConditionObjectMapper, GeotabConditionDbConditionObjectMapper>()
@@ -189,6 +190,7 @@ namespace MyGeotabAPIAdapter
 
                         // Database Entity Persisters:
                         .AddTransient<IGenericEntityPersister<DbBinaryData>, GenericEntityPersister<DbBinaryData>>()
+                        .AddTransient<IGenericEntityPersister<DbBinaryData2>, GenericEntityPersister<DbBinaryData2>>()
                         .AddTransient<IGenericEntityPersister<DbChargeEvent>, GenericEntityPersister<DbChargeEvent>>()
                         .AddTransient<IGenericEntityPersister<DbCondition>, GenericEntityPersister<DbCondition>>()
                         .AddTransient<IGenericEntityPersister<DbDBMaintenanceLog2>, GenericEntityPersister<DbDBMaintenanceLog2>>()
@@ -408,6 +410,7 @@ namespace MyGeotabAPIAdapter
                         services
                         .AddHostedService<Orchestrator2>()
                         .AddHostedService<DatabaseMaintenanceService2>()
+                        .AddHostedService<BinaryDataProcessor2>()
                         .AddHostedService<ControllerProcessor2>()
                         .AddHostedService<DeviceProcessor2>()
                         .AddHostedService<DiagnosticProcessor2>()
@@ -431,6 +434,7 @@ namespace MyGeotabAPIAdapter
                         services
                         .AddSingleton<IBackgroundServiceAwaiter<Orchestrator2>, BackgroundServiceAwaiter<Orchestrator2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<DatabaseMaintenanceService2>, BackgroundServiceAwaiter<DatabaseMaintenanceService2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<BinaryDataProcessor2>, BackgroundServiceAwaiter<BinaryDataProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<ControllerProcessor2>, BackgroundServiceAwaiter<ControllerProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<DeviceProcessor2>, BackgroundServiceAwaiter<DeviceProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<DiagnosticProcessor2>, BackgroundServiceAwaiter<DiagnosticProcessor2>>()
