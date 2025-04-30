@@ -127,6 +127,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
+        public async Task<T> GetChargeEventService2InfoAsync()
+        {
+            await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
+            var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.ChargeEventProcessor2.ToString());
+            return dbOServiceTracking;
+        }
+
+        /// <inheritdoc/>
         public async Task<T> GetDatabaseMaintenanceService2InfoAsync()
         {
             await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();

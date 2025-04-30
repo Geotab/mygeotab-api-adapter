@@ -10,11 +10,8 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
     /// </summary>
     public class GeotabTripDbStgTrip2ObjectMapper : IGeotabTripDbStgTrip2ObjectMapper
     {
-        readonly IGeotabIdConverter geotabIdConverter;
-     
-        public GeotabTripDbStgTrip2ObjectMapper(IGeotabIdConverter geotabIdConverter)
+        public GeotabTripDbStgTrip2ObjectMapper()
         {
-            this.geotabIdConverter = geotabIdConverter;
         }
 
         /// <inheritdoc/>

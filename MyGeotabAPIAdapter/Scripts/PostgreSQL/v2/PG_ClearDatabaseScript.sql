@@ -25,6 +25,9 @@
 -- ALTER TABLE public."BinaryData2" DISABLE TRIGGER ALL;
 -- delete from public."BinaryData2";
 -- ALTER TABLE public."BinaryData2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."ChargeEvents2" DISABLE TRIGGER ALL;
+-- delete from public."ChargeEvents2";
+-- ALTER TABLE public."ChargeEvents2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."ExceptionEvents2" DISABLE TRIGGER ALL;
 -- delete from public."ExceptionEvents2";
 -- ALTER TABLE public."ExceptionEvents2" ENABLE TRIGGER ALL;

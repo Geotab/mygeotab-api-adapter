@@ -239,8 +239,19 @@ namespace MyGeotabAPIAdapter.Services
                                     dbFaultDataLocation2s.Add(dbFaultDataLocation2);
                                 }
 
-                                // Persist dbFaultDataLocation2s without using a transaction to avoid contention with other services. There is no real risk of data inconsistency in this case, since any DbFaultData2 records that are not processed during the current iteration will be picked up during the next iteration. Note that this task needs to be run outside of the asyncRetryPolicyForDatabaseTransactions. 
-                                await dbFaultDataLocation2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbFaultDataLocation2s, cancellationTokenSource, Logging.LogLevel.Info, true, true);
+                                // Persist dbFaultDataLocation2s without using a transaction to avoid contention with other services. There is no real risk of data inconsistency in this case, since any DbFaultData2 records that are not processed during the current iteration will be picked up during the next iteration. While a UOW (transaction) is not used, a retry policy is still used to ensure that the database operations are retried in case of transient errors such as deadlocks. 
+                                await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                                {
+                                    try
+                                    {
+                                        await dbFaultDataLocation2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbFaultDataLocation2s, cancellationTokenSource, Logging.LogLevel.Info, true, true);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                        throw;
+                                    }
+                                }, new Context());
 
                                 // Persist changes to database. Run tasks in parallel.
                                 await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>

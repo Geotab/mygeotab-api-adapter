@@ -47,6 +47,11 @@ namespace MyGeotabAPIAdapter
         Task<T> GetChargeEventServiceInfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ChargeEventProcessor2"/>.
+        /// </summary>
+        Task<T> GetChargeEventService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DatabaseMaintenanceService"/>.
         /// </summary>
         Task<T> GetDatabaseMaintenanceService2InfoAsync();

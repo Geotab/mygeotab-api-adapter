@@ -479,6 +479,7 @@ CREATE TABLE public."Rules2"
     "ActiveTo" timestamp without time zone,
     "BaseType" character varying(50),
     "Comment" character varying,
+	"Condition" text,
     "Groups" text,
     "Name" character varying(255),
     "Version" bigint NOT NULL,
@@ -814,6 +815,7 @@ CREATE TABLE public."stg_Rules2"
     "ActiveTo" timestamp without time zone,
     "BaseType" character varying(50),
     "Comment" character varying,
+	"Condition" text,
     "Groups" text,
     "Name" character varying(255),
     "Version" bigint NOT NULL,
@@ -2733,6 +2735,7 @@ BEGIN
         "ActiveTo",
         "BaseType",
         "Comment",
+		"Condition",
         "Groups",
         "Name",
         "Version",        
@@ -2745,6 +2748,7 @@ BEGIN
         s."ActiveTo",
         s."BaseType",
         s."Comment",
+		s."Condition",
         s."Groups",
         s."Name",
         s."Version",   
@@ -2757,6 +2761,7 @@ BEGIN
         "ActiveTo" = EXCLUDED."ActiveTo",
         "BaseType" = EXCLUDED."BaseType",
         "Comment" = EXCLUDED."Comment",
+		"Condition" = EXCLUDED."Condition",
         "Groups" = EXCLUDED."Groups",
         "Name" = EXCLUDED."Name",
         "Version" = EXCLUDED."Version",
@@ -2767,6 +2772,7 @@ BEGIN
         OR d."ActiveTo" IS DISTINCT FROM EXCLUDED."ActiveTo"
         OR d."BaseType" IS DISTINCT FROM EXCLUDED."BaseType"
         OR d."Comment" IS DISTINCT FROM EXCLUDED."Comment"
+		OR d."Condition" IS DISTINCT FROM EXCLUDED."Condition"
         OR d."Groups" IS DISTINCT FROM EXCLUDED."Groups"
         OR d."Name" IS DISTINCT FROM EXCLUDED."Name"
         OR d."Version" IS DISTINCT FROM EXCLUDED."Version"
@@ -4089,9 +4095,223 @@ ALTER TABLE public."BinaryData2"
 
 
 
+/*** [START] v3.5.0.0 Updates ***/
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Create ChargeEvents2 table:
+CREATE TABLE public."ChargeEvents2" (
+    "id" uuid NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "ChargeIsEstimated" boolean NOT NULL,
+    "ChargeType" character varying(50) NOT NULL,
+    "DeviceId" bigint NOT NULL,
+    "DurationTicks" bigint NOT NULL,
+    "EndStateOfCharge" double precision,
+    "EnergyConsumedKwh" double precision,
+    "EnergyUsedSinceLastChargeKwh" double precision,
+    "Latitude" double precision,
+    "Longitude" double precision,
+    "MaxACVoltage" double precision,
+    "MeasuredBatteryEnergyInKwh" double precision,
+    "MeasuredBatteryEnergyOutKwh" double precision,
+    "MeasuredOnBoardChargerEnergyInKwh" double precision,
+    "MeasuredOnBoardChargerEnergyOutKwh" double precision,
+    "PeakPowerKw" double precision,
+    "StartStateOfCharge" double precision,
+    "StartTime" timestamp without time zone NOT NULL,
+    "TripStop" timestamp without time zone,
+    "Version" bigint,
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_ChargeEvents2" PRIMARY KEY ("id", "StartTime")
+)
+PARTITION BY RANGE ("StartTime");
+
+ALTER TABLE public."ChargeEvents2" OWNER TO geotabadapter_client;
+
+ALTER TABLE public."ChargeEvents2"
+    ADD CONSTRAINT "FK_ChargeEvents2_Devices2" FOREIGN KEY ("DeviceId")
+        REFERENCES public."Devices2" ("id");
+
+CREATE INDEX "IX_ChargeEvents2_DeviceId" ON public."ChargeEvents2" USING btree ("DeviceId");
+
+CREATE INDEX "IX_ChargeEvents2_RecordLastChangedUtc" ON public."ChargeEvents2" USING btree ("RecordLastChangedUtc");
+
+CREATE INDEX "IX_ChargeEvents2_StartTime_DeviceId" ON public."ChargeEvents2" USING btree ("StartTime", "DeviceId");
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Create stg_ChargeEvents2 table:
+CREATE TABLE public."stg_ChargeEvents2" (
+    "id" uuid NOT NULL,
+    "GeotabId" character varying(50) NOT NULL,
+    "ChargeIsEstimated" boolean NOT NULL,
+    "ChargeType" character varying(50) NOT NULL,
+    "DeviceId" bigint NOT NULL,
+    "DurationTicks" bigint NOT NULL,
+    "EndStateOfCharge" double precision,
+    "EnergyConsumedKwh" double precision,
+    "EnergyUsedSinceLastChargeKwh" double precision,
+    "Latitude" double precision,
+    "Longitude" double precision,
+    "MaxACVoltage" double precision,
+    "MeasuredBatteryEnergyInKwh" double precision,
+    "MeasuredBatteryEnergyOutKwh" double precision,
+    "MeasuredOnBoardChargerEnergyInKwh" double precision,
+    "MeasuredOnBoardChargerEnergyOutKwh" double precision,
+    "PeakPowerKw" double precision,
+    "StartStateOfCharge" double precision,
+    "StartTime" timestamp without time zone NOT NULL,
+    "TripStop" timestamp without time zone,
+    "Version" bigint,
+    "RecordLastChangedUtc" timestamp without time zone NOT NULL
+);
+
+ALTER TABLE public."stg_ChargeEvents2" OWNER TO geotabadapter_client;
+
+CREATE INDEX "IX_stg_ChargeEvents2_id_RecordLastChangedUtc" ON public."stg_ChargeEvents2" USING btree ("id", "RecordLastChangedUtc");
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Create spMerge_stg_ChargeEvents2 function:
+CREATE OR REPLACE FUNCTION public."spMerge_stg_ChargeEvents2"(
+	)
+    RETURNS void
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+-- ==========================================================================================
+-- Description:
+--   Upserts records from the stg_ChargeEvents2 staging table to the ChargeEvents2
+--   table and then truncates the staging table.
+--
+-- Notes:
+--   - No transaction used as application should manage the transaction.
+-- ==========================================================================================
+BEGIN
+    -- De-duplicate staging table by selecting the latest record per "id".
+    -- Uses DISTINCT ON to keep only the latest record per "id".
+    DROP TABLE IF EXISTS "TMP_DeduplicatedStaging";
+    CREATE TEMP TABLE "TMP_DeduplicatedStaging" AS
+    SELECT DISTINCT ON ("id") *
+    FROM public."stg_ChargeEvents2"
+    ORDER BY "id", "RecordLastChangedUtc" DESC;
+    CREATE INDEX ON "TMP_DeduplicatedStaging" ("id", "StartTime");
+
+    -- Perform upsert.
+    INSERT INTO public."ChargeEvents2" AS d (
+        "id",
+        "GeotabId",
+        "ChargeIsEstimated",
+        "ChargeType",
+        "DeviceId",
+        "DurationTicks",
+        "EndStateOfCharge",
+        "EnergyConsumedKwh",
+        "EnergyUsedSinceLastChargeKwh",
+        "Latitude",
+        "Longitude",
+        "MaxACVoltage",
+        "MeasuredBatteryEnergyInKwh",
+        "MeasuredBatteryEnergyOutKwh",
+        "MeasuredOnBoardChargerEnergyInKwh",
+        "MeasuredOnBoardChargerEnergyOutKwh",
+        "PeakPowerKw",
+        "StartStateOfCharge",
+        "StartTime",
+        "TripStop",
+        "Version",
+        "RecordLastChangedUtc"
+    )
+    SELECT
+        s."id",
+        s."GeotabId",
+        s."ChargeIsEstimated",
+        s."ChargeType",
+        s."DeviceId",
+        s."DurationTicks",
+        s."EndStateOfCharge",
+        s."EnergyConsumedKwh",
+        s."EnergyUsedSinceLastChargeKwh",
+        s."Latitude",
+        s."Longitude",
+        s."MaxACVoltage",
+        s."MeasuredBatteryEnergyInKwh",
+        s."MeasuredBatteryEnergyOutKwh",
+        s."MeasuredOnBoardChargerEnergyInKwh",
+        s."MeasuredOnBoardChargerEnergyOutKwh",
+        s."PeakPowerKw",
+        s."StartStateOfCharge",
+        s."StartTime",
+        s."TripStop",
+        s."Version",
+        s."RecordLastChangedUtc"
+    FROM "TMP_DeduplicatedStaging" s
+    ON CONFLICT ("id", "StartTime")
+    DO UPDATE SET
+        "GeotabId" = EXCLUDED."GeotabId",
+        "ChargeIsEstimated" = EXCLUDED."ChargeIsEstimated",
+        "ChargeType" = EXCLUDED."ChargeType",
+        "DeviceId" = EXCLUDED."DeviceId",
+        "DurationTicks" = EXCLUDED."DurationTicks",
+        "EndStateOfCharge" = EXCLUDED."EndStateOfCharge",
+        "EnergyConsumedKwh" = EXCLUDED."EnergyConsumedKwh",
+        "EnergyUsedSinceLastChargeKwh" = EXCLUDED."EnergyUsedSinceLastChargeKwh",
+        "Latitude" = EXCLUDED."Latitude",
+        "Longitude" = EXCLUDED."Longitude",
+        "MaxACVoltage" = EXCLUDED."MaxACVoltage",
+        "MeasuredBatteryEnergyInKwh" = EXCLUDED."MeasuredBatteryEnergyInKwh",
+        "MeasuredBatteryEnergyOutKwh" = EXCLUDED."MeasuredBatteryEnergyOutKwh",
+        "MeasuredOnBoardChargerEnergyInKwh" = EXCLUDED."MeasuredOnBoardChargerEnergyInKwh",
+        "MeasuredOnBoardChargerEnergyOutKwh" = EXCLUDED."MeasuredOnBoardChargerEnergyOutKwh",
+        "PeakPowerKw" = EXCLUDED."PeakPowerKw",
+        "StartStateOfCharge" = EXCLUDED."StartStateOfCharge",
+        "TripStop" = EXCLUDED."TripStop",
+        "Version" = EXCLUDED."Version",
+        "RecordLastChangedUtc" = EXCLUDED."RecordLastChangedUtc" -- Always update the timestamp
+    WHERE
+        d."GeotabId" IS DISTINCT FROM EXCLUDED."GeotabId"
+        OR d."ChargeIsEstimated" IS DISTINCT FROM EXCLUDED."ChargeIsEstimated"
+        OR d."ChargeType" IS DISTINCT FROM EXCLUDED."ChargeType"
+        OR d."DeviceId" IS DISTINCT FROM EXCLUDED."DeviceId"
+        OR d."DurationTicks" IS DISTINCT FROM EXCLUDED."DurationTicks"
+        OR d."EndStateOfCharge" IS DISTINCT FROM EXCLUDED."EndStateOfCharge"
+        OR d."EnergyConsumedKwh" IS DISTINCT FROM EXCLUDED."EnergyConsumedKwh"
+        OR d."EnergyUsedSinceLastChargeKwh" IS DISTINCT FROM EXCLUDED."EnergyUsedSinceLastChargeKwh"
+        OR d."Latitude" IS DISTINCT FROM EXCLUDED."Latitude"
+        OR d."Longitude" IS DISTINCT FROM EXCLUDED."Longitude"
+        OR d."MaxACVoltage" IS DISTINCT FROM EXCLUDED."MaxACVoltage"
+        OR d."MeasuredBatteryEnergyInKwh" IS DISTINCT FROM EXCLUDED."MeasuredBatteryEnergyInKwh"
+        OR d."MeasuredBatteryEnergyOutKwh" IS DISTINCT FROM EXCLUDED."MeasuredBatteryEnergyOutKwh"
+        OR d."MeasuredOnBoardChargerEnergyInKwh" IS DISTINCT FROM EXCLUDED."MeasuredOnBoardChargerEnergyInKwh"
+        OR d."MeasuredOnBoardChargerEnergyOutKwh" IS DISTINCT FROM EXCLUDED."MeasuredOnBoardChargerEnergyOutKwh"
+        OR d."PeakPowerKw" IS DISTINCT FROM EXCLUDED."PeakPowerKw"
+        OR d."StartStateOfCharge" IS DISTINCT FROM EXCLUDED."StartStateOfCharge"
+        OR d."TripStop" IS DISTINCT FROM EXCLUDED."TripStop"
+        OR d."Version" IS DISTINCT FROM EXCLUDED."Version";
+        -- OR d."RecordLastChangedUtc" IS DISTINCT FROM EXCLUDED."RecordLastChangedUtc";
+
+    -- Clear staging table.
+    TRUNCATE TABLE public."stg_ChargeEvents2";
+
+    -- Drop temporary table.
+    DROP TABLE "TMP_DeduplicatedStaging";
+
+END;
+$BODY$;
+
+ALTER FUNCTION public."spMerge_stg_ChargeEvents2"()
+    OWNER TO geotabadapter_client;
+
+GRANT EXECUTE ON FUNCTION public."spMerge_stg_ChargeEvents2"() TO geotabadapter_client;
+
+REVOKE ALL ON FUNCTION public."spMerge_stg_ChargeEvents2"() FROM PUBLIC;
+/*** [END] v3.5.0.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/  
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO public."MiddlewareVersionInfo2" ("DatabaseVersion", "RecordCreationTimeUtc") 
-VALUES ('3.4.0.0', timezone('UTC', NOW())); 
+VALUES ('3.5.0.0', timezone('UTC', NOW())); 
 /*** [END] Database Version Update ***/

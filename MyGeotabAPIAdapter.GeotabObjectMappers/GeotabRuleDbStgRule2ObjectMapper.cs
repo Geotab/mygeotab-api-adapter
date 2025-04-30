@@ -2,7 +2,9 @@
 using Geotab.Checkmate.ObjectModel.Exceptions;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
-using MyGeotabAPIAdapter.Helpers;								 
+using MyGeotabAPIAdapter.Helpers;
+using MyGeotabAPIAdapter.MyGeotabAPI;
+using Newtonsoft.Json;
 using System.Text;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
@@ -57,6 +59,22 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 RecordLastChangedUtc = DateTime.UtcNow,
                 Version = entityToMapTo.Version
             };
+
+            if (entityToMapTo.Condition != null)
+            {
+                var settings = new JsonSerializerSettings
+                {
+                    // Handle general loops elsewhere.
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+
+                    // Explicitly tell JsonConvert how to handle the Id type.
+                    Converters = new List<JsonConverter> { new GeotabIdJsonConverter() },
+
+                    Formatting = Formatting.Indented
+                };
+                string ruleConditionJson = JsonConvert.SerializeObject(entityToMapTo.Condition, settings);
+                dbStgRule2.Condition = ruleConditionJson;
+            }
 
             if (entityToMapTo.Groups != null && entityToMapTo.Groups.Count > 0)
             {

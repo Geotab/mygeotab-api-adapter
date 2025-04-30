@@ -27,6 +27,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public DateTime? ActiveFrom { get; set; }
         public DateTime? ActiveTo { get; set; }
         public string Comment { get; set; }
+        public string? Condition { get; set; }
         public string? Groups { get; set; }
         public long? Version { get; set; }
         public int EntityStatus { get; set; }

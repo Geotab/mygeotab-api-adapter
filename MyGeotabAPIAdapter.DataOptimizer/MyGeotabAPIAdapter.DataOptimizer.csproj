@@ -6,8 +6,8 @@
     <Authors>Geotab Inc.</Authors>
     <Company>Geotab Inc.</Company>
     <Product>MyGeotab API Adapter - DataOptimizer</Product>
-    <AssemblyVersion>3.4.0.0</AssemblyVersion>
-    <FileVersion>3.4.0.0</FileVersion>
+    <AssemblyVersion>3.5.0.0</AssemblyVersion>
+    <FileVersion>3.5.0.0</FileVersion>
     <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
     <Description>A worker service designed to migrate data from the MyGeotab API Adapter database into another set of tables that are optimized for use by applications and data analysis tools. Additional columns are added to some of the tables and these are populated via interpolation or other query-based procedues.</Description>
   </PropertyGroup>

@@ -25,7 +25,12 @@ namespace MyGeotabAPIAdapter.Database
         /// <summary>
         /// The name of the database table associated with <see cref="DbChargeEvent"/> entities.
         /// </summary>
-        string DbChargeEventsTableName { get; }
+        string DbChargeEventTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbChargeEvent2"/> entities.
+        /// </summary>
+        string DbChargeEvent2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbConfigFeedVersion"/> entities.
@@ -214,6 +219,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbStatusDataLocation2TrackingTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbStgChargeEvent2"/> entities.
+        /// </summary>
+        string DbStgChargeEvent2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbStgDevice2"/> entities.
         /// </summary>
         string DbStgDevice2TableName { get; }
@@ -302,6 +312,11 @@ namespace MyGeotabAPIAdapter.Database
         /// A unique identifier assigned during instantiation. Intended for debugging purposes.
         /// </summary>
         string Id { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging ChargeEvents into the main ChargeEvents2 table.
+        /// </summary>
+        string MergeStagingChargeEventsProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging Devices into the main Devices2 table.

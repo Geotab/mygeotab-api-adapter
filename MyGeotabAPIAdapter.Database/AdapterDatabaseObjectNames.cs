@@ -15,7 +15,10 @@
         public string DbBinaryData2TableName => "BinaryData2";
 
         /// <inheritdoc/>
-        public string DbChargeEventsTableName => "ChargeEvents";
+        public string DbChargeEventTableName => "ChargeEvents";
+
+        /// <inheritdoc/>
+        public string DbChargeEvent2TableName => "ChargeEvents2";
 
         /// <inheritdoc/>
         public string DbConfigFeedVersionsTableName => "ConfigFeedVersions";
@@ -128,6 +131,9 @@
         public string DbStatusDataLocation2TrackingTableName => "StatusDataLocations2Tracking";
 
         /// <inheritdoc/>
+        public string DbStgChargeEvent2TableName => "stg_ChargeEvents2";
+
+        /// <inheritdoc/>
         public string DbStgDevice2TableName => "stg_Devices2";
 
         /// <inheritdoc/>
@@ -180,6 +186,9 @@
 
         /// <inheritdoc/>
         public string Id { get; private set; }
+
+        /// <inheritdoc/>
+        public string MergeStagingChargeEventsProcedureName => "spMerge_stg_ChargeEvents2";
 
         /// <inheritdoc/>
         public string MergeStagingDevicesProcedureName => "spMerge_stg_Devices2";
