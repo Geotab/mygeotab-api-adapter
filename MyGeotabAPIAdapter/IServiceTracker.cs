@@ -104,6 +104,11 @@ namespace MyGeotabAPIAdapter
         Task<T> GetDriverChangeServiceInfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DriverChangeProcessor2"/>.
+        /// </summary>
+        Task<T> GetDriverChangeService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DutyStatusAvailabilityProcessor"/>.
         /// </summary>
         Task<T> GetDutyStatusAvailabilityServiceInfoAsync();
@@ -247,6 +252,14 @@ namespace MyGeotabAPIAdapter
         /// <param name="adapterService">The <see cref="AdapterService"/> to check.</param>
         /// <returns></returns>
         Task<bool> ServiceHasProcessedDataAsync(AdapterService adapterService);
+
+        /// <summary>
+        /// Indicates whether the subject <see cref="AdapterService"/> has processed data since <paramref name="sinceDateTime"/>.
+        /// </summary>
+        /// <param name="adapterService">The <see cref="AdapterService"/> to check.</param>
+        /// <param name="sinceDateTime">The UTC DateTime to check against for more recent activity.</param>
+        /// <returns></returns>
+        Task<bool> ServiceHasProcessedDataSinceAsync(AdapterService adapterService, DateTime sinceDateTime);
 
         /// <summary>
         /// Indicates whether the subject <see cref="AdapterService"/> is currently running. Since services can be distributed across multiple machines, this is a guess based on whether the subject <see cref="AdapterService"/> has processed any data within the past two days.

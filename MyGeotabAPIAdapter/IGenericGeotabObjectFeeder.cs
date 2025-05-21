@@ -96,5 +96,25 @@ namespace MyGeotabAPIAdapter
         /// <param name="lastFeedVersion">The <see cref="FeedResult{T}.ToVersion"/> returned by the latest GetFeed() call.</param>
         /// <returns></returns>
         Task InitializeAsync(CancellationTokenSource cancellationTokenSource, int feedPollingIntervalSeconds, int feedResultsLimit, long? lastFeedVersion);
+
+        /// <summary>
+        /// Re-executes the previous GetFeed() call for the subject <see cref="Entity"/> type to retrieve the same batch of entities.
+        /// This is typically used when a database rollback operation has occurred and the last batch of entities needs to be reprocessed.
+        /// When this method is called, the following actions are taken:
+        /// <list type="bullet">
+        /// <item>
+        /// <description><see cref="LastFeedVersion"/> is updated to the value of <paramref name="lastProcessedFeedVersion"/>.</description>
+        /// </item>
+        /// <item>
+        /// <description><see cref="LastFeedRetrievalTimeUtc"/> is updated to <see cref="DateTime.MinValue"/>.</description>
+        /// </item>
+        /// <item>
+        /// <description>If <paramref name="lastProcessedFeedVersion"/> is null and <see cref="FeedStartOption"/> differs from <see cref="ConfiguredFeedStartOption"/>, <see cref="FeedStartOption"/> is changed back to <see cref="ConfiguredFeedStartOption"/>.</description>
+        /// </item>
+        /// </list>
+        /// </summary>
+        /// <param name="lastProcessedFeedVersion">The last feed version that was successfully processed before the rollback. This value will be used to update <see cref="LastFeedVersion"/>.</param>
+
+        void Rollback(long? lastProcessedFeedVersion);
     }
 }

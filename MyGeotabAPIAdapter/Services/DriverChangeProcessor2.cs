@@ -1,5 +1,4 @@
 ﻿using Geotab.Checkmate.ObjectModel;
-using Geotab.Checkmate.ObjectModel.Exceptions;
 using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
@@ -22,9 +21,9 @@ using System.Threading.Tasks;
 namespace MyGeotabAPIAdapter.Services
 {
     /// <summary>
-    /// A <see cref="BackgroundService"/> that extracts <see cref="ExceptionEvent"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database. 
+    /// A <see cref="BackgroundService"/> that extracts <see cref="DriverChange"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database. 
     /// </summary>
-    class ExceptionEventProcessor2 : BackgroundService
+    class DriverChangeProcessor2 : BackgroundService
     {
         bool feedVersionRollbackRequired = false;
 
@@ -37,41 +36,41 @@ namespace MyGeotabAPIAdapter.Services
 
         readonly IAdapterConfiguration adapterConfiguration;
         readonly IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment;
-        readonly IBackgroundServiceAwaiter<ExceptionEventProcessor2> awaiter;
-        readonly IBaseRepository<DbStgExceptionEvent2> dbStgExceptionEvent2Repo;
+        readonly IBackgroundServiceAwaiter<DriverChangeProcessor2> awaiter;
+        readonly IBaseRepository<DbStgDriverChange2> dbStgDriverChange2Repo;
         readonly IExceptionHelper exceptionHelper;
-        readonly IForeignKeyServiceDependencyMap exceptionEventForeignKeyServiceDependencyMap;
-        readonly IGenericEntityPersister<DbStgExceptionEvent2> dbStgExceptionEvent2EntityPersister;
-        readonly IGenericGeotabObjectFeeder<ExceptionEvent> exceptionEventGeotabObjectFeeder;
+        readonly IGenericEntityPersister<DbStgDriverChange2> dbStgDriverChange2EntityPersister;
+        readonly IGenericGeotabObjectFeeder<DriverChange> driverChangeGeotabObjectFeeder;
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
         readonly IGeotabIdConverter geotabIdConverter;
-        readonly IGeotabExceptionEventDbStgExceptionEvent2ObjectMapper geotabExceptionEventDbStgExceptionEvent2ObjectMapper;
+        readonly IGeotabDriverChangeDbStgDriverChange2ObjectMapper geotabDriverChangeDbStgDriverChange2ObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
+        readonly IForeignKeyServiceDependencyMap driverChangeForeignKeyServiceDependencyMap;
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ExceptionEventProcessor2"/> class.
+        /// Initializes a new instance of the <see cref="DriverChangeProcessor2"/> class.
         /// </summary>
-        public ExceptionEventProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<ExceptionEventProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbStgExceptionEvent2> dbStgExceptionEvent2EntityPersister, IGenericGeotabObjectFeeder<ExceptionEvent> exceptionEventGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabIdConverter geotabIdConverter, IGeotabExceptionEventDbStgExceptionEvent2ObjectMapper geotabExceptionEventDbStgExceptionEvent2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DriverChangeProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<DriverChangeProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbStgDriverChange2> dbStgDriverChange2EntityPersister, IGenericGeotabObjectFeeder<DriverChange> driverChangeGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabIdConverter geotabIdConverter, IGeotabDriverChangeDbStgDriverChange2ObjectMapper geotabDriverChangeDbStgDriverChange2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
             this.awaiter = awaiter;
             this.exceptionHelper = exceptionHelper;
-            this.dbStgExceptionEvent2EntityPersister = dbStgExceptionEvent2EntityPersister;
-            this.exceptionEventGeotabObjectFeeder = exceptionEventGeotabObjectFeeder;
+            this.dbStgDriverChange2EntityPersister = dbStgDriverChange2EntityPersister;
+            this.driverChangeGeotabObjectFeeder = driverChangeGeotabObjectFeeder;
             this.geotabDeviceFilterer = geotabDeviceFilterer;
             this.geotabIdConverter = geotabIdConverter;
-            this.geotabExceptionEventDbStgExceptionEvent2ObjectMapper = geotabExceptionEventDbStgExceptionEvent2ObjectMapper;
+            this.geotabDriverChangeDbStgDriverChange2ObjectMapper = geotabDriverChangeDbStgDriverChange2ObjectMapper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
 
-            dbStgExceptionEvent2Repo = new BaseRepository<DbStgExceptionEvent2>(adapterContext);
+            dbStgDriverChange2Repo = new BaseRepository<DbStgDriverChange2>(adapterContext);
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -80,11 +79,10 @@ namespace MyGeotabAPIAdapter.Services
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
 
             // Setup the foreign key service dependency map.
-            exceptionEventForeignKeyServiceDependencyMap = new ForeignKeyServiceDependencyMap(
+            driverChangeForeignKeyServiceDependencyMap = new ForeignKeyServiceDependencyMap(
                 [
-                    new ForeignKeyServiceDependency("FK_ExceptionEvents2_Devices2", AdapterService.DeviceProcessor2),
-                    new ForeignKeyServiceDependency("FK_ExceptionEvents2_Rules2", AdapterService.RuleProcessor2),
-                    new ForeignKeyServiceDependency("FK_ExceptionEvents2_Users2", AdapterService.UserProcessor2)
+                    new ForeignKeyServiceDependency("FK_DriverChanges2_Devices2", AdapterService.DeviceProcessor2),
+                    new ForeignKeyServiceDependency("FK_DriverChanges2_Users2", AdapterService.UserProcessor2)
                 ]
             );
         }
@@ -96,13 +94,13 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            const string MergeFunctionSQL_Postgres = @"SELECT public.""spMerge_stg_ExceptionEvents2""();";
-            const string MergeProcedureSQL_SQLServer = @"EXEC [dbo].[spMerge_stg_ExceptionEvents2];";
-            const string TruncateStagingTableSQL_Postgres = @"TRUNCATE TABLE public.""stg_ExceptionEvents2"";";
-            const string TruncateStagingTableSQL_SQLServer = @"TRUNCATE TABLE [dbo].[stg_ExceptionEvents2];";
+            const string MergeFunctionSQL_Postgres = @"SELECT public.""spMerge_stg_DriverChanges2""();";
+            const string MergeProcedureSQL_SQLServer = @"EXEC [dbo].[spMerge_stg_DriverChanges2];";
+            const string TruncateStagingTableSQL_Postgres = @"TRUNCATE TABLE public.""stg_DriverChanges2"";";
+            const string TruncateStagingTableSQL_SQLServer = @"TRUNCATE TABLE [dbo].[stg_DriverChanges2];";
 
             MethodBase methodBase = MethodBase.GetCurrentMethod();
-            var delayTimeSpan = TimeSpan.FromSeconds(adapterConfiguration.ExceptionEventFeedIntervalSeconds);
+            var delayTimeSpan = TimeSpan.FromSeconds(adapterConfiguration.DriverChangeFeedIntervalSeconds);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -110,7 +108,6 @@ namespace MyGeotabAPIAdapter.Services
                 var prerequisiteServices = new List<AdapterService>
                 {
                     AdapterService.DeviceProcessor2,
-                    AdapterService.RuleProcessor2,
                     AdapterService.UserProcessor2
                 };
                 await awaiter.WaitForPrerequisiteServicesIfNeededAsync(prerequisiteServices, stoppingToken);
@@ -128,63 +125,63 @@ namespace MyGeotabAPIAdapter.Services
 
                     using (var cancellationTokenSource = new CancellationTokenSource())
                     {
-                        var dbOServiceTracking = await serviceTracker.GetExceptionEventService2InfoAsync();
+                        var dbOServiceTracking = await serviceTracker.GetDriverChangeService2InfoAsync();
 
                         // Initialize the Geotab object feeder.
-                        if (exceptionEventGeotabObjectFeeder.IsInitialized == false)
+                        if (driverChangeGeotabObjectFeeder.IsInitialized == false)
                         {
-                            await exceptionEventGeotabObjectFeeder.InitializeAsync(cancellationTokenSource, adapterConfiguration.ExceptionEventFeedIntervalSeconds, myGeotabAPIHelper.GetFeedResultLimitDefault, (long?)dbOServiceTracking.LastProcessedFeedVersion);
+                            await driverChangeGeotabObjectFeeder.InitializeAsync(cancellationTokenSource, adapterConfiguration.DriverChangeFeedIntervalSeconds, myGeotabAPIHelper.GetFeedResultLimitDefault, (long?)dbOServiceTracking.LastProcessedFeedVersion);
                         }
 
                         // If this is the first iteration after a connectivity disruption, roll-back the LastFeedVersion of the GeotabObjectFeeder to the last processed feed version that was committed to the database and set the LastFeedRetrievalTimeUtc to DateTime.MinValue to start processing without further delay.
                         if (feedVersionRollbackRequired == true)
                         {
-                            exceptionEventGeotabObjectFeeder.Rollback(dbOServiceTracking.LastProcessedFeedVersion);
+                            driverChangeGeotabObjectFeeder.Rollback(dbOServiceTracking.LastProcessedFeedVersion);
                             feedVersionRollbackRequired = false;
                         }
 
-                        // Get a batch of ExceptionEvent objects from Geotab.
-                        await exceptionEventGeotabObjectFeeder.GetFeedDataBatchAsync(cancellationTokenSource);
+                        // Get a batch of DriverChange objects from Geotab.
+                        await driverChangeGeotabObjectFeeder.GetFeedDataBatchAsync(cancellationTokenSource);
                         stoppingToken.ThrowIfCancellationRequested();
 
-                        // Process any returned ExceptionEvents.
-                        var exceptionEvents = exceptionEventGeotabObjectFeeder.GetFeedResultDataValuesList();
-                        var dbStgExceptionEvent2sToPersist = new List<DbStgExceptionEvent2>();
-                        if (exceptionEvents.Count != 0)
+                        // Process any returned DriverChanges.
+                        var driverChanges = driverChangeGeotabObjectFeeder.GetFeedResultDataValuesList();
+                        var dbStgDriverChange2sToPersist = new List<DbStgDriverChange2>();
+                        if (driverChanges.Count != 0)
                         {
                             // Apply tracked device filter and/or tracked diagnostic filter (if configured in appsettings.json).
-                            var filteredExceptionEvents = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, exceptionEvents);
+                            var filteredDriverChanges = await geotabDeviceFilterer.ApplyDeviceFilterAsync(cancellationTokenSource, driverChanges);
 
-                            // Map the ExceptionEvent objects to DbExceptionEvent2 entities.
-                            foreach (var exceptionEvent in filteredExceptionEvents)
+                            // Map the DriverChange objects to DbDriverChange2 entities.
+                            foreach (var driverChange in filteredDriverChanges)
                             {
-                                long? exceptionEventDeviceId = null;
-                                if (exceptionEvent.Device != null && exceptionEvent.Device.Id != null)
+                                long? driverChangeDeviceId = null;
+                                if (driverChange.Device != null && driverChange.Device.Id != null)
                                 {
-                                    exceptionEventDeviceId = geotabIdConverter.ToLong(exceptionEvent.Device.Id);
+                                    driverChangeDeviceId = geotabIdConverter.ToLong(driverChange.Device.Id);
                                 }
 
-                                long? exceptionEventDriverId = null;
-                                if (exceptionEvent.Driver != null && exceptionEvent.Driver.Id != null && exceptionEvent.Driver.GetType() != typeof(UnknownDriver))
+                                long? driverChangeDriverId = null;
+                                if (driverChange.Driver != null && driverChange.Driver.Id != null && driverChange.Driver.GetType() != typeof(UnknownDriver))
                                 {
-                                    exceptionEventDriverId = geotabIdConverter.ToLong(exceptionEvent.Driver.Id);
+                                    driverChangeDriverId = geotabIdConverter.ToLong(driverChange.Driver.Id);
                                 }
 
-                                if (exceptionEventDeviceId == null)
+                                if (driverChangeDeviceId == null)
                                 {
-                                    logger.Warn($"Could not process {nameof(ExceptionEvent)} with GeotabId {exceptionEvent.Id}' because its {nameof(ExceptionEvent.Device)} is null.");
+                                    logger.Warn($"Could not process {nameof(DriverChange)} with GeotabId {driverChange.Id}' because its {nameof(DriverChange.Device)} is null.");
                                     continue;
                                 }
 
-                                var dbStgExceptionEvent2 = geotabExceptionEventDbStgExceptionEvent2ObjectMapper.CreateEntity(exceptionEvent, (long)exceptionEventDeviceId, exceptionEventDriverId);
-                                dbStgExceptionEvent2sToPersist.Add(dbStgExceptionEvent2);
+                                var dbStgDriverChange2 = geotabDriverChangeDbStgDriverChange2ObjectMapper.CreateEntity(driverChange, (long)driverChangeDeviceId, driverChangeDriverId);
+                                dbStgDriverChange2sToPersist.Add(dbStgDriverChange2);
                             }
                         }
 
                         stoppingToken.ThrowIfCancellationRequested();
 
-                        // Persist changes to database. Step 1: Persist the DbStgExceptionEvent2 entities.
-                        if (dbStgExceptionEvent2sToPersist.Count != 0)
+                        // Persist changes to database. Step 1: Persist the DbStgDriverChange2 entities.
+                        if (dbStgDriverChange2sToPersist.Count != 0)
                         {
                             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                             {
@@ -199,10 +196,10 @@ namespace MyGeotabAPIAdapter.Services
                                             ConnectionInfo.DataAccessProviderType.SQLServer => TruncateStagingTableSQL_SQLServer,
                                             _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
                                         };
-                                        await dbStgExceptionEvent2Repo.ExecuteAsync(sql, null, cancellationTokenSource, true, adapterContext);
+                                        await dbStgDriverChange2Repo.ExecuteAsync(sql, null, cancellationTokenSource, true, adapterContext);
 
-                                        // DbStgExceptionEvent2:
-                                        await dbStgExceptionEvent2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStgExceptionEvent2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                        // DbStgDriverChange2:
+                                        await dbStgDriverChange2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStgDriverChange2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                         // Commit transactions:
                                         await adapterUOW.CommitAsync();
@@ -217,14 +214,14 @@ namespace MyGeotabAPIAdapter.Services
                             }, new Context());
                         }
 
-                        // Persist changes to database. Step 2: Merge the DbStgExceptionEvent2 entities into the DbExceptionEvent2 table and update the DbOServiceTracking table.
+                        // Persist changes to database. Step 2: Merge the DbStgDriverChange2 entities into the DbDriverChange2 table and update the DbOServiceTracking table.
                         await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                         {
                             using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                             {
                                 try
                                 {
-                                    if (dbStgExceptionEvent2sToPersist.Count != 0)
+                                    if (dbStgDriverChange2sToPersist.Count != 0)
                                     {
                                         // Build the SQL statement to execute the merge procedure.
                                         var sql = adapterContext.ProviderType switch
@@ -235,18 +232,18 @@ namespace MyGeotabAPIAdapter.Services
                                         };
 
                                         // Execute the merge procedure.
-                                        await dbStgExceptionEvent2Repo.ExecuteAsync(sql, null, cancellationTokenSource);
+                                        await dbStgDriverChange2Repo.ExecuteAsync(sql, null, cancellationTokenSource);
                                     }
 
                                     // DbOServiceTracking:
-                                    if (dbStgExceptionEvent2sToPersist.Count != 0)
+                                    if (dbStgDriverChange2sToPersist.Count != 0)
                                     {
-                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.ExceptionEventProcessor2, exceptionEventGeotabObjectFeeder.LastFeedRetrievalTimeUtc, exceptionEventGeotabObjectFeeder.LastFeedVersion);
+                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DriverChangeProcessor2, driverChangeGeotabObjectFeeder.LastFeedRetrievalTimeUtc, driverChangeGeotabObjectFeeder.LastFeedVersion);
                                     }
                                     else
                                     {
-                                        // No ExceptionEvents were returned, but the OServiceTracking record for this service still needs to be updated to show that the service is operating.
-                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.ExceptionEventProcessor2, DateTime.UtcNow);
+                                        // No DriverChanges were returned, but the OServiceTracking record for this service still needs to be updated to show that the service is operating.
+                                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DriverChangeProcessor2, DateTime.UtcNow);
                                     }
 
                                     // Commit transactions:
@@ -263,7 +260,7 @@ namespace MyGeotabAPIAdapter.Services
                         }, new Context());
 
                         // Clear FeedResultData.
-                        exceptionEventGeotabObjectFeeder.FeedResultData.Clear();
+                        driverChangeGeotabObjectFeeder.FeedResultData.Clear();
                     }
 
                     logger.Trace($"Completed iteration of {methodBase.ReflectedType.Name}.{methodBase.Name}");
@@ -291,7 +288,7 @@ namespace MyGeotabAPIAdapter.Services
                     if (ForeignKeyExceptionHelper.IsForeignKeyViolationException(exceptionToAnalyze))
                     {
                         var violatedConstraint = ForeignKeyExceptionHelper.GetConstraintNameFromException(exceptionToAnalyze);
-                        if (!string.IsNullOrEmpty(violatedConstraint) && exceptionEventForeignKeyServiceDependencyMap.TryGetDependency(violatedConstraint, out AdapterService prerequisiteService))
+                        if (!string.IsNullOrEmpty(violatedConstraint) && driverChangeForeignKeyServiceDependencyMap.TryGetDependency(violatedConstraint, out AdapterService prerequisiteService))
                         {
                             await awaiter.WaitForPrerequisiteServiceToProcessEntitiesAsync(prerequisiteService, stoppingToken);
                             // After waiting, this iteration's attempt is considered "handled" by waiting. The next iteration will be the actual retry of the operation.
@@ -300,7 +297,7 @@ namespace MyGeotabAPIAdapter.Services
                         else
                         {
                             // FK violation occurred, but constraint name not found OR not included in the dependency map.
-                            string reason = string.IsNullOrEmpty(violatedConstraint) ? "constraint name not extractable" : $"constraint '{violatedConstraint}' not included in tripForeignKeyServiceDependencyMap";
+                            string reason = string.IsNullOrEmpty(violatedConstraint) ? "constraint name not extractable" : $"constraint '{violatedConstraint}' not included in driverChangeForeignKeyServiceDependencyMap";
                             exceptionHelper.LogException(ex, NLogLogLevelName.Fatal, $"{DefaultErrorMessagePrefix} Unhandled FK violation: {reason}.");
                             stateMachine.HandleException(ex, NLogLogLevelName.Fatal);
                         }
@@ -314,7 +311,7 @@ namespace MyGeotabAPIAdapter.Services
                 }
 
                 // If the feed is up-to-date, add a delay equivalent to the configured interval.
-                if (exceptionEventGeotabObjectFeeder.FeedCurrent == true)
+                if (driverChangeGeotabObjectFeeder.FeedCurrent == true)
                 {
                     await awaiter.WaitForConfiguredIntervalAsync(delayTimeSpan, DelayIntervalType.Feed, stoppingToken);
                 }
@@ -322,21 +319,21 @@ namespace MyGeotabAPIAdapter.Services
         }
 
         /// <summary>
-        /// Starts the current <see cref="ExceptionEventProcessor2"/> instance.
+        /// Starts the current <see cref="DriverChangeProcessor2"/> instance.
         /// </summary>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
         /// <returns></returns>
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
             var dbOserviceTrackings = await serviceTracker.GetDbOServiceTrackingListAsync();
-            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.ExceptionEventProcessor2, adapterConfiguration.DisableMachineNameValidation);
+            adapterEnvironment.ValidateAdapterEnvironment(dbOserviceTrackings, AdapterService.DriverChangeProcessor2, adapterConfiguration.DisableMachineNameValidation);
             await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
             {
                 using (var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase))
                 {
                     try
                     {
-                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.ExceptionEventProcessor2, adapterEnvironment.AdapterVersion.ToString(), adapterEnvironment.AdapterMachineName);
+                        await serviceTracker.UpdateDbOServiceTrackingRecordAsync(adapterContext, AdapterService.DriverChangeProcessor2, adapterEnvironment.AdapterVersion.ToString(), adapterEnvironment.AdapterMachineName);
                         await adapterUOW.CommitAsync();
                     }
                     catch (Exception ex)
@@ -351,11 +348,11 @@ namespace MyGeotabAPIAdapter.Services
             // Register this service with the StateMachine. Set mustPauseForDatabaseMaintenance to true if the service is enabled or false otherwise.
             if (adapterConfiguration.UseDataModel2 == true)
             {
-                stateMachine.RegisterService(nameof(ExceptionEventProcessor2), adapterConfiguration.EnableExceptionEventFeed);
+                stateMachine.RegisterService(nameof(DriverChangeProcessor2), adapterConfiguration.EnableDriverChangeFeed);
             }
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.UseDataModel2 == true && adapterConfiguration.EnableExceptionEventFeed == true)
+            if (adapterConfiguration.UseDataModel2 == true && adapterConfiguration.EnableDriverChangeFeed == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -367,7 +364,7 @@ namespace MyGeotabAPIAdapter.Services
         }
 
         /// <summary>
-        /// Stops the current <see cref="ExceptionEventProcessor2"/> instance.
+        /// Stops the current <see cref="DriverChangeProcessor2"/> instance.
         /// </summary>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
         /// <returns></returns>
@@ -376,7 +373,7 @@ namespace MyGeotabAPIAdapter.Services
             // Update the registration of this service with the StateMachine. Set mustPauseForDatabaseMaintenance to false since it is stopping and will no longer be able to participate in pauses for database mainteance.
             if (adapterConfiguration.UseDataModel2 == true)
             {
-                stateMachine.RegisterService(nameof(ExceptionEventProcessor2), false);
+                stateMachine.RegisterService(nameof(DriverChangeProcessor2), false);
             }
 
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");

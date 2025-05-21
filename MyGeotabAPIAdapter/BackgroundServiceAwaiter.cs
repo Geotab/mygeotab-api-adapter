@@ -82,7 +82,7 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
-        public async Task WaitForConnectivityRestorationIfNeededAsync(CancellationToken cancellationToken)
+        public async Task<bool> WaitForConnectivityRestorationIfNeededAsync(CancellationToken cancellationToken)
         {
             if (IsConnectivityLost())
             {
@@ -95,6 +95,7 @@ namespace MyGeotabAPIAdapter
                         cancellationToken.ThrowIfCancellationRequested();
                         await Task.Delay(StateMachineCheckIntervalMilliseconds, cancellationToken);
                     }
+                    return true;
                 }
                 catch (OperationCanceledException)
                 {
@@ -105,6 +106,7 @@ namespace MyGeotabAPIAdapter
                     logger.Info($"******** RESUMING SERVICE: {ServiceName} after connectivity restoration.");
                 }
             }
+            return false;
         }
 
         /// <inheritdoc/>
@@ -141,6 +143,12 @@ namespace MyGeotabAPIAdapter
         public async Task WaitForPrerequisiteServicesIfNeededAsync(List<AdapterService> prerequisiteServices, CancellationToken cancellationToken)
         {
             await prerequisiteServiceChecker.WaitForPrerequisiteServicesIfNeededAsync(ServiceName, prerequisiteServices, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task WaitForPrerequisiteServiceToProcessEntitiesAsync(AdapterService prerequisiteService, CancellationToken cancellationToken)
+        {
+            await prerequisiteServiceChecker.WaitForPrerequisiteServiceToProcessEntitiesAsync(ServiceName, prerequisiteService, cancellationToken);
         }
     }
 }

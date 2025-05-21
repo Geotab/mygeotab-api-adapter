@@ -66,6 +66,7 @@ GO
 --truncate table [dbo].[Devices2];
 --truncate table [dbo].[DiagnosticIds2];
 --truncate table [dbo].[Diagnostics2];
+--truncate table [dbo].[DriverChanges2];
 --truncate table [dbo].[EntityMetadata2];
 --truncate table [dbo].[ExceptionEvents2];
 --truncate table [dbo].[FaultData2];

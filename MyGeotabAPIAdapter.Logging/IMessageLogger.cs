@@ -47,5 +47,20 @@ namespace MyGeotabAPIAdapter.Logging
         /// </summary>
         /// <param name="loggingClassName"></param>
         void LogWaitForPrerequisiteServicesServiceResumption(string loggingClassName);
+
+        /// <summary>
+        /// Logs a message indicating that the <paramref name="loggingClassName"/> service is being paused while waiting for the <paramref name="prerequisiteService"/> to complete its next processing of entities.
+        /// </summary>
+        /// <param name="loggingClassName">The class name of the service being paused.</param>
+        /// <param name="prerequisiteService">The name of the service being waited upon.</param>
+        /// <param name="delayBeforeNextCheck">The amount of time to delay before checking again.</param>
+        void LogWaitForPrerequisiteServiceToProcessEntitiesPause(string loggingClassName, string prerequisiteService, TimeSpan delayBeforeNextCheck);
+
+        /// <summary>
+        ///  Logs a message indicating that the <paramref name="loggingClassName"/> service is resuming operation now that the <paramref name="prerequisiteService"/> has completed another iteration of entity processing.
+        /// </summary>
+        /// <param name="loggingClassName">The class name of the service being paused.</param>
+        /// <param name="prerequisiteService">The name of the service being waited upon.</param>
+        void LogWaitForPrerequisiteServiceToProcessEntitiesResumption(string loggingClassName, string prerequisiteService);
     }
 }

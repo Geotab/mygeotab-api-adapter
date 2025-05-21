@@ -9,7 +9,6 @@ using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -295,6 +294,18 @@ namespace MyGeotabAPIAdapter
             finally
             {
                 initializationLock.Release();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void Rollback(long? lastProcessedFeedVersion)
+        { 
+            LastFeedVersion = lastProcessedFeedVersion;
+            LastFeedRetrievalTimeUtc = DateTime.MinValue;
+
+            if (lastProcessedFeedVersion == null && FeedStartOption != ConfiguredFeedStartOption)
+            {
+                FeedStartOption = ConfiguredFeedStartOption;
             }
         }
 

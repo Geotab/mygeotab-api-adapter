@@ -20,5 +20,13 @@ namespace MyGeotabAPIAdapter
         /// <param name="includeCheckForWhetherServicesHaveProcessedAnyData">If set to true, an additional check will be done to see whether each service has processed data.</param>
         /// <returns></returns>
         Task WaitForPrerequisiteServicesIfNeededAsync(string dependentServiceClassName, List<AdapterService> prerequisiteServices, CancellationToken cancellationToken, bool includeCheckForWhetherServicesHaveProcessedAnyData = false);
+
+        /// <summary>
+        /// Waits for the <paramref name="prerequisiteService"/> to log its next activity from the DateTime at which this method is called. Keeps checking until the service has logged its next activity.
+        /// </summary>
+        /// <param name="dependentServiceClassName">The name of the dependent service class.</param>
+        /// <param name="prerequisiteService">The service upon which the dependent service depends.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+        Task WaitForPrerequisiteServiceToProcessEntitiesAsync(string dependentServiceClassName, AdapterService prerequisiteService, CancellationToken cancellationToken);
     }
 }

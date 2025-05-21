@@ -28,6 +28,9 @@
 -- ALTER TABLE public."ChargeEvents2" DISABLE TRIGGER ALL;
 -- delete from public."ChargeEvents2";
 -- ALTER TABLE public."ChargeEvents2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."DriverChanges2" DISABLE TRIGGER ALL;
+-- delete from public."DriverChanges2";
+-- ALTER TABLE public."DriverChanges2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."ExceptionEvents2" DISABLE TRIGGER ALL;
 -- delete from public."ExceptionEvents2";
 -- ALTER TABLE public."ExceptionEvents2" ENABLE TRIGGER ALL;

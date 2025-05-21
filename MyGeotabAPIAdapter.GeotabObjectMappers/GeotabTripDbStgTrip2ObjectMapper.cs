@@ -1,7 +1,6 @@
 ﻿using Geotab.Checkmate.ObjectModel;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
-using MyGeotabAPIAdapter.MyGeotabAPI;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
 {

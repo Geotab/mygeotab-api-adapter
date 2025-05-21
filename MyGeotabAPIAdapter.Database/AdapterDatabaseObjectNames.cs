@@ -48,6 +48,9 @@
         public string DbDriverChangeTableName => "DriverChanges";
 
         /// <inheritdoc/>
+        public string DbDriverChange2TableName => "DriverChanges2";
+
+        /// <inheritdoc/>
         public string DbDutyStatusAvailabilityTableName => "DutyStatusAvailability";
 
         /// <inheritdoc/>
@@ -140,6 +143,9 @@
         public string DbStgDiagnostic2TableName => "stg_Diagnostics2";
 
         /// <inheritdoc/>
+        public string DbStgDriverChange2TableName => "stg_DriverChanges2";
+
+        /// <inheritdoc/>
         public string DbStgExceptionEvent2TableName => "stg_ExceptionEvents2";
 
         /// <inheritdoc/>
@@ -195,6 +201,9 @@
 
         /// <inheritdoc/>
         public string MergeStagingDiagnosticsProcedureName => "spMerge_stg_Diagnostics2";
+
+        /// <inheritdoc/>
+        public string MergeStagingDriverChangesProcedureName => "spMerge_stg_DriverChanges2";
 
         /// <inheritdoc/>
         public string MergeStagingExceptionEventsProcedureName => "spMerge_stg_ExceptionEvents2";

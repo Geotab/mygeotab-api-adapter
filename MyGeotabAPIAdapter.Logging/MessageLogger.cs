@@ -73,5 +73,24 @@ namespace MyGeotabAPIAdapter.Logging
         {
             logger.Info($"******** RESUMING SERVICE: {loggingClassName} now that all prerequisite processors are running.");
         }
+
+        /// <inheritdoc/>
+        public void LogWaitForPrerequisiteServiceToProcessEntitiesPause(string loggingClassName, string prerequisiteService, TimeSpan delayBeforeNextCheck)
+        {
+            var nextCheckDateTime = DateTime.UtcNow.Add(delayBeforeNextCheck);
+
+            var message = new StringBuilder();
+            message.AppendLine($"******** PAUSING SERVICE: {loggingClassName} because of the following:");
+            message.AppendLine($"> Waiting for {prerequisiteService} to complete its next iteration of entity processing.");
+            message.AppendLine($"The {loggingClassName} will check again at {nextCheckDateTime} (UTC) and will resume operation if the {prerequisiteService} service has processed entities between now and then.");
+
+            logger.Info(message.ToString());
+        }
+
+        /// <inheritdoc/>
+        public void LogWaitForPrerequisiteServiceToProcessEntitiesResumption(string loggingClassName, string prerequisiteService)
+        {
+            logger.Info($"******** RESUMING SERVICE: {loggingClassName} now that the {prerequisiteService} service has completed another iteration of entity processing.");
+        }
     }
 }

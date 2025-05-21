@@ -1,5 +1,4 @@
-﻿using Geotab.Checkmate.ObjectModel.Exceptions;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
@@ -39,6 +38,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment;
         readonly IBackgroundServiceAwaiter<BinaryDataProcessor2> awaiter;
         readonly IExceptionHelper exceptionHelper;
+        readonly IForeignKeyServiceDependencyMap binaryDataForeignKeyServiceDependencyMap;
         readonly IGenericEntityPersister<DbBinaryData2> dbBinaryData2EntityPersister;
         readonly IGenericGeotabObjectFeeder<BinaryData> binaryDataGeotabObjectFeeder;
         readonly IGeotabBinaryDataDbBinaryData2ObjectMapper geotabBinaryDataDbBinaryData2ObjectMapper;
@@ -74,6 +74,13 @@ namespace MyGeotabAPIAdapter.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
+
+            // Setup the foreign key service dependency map.
+            binaryDataForeignKeyServiceDependencyMap = new ForeignKeyServiceDependencyMap(
+                [
+                    new ForeignKeyServiceDependency("FK_BinaryData2_Devices2", AdapterService.DeviceProcessor2)
+                ]
+            );
         }
 
         /// <summary>
@@ -95,7 +102,12 @@ namespace MyGeotabAPIAdapter.Services
                 };
                 await awaiter.WaitForPrerequisiteServicesIfNeededAsync(prerequisiteServices, stoppingToken);
                 await awaiter.WaitForDatabaseMaintenanceCompletionIfNeededAsync(stoppingToken);
-                await awaiter.WaitForConnectivityRestorationIfNeededAsync(stoppingToken);
+                var connectivityRestored = await awaiter.WaitForConnectivityRestorationIfNeededAsync(stoppingToken);
+                if (connectivityRestored == true)
+                {
+                    feedVersionRollbackRequired = true;
+                    connectivityRestored = false;
+                }
 
                 try
                 {
@@ -114,8 +126,7 @@ namespace MyGeotabAPIAdapter.Services
                         // If this is the first iteration after a connectivity disruption, roll-back the LastFeedVersion of the GeotabObjectFeeder to the last processed feed version that was committed to the database and set the LastFeedRetrievalTimeUtc to DateTime.MinValue to start processing without further delay.
                         if (feedVersionRollbackRequired == true)
                         {
-                            binaryDataGeotabObjectFeeder.LastFeedVersion = dbOServiceTracking.LastProcessedFeedVersion;
-                            binaryDataGeotabObjectFeeder.LastFeedRetrievalTimeUtc = DateTime.MinValue;
+                            binaryDataGeotabObjectFeeder.Rollback(dbOServiceTracking.LastProcessedFeedVersion);
                             feedVersionRollbackRequired = false;
                         }
 
@@ -179,8 +190,9 @@ namespace MyGeotabAPIAdapter.Services
                                 }
                                 catch (Exception ex)
                                 {
-                                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                    feedVersionRollbackRequired = true;
                                     await adapterUOW.RollBackAsync();
+                                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
                                     throw;
                                 }
                             }
@@ -211,8 +223,30 @@ namespace MyGeotabAPIAdapter.Services
                 }
                 catch (Exception ex)
                 {
-                    exceptionHelper.LogException(ex, NLogLogLevelName.Fatal, DefaultErrorMessagePrefix);
-                    stateMachine.HandleException(ex, NLogLogLevelName.Fatal);
+                    var exceptionToAnalyze = ex.InnerException ?? ex;
+                    if (ForeignKeyExceptionHelper.IsForeignKeyViolationException(exceptionToAnalyze))
+                    {
+                        var violatedConstraint = ForeignKeyExceptionHelper.GetConstraintNameFromException(exceptionToAnalyze);
+                        if (!string.IsNullOrEmpty(violatedConstraint) && binaryDataForeignKeyServiceDependencyMap.TryGetDependency(violatedConstraint, out AdapterService prerequisiteService))
+                        {
+                            await awaiter.WaitForPrerequisiteServiceToProcessEntitiesAsync(prerequisiteService, stoppingToken);
+                            // After waiting, this iteration's attempt is considered "handled" by waiting. The next iteration will be the actual retry of the operation.
+                            logger.Debug($"Iteration handling for FK violation on '{violatedConstraint}' complete (waited for {prerequisiteService}). Ready for next iteration.");
+                        }
+                        else
+                        {
+                            // FK violation occurred, but constraint name not found OR not included in the dependency map.
+                            string reason = string.IsNullOrEmpty(violatedConstraint) ? "constraint name not extractable" : $"constraint '{violatedConstraint}' not included in tripForeignKeyServiceDependencyMap";
+                            exceptionHelper.LogException(ex, NLogLogLevelName.Fatal, $"{DefaultErrorMessagePrefix} Unhandled FK violation: {reason}.");
+                            stateMachine.HandleException(ex, NLogLogLevelName.Fatal);
+                        }
+                    }
+                    else
+                    {
+                        // Not an FK violation. Treat as fatal.
+                        exceptionHelper.LogException(ex, NLogLogLevelName.Fatal, DefaultErrorMessagePrefix);
+                        stateMachine.HandleException(ex, NLogLogLevelName.Fatal);
+                    }
                 }
 
                 // If the feed is up-to-date, add a delay equivalent to the configured interval.

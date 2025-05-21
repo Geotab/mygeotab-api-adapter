@@ -112,8 +112,7 @@ namespace MyGeotabAPIAdapter.Services
                         // If this is the first iteration after a connectivity disruption, roll-back the LastFeedVersion of the GeotabObjectFeeder to the last processed feed version that was committed to the database and set the LastFeedRetrievalTimeUtc to DateTime.MinValue to start processing without further delay.
                         if (feedVersionRollbackRequired == true)
                         {
-                            tripGeotabObjectFeeder.LastFeedVersion = dbOServiceTracking.LastProcessedFeedVersion;
-                            tripGeotabObjectFeeder.LastFeedRetrievalTimeUtc = DateTime.MinValue;
+                            tripGeotabObjectFeeder.Rollback(dbOServiceTracking.LastProcessedFeedVersion);
                             feedVersionRollbackRequired = false;
                         }
 

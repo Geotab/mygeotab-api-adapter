@@ -35,8 +35,8 @@ namespace MyGeotabAPIAdapter
         /// Waits for the restoration of connectivity to the MyGeotab API or to the adapter database if connecticity to either is lost, effectively pausing the subject service, <see cref="T"/>.
         /// </summary>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
-        /// <returns></returns>
-        Task WaitForConnectivityRestorationIfNeededAsync(CancellationToken cancellationToken);
+        /// <returns><c>true</c> if wait was needed; otherwise, <c>false</c></returns>
+        Task<bool> WaitForConnectivityRestorationIfNeededAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Waits for the completion of database maintenance (if underway), effectively pausing the subject service, <see cref="T"/>.
@@ -51,5 +51,13 @@ namespace MyGeotabAPIAdapter
         /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
         /// <returns></returns>
         Task WaitForPrerequisiteServicesIfNeededAsync(List<AdapterService> prerequisiteServices, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Waits for the <paramref name="prerequisiteService"/> to log its next activity from the DateTime at which this method is called. Checks every minute until the service has logged its next activity.
+        /// </summary>
+        /// <param name="prerequisiteService">The prerequisite service upon which to wait.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+        /// <returns></returns>
+        Task WaitForPrerequisiteServiceToProcessEntitiesAsync(AdapterService prerequisiteService, CancellationToken cancellationToken);
     }
 }

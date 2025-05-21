@@ -39,6 +39,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly IBackgroundServiceAwaiter<TripProcessor2> awaiter;
         readonly IBaseRepository<DbStgTrip2> dbStgTrip2Repo;
         readonly IExceptionHelper exceptionHelper;
+        readonly IForeignKeyServiceDependencyMap tripForeignKeyServiceDependencyMap;
         readonly IGenericEntityPersister<DbStgTrip2> dbStgTrip2EntityPersister;
         readonly IGenericGeotabObjectFeeder<Trip> tripGeotabObjectFeeder;
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
@@ -76,6 +77,14 @@ namespace MyGeotabAPIAdapter.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
+
+            // Setup the foreign key service dependency map.
+            tripForeignKeyServiceDependencyMap = new ForeignKeyServiceDependencyMap(
+                [
+                    new ForeignKeyServiceDependency("FK_Trips2_Devices2", AdapterService.DeviceProcessor2),
+                    new ForeignKeyServiceDependency("FK_Trips2_Users2", AdapterService.UserProcessor2)
+                ]
+            );
         }
 
         /// <summary>
@@ -103,7 +112,12 @@ namespace MyGeotabAPIAdapter.Services
                 };
                 await awaiter.WaitForPrerequisiteServicesIfNeededAsync(prerequisiteServices, stoppingToken);
                 await awaiter.WaitForDatabaseMaintenanceCompletionIfNeededAsync(stoppingToken);
-                await awaiter.WaitForConnectivityRestorationIfNeededAsync(stoppingToken);
+                var connectivityRestored = await awaiter.WaitForConnectivityRestorationIfNeededAsync(stoppingToken);
+                if (connectivityRestored == true)
+                {
+                    feedVersionRollbackRequired = true;
+                    connectivityRestored = false;
+                }
 
                 try
                 {
@@ -122,8 +136,7 @@ namespace MyGeotabAPIAdapter.Services
                         // If this is the first iteration after a connectivity disruption, roll-back the LastFeedVersion of the GeotabObjectFeeder to the last processed feed version that was committed to the database and set the LastFeedRetrievalTimeUtc to DateTime.MinValue to start processing without further delay.
                         if (feedVersionRollbackRequired == true)
                         {
-                            tripGeotabObjectFeeder.LastFeedVersion = dbOServiceTracking.LastProcessedFeedVersion;
-                            tripGeotabObjectFeeder.LastFeedRetrievalTimeUtc = DateTime.MinValue;
+                            tripGeotabObjectFeeder.Rollback(dbOServiceTracking.LastProcessedFeedVersion);
                             feedVersionRollbackRequired = false;
                         }
 
@@ -238,8 +251,9 @@ namespace MyGeotabAPIAdapter.Services
                                 }
                                 catch (Exception ex)
                                 {
-                                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                                    feedVersionRollbackRequired = true;
                                     await adapterUOW.RollBackAsync();
+                                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
                                     throw;
                                 }
                             }
@@ -270,8 +284,30 @@ namespace MyGeotabAPIAdapter.Services
                 }
                 catch (Exception ex)
                 {
-                    exceptionHelper.LogException(ex, NLogLogLevelName.Fatal, DefaultErrorMessagePrefix);
-                    stateMachine.HandleException(ex, NLogLogLevelName.Fatal);
+                    var exceptionToAnalyze = ex.InnerException ?? ex;
+                    if (ForeignKeyExceptionHelper.IsForeignKeyViolationException(exceptionToAnalyze))
+                    {
+                        var violatedConstraint = ForeignKeyExceptionHelper.GetConstraintNameFromException(exceptionToAnalyze);
+                        if (!string.IsNullOrEmpty(violatedConstraint) && tripForeignKeyServiceDependencyMap.TryGetDependency(violatedConstraint, out AdapterService prerequisiteService))
+                        {
+                            await awaiter.WaitForPrerequisiteServiceToProcessEntitiesAsync(prerequisiteService, stoppingToken);
+                            // After waiting, this iteration's attempt is considered "handled" by waiting. The next iteration will be the actual retry of the operation.
+                            logger.Debug($"Iteration handling for FK violation on '{violatedConstraint}' complete (waited for {prerequisiteService}). Ready for next iteration.");
+                        }
+                        else
+                        {
+                            // FK violation occurred, but constraint name not found OR not included in the dependency map.
+                            string reason = string.IsNullOrEmpty(violatedConstraint) ? "constraint name not extractable" : $"constraint '{violatedConstraint}' not included in tripForeignKeyServiceDependencyMap";
+                            exceptionHelper.LogException(ex, NLogLogLevelName.Fatal, $"{DefaultErrorMessagePrefix} Unhandled FK violation: {reason}.");
+                            stateMachine.HandleException(ex, NLogLogLevelName.Fatal);
+                        }
+                    }
+                    else
+                    {
+                        // Not an FK violation. Treat as fatal.
+                        exceptionHelper.LogException(ex, NLogLogLevelName.Fatal, DefaultErrorMessagePrefix);
+                        stateMachine.HandleException(ex, NLogLogLevelName.Fatal);
+                    }
                 }
 
                 // If the feed is up-to-date, add a delay equivalent to the configured interval.

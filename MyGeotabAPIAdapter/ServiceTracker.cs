@@ -215,6 +215,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
+        public async Task<T> GetDriverChangeService2InfoAsync()
+        {
+            await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
+            var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.DriverChangeProcessor2.ToString());
+            return dbOServiceTracking;
+        }
+
+        /// <inheritdoc/>
         public async Task<T> GetDutyStatusAvailabilityServiceInfoAsync()
         {
             await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
@@ -525,6 +533,19 @@ namespace MyGeotabAPIAdapter
         {
             var dbOServiceTracking = await GetDbOServiceTrackingRecordAsync(adapterService);
             if (dbOServiceTracking.LastProcessedFeedVersion != null)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> ServiceHasProcessedDataSinceAsync(AdapterService adapterService, DateTime sinceDateTime)
+        {
+            var dbOServiceTracking = await GetDbOServiceTrackingRecordAsync(adapterService);
+            var entitiesLastProcessedUtc = dbOServiceTracking.EntitiesLastProcessedUtc;
+
+            if (entitiesLastProcessedUtc.HasValue && entitiesLastProcessedUtc > sinceDateTime)
             {
                 return true;
             }

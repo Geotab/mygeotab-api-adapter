@@ -78,6 +78,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbDriverChangeTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbDriverChange2"/> entities.
+        /// </summary>
+        string DbDriverChange2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbDutyStatusAvailability"/> entities.
         /// </summary>
         string DbDutyStatusAvailabilityTableName { get; }
@@ -234,6 +239,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbStgDiagnostic2TableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbStgDriverChange2"/> entities.
+        /// </summary>
+        string DbStgDriverChange2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbStgExceptionEvent2"/> entities.
         /// </summary>
         string DbStgExceptionEvent2TableName { get; }
@@ -327,6 +337,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the stored procedure or function responsible for merging staging Diagnostics into the main Diagnostics2 table.
         /// </summary>
         string MergeStagingDiagnosticsProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging DriverChanges into the main DriverChanges2 table.
+        /// </summary>
+        string MergeStagingDriverChangesProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging ExceptionEvents into the main ExceptionEvents2 table.

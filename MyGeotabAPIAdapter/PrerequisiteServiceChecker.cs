@@ -1,9 +1,7 @@
 ﻿using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Logging;
-using NLog;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,7 +17,6 @@ namespace MyGeotabAPIAdapter
         readonly IMessageLogger messageLogger;
         readonly IOrchestratorServiceTracker orchestratorServiceTracker;
         readonly IServiceTracker<T> serviceTracker;
-        readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PrerequisiteServiceChecker"/> class.
@@ -87,6 +84,29 @@ namespace MyGeotabAPIAdapter
             {
                 messageLogger.LogWaitForPrerequisiteServicesServiceResumption(dependentServiceClassName);
             }
+        }
+
+        /// <inheritdoc/>
+        public async Task WaitForPrerequisiteServiceToProcessEntitiesAsync(string dependentServiceClassName, AdapterService prerequisiteService, CancellationToken cancellationToken)
+        {
+            const int CheckIntervalSeconds = 10;
+            var waitDuration = TimeSpan.FromSeconds(CheckIntervalSeconds);
+            var waitStartTime = DateTime.UtcNow;
+            var prerequisiteServiceHasProcessedEntitiesSinceWaitStartTime = false;
+            while (prerequisiteServiceHasProcessedEntitiesSinceWaitStartTime == false)
+            {
+                prerequisiteServiceHasProcessedEntitiesSinceWaitStartTime = await serviceTracker.ServiceHasProcessedDataSinceAsync(prerequisiteService, waitStartTime);
+                if (prerequisiteServiceHasProcessedEntitiesSinceWaitStartTime == false)
+                {
+                    messageLogger.LogWaitForPrerequisiteServiceToProcessEntitiesPause(dependentServiceClassName, prerequisiteService.ToString(), waitDuration);
+                    await Task.Delay(waitDuration, cancellationToken);
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            // Log a message indicating that the service is resuming operation.
+            messageLogger.LogWaitForPrerequisiteServiceToProcessEntitiesResumption(dependentServiceClassName, prerequisiteService.ToString());
         }
     }
 }
