@@ -156,11 +156,12 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGeotabBinaryDataDbBinaryData2ObjectMapper, GeotabBinaryDataDbBinaryData2ObjectMapper>()
                         .AddTransient<IGeotabChargeEventDbChargeEventObjectMapper, GeotabChargeEventDbChargeEventObjectMapper>()
                         .AddTransient<IGeotabChargeEventDbStgChargeEvent2ObjectMapper, GeotabChargeEventDbStgChargeEvent2ObjectMapper>()
-                        .AddTransient<IGeotabDebugDataDbDebugDataObjectMapper, GeotabDebugDataDbDebugDataObjectMapper>()
                         .AddTransient<IGeotabConditionDbConditionObjectMapper, GeotabConditionDbConditionObjectMapper>()
+                        .AddTransient<IGeotabDebugDataDbDebugDataObjectMapper, GeotabDebugDataDbDebugDataObjectMapper>()
                         .AddTransient<IGeotabDeviceDbDeviceObjectMapper, GeotabDeviceDbDeviceObjectMapper>()
                         .AddTransient<IGeotabDeviceDbStgDevice2ObjectMapper, GeotabDeviceDbStgDevice2ObjectMapper>()
                         .AddTransient<IGeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper, GeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper>()
+                        .AddTransient<IGeotabDeviceStatusInfoDbStgDeviceStatusInfo2ObjectMapper, GeotabDeviceStatusInfoDbStgDeviceStatusInfo2ObjectMapper>()
                         .AddTransient<IGeotabDiagnosticDbDiagnosticObjectMapper, GeotabDiagnosticDbDiagnosticObjectMapper>()
                         .AddTransient<IGeotabDiagnosticDbStgDiagnostic2ObjectMapper, GeotabDiagnosticDbStgDiagnostic2ObjectMapper>()
                         .AddTransient<IGeotabDriverChangeDbDriverChangeObjectMapper, GeotabDriverChangeDbDriverChangeObjectMapper>()
@@ -202,6 +203,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGenericEntityPersister<DbDevice>, GenericEntityPersister<DbDevice>>()
                         .AddTransient<IGenericEntityPersister<DbDevice2>, GenericEntityPersister<DbDevice2>>()
                         .AddTransient<IGenericEntityPersister<DbDeviceStatusInfo>, GenericEntityPersister<DbDeviceStatusInfo>>()
+                        .AddTransient<IGenericEntityPersister<DbDeviceStatusInfo2>, GenericEntityPersister<DbDeviceStatusInfo2>>()
                         .AddTransient<IGenericEntityPersister<DbDiagnostic>, GenericEntityPersister<DbDiagnostic>>()
                         .AddTransient<IGenericEntityPersister<DbDiagnostic2>, GenericEntityPersister<DbDiagnostic2>>()
                         .AddTransient<IGenericEntityPersister<DbDiagnosticId2>, GenericEntityPersister<DbDiagnosticId2>>()
@@ -238,6 +240,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGenericEntityPersister<DbStatusDataLocation2>, GenericEntityPersister<DbStatusDataLocation2>>()
                         .AddTransient<IGenericEntityPersister<DbStgChargeEvent2>, GenericEntityPersister<DbStgChargeEvent2>>()
                         .AddTransient<IGenericEntityPersister<DbStgDevice2>, GenericEntityPersister<DbStgDevice2>>()
+                        .AddTransient<IGenericEntityPersister<DbStgDeviceStatusInfo2>, GenericEntityPersister<DbStgDeviceStatusInfo2>>()
                         .AddTransient<IGenericEntityPersister<DbStgDiagnostic2>, GenericEntityPersister<DbStgDiagnostic2>>()
                         .AddTransient<IGenericEntityPersister<DbStgDriverChange2>, GenericEntityPersister<DbStgDriverChange2>>()
                         .AddTransient<IGenericEntityPersister<DbStgExceptionEvent2>, GenericEntityPersister<DbStgExceptionEvent2>>()
@@ -353,7 +356,7 @@ namespace MyGeotabAPIAdapter
                         databaseValidator.ValidateDatabaseVersion();
 
                         // Configure options for the services. This is necessary because the services are registered as hosted services and the options are used to determine whether the individual services should pause for database maintenance windows wherein operations such as reindexing could potentially cause exceptions.
-                        var serviceNames = new string[] { nameof(Orchestrator2), nameof(ChargeEventProcessor2), nameof(ControllerProcessor2), nameof(DeviceProcessor2), nameof(DiagnosticProcessor2), nameof(DriverChangeProcessor2), nameof(ExceptionEventProcessor2), nameof(FailureModeProcessor2), nameof(FaultDataLocationService2), nameof(FaultDataProcessor2), nameof(GroupProcessor2), nameof(LogRecordProcessor2), nameof(RuleProcessor2), nameof(StatusDataLocationService2), nameof(StatusDataProcessor2), nameof(TripProcessor2), nameof(UnitOfMeasureProcessor2), nameof(UserProcessor2), nameof(ZoneProcessor2), nameof(ZoneTypeProcessor2) };
+                        var serviceNames = new string[] { nameof(Orchestrator2), nameof(ChargeEventProcessor2), nameof(ControllerProcessor2), nameof(DeviceProcessor2), nameof(DeviceStatusInfoProcessor2), nameof(DiagnosticProcessor2), nameof(DriverChangeProcessor2), nameof(ExceptionEventProcessor2), nameof(FailureModeProcessor2), nameof(FaultDataLocationService2), nameof(FaultDataProcessor2), nameof(GroupProcessor2), nameof(LogRecordProcessor2), nameof(RuleProcessor2), nameof(StatusDataLocationService2), nameof(StatusDataProcessor2), nameof(TripProcessor2), nameof(UnitOfMeasureProcessor2), nameof(UserProcessor2), nameof(ZoneProcessor2), nameof(ZoneTypeProcessor2) };
 
                         // Register the ServiceOprionsProvider.
                         services.AddSingleton<IServiceOptionsProvider, ServiceOptionsProvider>();
@@ -421,6 +424,7 @@ namespace MyGeotabAPIAdapter
                         .AddHostedService<ChargeEventProcessor2>()
                         .AddHostedService<ControllerProcessor2>()
                         .AddHostedService<DeviceProcessor2>()
+                        .AddHostedService<DeviceStatusInfoProcessor2>()
                         .AddHostedService<DiagnosticProcessor2>()
                         .AddHostedService<DriverChangeProcessor2>()
                         .AddHostedService<ExceptionEventProcessor2>()
@@ -447,6 +451,7 @@ namespace MyGeotabAPIAdapter
                         .AddSingleton<IBackgroundServiceAwaiter<ChargeEventProcessor2>, BackgroundServiceAwaiter<ChargeEventProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<ControllerProcessor2>, BackgroundServiceAwaiter<ControllerProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<DeviceProcessor2>, BackgroundServiceAwaiter<DeviceProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<DeviceStatusInfoProcessor2>, BackgroundServiceAwaiter<DeviceStatusInfoProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<DiagnosticProcessor2>, BackgroundServiceAwaiter<DiagnosticProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<DriverChangeProcessor2>, BackgroundServiceAwaiter<DriverChangeProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<ExceptionEventProcessor2>, BackgroundServiceAwaiter<ExceptionEventProcessor2>>()

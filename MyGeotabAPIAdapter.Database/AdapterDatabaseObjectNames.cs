@@ -30,6 +30,9 @@
         public string DbDebugDataTableName => "DebugData";
 
         /// <inheritdoc/>
+        public string DbDeviceStatusInfo2TableName => "DeviceStatusInfo2";
+
+        /// <inheritdoc/>
         public string DbDeviceTableName => "Devices";
 
         /// <inheritdoc/>
@@ -140,6 +143,9 @@
         public string DbStgDevice2TableName => "stg_Devices2";
 
         /// <inheritdoc/>
+        public string DbStgDeviceStatusInfo2TableName => "stg_DeviceStatusInfo2";
+
+        /// <inheritdoc/>
         public string DbStgDiagnostic2TableName => "stg_Diagnostics2";
 
         /// <inheritdoc/>
@@ -198,6 +204,9 @@
 
         /// <inheritdoc/>
         public string MergeStagingDevicesProcedureName => "spMerge_stg_Devices2";
+
+        /// <inheritdoc/>
+        public string MergeStagingDeviceStatusInfoProcedureName => "spMerge_stg_DeviceStatusInfo2";
 
         /// <inheritdoc/>
         public string MergeStagingDiagnosticsProcedureName => "spMerge_stg_Diagnostics2";

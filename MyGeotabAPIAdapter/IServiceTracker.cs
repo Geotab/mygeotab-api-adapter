@@ -89,6 +89,11 @@ namespace MyGeotabAPIAdapter
         Task<T> GetDeviceStatusInfoServiceInfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DeviceStatusInfoProcessor2"/>.
+        /// </summary>
+        Task<T> GetDeviceStatusInfoService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DiagnosticProcessor"/>.
         /// </summary>
         Task<T> GetDiagnosticServiceInfoAsync();

@@ -64,6 +64,7 @@ GO
 --truncate table [dbo].[BinaryData2];
 --truncate table [dbo].[ChargeEvents2];
 --truncate table [dbo].[Devices2];
+--truncate table [dbo].[DeviceStatusInfo2];
 --truncate table [dbo].[DiagnosticIds2];
 --truncate table [dbo].[Diagnostics2];
 --truncate table [dbo].[DriverChanges2];

@@ -48,6 +48,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbDebugDataTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbDeviceStatusInfo2"/> entities.
+        /// </summary>
+        string DbDeviceStatusInfo2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbDevice"/> entities.
         /// </summary>
         string DbDeviceTableName { get; }
@@ -234,6 +239,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbStgDevice2TableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbStgDeviceStatusInfo2"/> entities.
+        /// </summary>
+        string DbStgDeviceStatusInfo2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbStgDiagnostic2"/> entities.
         /// </summary>
         string DbStgDiagnostic2TableName { get; }
@@ -332,6 +342,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the stored procedure or function responsible for merging staging Devices into the main Devices2 table.
         /// </summary>
         string MergeStagingDevicesProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging DeviceStatusInfo records into the main DeviceStatusInfo2 table.
+        /// </summary>
+        string MergeStagingDeviceStatusInfoProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging Diagnostics into the main Diagnostics2 table.
