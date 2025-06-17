@@ -109,6 +109,12 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             {
                 dbStgDevice2.Groups = GetDeviceGroupsJSON(entityToMapTo.Groups);
             }
+            // Until Trailer Ids have been fully migrated to Device Ids from the perspective of other enity types such as DVIRLog, it will be be necessary to use TmpTrailerId as the only possible way to associate Traler Id with Device Id. 
+            if (entityToMapTo.TmpTrailerId != null)
+            {
+                dbStgDevice2.TmpTrailerGeotabId = entityToMapTo.TmpTrailerId.ToString();
+                dbStgDevice2.TmpTrailerId = geotabIdConverter.ToGuid(entityToMapTo.TmpTrailerId);
+            }
             return dbStgDevice2;
         }
 

@@ -104,9 +104,19 @@ namespace MyGeotabAPIAdapter.Database
         string DbDVIRDefectTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbDVIRDefect2"/> entities.
+        /// </summary>
+        string DbDVIRDefect2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbDVIRDefectRemark"/> entities.
         /// </summary>
         string DbDVIRDefectRemarkTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbDVIRDefectRemark2"/> entities.
+        /// </summary>
+        string DbDVIRDefectRemark2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbDVIRDefectUpdate"/> entities.
@@ -117,6 +127,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the database table associated with <see cref="DbDVIRLog"/> entities.
         /// </summary>
         string DbDVIRLogTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbDVIRLog2"/> entities.
+        /// </summary>
+        string DbDVIRLog2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbExceptionEvent"/> entities.
@@ -254,6 +269,21 @@ namespace MyGeotabAPIAdapter.Database
         string DbStgDriverChange2TableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbStgDVIRDefect2"/> entities.
+        /// </summary>
+        string DbStgDVIRDefect2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgDVIRDefectRemark2"/> entities.
+        /// </summary>
+        string DbStgDVIRDefectRemark2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgDVIRLog2"/> entities.
+        /// </summary>
+        string DbStgDVIRLog2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbStgExceptionEvent2"/> entities.
         /// </summary>
         string DbStgExceptionEvent2TableName { get; }
@@ -357,6 +387,21 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the stored procedure or function responsible for merging staging DriverChanges into the main DriverChanges2 table.
         /// </summary>
         string MergeStagingDriverChangesProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging DVIRDefects into the main DVIRDefects2 table.
+        /// </summary>
+        string MergeStagingDVIRDefectsProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging DVIRDefectRemarks into the main DVIRDefectRemarks2 table.
+        /// </summary>
+        string MergeStagingDVIRDefectRemarksProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging DVIRLogs into the main DVIRLogs2 table.
+        /// </summary>
+        string MergeStagingDVIRLogsProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging ExceptionEvents into the main ExceptionEvents2 table.

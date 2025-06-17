@@ -63,13 +63,22 @@
         public string DbDVIRDefectTableName => "DVIRDefects";
 
         /// <inheritdoc/>
+        public string DbDVIRDefect2TableName => "DVIRDefects2";
+
+        /// <inheritdoc/>
         public string DbDVIRDefectRemarkTableName => "DVIRDefectRemarks";
+
+        /// <inheritdoc/>
+        public string DbDVIRDefectRemark2TableName => "DVIRDefectRemarks2";
 
         /// <inheritdoc/>
         public string DbDVIRDefectUpdatesTableName => "DVIRDefectUpdates";
 
         /// <inheritdoc/>
         public string DbDVIRLogTableName => "DVIRLogs";
+
+        /// <inheritdoc/>
+        public string DbDVIRLog2TableName => "DVIRLogs2";
 
         /// <inheritdoc/>
         public string DbExceptionEventTableName => "ExceptionEvents";
@@ -152,6 +161,15 @@
         public string DbStgDriverChange2TableName => "stg_DriverChanges2";
 
         /// <inheritdoc/>
+        public string DbStgDVIRDefect2TableName => "stg_DVIRDefects2";
+
+        /// <inheritdoc/>
+        public string DbStgDVIRDefectRemark2TableName => "stg_DVIRDefectRemarks2";
+
+        /// <inheritdoc/>
+        public string DbStgDVIRLog2TableName => "stg_DVIRLogs2";
+
+        /// <inheritdoc/>
         public string DbStgExceptionEvent2TableName => "stg_ExceptionEvents2";
 
         /// <inheritdoc/>
@@ -213,6 +231,15 @@
 
         /// <inheritdoc/>
         public string MergeStagingDriverChangesProcedureName => "spMerge_stg_DriverChanges2";
+
+        /// <inheritdoc/>
+        public string MergeStagingDVIRDefectsProcedureName => "spMerge_stg_DVIRDefects2";
+
+        /// <inheritdoc/>
+        public string MergeStagingDVIRDefectRemarksProcedureName => "spMerge_stg_DVIRDefectRemarks2";
+
+        /// <inheritdoc/>
+        public string MergeStagingDVIRLogsProcedureName => "spMerge_stg_DVIRLogs2";
 
         /// <inheritdoc/>
         public string MergeStagingExceptionEventsProcedureName => "spMerge_stg_ExceptionEvents2";

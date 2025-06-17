@@ -37,6 +37,8 @@ namespace MyGeotabAPIAdapter.Database.Models
         public string Name { get; set; }
         public int? ProductId { get; set; }
         public string SerialNumber { get; set; }
+        public string? TmpTrailerGeotabId { get; set; }
+        public Guid? TmpTrailerId { get; set; }
         public string VIN { get; set; }
         public int EntityStatus { get; set; }
         [ChangeTracker]

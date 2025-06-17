@@ -31,6 +31,15 @@
 -- ALTER TABLE public."ChargeEvents2" DISABLE TRIGGER ALL;
 -- delete from public."ChargeEvents2";
 -- ALTER TABLE public."ChargeEvents2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."DVIRDefectRemarks2" DISABLE TRIGGER ALL;
+-- delete from public."DVIRDefectRemarks2";
+-- ALTER TABLE public."DVIRDefectRemarks2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."DVIRDefects2" DISABLE TRIGGER ALL;
+-- delete from public."DVIRDefects2";
+-- ALTER TABLE public."DVIRDefects2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."DVIRLogs2" DISABLE TRIGGER ALL;
+-- delete from public."DVIRLogs2";
+-- ALTER TABLE public."DVIRLogs2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."DriverChanges2" DISABLE TRIGGER ALL;
 -- delete from public."DriverChanges2";
 -- ALTER TABLE public."DriverChanges2" ENABLE TRIGGER ALL;

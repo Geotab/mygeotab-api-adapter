@@ -129,6 +129,11 @@ namespace MyGeotabAPIAdapter
         Task<T> GetDVIRLogServiceInfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DVIRLogProcessor2"/>.
+        /// </summary>
+        Task<T> GetDVIRLogService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ExceptionEventProcessor"/>.
         /// </summary>
         Task<T> GetExceptionEventServiceInfoAsync();
