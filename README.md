@@ -1,4 +1,4 @@
-﻿﻿# MyGeotab API Adapter
+# MyGeotab API Adapter
 
 The MyGeotab API Adapter solution serves as both an example of proper integration via data feeds and the potential foundation for those seeking to develop new integrations with the Geotab platform. It is a collection of .NET 9.0 (C#) Background Services that use the MyGeotab API data feeds to pull the most common data sets from a MyGeotab database and stream the data into tables within a SQL Server or PostgreSQL database; this could account for half the work in terms of a unidirectional integration where the data from the database is further processed for integration into an external system.
 
@@ -57,3 +57,7 @@ An example process has been developed to facilitate rapid and semi-autonomous de
 Utilizing the deployment process outlined in this example **may result in charges** incurred for utilization of Microsoft Azure resources. Geotab is not liable under any circumstances for any charges incurred as a result of following this deployment example.
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#cloudshell)
+
+## Feedback
+
+Help us prioritize future efforts and better understand how the API Adapter is used! If you would like to provide any feedback about the MyGeotab API Adapter solution, please feel free to complete the 100% voluntary [MyGeotab API Adapter - Usage Survey](https://docs.google.com/forms/d/e/1FAIpQLSeIv-6A4Ugu7aIoyJdXrqVWyOF7sB8nuHOV-FDAYqayaPlkJg/viewform?usp=header).
