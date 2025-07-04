@@ -535,7 +535,7 @@ CREATE TABLE public."Diagnostics" (
     "FormerShimGeotabGUID" character varying(100),
     "ControllerId" character varying(100),
     "DiagnosticCode" integer,
-    "DiagnosticName" character varying(255) NOT NULL,
+    "DiagnosticName" text NOT NULL,
     "DiagnosticSourceId" character varying(50) NOT NULL,
     "DiagnosticSourceName" character varying(255) NOT NULL,
     "DiagnosticUnitOfMeasureId" character varying(50) NOT NULL,

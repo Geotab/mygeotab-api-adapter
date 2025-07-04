@@ -207,7 +207,7 @@
 	"FormerShimGeotabGUID" NVARCHAR2(100), 
 	"ControllerId" NVARCHAR2(100), 
 	"DiagnosticCode" NUMBER(10,0), 
-	"DiagnosticName" NVARCHAR2(255), 
+	"DiagnosticName" NCLOB, 
 	"DiagnosticSourceId" NVARCHAR2(50), 
 	"DiagnosticSourceName" NVARCHAR2(255), 
 	"DiagnosticUnitOfMeasureId" NVARCHAR2(50), 

@@ -93,6 +93,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbDutyStatusAvailabilityTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbDutyStatusAvailability2"/> entities.
+        /// </summary>
+        string DbDutyStatusAvailability2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbDutyStatusLog"/> entities.
         /// </summary>
         string DbDutyStatusLogsTableName { get; }
@@ -269,6 +274,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbStgDriverChange2TableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbStgDutyStatusAvailability2"/> entities.
+        /// </summary>
+        string DbStgDutyStatusAvailability2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbStgDVIRDefect2"/> entities.
         /// </summary>
         string DbStgDVIRDefect2TableName { get; }
@@ -387,6 +397,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the stored procedure or function responsible for merging staging DriverChanges into the main DriverChanges2 table.
         /// </summary>
         string MergeStagingDriverChangesProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging DutyStatusAvailabilities into the main DutyStatusAvailabilities2 table.
+        /// </summary>
+        string MergeStagingDutyStatusAvailabilitiesProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging DVIRDefects into the main DVIRDefects2 table.

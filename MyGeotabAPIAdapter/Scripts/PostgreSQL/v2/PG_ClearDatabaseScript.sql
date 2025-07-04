@@ -31,6 +31,9 @@
 -- ALTER TABLE public."ChargeEvents2" DISABLE TRIGGER ALL;
 -- delete from public."ChargeEvents2";
 -- ALTER TABLE public."ChargeEvents2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."DutyStatusAvailabilities2" DISABLE TRIGGER ALL;
+-- delete from public."DutyStatusAvailabilities2";
+-- ALTER TABLE public."DutyStatusAvailabilities2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."DVIRDefectRemarks2" DISABLE TRIGGER ALL;
 -- delete from public."DVIRDefectRemarks2";
 -- ALTER TABLE public."DVIRDefectRemarks2" ENABLE TRIGGER ALL;

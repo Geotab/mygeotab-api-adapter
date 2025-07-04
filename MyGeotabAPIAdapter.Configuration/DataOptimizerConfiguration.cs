@@ -10,8 +10,8 @@ namespace MyGeotabAPIAdapter.Configuration
     public class DataOptimizerConfiguration : IDataOptimizerConfiguration
     {
         // Argument Names for appsettings:
-        // > OverrideSetings
-        const string ArgNameDisableMachineNameValidation = "OverrideSetings:DisableMachineNameValidation";
+        // > OverrideSettings
+        const string ArgNameDisableMachineNameValidation = "OverrideSettings:DisableMachineNameValidation";
         // > DatabaseSettings:AdapterDatabase
         const string ArgNameAdapterDatabaseProviderType = "DatabaseSettings:AdapterDatabase:AdapterDatabaseProviderType";
         const string ArgNameAdapterDatabaseConnectionString = "DatabaseSettings:AdapterDatabase:AdapterDatabaseConnectionString";
@@ -355,7 +355,7 @@ namespace MyGeotabAPIAdapter.Configuration
 
             string errorMessage;
 
-            // OverrideSetings:
+            // OverrideSettings:
             DisableMachineNameValidation = configurationHelper.GetConfigKeyValueBoolean(ArgNameDisableMachineNameValidation);
             if (DisableMachineNameValidation == true)
             {

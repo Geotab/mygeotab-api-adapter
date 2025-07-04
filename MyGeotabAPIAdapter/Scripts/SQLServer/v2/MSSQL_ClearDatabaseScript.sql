@@ -63,6 +63,7 @@ GO
 --truncate table [dbo].[DBMaintenanceLogs2];
 --truncate table [dbo].[BinaryData2];
 --truncate table [dbo].[ChargeEvents2];
+--truncate table [dbo].[DutyStatusAvailabilities2];
 --truncate table [dbo].[DVIRDefectRemarks2];
 --truncate table [dbo].[DVIRDefects2];
 --truncate table [dbo].[DVIRLogs2];

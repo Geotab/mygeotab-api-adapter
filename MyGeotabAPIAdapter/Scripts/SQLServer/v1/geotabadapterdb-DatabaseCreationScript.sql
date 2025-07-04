@@ -167,7 +167,7 @@ CREATE TABLE [dbo].[Diagnostics](
 	[FormerShimGeotabGUID] [nvarchar](100) NULL,
 	[ControllerId] [nvarchar](100) NULL,
 	[DiagnosticCode] [int] NULL,
-	[DiagnosticName] [nvarchar](255) NOT NULL,
+	[DiagnosticName] [nvarchar](max) NOT NULL,
 	[DiagnosticSourceId] [nvarchar](50) NOT NULL,
 	[DiagnosticSourceName] [nvarchar](255) NOT NULL,
 	[DiagnosticUnitOfMeasureId] [nvarchar](50) NOT NULL,

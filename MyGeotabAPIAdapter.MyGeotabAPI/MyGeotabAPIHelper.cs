@@ -204,7 +204,9 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                                 search = new ExceptionEventSearch
                                 {
                                     FromDate = fromDate,
-                                    IncludeInvalidated = true
+                                    IncludeInvalidated = true,
+                                    IncludeDismissedEvents = true,
+                                    IncludeDeleted = true
                                 },
                                 resultsLimit
                             }, cancellationTokenSource.Token);
@@ -315,7 +317,9 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                             {
                                 search = new ExceptionEventSearch
                                 {
-                                    IncludeInvalidated = true
+                                    IncludeInvalidated = true,
+                                    IncludeDismissedEvents = true,
+                                    IncludeDeleted = true
                                 },
                                 fromVersion,
                                 resultsLimit

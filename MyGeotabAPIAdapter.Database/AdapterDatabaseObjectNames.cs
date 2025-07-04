@@ -57,6 +57,9 @@
         public string DbDutyStatusAvailabilityTableName => "DutyStatusAvailability";
 
         /// <inheritdoc/>
+        public string DbDutyStatusAvailability2TableName => "DutyStatusAvailability2";
+
+        /// <inheritdoc/>
         public string DbDutyStatusLogsTableName => "DutyStatusLogs";
 
         /// <inheritdoc/>
@@ -161,6 +164,9 @@
         public string DbStgDriverChange2TableName => "stg_DriverChanges2";
 
         /// <inheritdoc/>
+        public string DbStgDutyStatusAvailability2TableName => "stg_DutyStatusAvailability2";
+
+        /// <inheritdoc/>
         public string DbStgDVIRDefect2TableName => "stg_DVIRDefects2";
 
         /// <inheritdoc/>
@@ -231,6 +237,9 @@
 
         /// <inheritdoc/>
         public string MergeStagingDriverChangesProcedureName => "spMerge_stg_DriverChanges2";
+
+        /// <inheritdoc/>
+        public string MergeStagingDutyStatusAvailabilitiesProcedureName => "spMerge_stg_DutyStatusAvailabilities2";
 
         /// <inheritdoc/>
         public string MergeStagingDVIRDefectsProcedureName => "spMerge_stg_DVIRDefects2";

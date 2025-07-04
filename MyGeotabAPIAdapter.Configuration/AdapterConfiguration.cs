@@ -13,8 +13,8 @@ namespace MyGeotabAPIAdapter.Configuration
         const string WildcardString = "*";
 
         // Argument Names for appsettings:
-        // > OverrideSetings
-        const string ArgNameDisableMachineNameValidation = "OverrideSetings:DisableMachineNameValidation";
+        // > OverrideSettings
+        const string ArgNameDisableMachineNameValidation = "OverrideSettings:DisableMachineNameValidation";
         // > DatabaseSettings
         const string ArgNameUseDataModel2 = "DatabaseSettings:UseDataModel2";
         const string ArgNameEnableLevel1DatabaseMaintenance = "DatabaseSettings:EnableLevel1DatabaseMaintenance";
@@ -619,7 +619,7 @@ namespace MyGeotabAPIAdapter.Configuration
         {
             logger.Info($"Processing configuration items.");
 
-            // OverrideSetings:
+            // OverrideSettings:
             DisableMachineNameValidation = configurationHelper.GetConfigKeyValueBoolean(ArgNameDisableMachineNameValidation);
             if (DisableMachineNameValidation == true)
             {
