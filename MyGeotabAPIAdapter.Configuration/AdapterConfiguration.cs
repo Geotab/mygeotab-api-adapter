@@ -128,6 +128,10 @@ namespace MyGeotabAPIAdapter.Configuration
         // > AppSettings:Feeds:FaultData
         const string ArgNameEnableFaultDataFeed = "AppSettings:Feeds:FaultData:EnableFaultDataFeed";
         const string ArgNameFaultDataFeedIntervalSeconds = "AppSettings:Feeds:FaultData:FaultDataFeedIntervalSeconds";
+        const string ArgNamePopulateEffectOnComponentAndRecommendation = "AppSettings:Feeds:FaultData:PopulateEffectOnComponentAndRecommendation";
+        // > AppSettings:Feeds:FuelAndEnergyUsed
+        const string ArgNameEnableFuelAndEnergyUsedFeed = "AppSettings:Feeds:FuelAndEnergyUsed:EnableFuelAndEnergyUsedFeed";
+        const string ArgNameFuelAndEnergyUsedFeedIntervalSeconds = "AppSettings:Feeds:FuelAndEnergyUsed:FuelAndEnergyUsedFeedIntervalSeconds";
         // > AppSettings:Feeds:LogRecord
         const string ArgNameEnableLogRecordFeed = "AppSettings:Feeds:LogRecord:EnableLogRecordFeed";
         const string ArgNameLogRecordFeedIntervalSeconds = "AppSettings:Feeds:LogRecord:LogRecordFeedIntervalSeconds";
@@ -357,6 +361,9 @@ namespace MyGeotabAPIAdapter.Configuration
         public bool EnableFaultDataLocationService { get; private set; }
 
         /// <inheritdoc/>
+        public bool EnableFuelAndEnergyUsedFeed { get; private set; }
+
+        /// <inheritdoc/>
         public bool EnableGroupCache { get; private set; }
 
         /// <inheritdoc/>
@@ -459,6 +466,9 @@ namespace MyGeotabAPIAdapter.Configuration
         public DateTime FeedStartSpecificTimeUTC { get; private set; }
 
         /// <inheritdoc/>
+        public int FuelAndEnergyUsedFeedIntervalSeconds { get; private set; }
+
+        /// <inheritdoc/>
         public DateTime GroupCacheIntervalDailyReferenceStartTimeUTC { get; private set; }
 
         /// <inheritdoc/>
@@ -502,6 +512,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public string MyGeotabUser { get; private set; }
+
+        /// <inheritdoc/>
+        public bool PopulateEffectOnComponentAndRecommendation { get; private set; }
 
         /// <inheritdoc/>
         public DateTime RuleCacheIntervalDailyReferenceStartTimeUTC { get; private set; }
@@ -792,6 +805,11 @@ namespace MyGeotabAPIAdapter.Configuration
             // AppSettings:Feeds:FaultData:
             EnableFaultDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableFaultDataFeed);
             FaultDataFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameFaultDataFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+            PopulateEffectOnComponentAndRecommendation = configurationHelper.GetConfigKeyValueBoolean(ArgNamePopulateEffectOnComponentAndRecommendation);
+
+            // AppSettings:Feeds:FuelAndEnergyUsed:
+            EnableFuelAndEnergyUsedFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableFuelAndEnergyUsedFeed);
+            FuelAndEnergyUsedFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameFuelAndEnergyUsedFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
             // AppSettings:Feeds:LogRecord:
             EnableLogRecordFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableLogRecordFeed);

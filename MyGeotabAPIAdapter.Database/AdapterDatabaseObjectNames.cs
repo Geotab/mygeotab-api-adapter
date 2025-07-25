@@ -111,6 +111,9 @@
         public string DbFaultDataLocation2TrackingTableName => "FaultDataLocations2Tracking";
 
         /// <inheritdoc/>
+        public string DbFuelAndEnergyUsed2TableName => "FuelAndEnergyUsed2";
+
+        /// <inheritdoc/>
         public string DbGroupTableName => "Groups";
 
         /// <inheritdoc/>
@@ -177,6 +180,9 @@
 
         /// <inheritdoc/>
         public string DbStgExceptionEvent2TableName => "stg_ExceptionEvents2";
+
+        /// <inheritdoc/>
+        public string DbStgFuelAndEnergyUsed2TableName => "stg_FuelAndEnergyUsed2";
 
         /// <inheritdoc/>
         public string DbStgGroup2TableName => "stg_Groups2";
@@ -252,6 +258,9 @@
 
         /// <inheritdoc/>
         public string MergeStagingExceptionEventsProcedureName => "spMerge_stg_ExceptionEvents2";
+
+        /// <inheritdoc/>
+        public string MergeStagingFuelAndEnergyUsedProcedureName => "spMerge_stg_FuelAndEnergyUsed2";
 
         /// <inheritdoc/>
         public string MergeStagingGroupsProcedureName => "spMerge_stg_Groups2";

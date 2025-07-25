@@ -223,6 +223,11 @@ namespace MyGeotabAPIAdapter.Configuration
         bool EnableFaultDataLocationService { get; }
 
         /// <summary>
+        /// Indicates whether a <see cref="FuelAndEnergyUsed"/> data feed should be enabled. 
+        /// </summary>
+        bool EnableFuelAndEnergyUsedFeed { get; }
+
+        /// <summary>
         /// Indicates whether a <see cref="Group"/> cache should be enabled. 
         /// </summary>
         bool EnableGroupCache { get; }
@@ -393,6 +398,11 @@ namespace MyGeotabAPIAdapter.Configuration
         DateTime FeedStartSpecificTimeUTC { get; }
 
         /// <summary>
+        /// The minimum number of seconds to wait between GetFeed() calls for <see cref="FuelAndEnergyUsed"/> objects.
+        /// </summary>
+        int FuelAndEnergyUsedFeedIntervalSeconds { get; }
+
+        /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="Group"/> cache.
         /// </summary>
         DateTime GroupCacheIntervalDailyReferenceStartTimeUTC { get; }
@@ -466,6 +476,11 @@ namespace MyGeotabAPIAdapter.Configuration
         /// The value to use for the <c>User</c> parameter when authenticating the <see cref="MyGeotabAPIAdapter.Checkmate.API"/>.
         /// </summary>
         string MyGeotabUser { get; }
+
+        /// <summary>
+        /// If <see cref="EnableFaultDataFeed"/> is <c>true</c>, indicates whether the EffectOnComponent and Recommendation columns in the associated adapter database table will be populated. Setting this property to <c>false</c> will result in the EffectOnComponent and Recommendation columns being set to <c>null</c> for all records in the associated adapter database table, thereby potentially saving on disk space if these property values are not of interest. WARNING: There is no way to update these columns for records that have already been downloaded.
+        /// </summary>
+        bool PopulateEffectOnComponentAndRecommendation { get; }
 
         /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="Rule"/> cache.

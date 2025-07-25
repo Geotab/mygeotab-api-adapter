@@ -5,10 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="11.68.266" />
+    <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="11.83.265" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="6.0.1" />
-    <PackageReference Include="Polly" Version="8.6.1" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="6.0.2" />
+    <PackageReference Include="Polly" Version="8.6.2" />
   </ItemGroup>
 
   <ItemGroup>

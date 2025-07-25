@@ -164,6 +164,12 @@ namespace MyGeotabAPIAdapter
         Task<T> GetFaultDataService2InfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.FuelAndEnergyUsedProcessor2"/>.
+        /// </summary>
+        /// <returns></returns>
+        Task<T> GetFuelAndEnergyUsedService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.GroupProcessor"/>.
         /// </summary>
         Task<T> GetGroupServiceInfoAsync();

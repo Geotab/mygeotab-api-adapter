@@ -222,7 +222,7 @@ namespace MyGeotabAPIAdapter.Services
                                     continue;
                                 }
 
-                                var dbFaultData2 = geotabFaultDataDbFaultData2ObjectMapper.CreateEntity(faultData, (long)faultDataDeviceId, (long)faultDataDiagnosticDbId, faultDataDismissUserId);
+                                var dbFaultData2 = geotabFaultDataDbFaultData2ObjectMapper.CreateEntity(faultData, (long)faultDataDeviceId, (long)faultDataDiagnosticDbId, faultDataDismissUserId, adapterConfiguration.PopulateEffectOnComponentAndRecommendation);
                                 dbFaultData2sToPersist.Add(dbFaultData2);
 
                                 DbFaultDataLocation2 dbFaultDataLocation2 = new()

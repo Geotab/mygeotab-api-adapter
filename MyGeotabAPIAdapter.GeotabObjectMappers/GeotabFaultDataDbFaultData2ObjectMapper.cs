@@ -18,7 +18,7 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
         }
 
         /// <inheritdoc/>
-        public DbFaultData2 CreateEntity(FaultData entityToMapTo, long deviceId, long diagnosticId, long? dismissUserId)
+        public DbFaultData2 CreateEntity(FaultData entityToMapTo, long deviceId, long diagnosticId, long? dismissUserId, bool populateEffectOnComponentAndRecommendation)
         {
             long id = geotabIdConverter.ToLong(entityToMapTo.Id);
 
@@ -40,6 +40,7 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 DismissUserId = dismissUserId,
                 FailureModeId = faultDataFailureMode.Id.ToString(),
                 FailureModeName = faultDataFailureMode.Name,
+                FaultDescription = entityToMapTo.FaultDescription,
                 FaultLampState = entityToMapTo.FaultLampState.HasValue ? entityToMapTo.FaultLampState.ToString() : null,
                 GeotabId = entityToMapTo.Id.ToString(),
                 id = id,
@@ -47,6 +48,8 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 ProtectWarningLamp = entityToMapTo.ProtectWarningLamp,
                 RecordCreationTimeUtc = DateTime.UtcNow,
                 RedStopLamp = entityToMapTo.RedStopLamp,
+                // TODO: RiskOfBreakdown is not available in the Geotab API, so it is commented out. Once available, it can be uncommented.
+                //RiskOfBreakdown = entityToMapTo.RiskOfBreakdown,
                 Severity = entityToMapTo.Severity.HasValue ? entityToMapTo.Severity.ToString() : null,
                 SourceAddress = entityToMapTo.SourceAddress
             };
@@ -62,6 +65,17 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             if (faultDataFaultState != null)
             {
                 dbFaultData2.FaultState = faultDataFaultState.ToString();
+            }
+            if (entityToMapTo.FlashCode != null)
+            {
+                var flashCode = entityToMapTo.FlashCode;
+                dbFaultData2.FlashCodeId = flashCode.Id.ToString();
+                dbFaultData2.FlashCodeName = flashCode.Name;
+            }
+            if (populateEffectOnComponentAndRecommendation == true)
+            {
+                dbFaultData2.EffectOnComponent = entityToMapTo.EffectOnComponent;
+                dbFaultData2.Recommendation = entityToMapTo.Recommendation;
             }
 
             return dbFaultData2;

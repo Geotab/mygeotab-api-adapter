@@ -184,6 +184,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbFaultDataLocation2TrackingTableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbFuelAndEnergyUsed"/> entities.
+        /// </summary>
+        string DbFuelAndEnergyUsed2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbGroup"/> entities.
         /// </summary>
         string DbGroupTableName { get; }
@@ -297,6 +302,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the database table associated with <see cref="DbStgExceptionEvent2"/> entities.
         /// </summary>
         string DbStgExceptionEvent2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgFuelAndEnergyUsed2"/> entities.
+        /// </summary>
+        string DbStgFuelAndEnergyUsed2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbStgGroup2"/> entities.
@@ -422,6 +432,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the stored procedure or function responsible for merging staging ExceptionEvents into the main ExceptionEvents2 table.
         /// </summary>
         string MergeStagingExceptionEventsProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging FuelAndEnergyUsed records into the main FuelAndEnergyUsed2 table.
+        /// </summary>
+        string MergeStagingFuelAndEnergyUsedProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging Groups into the main Groups2 table.

@@ -76,6 +76,7 @@ GO
 --truncate table [dbo].[ExceptionEvents2];
 --truncate table [dbo].[FaultData2];
 --truncate table [dbo].[FaultDataLocations2];
+--truncate table [dbo].[FuelAndEnergyUsed2];
 --truncate table [dbo].[Groups2];
 --truncate table [dbo].[LogRecords2];
 --truncate table [dbo].[MyGeotabVersionInfo2];

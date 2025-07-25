@@ -311,6 +311,14 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
+        public async Task<T> GetFuelAndEnergyUsedService2InfoAsync()
+        {
+            await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
+            var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.FuelAndEnergyUsedProcessor2.ToString());
+            return dbOServiceTracking;
+        }
+
+        /// <inheritdoc/>
         public async Task<T> GetGroupServiceInfoAsync()
         {
             await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();

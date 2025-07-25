@@ -2,6 +2,7 @@ using Geotab.Checkmate.ObjectModel;
 using Geotab.Checkmate.ObjectModel.Charging;
 using Geotab.Checkmate.ObjectModel.Engine;
 using Geotab.Checkmate.ObjectModel.Exceptions;
+using Geotab.Checkmate.ObjectModel.Fuel;
 using System;
 using System.Net.Http;
 using Microsoft.Extensions.Configuration;
@@ -178,6 +179,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGeotabExceptionEventDbExceptionEventObjectMapper, GeotabExceptionEventDbExceptionEventObjectMapper>()
                         .AddTransient<IGeotabExceptionEventDbStgExceptionEvent2ObjectMapper, GeotabExceptionEventDbStgExceptionEvent2ObjectMapper>()
                         .AddTransient<IGeotabFaultDataDbFaultDataObjectMapper, GeotabFaultDataDbFaultDataObjectMapper>()
+                        .AddTransient<IGeotabFuelAndEnergyUsedDbStgFuelAndEnergyUsed2ObjectMapper, GeotabFuelAndEnergyUsedDbStgFuelAndEnergyUsed2ObjectMapper>()
                         .AddTransient<IGeotabGroupDbGroupObjectMapper, GeotabGroupDbGroupObjectMapper>()
                         .AddTransient<IGeotabGroupDbStgGroup2ObjectMapper, GeotabGroupDbStgGroup2ObjectMapper>()
                         .AddTransient<IGeotabFaultDataDbFaultData2ObjectMapper, GeotabFaultDataDbFaultData2ObjectMapper>()
@@ -229,6 +231,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGenericEntityPersister<DbFailedDVIRDefectUpdate>, GenericEntityPersister<DbFailedDVIRDefectUpdate>>()
                         .AddTransient<IGenericEntityPersister<DbFailedOVDSServerCommand>, GenericEntityPersister<DbFailedOVDSServerCommand>>()
                         .AddTransient<IGenericEntityPersister<DbFaultData>, GenericEntityPersister<DbFaultData>>()
+                        .AddTransient<IGenericEntityPersister<DbFuelAndEnergyUsed2>, GenericEntityPersister<DbFuelAndEnergyUsed2>>()
                         .AddTransient<IGenericEntityPersister<DbGroup>, GenericEntityPersister<DbGroup>>()
                         .AddTransient<IGenericEntityPersister<DbGroup2>, GenericEntityPersister<DbGroup2>>()
                         .AddTransient<IGenericEntityPersister<DbFaultData2>, GenericEntityPersister<DbFaultData2>>()
@@ -256,6 +259,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGenericEntityPersister<DbStgDVIRDefect2>, GenericEntityPersister<DbStgDVIRDefect2>>()
                         .AddTransient<IGenericEntityPersister<DbStgDVIRDefectRemark2>, GenericEntityPersister<DbStgDVIRDefectRemark2>>()
                         .AddTransient<IGenericEntityPersister<DbStgExceptionEvent2>, GenericEntityPersister<DbStgExceptionEvent2>>()
+                        .AddTransient<IGenericEntityPersister<DbStgFuelAndEnergyUsed2>, GenericEntityPersister<DbStgFuelAndEnergyUsed2>>()
                         .AddTransient<IGenericEntityPersister<DbStgGroup2>, GenericEntityPersister<DbStgGroup2>>()
                         .AddTransient<IGenericEntityPersister<DbStgRule2>, GenericEntityPersister<DbStgRule2>>()
                         .AddTransient<IGenericEntityPersister<DbStgTrip2>, GenericEntityPersister<DbStgTrip2>>()
@@ -337,6 +341,7 @@ namespace MyGeotabAPIAdapter
                         .AddSingleton<IGenericGeotabObjectFeeder<DVIRLog>, GenericGeotabObjectFeeder<DVIRLog>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<ExceptionEvent>, GenericGeotabObjectFeeder<ExceptionEvent>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<FaultData>, GenericGeotabObjectFeeder<FaultData>>()
+                        .AddSingleton<IGenericGeotabObjectFeeder<FuelAndEnergyUsed>, GenericGeotabObjectFeeder<FuelAndEnergyUsed>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<LogRecord>, GenericGeotabObjectFeeder<LogRecord>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<StatusData>, GenericGeotabObjectFeeder<StatusData>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<Trip>, GenericGeotabObjectFeeder<Trip>>()
@@ -368,7 +373,7 @@ namespace MyGeotabAPIAdapter
                         databaseValidator.ValidateDatabaseVersion();
 
                         // Configure options for the services. This is necessary because the services are registered as hosted services and the options are used to determine whether the individual services should pause for database maintenance windows wherein operations such as reindexing could potentially cause exceptions.
-                        var serviceNames = new string[] { nameof(Orchestrator2), nameof(ChargeEventProcessor2), nameof(ControllerProcessor2), nameof(DeviceProcessor2), nameof(DeviceStatusInfoProcessor2), nameof(DiagnosticProcessor2), nameof(DriverChangeProcessor2), nameof(DutyStatusAvailabilityProcessor2), nameof(ExceptionEventProcessor2), nameof(FailureModeProcessor2), nameof(FaultDataLocationService2), nameof(FaultDataProcessor2), nameof(GroupProcessor2), nameof(LogRecordProcessor2), nameof(RuleProcessor2), nameof(StatusDataLocationService2), nameof(StatusDataProcessor2), nameof(TripProcessor2), nameof(UnitOfMeasureProcessor2), nameof(UserProcessor2), nameof(ZoneProcessor2), nameof(ZoneTypeProcessor2) };
+                        var serviceNames = new string[] { nameof(Orchestrator2), nameof(ChargeEventProcessor2), nameof(ControllerProcessor2), nameof(DeviceProcessor2), nameof(DeviceStatusInfoProcessor2), nameof(DiagnosticProcessor2), nameof(DriverChangeProcessor2), nameof(DutyStatusAvailabilityProcessor2), nameof(ExceptionEventProcessor2), nameof(FailureModeProcessor2), nameof(FaultDataLocationService2), nameof(FaultDataProcessor2), nameof(FuelAndEnergyUsedProcessor2), nameof(GroupProcessor2), nameof(LogRecordProcessor2), nameof(RuleProcessor2), nameof(StatusDataLocationService2), nameof(StatusDataProcessor2), nameof(TripProcessor2), nameof(UnitOfMeasureProcessor2), nameof(UserProcessor2), nameof(ZoneProcessor2), nameof(ZoneTypeProcessor2) };
 
                         // Register the ServiceOprionsProvider.
                         services.AddSingleton<IServiceOptionsProvider, ServiceOptionsProvider>();
@@ -445,6 +450,7 @@ namespace MyGeotabAPIAdapter
                         .AddHostedService<FailureModeProcessor2>()
                         .AddHostedService<FaultDataLocationService2>()
                         .AddHostedService<FaultDataProcessor2>()
+                        .AddHostedService<FuelAndEnergyUsedProcessor2>()
                         .AddHostedService<GroupProcessor2>()
                         .AddHostedService<LogRecordProcessor2>()
                         .AddHostedService<RuleProcessor2>()
@@ -474,6 +480,7 @@ namespace MyGeotabAPIAdapter
                         .AddSingleton<IBackgroundServiceAwaiter<FailureModeProcessor2>, BackgroundServiceAwaiter<FailureModeProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<FaultDataLocationService2>, BackgroundServiceAwaiter<FaultDataLocationService2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<FaultDataProcessor2>, BackgroundServiceAwaiter<FaultDataProcessor2>>()
+                        .AddSingleton<IBackgroundServiceAwaiter<FuelAndEnergyUsedProcessor2>, BackgroundServiceAwaiter<FuelAndEnergyUsedProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<GroupProcessor2>, BackgroundServiceAwaiter<GroupProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<LogRecordProcessor2>, BackgroundServiceAwaiter<LogRecordProcessor2>>()
                         .AddSingleton<IBackgroundServiceAwaiter<RuleProcessor2>, BackgroundServiceAwaiter<RuleProcessor2>>()

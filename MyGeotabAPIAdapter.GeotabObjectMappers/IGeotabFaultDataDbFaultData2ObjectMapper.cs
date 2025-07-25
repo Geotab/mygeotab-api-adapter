@@ -15,7 +15,8 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
         /// <param name="deviceId">The value to be used for the entity property of the same name.</param>
         /// <param name="diagnosticId">The value to be used for the entity property of the same name.</param>
         /// <param name="dismissUserId">The value to be used for the entity property of the same name.</param>
+        /// <param name="populateEffectOnComponentAndRecommendation">Indicates whether to populate the <see cref="DbFaultData2.EffectOnComponent"/> and <see cref="DbFaultData2.Recommendation"/> properties.</param>
         /// <returns></returns>
-        DbFaultData2 CreateEntity(FaultData entityToMapTo, long deviceId, long diagnosticId, long? dismissUserId);
+        DbFaultData2 CreateEntity(FaultData entityToMapTo, long deviceId, long diagnosticId, long? dismissUserId, bool populateEffectOnComponentAndRecommendation);
     }
 }

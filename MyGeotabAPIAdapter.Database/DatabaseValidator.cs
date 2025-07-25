@@ -17,7 +17,7 @@ namespace MyGeotabAPIAdapter.Database
         // The required version of the middleware database for the current version of the middleware application. Any time the middleware database is updated as part of an application update:
         // 1. This value should be updated to reflect the application version at the time.
         // 2. Database changes should be included in a single script file and the filename should be formatted as "prefix_version_suffix.sql" (e.g. "MSSQL_3.0.0.0_InitialSchemaCreation.sql") where the version portion of the filename is equal to the value of this constant.
-        const string RequiredDatabaseVersion = "3.9.0.0";
+        const string RequiredDatabaseVersion = "3.10.0.0";
 
         readonly IExceptionHelper exceptionHelper;
         readonly Logger logger = LogManager.GetCurrentClassLogger();

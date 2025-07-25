@@ -27,14 +27,20 @@ namespace MyGeotabAPIAdapter.Database.Models
         public long DiagnosticId { get; set; }
         public DateTime? DismissDateTime { get; set; }
         public long? DismissUserId { get; set; }
+        public string EffectOnComponent { get; set; }
         public int? FailureModeCode { get; set; }
         public string FailureModeId { get; set; }
         public string FailureModeName { get; set; }
+        public string FaultDescription { get; set; }
         public string FaultLampState { get; set; }
         public string FaultState { get; set; }
+        public string FlashCodeId { get; set; }
+        public string FlashCodeName { get; set; }
         public bool? MalfunctionLamp { get; set; }
         public bool? ProtectWarningLamp { get; set; }
+        public string Recommendation { get; set; }
         public bool? RedStopLamp { get; set; }
+        public double? RiskOfBreakdown { get; set; }
         public string Severity { get; set; }
         public int? SourceAddress { get; set; }
         [ChangeTracker]

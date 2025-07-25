@@ -2,6 +2,7 @@
 using Geotab.Checkmate.ObjectModel.Charging;
 using Geotab.Checkmate.ObjectModel.Engine;
 using Geotab.Checkmate.ObjectModel.Exceptions;
+using Geotab.Checkmate.ObjectModel.Fuel;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Helpers;
 using MyGeotabAPIAdapter.MyGeotabAPI;
@@ -121,6 +122,7 @@ namespace MyGeotabAPIAdapter
             if (typeParameterType == typeof(ExceptionEvent)) { return AdapterService.ExceptionEventProcessor; }
             if (typeParameterType == typeof(FailureMode)) { return AdapterService.FailureModeProcessor; }
             if (typeParameterType == typeof(FaultData)) { return AdapterService.FaultDataProcessor; }
+            if (typeParameterType == typeof(FuelAndEnergyUsed)) { return AdapterService.FuelAndEnergyUsedProcessor2; }
             if (typeParameterType == typeof(Group)) { return AdapterService.GroupProcessor; }
             if (typeParameterType == typeof(LogRecord)) { return AdapterService.LogRecordProcessor; }
             if (typeParameterType == typeof(Rule)) { return AdapterService.RuleProcessor; }

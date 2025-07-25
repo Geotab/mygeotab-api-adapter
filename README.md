@@ -3,10 +3,16 @@
 The MyGeotab API Adapter solution serves as both an example of proper integration via data feeds and the potential foundation for those seeking to develop new integrations with the Geotab platform. It is a collection of .NET 9.0 (C#) Background Services that use the MyGeotab API data feeds to pull the most common data sets from a MyGeotab database and stream the data into tables within a SQL Server or PostgreSQL database; this could account for half the work in terms of a unidirectional integration where the data from the database is further processed for integration into an external system.
 
 - A good overview can be found in the [MyGeotab API Adapter](https://docs.google.com/presentation/d/1PhsDhZwj23i2oWXrqZozf4h0svUEHZLnFXtzMYyk4kQ/edit?usp=sharing) presentation.
-- For detailed information, refer to:
-	- [MyGeotab API Adapter - Solution and Implementation Guide](https://docs.google.com/document/d/12TIgTCuWVF_AYc3evsIms9VOecc1NT4P9Kn-eVg-H7k/edit?usp=sharing)
-	- [MyGeotab API Adapter DM2 — Solution and Implementation Guide](https://docs.google.com/document/d/1Y_9FnHPldeX4_aPViUUOi_8y2UJU1lKcfb1SBnu-lj8/edit?usp=sharing) 🆕
-- Developers seeking to learn about the API Adapter source code and database may find the [MyGeotab API Adapter - Developer Overview](https://docs.google.com/presentation/d/1agH1x6EYRjNDemzoLixPwPpakwxepAhEJSrktZ5ek_Y/edit?usp=sharing) presentation helpful.
+- Here are some videos to help get started quickly and augment the documentation below. While SQL Server is the database of choice in these videos, the processes are similar for PostgreSQL, so the videos are still relevant regardless of the database provider chosen.
+	- [How to Download the MyGeotab API Adapter](https://drive.google.com/file/d/18ybU8AdUZLjv4LWG90l-0D4X6-g5E6a9/view?usp=sharing) (3:25)
+	- [How to Set Up the MyGeotab API Adapter Database](https://drive.google.com/file/d/1GgkOSNGG9SvmEs9oyIzVcYYSc6z7HBxc/view?usp=drive_link) (4:20)
+	- [How to Deploy and Configure the MyGeotab API Adapter Application](https://drive.google.com/file/d/1p0t37xHBWudFviYmmV-bWteUAbg77xgH/view?usp=sharing) (8:15)
+	- [How to Start the MyGeotab API Adapter Application](https://drive.google.com/file/d/17ElhV8cPYJbbloXdci98L_8e2KSMW0Lu/view?usp=sharing) (2:15)
+	- [How to Upgrade the MyGeotab API Adapter](https://drive.google.com/file/d/1eYDU7cw49S2hHYZYfOp9p26Yszq67wz6/view?usp=sharing) (7:11)
+- For more detailed information, refer to:
+	- 🆕 [MyGeotab API Adapter DM2 — Solution and Implementation Guide](https://docs.google.com/document/d/1Y_9FnHPldeX4_aPViUUOi_8y2UJU1lKcfb1SBnu-lj8/edit?usp=sharing)
+	- (Deprecated) [MyGeotab API Adapter - Solution and Implementation Guide](https://docs.google.com/document/d/12TIgTCuWVF_AYc3evsIms9VOecc1NT4P9Kn-eVg-H7k/edit?usp=sharing)
+- - Developers seeking to learn about the API Adapter source code and database may find the [MyGeotab API Adapter - Developer Overview](https://docs.google.com/presentation/d/1agH1x6EYRjNDemzoLixPwPpakwxepAhEJSrktZ5ek_Y/edit?usp=sharing) presentation helpful.
 - Is there a Geotab entity type that you would like to add to the API Adapter? Please refer to the [MyGeotab API Adapter — How to Add a Data Feed](https://docs.google.com/document/d/10sGCVsJgYxr7UBxY7lPrDOy4jPzW-bzNEnVfqDVEfBs/edit?usp=sharing) guide for step-by-step instructions.
 - Want to access the above materials, but don't have a Gmail address or aren't permitted to use one? No problem - you can [create a Google account without using Gmail](https://accounts.google.com/signup/v2/webcreateaccount?flowName=GlifWebSignIn&flowEntry=SignUp&nogm=true).
 
