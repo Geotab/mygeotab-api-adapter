@@ -16,9 +16,12 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
             var dbTrips = new List<DbTrip>();
             foreach (var entity in entitiesToMapTo)
             {
-                var dbTrip = CreateEntity(entity);
-                dbTrip.RecordCreationTimeUtc = recordCreationTimeUtc;
-                dbTrips.Add(dbTrip);
+                if (entity.Device != null)
+                {
+                    var dbTrip = CreateEntity(entity);
+                    dbTrip.RecordCreationTimeUtc = recordCreationTimeUtc;
+                    dbTrips.Add(dbTrip);
+                }
             }
             return dbTrips;
         }

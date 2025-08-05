@@ -29,52 +29,50 @@ using MyGeotabAPIAdapter.Services;
 using NLog;
 using NLog.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Threading.Tasks;
 
 namespace MyGeotabAPIAdapter
 {
     /// <summary>
-    /// The main program.  Handles initialization of logging and configuration settings and instantiates the <see cref="Worker"/> class, which is responsible for execution of  application logic. 
+    /// The main program. Handles initialization of logging and configuration settings and instantiates the application's services.
     /// </summary>
     public class Program
     {
-        public static void Main(string[] args)
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        /// <param name="args">Command-line arguments.</param>
+        public static async Task Main(string[] args)
         {
             var logger = LogManager.GetCurrentClassLogger();
             try
             {
-                var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+                var hostBuilder = Host.CreateDefaultBuilder(args);
 
-                var config = new ConfigurationBuilder()
-                    .SetBasePath(System.IO.Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                    .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
-                    .Build();
+                // Conditionally configure the host for Windows Service or Linux Systemd.
+                if (OperatingSystem.IsWindows())
+                {
+                    hostBuilder.UseWindowsService(options =>
+                    {
+                        // Set the name for the Windows service.
+                        options.ServiceName = "MyGeotabAPIAdapter";
+                    });
+                }
+                else if (OperatingSystem.IsLinux())
+                {
+                    hostBuilder.UseSystemd();
+                }
 
-                CreateHostBuilder(args, config).Build().Run();
-            }
-            catch (Exception ex)
-            {
-                // NLog: catch any exception and log it.
-                logger.Error(ex, $"Stopped application because of exception: \nMESSAGE [{ex.Message}]; \nSOURCE [{ex.Source}]; \nSTACK TRACE [{ex.StackTrace}]");
-            }
-            finally
-            {
-                // Ensure to flush and stop internal timers/threads before application-exit (Avoid segmentation fault on Linux)
-                LogManager.Shutdown();
-            }
-        }
-
-        public static IHostBuilder CreateHostBuilder(string[] args, IConfiguration config) =>
-            Host.CreateDefaultBuilder(args)
-                // Configure logging with NLog. 
-                .ConfigureLogging((context, logging) =>
+                hostBuilder.ConfigureLogging((context, logging) =>
                 {
                     logging.ClearProviders();
                     logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
-                    logging.AddNLog(config);
+                    // NLog configuration is loaded from appsettings.json by the default builder.
+                    logging.AddNLog();
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
+                    // Dependency injection registrations:
                     IConfiguration configuration = hostContext.Configuration;
                     HttpClient httpClient = new();
                     services
@@ -526,5 +524,21 @@ namespace MyGeotabAPIAdapter
                         ;
                     }
                 });
+
+                var host = hostBuilder.Build();
+                await host.RunAsync();
+            }
+            catch (Exception ex)
+            {
+                // NLog: catch any exception and log it.
+                logger.Error(ex, $"Stopped application because of exception: \nMESSAGE [{ex.Message}]; \nSOURCE [{ex.Source}]; \nSTACK TRACE [{ex.StackTrace}]");
+                throw; // Re-throw the exception to ensure the process terminates with an error code.
+            }
+            finally
+            {
+                // Ensure to flush and stop internal timers/threads before application-exit (Avoid segmentation fault on Linux)
+                LogManager.Shutdown();
+            }
+        }
     }
 }
