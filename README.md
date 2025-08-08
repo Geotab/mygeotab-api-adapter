@@ -22,6 +22,7 @@ Here are some videos to help get started quickly and augment the documentation b
 - ▶️ [How to Set Up the MyGeotab API Adapter Database](https://drive.google.com/file/d/1GgkOSNGG9SvmEs9oyIzVcYYSc6z7HBxc/view?usp=drive_link) (4:20)
 - ▶️ [How to Deploy and Configure the MyGeotab API Adapter Application](https://drive.google.com/file/d/1p0t37xHBWudFviYmmV-bWteUAbg77xgH/view?usp=sharing) (8:15)
 - ▶️ [How to Start the MyGeotab API Adapter Application](https://drive.google.com/file/d/17ElhV8cPYJbbloXdci98L_8e2KSMW0Lu/view?usp=sharing) (2:15)
+- ▶️ [How to Install the MyGeotab API Adapter as a Windows Service](https://drive.google.com/file/d/14CdkaAwkSVwsX5MavN1F71LTVDhOpd2P/view?usp=drive_link) (2:29)
 - ▶️ [How to Upgrade the MyGeotab API Adapter](https://drive.google.com/file/d/1eYDU7cw49S2hHYZYfOp9p26Yszq67wz6/view?usp=sharing) (7:11)
 
 For more detailed information, refer to the official guide: 
@@ -78,3 +79,4 @@ Utilizing the deployment process outlined in this example **may result in charge
 ## Feedback
 
 Help us prioritize future efforts and better understand how the API Adapter is used! If you would like to provide any feedback about the MyGeotab API Adapter solution, please feel free to complete the 100% voluntary [MyGeotab API Adapter - Usage Survey](https://docs.google.com/forms/d/e/1FAIpQLSeIv-6A4Ugu7aIoyJdXrqVWyOF7sB8nuHOV-FDAYqayaPlkJg/viewform?usp=header).
+
