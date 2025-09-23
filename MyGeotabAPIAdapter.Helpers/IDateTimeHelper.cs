@@ -18,6 +18,11 @@ namespace MyGeotabAPIAdapter.Helpers
         DateTime DefaultDateTime { get; }
 
         /// <summary>
+        /// The default maximum <see cref="DateTime"/> value to use when a maximum is needed and not provided.
+        /// </summary>
+        DateTime DefaultMaxDateTime { get; }
+
+        /// <summary>
         /// Indicates whether the timespan defined by <paramref name="range1MinDateTime"/> and <paramref name="range1MaxDateTime"/> falls within the timespan defined by <paramref name="range2MinDateTime"/> and <paramref name="range2MaxDateTime"/>
         /// </summary>
         /// <param name="range1MinDateTime">The lower limit of the "Range 1" timespan.</param>

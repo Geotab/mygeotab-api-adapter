@@ -5,6 +5,7 @@ using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
+using MyGeotabAPIAdapter.Database.Enums;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Exceptions;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
@@ -82,9 +83,7 @@ namespace MyGeotabAPIAdapter.Services
             // Setup the foreign key service dependency map.
             exceptionEventForeignKeyServiceDependencyMap = new ForeignKeyServiceDependencyMap(
                 [
-                    new ForeignKeyServiceDependency("FK_ExceptionEvents2_Devices2", AdapterService.DeviceProcessor2),
-                    new ForeignKeyServiceDependency("FK_ExceptionEvents2_Rules2", AdapterService.RuleProcessor2),
-                    new ForeignKeyServiceDependency("FK_ExceptionEvents2_Users2", AdapterService.UserProcessor2)
+                    new ForeignKeyServiceDependency("FK_ExceptionEvents2_Devices2", AdapterService.DeviceProcessor2)
                 ]
             );
         }
@@ -159,21 +158,42 @@ namespace MyGeotabAPIAdapter.Services
                             foreach (var exceptionEvent in filteredExceptionEvents)
                             {
                                 long? exceptionEventDeviceId = null;
-                                if (exceptionEvent.Device != null && exceptionEvent.Device.Id != null)
+                                if (exceptionEvent.Device != null)
                                 {
-                                    exceptionEventDeviceId = geotabIdConverter.ToLong(exceptionEvent.Device.Id);
+                                    if (exceptionEvent.Device.GetType() == typeof(NoDevice))
+                                    {
+                                        exceptionEventDeviceId = AdapterDbSentinelIdsForMYGKnownIds.NoDeviceId;
+                                    }
+                                    else if (exceptionEvent.Device.Id != null)
+                                    {
+                                        exceptionEventDeviceId = geotabIdConverter.ToLong(exceptionEvent.Device.Id);
+                                    }
+                                }
+                                if (exceptionEventDeviceId == null)
+                                {
+                                    logger.Warn($"Could not process {nameof(ExceptionEvent)} with GeotabId '{exceptionEvent.Id}' because its {nameof(ExceptionEvent.Device)} is null.");
+                                    continue;
                                 }
 
                                 long? exceptionEventDriverId = null;
-                                if (exceptionEvent.Driver != null && exceptionEvent.Driver.Id != null && exceptionEvent.Driver.GetType() != typeof(UnknownDriver))
+                                if (exceptionEvent.Driver != null)
                                 {
-                                    exceptionEventDriverId = geotabIdConverter.ToLong(exceptionEvent.Driver.Id);
-                                }
-
-                                if (exceptionEventDeviceId == null)
-                                {
-                                    logger.Warn($"Could not process {nameof(ExceptionEvent)} with GeotabId {exceptionEvent.Id}' because its {nameof(ExceptionEvent.Device)} is null.");
-                                    continue;
+                                    if (exceptionEvent.Driver.GetType() == typeof(NoDriver))
+                                    {
+                                        exceptionEventDriverId = AdapterDbSentinelIdsForMYGKnownIds.NoDriverId;
+                                    }
+                                    else if (exceptionEvent.Driver.GetType() == typeof(UnknownDriver))
+                                    {
+                                        exceptionEventDriverId = AdapterDbSentinelIdsForMYGKnownIds.UnknownDriverId;
+                                    }
+                                    else if (exceptionEvent.Driver.GetType() == typeof(NoUser))
+                                    {
+                                        exceptionEventDriverId = AdapterDbSentinelIdsForMYGKnownIds.NoUserId;
+                                    }
+                                    else if (exceptionEvent.Driver.Id != null)
+                                    {
+                                        exceptionEventDriverId = geotabIdConverter.ToLong(exceptionEvent.Driver.Id);
+                                    }
                                 }
 
                                 var dbStgExceptionEvent2 = geotabExceptionEventDbStgExceptionEvent2ObjectMapper.CreateEntity(exceptionEvent, (long)exceptionEventDeviceId, exceptionEventDriverId);

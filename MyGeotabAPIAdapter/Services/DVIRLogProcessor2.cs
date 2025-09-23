@@ -4,6 +4,7 @@ using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
+using MyGeotabAPIAdapter.Database.Enums;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Exceptions;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
@@ -99,12 +100,7 @@ namespace MyGeotabAPIAdapter.Services
             // Setup the foreign key service dependency map.
             dvirLogForeignKeyServiceDependencyMap = new ForeignKeyServiceDependencyMap(
                 [
-                    new ForeignKeyServiceDependency("FK_DVIRLogs2_Devices2", AdapterService.DeviceProcessor2),
-                    new ForeignKeyServiceDependency("FK_DVIRLogs2_Users2", AdapterService.UserProcessor2),
-                    new ForeignKeyServiceDependency("FK_DVIRLogs2_Users2_2", AdapterService.UserProcessor2),
-                    new ForeignKeyServiceDependency("FK_DVIRLogs2_Users2_3", AdapterService.UserProcessor2),
-                    new ForeignKeyServiceDependency("FK_DVIRDefects2_Users2", AdapterService.UserProcessor2),
-                    new ForeignKeyServiceDependency("FK_DVIRDefectRemarks2_Users2", AdapterService.UserProcessor2)
+                    new ForeignKeyServiceDependency("FK_DVIRLogs2_Devices2", AdapterService.DeviceProcessor2)
                 ]
             );
         }
@@ -228,38 +224,89 @@ namespace MyGeotabAPIAdapter.Services
                             {
                                 // Create a DbStgDVIRLog2 entity from the DVIRLog entity. First, convert the string GeotabId values to long values, where applicable, and then map the properties.
                                 long? dvirLogCertifiedByUserId = null;
-                                if (filteredDVIRLog.CertifiedBy != null && filteredDVIRLog.CertifiedBy.Id != null)
+                                if (filteredDVIRLog.CertifiedBy != null)
                                 {
-                                    dvirLogCertifiedByUserId = geotabIdConverter.ToLong(filteredDVIRLog.CertifiedBy.Id);
+                                    if (filteredDVIRLog.CertifiedBy.GetType() == typeof(NoDriver))
+                                    {
+                                        dvirLogCertifiedByUserId = AdapterDbSentinelIdsForMYGKnownIds.NoDriverId;
+                                    }
+                                    else if (filteredDVIRLog.CertifiedBy.GetType() == typeof(UnknownDriver))
+                                    {
+                                        dvirLogCertifiedByUserId = AdapterDbSentinelIdsForMYGKnownIds.UnknownDriverId;
+                                    }
+                                    else if (filteredDVIRLog.CertifiedBy.GetType() == typeof(NoUser))
+                                    {
+                                        dvirLogCertifiedByUserId = AdapterDbSentinelIdsForMYGKnownIds.NoUserId;
+                                    }
+                                    else if (filteredDVIRLog.CertifiedBy.Id != null)
+                                    {
+                                        dvirLogCertifiedByUserId = geotabIdConverter.ToLong(filteredDVIRLog.CertifiedBy.Id);
+                                    }
                                 }
 
                                 long? dvirLogDeviceId = null;
-                                if (filteredDVIRLog.Device != null && filteredDVIRLog.Device.Id != null)
+                                if (filteredDVIRLog.Device != null)
                                 {
-                                    dvirLogDeviceId = geotabIdConverter.ToLong(filteredDVIRLog.Device.Id);
+                                    if (filteredDVIRLog.Device.GetType() == typeof(NoDevice))
+                                    {
+                                        dvirLogDeviceId = AdapterDbSentinelIdsForMYGKnownIds.NoDeviceId;
+                                    }
+                                    else if (filteredDVIRLog.Device.Id != null)
+                                    {
+                                        dvirLogDeviceId = geotabIdConverter.ToLong(filteredDVIRLog.Device.Id);
+                                    }
                                 }
                                 // Temporary logic to get DeviceId associated with a Trailer (which will be deprecated in the future).
-                                if (dvirLogDeviceId == null && filteredDVIRLog.Trailer != null)
+                                if (dvirLogDeviceId == null && filteredDVIRLog.Trailer != null && filteredDVIRLog.Trailer.GetType() != typeof(NoTrailer) && filteredDVIRLog.Trailer.Id != null)
                                 {
                                     dvirLogDeviceId = await GetTrailerDeviceIdAsync(filteredDVIRLog.Trailer, cancellationTokenSource);
                                 }
-
-                                long? dvirLogDriverId = null;
-                                if (filteredDVIRLog.Driver != null && filteredDVIRLog.Driver.Id != null && filteredDVIRLog.Driver.GetType() != typeof(UnknownDriver))
-                                {
-                                    dvirLogDriverId = geotabIdConverter.ToLong(filteredDVIRLog.Driver.Id);
-                                }
-
                                 if (dvirLogDeviceId == null)
                                 {
-                                    logger.Warn($"Could not process {nameof(DVIRLog)} with GeotabId {filteredDVIRLog.Id}' because its {nameof(DVIRLog.Device)} is null.");
+                                    logger.Warn($"Could not process {nameof(DVIRLog)} with GeotabId '{filteredDVIRLog.Id}' because its {nameof(DVIRLog.Device)} is null.");
                                     continue;
                                 }
 
+                                long? dvirLogDriverId = null;
+                                if (filteredDVIRLog.Driver != null)
+                                { 
+                                    if (filteredDVIRLog.Driver.GetType() == typeof(NoDriver))
+                                    {
+                                        dvirLogDriverId = AdapterDbSentinelIdsForMYGKnownIds.NoDriverId;
+                                    }
+                                    else if (filteredDVIRLog.Driver.GetType() == typeof(UnknownDriver))
+                                    {
+                                        dvirLogDriverId = AdapterDbSentinelIdsForMYGKnownIds.UnknownDriverId;
+                                    }
+                                    else if (filteredDVIRLog.Driver.GetType() == typeof(NoUser))
+                                    {
+                                        dvirLogDriverId = AdapterDbSentinelIdsForMYGKnownIds.NoUserId;
+                                    }
+                                    else if (filteredDVIRLog.Driver.Id != null)
+                                    {
+                                        dvirLogDriverId = geotabIdConverter.ToLong(filteredDVIRLog.Driver.Id);
+                                    }
+                                }
+
                                 long? dvirLogRepairedByUserId = null;
-                                if (filteredDVIRLog.RepairedBy != null && filteredDVIRLog.RepairedBy.Id != null)
+                                if (filteredDVIRLog.RepairedBy != null)
                                 {
-                                    dvirLogRepairedByUserId = geotabIdConverter.ToLong(filteredDVIRLog.RepairedBy.Id);
+                                    if (filteredDVIRLog.RepairedBy.GetType() == typeof(NoDriver))
+                                    {
+                                        dvirLogRepairedByUserId = AdapterDbSentinelIdsForMYGKnownIds.NoDriverId;
+                                    }
+                                    else if (filteredDVIRLog.RepairedBy.GetType() == typeof(UnknownDriver))
+                                    {
+                                        dvirLogRepairedByUserId = AdapterDbSentinelIdsForMYGKnownIds.UnknownDriverId;
+                                    }
+                                    else if (filteredDVIRLog.RepairedBy.GetType() == typeof(NoUser))
+                                    {
+                                        dvirLogRepairedByUserId = AdapterDbSentinelIdsForMYGKnownIds.NoUserId;
+                                    }
+                                    else if (filteredDVIRLog.RepairedBy.Id != null)
+                                    {
+                                        dvirLogRepairedByUserId = geotabIdConverter.ToLong(filteredDVIRLog.RepairedBy.Id);
+                                    }
                                 }
 
                                 var dbStgDVIRLog2 = geotabDVIRLogDbStgDVIRLog2ObjectMapper.CreateEntity(filteredDVIRLog, dvirLogCertifiedByUserId, (long)dvirLogDeviceId, dvirLogDriverId, dvirLogRepairedByUserId);

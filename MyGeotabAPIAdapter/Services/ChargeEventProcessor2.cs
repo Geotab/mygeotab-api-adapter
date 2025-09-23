@@ -43,7 +43,6 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGenericEntityPersister<DbStgChargeEvent2> dbStgChargeEvent2EntityPersister;
         readonly IGenericGeotabObjectFeeder<ChargeEvent> chargeEventGeotabObjectFeeder;
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
-        readonly IGeotabIdConverter geotabIdConverter;
         readonly IGeotabChargeEventDbStgChargeEvent2ObjectMapper geotabChargeEventDbStgChargeEvent2ObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
@@ -55,7 +54,8 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="ChargeEventProcessor2"/> class.
         /// </summary>
-        public ChargeEventProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<ChargeEventProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbStgChargeEvent2> dbStgChargeEvent2EntityPersister, IGenericGeotabObjectFeeder<ChargeEvent> chargeEventGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabIdConverter geotabIdConverter, IGeotabChargeEventDbStgChargeEvent2ObjectMapper geotabChargeEventDbStgChargeEvent2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public ChargeEventProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<ChargeEventProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbStgChargeEvent2> dbStgChargeEvent2EntityPersister, IGenericGeotabObjectFeeder<ChargeEvent> chargeEventGeotabObjectFeeder, IGeotabDeviceFilterer geotabDeviceFilterer,
+            IGeotabChargeEventDbStgChargeEvent2ObjectMapper geotabChargeEventDbStgChargeEvent2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
@@ -64,7 +64,6 @@ namespace MyGeotabAPIAdapter.Services
             this.dbStgChargeEvent2EntityPersister = dbStgChargeEvent2EntityPersister;
             this.chargeEventGeotabObjectFeeder = chargeEventGeotabObjectFeeder;
             this.geotabDeviceFilterer = geotabDeviceFilterer;
-            this.geotabIdConverter = geotabIdConverter;
             this.geotabChargeEventDbStgChargeEvent2ObjectMapper = geotabChargeEventDbStgChargeEvent2ObjectMapper;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;

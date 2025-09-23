@@ -63,6 +63,9 @@
         public string DbDutyStatusLogsTableName => "DutyStatusLogs";
 
         /// <inheritdoc/>
+        public string DbDutyStatusLog2TableName => "DutyStatusLogs2";
+
+        /// <inheritdoc/>
         public string DbDVIRDefectTableName => "DVIRDefects";
 
         /// <inheritdoc/>
@@ -170,6 +173,9 @@
         public string DbStgDutyStatusAvailability2TableName => "stg_DutyStatusAvailability2";
 
         /// <inheritdoc/>
+        public string DbStgDutyStatusLog2TableName => "stg_DutyStatusLogs2";
+
+        /// <inheritdoc/>
         public string DbStgDVIRDefect2TableName => "stg_DVIRDefects2";
 
         /// <inheritdoc/>
@@ -246,6 +252,9 @@
 
         /// <inheritdoc/>
         public string MergeStagingDutyStatusAvailabilitiesProcedureName => "spMerge_stg_DutyStatusAvailabilities2";
+
+        /// <inheritdoc/>
+        public string MergeStagingDutyStatusLogsProcedureName => "spMerge_stg_DutyStatusLogs2";
 
         /// <inheritdoc/>
         public string MergeStagingDVIRDefectsProcedureName => "spMerge_stg_DVIRDefects2";

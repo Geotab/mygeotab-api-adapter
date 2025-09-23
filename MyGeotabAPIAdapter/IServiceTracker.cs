@@ -129,6 +129,11 @@ namespace MyGeotabAPIAdapter
         Task<T> GetDutyStatusLogServiceInfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DutyStatusLogProcessor2"/>.
+        /// </summary>
+        Task<T> GetDutyStatusLogService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.DVIRLogProcessor"/>.
         /// </summary>
         Task<T> GetDVIRLogServiceInfoAsync();

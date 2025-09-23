@@ -1,9 +1,11 @@
-﻿using Geotab.Checkmate.ObjectModel.Fuel;
+﻿using Geotab.Checkmate.ObjectModel;
+using Geotab.Checkmate.ObjectModel.Fuel;
 using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
+using MyGeotabAPIAdapter.Database.Enums;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Exceptions;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
@@ -154,11 +156,17 @@ namespace MyGeotabAPIAdapter.Services
                             foreach (var fuelAndEnergyUsed in filteredFuelAndEnergyUseds)
                             {
                                 long? fuelAndEnergyUsedDeviceId = null;
-                                if (fuelAndEnergyUsed.Device != null && fuelAndEnergyUsed.Device.Id != null)
+                                if (fuelAndEnergyUsed.Device != null)
                                 {
-                                    fuelAndEnergyUsedDeviceId = geotabIdConverter.ToLong(fuelAndEnergyUsed.Device.Id);
+                                    if (fuelAndEnergyUsed.Device.GetType() == typeof(NoDevice))
+                                    {
+                                        fuelAndEnergyUsedDeviceId = AdapterDbSentinelIdsForMYGKnownIds.NoDeviceId;
+                                    }
+                                    else if (fuelAndEnergyUsed.Device.Id != null)
+                                    {
+                                        fuelAndEnergyUsedDeviceId = geotabIdConverter.ToLong(fuelAndEnergyUsed.Device.Id);
+                                    }
                                 }
-
                                 if (fuelAndEnergyUsedDeviceId == null)
                                 {
                                     logger.Warn($"Could not process {nameof(FuelAndEnergyUsed)} with GeotabId {fuelAndEnergyUsed.Id}' because its {nameof(FuelAndEnergyUsed.Device)} is null.");

@@ -102,6 +102,10 @@ namespace MyGeotabAPIAdapter.Database
         /// </summary>
         string DbDutyStatusLogsTableName { get; }
 
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbDutyStatusLog2"/> entities.
+        /// </summary>
+        string DbDutyStatusLog2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbDVIRDefect"/> entities.
@@ -283,6 +287,10 @@ namespace MyGeotabAPIAdapter.Database
         /// </summary>
         string DbStgDutyStatusAvailability2TableName { get; }
 
+        /// The name of the database table associated with <see cref="DbStgDutyStatusLog2"/> entities.
+        /// </summary>
+        string DbStgDutyStatusLog2TableName { get; }
+
         /// <summary>
         /// The name of the database table associated with <see cref="DbStgDVIRDefect2"/> entities.
         /// </summary>
@@ -412,6 +420,10 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the stored procedure or function responsible for merging staging DutyStatusAvailabilities into the main DutyStatusAvailabilities2 table.
         /// </summary>
         string MergeStagingDutyStatusAvailabilitiesProcedureName { get; }
+
+        /// The name of the stored procedure or function responsible for merging staging DutyStatusLogs into the main DutyStatusLogs2 table.
+        /// </summary>
+        string MergeStagingDutyStatusLogsProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging DVIRDefects into the main DVIRDefects2 table.

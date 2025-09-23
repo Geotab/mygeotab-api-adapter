@@ -18,7 +18,8 @@
 --            to clear all tables of data. 
 -- ================================================================================
 
--- /* Clean Database */ 
+-- /*** [START] Clean Database ***/ 
+-- -- Step 1: Delete data and reseed indexes: 
 -- delete from public."MyGeotabVersionInfo2";
 -- delete from public."DBMaintenanceLogs2";
 -- delete from public."OServiceTracking2";
@@ -34,6 +35,9 @@
 -- ALTER TABLE public."DutyStatusAvailabilities2" DISABLE TRIGGER ALL;
 -- delete from public."DutyStatusAvailabilities2";
 -- ALTER TABLE public."DutyStatusAvailabilities2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."DutyStatusLogs2" DISABLE TRIGGER ALL;
+-- delete from public."DutyStatusLogs2";
+-- ALTER TABLE public."DutyStatusLogs2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."DVIRDefectRemarks2" DISABLE TRIGGER ALL;
 -- delete from public."DVIRDefectRemarks2";
 -- ALTER TABLE public."DVIRDefectRemarks2" ENABLE TRIGGER ALL;
@@ -106,6 +110,82 @@
 -- ALTER SEQUENCE public."Trips2_id_seq" RESTART;
 -- ALTER SEQUENCE public."ZoneTypes2_id_seq" RESTART;
 -- ALTER SEQUENCE public."OServiceTracking2_id_seq" RESTART;
+
+-- -- Step 2: Re-add sentinel records:
+-- -- Add a sentinel record to represent "NoUserId".
+-- INSERT INTO public."Users2" (
+    -- "id", "GeotabId", "ActiveFrom", "ActiveTo", "CompanyGroups",
+    -- "EmployeeNo", "FirstName", "HosRuleSet", "IsDriver", "LastAccessDate",
+    -- "LastName", "Name", "EntityStatus", "RecordLastChangedUtc"
+-- )
+-- VALUES (
+    -- -1, 'NoUserId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL,
+    -- NULL, 'No', NULL, false, NULL,
+    -- 'User', 'NoUser', 1, '1912-06-23 00:00:00'
+-- );
+-- -- Add a sentinel record to represent "NoDriverId".
+-- INSERT INTO public."Users2" (
+    -- "id", "GeotabId", "ActiveFrom", "ActiveTo", "CompanyGroups",
+    -- "EmployeeNo", "FirstName", "HosRuleSet", "IsDriver", "LastAccessDate",
+    -- "LastName", "Name", "EntityStatus", "RecordLastChangedUtc"
+-- )
+-- VALUES (
+    -- -2, 'NoDriverId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL,
+    -- NULL, 'No', NULL, false, NULL,
+    -- 'Driver', 'NoDriver', 1, '1912-06-23 00:00:00'
+-- );
+-- -- Add a sentinel record to represent "UnknownDriverId".
+-- INSERT INTO public."Users2" (
+    -- "id", "GeotabId", "ActiveFrom", "ActiveTo", "CompanyGroups",
+    -- "EmployeeNo", "FirstName", "HosRuleSet", "IsDriver", "LastAccessDate",
+    -- "LastName", "Name", "EntityStatus", "RecordLastChangedUtc"
+-- )
+-- VALUES (
+    -- -3, 'UnknownDriverId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL,
+    -- NULL, 'No', NULL, true, NULL,
+    -- 'Driver', 'UnknownDriver', 1, '1912-06-23 00:00:00'
+-- );
+-- -- Add a sentinel record to represent "NoDeviceId".
+-- INSERT INTO public."Devices2" (
+    -- "id", "GeotabId", "ActiveFrom", "ActiveTo", "Comment",
+    -- "DeviceType", "Groups", "LicensePlate", "LicenseState", "Name",
+    -- "ProductId", "SerialNumber", "VIN", "EntityStatus", "RecordLastChangedUtc",
+    -- "TmpTrailerGeotabId", "TmpTrailerId"
+-- )
+-- VALUES (
+    -- -1, 'NoDeviceId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL,
+    -- 'None', NULL, NULL, NULL, 'NoDevice',
+    -- NULL, NULL, NULL, 1, '1912-06-23 00:00:00',
+    -- NULL, NULL
+-- );
+-- -- Add a sentinel record to represent "NoRuleId".
+-- INSERT INTO public."Rules2" (
+    -- "id", "GeotabId", "ActiveFrom", "ActiveTo", "BaseType",
+    -- "Comment", "Condition", "Groups", "Name", "Version",
+    -- "EntityStatus", "RecordLastChangedUtc"
+-- )
+-- OVERRIDING SYSTEM VALUE
+-- VALUES (
+    -- -1, 'NoRuleId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL,
+    -- NULL, NULL, NULL, 'NoRule', 0,
+    -- 1, '1912-06-23 00:00:00'
+-- );
+-- -- Add a sentinel record to represent "NoZoneId".
+-- INSERT INTO public."Zones2" (
+    -- "id", "GeotabId", "ActiveFrom", "ActiveTo", "CentroidLatitude",
+    -- "CentroidLongitude", "Comment", "Displayed", "ExternalReference", "Groups",
+    -- "MustIdentifyStops", "Name", "Points", "ZoneTypeIds", "Version",
+    -- "EntityStatus", "RecordLastChangedUtc"
+-- )
+-- VALUES (
+    -- -1, 'NoZoneId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL,
+    -- NULL, NULL, false, NULL, NULL,
+    -- false, 'NoZone', NULL, 'None', 0,
+    -- 1, '1912-06-23 00:00:00'
+-- );
+-- /*** [END] Clean Database ***/
+
+
 
 
 /* Check counts */

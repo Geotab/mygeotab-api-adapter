@@ -4,6 +4,7 @@ using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
+using MyGeotabAPIAdapter.Database.Enums;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Exceptions;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
@@ -81,8 +82,7 @@ namespace MyGeotabAPIAdapter.Services
             // Setup the foreign key service dependency map.
             deviceStatusInfoForeignKeyServiceDependencyMap = new ForeignKeyServiceDependencyMap(
                 [
-                    new ForeignKeyServiceDependency("FK_DeviceStatusInfo2_Devices2", AdapterService.DeviceProcessor2),
-                    new ForeignKeyServiceDependency("FK_DeviceStatusInfo2_Users2", AdapterService.UserProcessor2)
+                    new ForeignKeyServiceDependency("FK_DeviceStatusInfo2_Devices2", AdapterService.DeviceProcessor2)
                 ]
             );
         }
@@ -160,17 +160,31 @@ namespace MyGeotabAPIAdapter.Services
                                 {
                                     deviceStatusInfoDeviceId = geotabIdConverter.ToLong(deviceStatusInfo.Device.Id);
                                 }
-
-                                long? deviceStatusInfoDriverId = null;
-                                if (deviceStatusInfo.Driver != null && deviceStatusInfo.Driver.Id != null && deviceStatusInfo.Driver.GetType() != typeof(UnknownDriver))
+                                else 
                                 {
-                                    deviceStatusInfoDriverId = geotabIdConverter.ToLong(deviceStatusInfo.Driver.Id);
+                                    logger.Warn($"Could not process {nameof(DeviceStatusInfo)} with GeotabId '{deviceStatusInfo.Id}' because its {nameof(DeviceStatusInfo.Device)} is null.");
+                                    continue;
                                 }
 
-                                if (deviceStatusInfoDeviceId == null)
+                                long? deviceStatusInfoDriverId = null;
+                                if (deviceStatusInfo.Driver != null)
                                 {
-                                    logger.Warn($"Could not process {nameof(DeviceStatusInfo)} with GeotabId {deviceStatusInfo.Id}' because its {nameof(DeviceStatusInfo.Device)} is null.");
-                                    continue;
+                                    if (deviceStatusInfo.Driver.GetType() == typeof(NoDriver))
+                                    {
+                                        deviceStatusInfoDriverId = AdapterDbSentinelIdsForMYGKnownIds.NoDriverId;
+                                    }
+                                    else if (deviceStatusInfo.Driver.GetType() == typeof(UnknownDriver))
+                                    {
+                                        deviceStatusInfoDriverId = AdapterDbSentinelIdsForMYGKnownIds.UnknownDriverId;
+                                    }
+                                    else if (deviceStatusInfo.Driver.GetType() == typeof(NoUser))
+                                    {
+                                        deviceStatusInfoDriverId = AdapterDbSentinelIdsForMYGKnownIds.NoUserId;
+                                    }
+                                    else if (deviceStatusInfo.Driver.Id != null)
+                                    {
+                                        deviceStatusInfoDriverId = geotabIdConverter.ToLong(deviceStatusInfo.Driver.Id);
+                                    }
                                 }
 
                                 var dbStgDeviceStatusInfo2 = geotabDeviceStatusInfoDbStgDeviceStatusInfo2ObjectMapper.CreateEntity(deviceStatusInfo, (long)deviceStatusInfoDeviceId, deviceStatusInfoDriverId);

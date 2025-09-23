@@ -86,7 +86,7 @@ namespace MyGeotabAPIAdapter.Services
             // Setup the foreign key service dependency map.
             dutyStatusAvailabilityForeignKeyServiceDependencyMap = new ForeignKeyServiceDependencyMap(
                 [
-                    new ForeignKeyServiceDependency("FK_DutyStatusAvailabilities2_Users2", AdapterService.UserProcessor2)
+                    //new ForeignKeyServiceDependency("FK_DutyStatusAvailabilities2_Users2", AdapterService.UserProcessor2)
                 ]
             );
         }

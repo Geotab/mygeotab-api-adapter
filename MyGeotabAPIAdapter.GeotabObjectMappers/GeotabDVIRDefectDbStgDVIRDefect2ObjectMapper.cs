@@ -1,5 +1,6 @@
 ﻿using Geotab.Checkmate.ObjectModel;
 using MyGeotabAPIAdapter.Database;
+using MyGeotabAPIAdapter.Database.Enums;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.MyGeotabAPI;
 
@@ -43,10 +44,27 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 dbStgDVIRDefect2.RepairStatusId = (short)dvirDefect.RepairStatus;
             }
 
+            long? dvirDefectRepairUserId = null;
             if (dvirDefect.RepairUser != null)
             {
-                dbStgDVIRDefect2.RepairUserId = geotabIdConverter.ToLong(dvirDefect.RepairUser.Id);
+                if (dvirDefect.RepairUser.GetType() == typeof(NoDriver))
+                {
+                    dvirDefectRepairUserId = AdapterDbSentinelIdsForMYGKnownIds.NoDriverId;
+                }
+                else if (dvirDefect.RepairUser.GetType() == typeof(UnknownDriver))
+                {
+                    dvirDefectRepairUserId = AdapterDbSentinelIdsForMYGKnownIds.UnknownDriverId;
+                }
+                else if (dvirDefect.RepairUser.GetType() == typeof(NoUser))
+                {
+                    dvirDefectRepairUserId = AdapterDbSentinelIdsForMYGKnownIds.NoUserId;
+                }
+                else if (dvirDefect.RepairUser.Id != null)
+                {
+                    dvirDefectRepairUserId = geotabIdConverter.ToLong(dvirDefect.RepairUser.Id);
+                }
             }
+            dbStgDVIRDefect2.RepairUserId = dvirDefectRepairUserId;
 
             return dbStgDVIRDefect2;
         }

@@ -41,7 +41,6 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>> dbZone2ObjectCache;
         readonly IGenericEntityPersister<DbStgZone2> dbStgZone2EntityPersister;
         readonly IGenericGeotabObjectCacher<Zone> zoneGeotabObjectCacher;
-        readonly IGeotabIdConverter geotabIdConverter;
         readonly IGeotabZoneDbStgZone2ObjectMapper geotabZoneDbStgZone2ObjectMapper;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
@@ -53,7 +52,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="ZoneProcessor2"/> class.
         /// </summary>
-        public ZoneProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<ZoneProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>> dbZone2ObjectCache, IGenericEntityPersister<DbStgZone2> dbStgZone2EntityPersister, IGeotabZoneDbStgZone2ObjectMapper geotabZoneDbStgZone2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Zone> zoneGeotabObjectCacher, IGeotabIdConverter geotabIdConverter, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public ZoneProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<ZoneProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>> dbZone2ObjectCache, IGenericEntityPersister<DbStgZone2> dbStgZone2EntityPersister, IGeotabZoneDbStgZone2ObjectMapper geotabZoneDbStgZone2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Zone> zoneGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
@@ -66,7 +65,6 @@ namespace MyGeotabAPIAdapter.Services
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
             this.zoneGeotabObjectCacher = zoneGeotabObjectCacher;
-            this.geotabIdConverter = geotabIdConverter;
 
             dbStgZone2Repo = new BaseRepository<DbStgZone2>(adapterContext);
 

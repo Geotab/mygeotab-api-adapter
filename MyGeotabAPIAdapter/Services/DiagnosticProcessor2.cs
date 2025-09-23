@@ -43,7 +43,6 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGenericEntityPersister<DbStgDiagnostic2> dbStgDiagnostic2EntityPersister;
         readonly IGenericGeotabObjectCacher<Diagnostic> diagnosticGeotabObjectCacher;
         readonly IGeotabDiagnosticDbStgDiagnostic2ObjectMapper geotabDiagnosticDbStgDiagnostic2ObjectMapper;
-        readonly IGeotabIdConverter geotabIdConverter;
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
@@ -54,7 +53,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="DiagnosticProcessor2"/> class.
         /// </summary>
-        public DiagnosticProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<DiagnosticProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnostic2, AdapterDatabaseUnitOfWorkContext> dbDiagnostic2ObjectCache, IGenericEntityPersister<DbStgDiagnostic2> dbStgDiagnostic2EntityPersister, IGeotabDiagnosticDbStgDiagnostic2ObjectMapper geotabDiagnosticDbStgDiagnostic2ObjectMapper, IGeotabIdConverter geotabIdConverter, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Diagnostic> diagnosticGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DiagnosticProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<DiagnosticProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnostic2, AdapterDatabaseUnitOfWorkContext> dbDiagnostic2ObjectCache, IGenericEntityPersister<DbStgDiagnostic2> dbStgDiagnostic2EntityPersister, IGeotabDiagnosticDbStgDiagnostic2ObjectMapper geotabDiagnosticDbStgDiagnostic2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Diagnostic> diagnosticGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
@@ -64,7 +63,6 @@ namespace MyGeotabAPIAdapter.Services
             this.dbDiagnostic2ObjectCache = dbDiagnostic2ObjectCache;
             this.dbStgDiagnostic2EntityPersister = dbStgDiagnostic2EntityPersister;
             this.geotabDiagnosticDbStgDiagnostic2ObjectMapper = geotabDiagnosticDbStgDiagnostic2ObjectMapper;
-            this.geotabIdConverter = geotabIdConverter;
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;

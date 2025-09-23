@@ -15,6 +15,9 @@ namespace MyGeotabAPIAdapter.Helpers
         public DateTime DefaultDateTime { get => DateTime.ParseExact("1912/06/23", "yyyy/MM/dd", CultureInfo.InvariantCulture); }
 
         /// <inheritdoc/>
+        public DateTime DefaultMaxDateTime { get => DateTime.ParseExact("2099/12/31", "yyyy/MM/dd", CultureInfo.InvariantCulture); }
+
+        /// <inheritdoc/>
         public bool DateTimeRange1FallsWithinDateTimeRange2(DateTime Range1MinDateTime, DateTime Range1MaxDateTime, DateTime Range2MinDateTime, DateTime Range2MaxDateTime)
         {
             if (Range1MinDateTime > Range1MaxDateTime)

@@ -79,4 +79,3 @@ Utilizing the deployment process outlined in this example **may result in charge
 ## Feedback
 
 Help us prioritize future efforts and better understand how the API Adapter is used! If you would like to provide any feedback about the MyGeotab API Adapter solution, please feel free to complete the 100% voluntary [MyGeotab API Adapter - Usage Survey](https://docs.google.com/forms/d/e/1FAIpQLSeIv-6A4Ugu7aIoyJdXrqVWyOF7sB8nuHOV-FDAYqayaPlkJg/viewform?usp=header).
-

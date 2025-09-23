@@ -7,6 +7,7 @@ using MyGeotabAPIAdapter.Database.Caches;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityMappers;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
+using MyGeotabAPIAdapter.Database.Enums;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Exceptions;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
@@ -96,8 +97,7 @@ namespace MyGeotabAPIAdapter.Services
             faultDataForeignKeyServiceDependencyMap = new ForeignKeyServiceDependencyMap(
                 [
                     new ForeignKeyServiceDependency("FK_FaultData2_Devices2", AdapterService.DeviceProcessor2),
-                    new ForeignKeyServiceDependency("FK_FaultData2_DiagnosticIds2", AdapterService.DiagnosticProcessor2),
-                    new ForeignKeyServiceDependency("FK_FaultData2_Users2", AdapterService.UserProcessor2)
+                    new ForeignKeyServiceDependency("FK_FaultData2_DiagnosticIds2", AdapterService.DiagnosticProcessor2)
                 ]
             );
         }
@@ -183,19 +183,54 @@ namespace MyGeotabAPIAdapter.Services
                             foreach (var faultData in filteredFaultDatas)
                             {
                                 long? faultDataDeviceId = null;
-                                if (faultData.Device != null && faultData.Device.Id != null)
+                                if (faultData.Device != null)
                                 {
-                                    faultDataDeviceId = geotabIdConverter.ToLong(faultData.Device.Id);
+                                    if (faultData.Device.GetType() == typeof(NoDevice))
+                                    {
+                                        faultDataDeviceId = AdapterDbSentinelIdsForMYGKnownIds.NoDeviceId;
+                                    }
+                                    else if (faultData.Device.Id != null)
+                                    {
+                                        faultDataDeviceId = geotabIdConverter.ToLong(faultData.Device.Id);
+                                    }
+                                }
+                                if (faultDataDeviceId == null)
+                                {
+                                    logger.Warn($"Could not process {nameof(FaultData)} with GeotabId '{faultData.Id}' because its {nameof(FaultData.Device)} is null.");
+                                    continue;
                                 }
 
                                 long? faultDataDismissUserId = null;
-                                if (faultData.DismissUser != null && faultData.DismissUser.Id != null && faultData.DismissUser.GetType() != typeof(NoUser))
+                                if (faultData.DismissUser != null)
                                 {
-                                    faultDataDismissUserId = geotabIdConverter.ToLong(faultData.DismissUser.Id);
+                                    if (faultData.DismissUser.GetType() == typeof(NoDriver))
+                                    {
+                                        faultDataDismissUserId = AdapterDbSentinelIdsForMYGKnownIds.NoDriverId;
+                                    }
+                                    else if (faultData.DismissUser.GetType() == typeof(UnknownDriver))
+                                    {
+                                        faultDataDismissUserId = AdapterDbSentinelIdsForMYGKnownIds.UnknownDriverId;
+                                    }
+                                    else if (faultData.DismissUser.GetType() == typeof(NoUser))
+                                    {
+                                        faultDataDismissUserId = AdapterDbSentinelIdsForMYGKnownIds.NoUserId;
+                                    }
+                                    else if (faultData.DismissUser.Id != null)
+                                    {
+                                        faultDataDismissUserId = geotabIdConverter.ToLong(faultData.DismissUser.Id);
+                                    }
                                 }
 
                                 // Get the id of the record in the DiagnosticIds2 database table that corresponds with the faultData.Diagnostic. Diagnostic Ids are mostly GUIDs, but there may be some that are "ShimIds" that don't have an underlying GUID. For efficiency, where possible, the dbDiagnosticId2ObjectCache is queried using the GUID version of the Id. Otherwise, the "GuidString" is used.
                                 var faultDataDiagnostic = faultData.Diagnostic;
+                                if (faultDataDiagnostic != null)
+                                {
+                                    if (faultDataDiagnostic.GetType() == typeof(NoDiagnostic))
+                                    {
+                                        logger.Warn($"Could not process {nameof(FaultData)} with GeotabId '{faultData.Id}' because its {nameof(FaultData.Diagnostic)} is {nameof(NoDiagnostic)}.");
+                                        continue;
+                                    }
+                                }
                                 var faultDataDiagnosticId = faultDataDiagnostic.Id;
                                 var faultDataDiagnosticGeotabIdType = geotabIdConverter.GetGeotabIdType(faultDataDiagnosticId);
                                 long? faultDataDiagnosticDbId = null;
@@ -210,15 +245,9 @@ namespace MyGeotabAPIAdapter.Services
                                     faultDataDiagnosticDbId = await dbDiagnosticId2ObjectCache.GetObjectIdByGeotabGUIDStringAsync(faultDataDiagnosticGuidString);
                                 }
 
-                                if (faultDataDeviceId == null)
-                                {
-                                    logger.Warn($"Could not process {nameof(FaultData)} with GeotabId {faultData.Id}' because its {nameof(FaultData.Device)} is null.");
-                                    continue;
-                                }
-
                                 if (faultDataDiagnosticDbId == null)
                                 {
-                                    logger.Warn($"Could not process {nameof(FaultData)} with GeotabId {faultData.Id}' because a {nameof(DbDiagnosticId2)} with a {nameof(DbDiagnosticId2.GeotabId)} matching the {nameof(FaultData.Diagnostic.Id)} could not be found.");
+                                    logger.Warn($"Could not process {nameof(FaultData)} with GeotabId '{faultData.Id}' because a {nameof(DbDiagnosticId2)} with a {nameof(DbDiagnosticId2.GeotabId)} matching the {nameof(FaultData.Diagnostic.Id)} could not be found.");
                                     continue;
                                 }
 

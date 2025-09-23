@@ -255,6 +255,13 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
+        public async Task<T> GetDutyStatusLogService2InfoAsync()
+        {
+            await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();
+            var dbOServiceTracking = await dbOServiceTrackingObjectCache.GetObjectAsync(AdapterService.DutyStatusLogProcessor2.ToString());
+            return dbOServiceTracking;
+        }
+        /// <inheritdoc/>
         public async Task<T> GetDVIRLogServiceInfoAsync()
         {
             await ReloadDbOServiceTrackingObjectCacheIfStaleAsync();

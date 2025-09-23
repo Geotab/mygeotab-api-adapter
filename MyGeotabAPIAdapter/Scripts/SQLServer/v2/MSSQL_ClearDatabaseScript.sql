@@ -23,98 +23,173 @@
 USE [geotabadapterdb]
 GO
 
---/*** [START] Clean Database ***/ 
---BEGIN TRANSACTION;
+-- /*** [START] Clean Database ***/ 
+-- BEGIN TRANSACTION;
 
---BEGIN TRY
----- Step 1: Capture foreign key constraints
---DECLARE @sqlDrop NVARCHAR(MAX) = N'';
---DECLARE @sqlCreate NVARCHAR(MAX) = N'';
+-- BEGIN TRY
+-- -- Step 1: Capture foreign key constraints
+-- DECLARE @sqlDrop NVARCHAR(MAX) = N'';
+-- DECLARE @sqlCreate NVARCHAR(MAX) = N'';
 
---SELECT 
---    @sqlDrop += 'ALTER TABLE ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name) + 
---                ' DROP CONSTRAINT ' + QUOTENAME(fk.name) + '; '
---    ,@sqlCreate += 'ALTER TABLE ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name) + 
---                    ' ADD CONSTRAINT ' + QUOTENAME(fk.name) + ' FOREIGN KEY (' + 
---                    STRING_AGG(QUOTENAME(fc.name), ', ') + ') REFERENCES ' + 
---                    QUOTENAME(rs.name) + '.' + QUOTENAME(rt.name) + ' (' + 
---                    STRING_AGG(QUOTENAME(rc.name), ', ') + '); '
---FROM sys.foreign_keys AS fk
---INNER JOIN sys.foreign_key_columns AS fkc
---    ON fk.object_id = fkc.constraint_object_id
---INNER JOIN sys.tables AS t
---    ON fkc.parent_object_id = t.object_id
---INNER JOIN sys.columns AS fc
---    ON fkc.parent_object_id = fc.object_id AND fkc.parent_column_id = fc.column_id
---INNER JOIN sys.tables AS rt
---    ON fkc.referenced_object_id = rt.object_id
---INNER JOIN sys.columns AS rc
---    ON fkc.referenced_object_id = rc.object_id AND fkc.referenced_column_id = rc.column_id
---INNER JOIN sys.schemas AS s
---    ON t.schema_id = s.schema_id
---INNER JOIN sys.schemas AS rs
---    ON rt.schema_id = rs.schema_id
---GROUP BY s.name, t.name, fk.name, rs.name, rt.name;
+-- SELECT 
+   -- @sqlDrop += 'ALTER TABLE ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name) + 
+               -- ' DROP CONSTRAINT ' + QUOTENAME(fk.name) + '; '
+   -- ,@sqlCreate += 'ALTER TABLE ' + QUOTENAME(s.name) + '.' + QUOTENAME(t.name) + 
+                   -- ' ADD CONSTRAINT ' + QUOTENAME(fk.name) + ' FOREIGN KEY (' + 
+                   -- STRING_AGG(QUOTENAME(fc.name), ', ') + ') REFERENCES ' + 
+                   -- QUOTENAME(rs.name) + '.' + QUOTENAME(rt.name) + ' (' + 
+                   -- STRING_AGG(QUOTENAME(rc.name), ', ') + '); '
+-- FROM sys.foreign_keys AS fk
+-- INNER JOIN sys.foreign_key_columns AS fkc
+   -- ON fk.object_id = fkc.constraint_object_id
+-- INNER JOIN sys.tables AS t
+   -- ON fkc.parent_object_id = t.object_id
+-- INNER JOIN sys.columns AS fc
+   -- ON fkc.parent_object_id = fc.object_id AND fkc.parent_column_id = fc.column_id
+-- INNER JOIN sys.tables AS rt
+   -- ON fkc.referenced_object_id = rt.object_id
+-- INNER JOIN sys.columns AS rc
+   -- ON fkc.referenced_object_id = rc.object_id AND fkc.referenced_column_id = rc.column_id
+-- INNER JOIN sys.schemas AS s
+   -- ON t.schema_id = s.schema_id
+-- INNER JOIN sys.schemas AS rs
+   -- ON rt.schema_id = rs.schema_id
+-- GROUP BY s.name, t.name, fk.name, rs.name, rt.name;
 
----- Step 2: Drop foreign key constraints:
---EXEC sp_executesql @sqlDrop;
+-- -- Step 2: Drop foreign key constraints:
+-- EXEC sp_executesql @sqlDrop;
 
----- Step 3: Truncate tables and reseed indexes: 
---truncate table [dbo].[DBMaintenanceLogs2];
---truncate table [dbo].[BinaryData2];
---truncate table [dbo].[ChargeEvents2];
---truncate table [dbo].[DutyStatusAvailabilities2];
---truncate table [dbo].[DVIRDefectRemarks2];
---truncate table [dbo].[DVIRDefects2];
---truncate table [dbo].[DVIRLogs2];
---truncate table [dbo].[Devices2];
---truncate table [dbo].[DeviceStatusInfo2];
---truncate table [dbo].[DiagnosticIds2];
---truncate table [dbo].[Diagnostics2];
---truncate table [dbo].[DriverChanges2];
---truncate table [dbo].[EntityMetadata2];
---truncate table [dbo].[ExceptionEvents2];
---truncate table [dbo].[FaultData2];
---truncate table [dbo].[FaultDataLocations2];
---truncate table [dbo].[FuelAndEnergyUsed2];
---truncate table [dbo].[Groups2];
---truncate table [dbo].[LogRecords2];
---truncate table [dbo].[MyGeotabVersionInfo2];
---truncate table [dbo].[OServiceTracking2];
---truncate table [dbo].[Rules2];
---truncate table [dbo].[StatusData2];
---truncate table [dbo].[StatusDataLocations2];
---truncate table [dbo].[Trips2];
---truncate table [dbo].[Users2];
---truncate table [dbo].[Zones2];
---truncate table [dbo].[ZoneTypes2];
---DBCC CHECKIDENT ('dbo.DBMaintenanceLogs2', RESEED, 0);
---DBCC CHECKIDENT ('dbo.DiagnosticIds2', RESEED, 0);
---DBCC CHECKIDENT ('dbo.Diagnostics2', RESEED, 0);
---DBCC CHECKIDENT ('dbo.EntityMetadata2', RESEED, 0);
---DBCC CHECKIDENT ('dbo.Groups2', RESEED, 0);
---DBCC CHECKIDENT ('dbo.Rules2', RESEED, 0);
---DBCC CHECKIDENT ('dbo.Trips2', RESEED, 0);
---DBCC CHECKIDENT ('dbo.ZoneTypes2', RESEED, 0);
---DBCC CHECKIDENT ('dbo.OServiceTracking2', RESEED, 0);
+-- -- Step 3: Truncate tables and reseed indexes: 
+-- truncate table [dbo].[DBMaintenanceLogs2];
+-- truncate table [dbo].[BinaryData2];
+-- truncate table [dbo].[ChargeEvents2];
+-- truncate table [dbo].[DutyStatusAvailabilities2];
+-- truncate table [dbo].[DutyStatusLogs2];
+-- truncate table [dbo].[DVIRDefectRemarks2];
+-- truncate table [dbo].[DVIRDefects2];
+-- truncate table [dbo].[DVIRLogs2];
+-- truncate table [dbo].[Devices2];
+-- truncate table [dbo].[DeviceStatusInfo2];
+-- truncate table [dbo].[DiagnosticIds2];
+-- truncate table [dbo].[Diagnostics2];
+-- truncate table [dbo].[DriverChanges2];
+-- truncate table [dbo].[EntityMetadata2];
+-- truncate table [dbo].[ExceptionEvents2];
+-- truncate table [dbo].[FaultData2];
+-- truncate table [dbo].[FaultDataLocations2];
+-- truncate table [dbo].[FuelAndEnergyUsed2];
+-- truncate table [dbo].[Groups2];
+-- truncate table [dbo].[LogRecords2];
+-- truncate table [dbo].[MyGeotabVersionInfo2];
+-- truncate table [dbo].[OServiceTracking2];
+-- truncate table [dbo].[Rules2];
+-- truncate table [dbo].[StatusData2];
+-- truncate table [dbo].[StatusDataLocations2];
+-- truncate table [dbo].[Trips2];
+-- truncate table [dbo].[Users2];
+-- truncate table [dbo].[Zones2];
+-- truncate table [dbo].[ZoneTypes2];
+-- DBCC CHECKIDENT ('dbo.DBMaintenanceLogs2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.DiagnosticIds2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.Diagnostics2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.EntityMetadata2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.Groups2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.Rules2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.Trips2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.ZoneTypes2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.OServiceTracking2', RESEED, 0);
 
----- Step 4: Recreate foreign key constraints:
---EXEC sp_executesql @sqlCreate;
+-- -- Step 4: Re-add sentinel records:
+-- -- Add a sentinel record to represent "NoUserId".
+-- INSERT INTO [dbo].[Users2] (
+    -- [id], [GeotabId], [ActiveFrom], [ActiveTo], [CompanyGroups], 
+	-- [EmployeeNo], [FirstName], [HosRuleSet], [IsDriver], [LastAccessDate], 
+	-- [LastName], [Name], [EntityStatus], [RecordLastChangedUtc]
+-- )
+-- VALUES (
+    -- -1, 'NoUserId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL, 
+	-- NULL, 'No', NULL, 0, NULL, 
+	-- 'User', 'NoUser', 1, '1912-06-23 00:00:00'
+-- );
+-- -- Add a sentinel record to represent "NoDriverId".
+-- INSERT INTO [dbo].[Users2] (
+    -- [id], [GeotabId], [ActiveFrom], [ActiveTo], [CompanyGroups], 
+	-- [EmployeeNo], [FirstName], [HosRuleSet], [IsDriver], [LastAccessDate], 
+	-- [LastName], [Name], [EntityStatus], [RecordLastChangedUtc]
+-- )
+-- VALUES (
+    -- -2, 'NoDriverId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL, 
+	-- NULL, 'No', NULL, 0, NULL, 
+	-- 'Driver', 'NoDriver', 1, '1912-06-23 00:00:00'
+-- );
+-- -- Add a sentinel record to represent "UnknownDriverId".
+-- INSERT INTO [dbo].[Users2] (
+    -- [id], [GeotabId], [ActiveFrom], [ActiveTo], [CompanyGroups], 
+	-- [EmployeeNo], [FirstName], [HosRuleSet], [IsDriver], [LastAccessDate], 
+	-- [LastName], [Name], [EntityStatus], [RecordLastChangedUtc]
+-- )
+-- VALUES (
+    -- -3, 'UnknownDriverId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL, 
+	-- NULL, 'Unknown', NULL, 1, NULL, 
+	-- 'Driver', 'UnknownDriver', 1, '1912-06-23 00:00:00'
+-- );
+-- -- Add a sentinel record to represent "NoDeviceId".
+-- INSERT INTO [dbo].[Devices2] (
+    -- [id], [GeotabId], [ActiveFrom], [ActiveTo], [Comment],
+    -- [DeviceType], [Groups], [LicensePlate], [LicenseState], [Name],
+    -- [ProductId], [SerialNumber], [VIN], [EntityStatus], [RecordLastChangedUtc],
+    -- [TmpTrailerGeotabId], [TmpTrailerId]
+-- )
+-- VALUES (
+    -- -1, 'NoDeviceId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL,
+    -- 'None', NULL, NULL, NULL, 'NoDevice',
+    -- NULL, NULL, NULL, 1, '1912-06-23 00:00:00',
+    -- NULL, NULL
+-- );
+-- -- Add a sentinel record to represent "NoRuleId".
+-- SET IDENTITY_INSERT [dbo].[Rules2] ON;
+-- INSERT INTO [dbo].[Rules2] (
+    -- [id], [GeotabId], [ActiveFrom], [ActiveTo], [BaseType],
+    -- [Comment], [Condition], [Groups], [Name], [Version], 
+	-- [EntityStatus], [RecordLastChangedUtc]
+-- )
+-- VALUES (
+    -- -1, 'NoRuleId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL,
+    -- NULL, NULL, NULL, 'NoRule', 0,
+    -- 1, '1912-06-23 00:00:00'
+-- );
+-- SET IDENTITY_INSERT [dbo].[Rules2] OFF;
+-- -- Add a sentinel record to represent "NoZoneId".
+-- INSERT INTO [dbo].[Zones2] (
+    -- [id], [GeotabId], [ActiveFrom], [ActiveTo], [CentroidLatitude],
+    -- [CentroidLongitude], [Comment], [Displayed], [ExternalReference], [Groups],
+    -- [MustIdentifyStops], [Name], [Points], [ZoneTypeIds], [Version],
+    -- [EntityStatus], [RecordLastChangedUtc]
+-- )
+-- VALUES (
+    -- -1, 'NoZoneId', '1912-06-23 00:00:00', '2099-12-31 00:00:00', NULL,
+    -- NULL, NULL, 0, NULL, NULL,
+    -- 0, 'NoZone', NULL, 'None', 0,
+    -- 1, '1912-06-23 00:00:00'
+-- );
 
----- Commit transaction
---COMMIT TRANSACTION;
+-- -- Step 5: Recreate foreign key constraints:
+-- EXEC sp_executesql @sqlCreate;
 
---PRINT 'Tables truncated and constraints recreated successfully.';
---END TRY
---BEGIN CATCH
----- Rollback transaction if an error occurs
---ROLLBACK TRANSACTION;
+-- -- Commit transaction
+-- COMMIT TRANSACTION;
 
----- Print error message
---PRINT 'An error occurred. Transaction rolled back.';
---PRINT ERROR_MESSAGE();
---END CATCH;
---/*** [END] Clean Database ***/
+-- PRINT 'Tables truncated and constraints recreated successfully.';
+-- END TRY
+-- BEGIN CATCH
+-- -- Rollback transaction if an error occurs
+-- ROLLBACK TRANSACTION;
+
+-- -- Print error message
+-- PRINT 'An error occurred. Transaction rolled back.';
+-- PRINT ERROR_MESSAGE();
+-- END CATCH;
+-- /*** [END] Clean Database ***/
 
 
 
