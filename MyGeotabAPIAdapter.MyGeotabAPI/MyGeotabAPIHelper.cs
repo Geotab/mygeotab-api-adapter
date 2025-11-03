@@ -428,7 +428,7 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         }
 
         /// <inheritdoc/>
-        public async Task<object> SetAsync<T>(T entity, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
+        public async Task SetAsync<T>(T entity, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
         {
             ValidateTimeoutSeconds(timeoutSeconds);
             SetAsyncPolicyWrapForMyGeotabAPICalls(timeoutSeconds);
@@ -436,20 +436,19 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
             // Obtain the type parameter type (for logging purposes).
             Type typeParameterType = typeof(T);
 
-            object result = null;
             try
             {
                 await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                 {
                     using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
                     {
-                        result = await MyGeotabAPI.CallAsync<object>("Set", typeof(T), new { entity }, cancellationTokenSource.Token);
+                        await MyGeotabAPI.CallAsync<T>("Set", typeof(T), new { entity }, cancellationTokenSource.Token);
                     }
                 }, new Context());
             }
             catch (OperationCanceledException exception)
             {
-                throw new MyGeotabConnectionException($"MyGeotab API GetAsync call for type '{typeParameterType.Name}' did not return within the allowed time of {timeoutSeconds} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
+                throw new MyGeotabConnectionException($"MyGeotab API SetAsync call for type '{typeParameterType.Name}' did not return within the allowed time of {timeoutSeconds} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
             }
             catch (Exception exception)
             {
@@ -463,12 +462,6 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                     throw;
                 }
             }
-
-            if (result != null)
-            {
-                return result;
-            }
-            throw new Exception($"SetAsync<T> method failed to return a result for entity type '{typeof(T).Name}'.");
         }
 
         /// <summary>

@@ -214,7 +214,7 @@ namespace MyGeotabAPIAdapter
                                             try
                                             {
                                                 // Update the DVIRLog in the MyGeotab database.
-                                                var result = await myGeotabAPIHelper.SetAsync<DVIRLog>(dvirLogToUpdate, adapterConfiguration.TimeoutSecondsForMyGeotabTasks);
+                                                await myGeotabAPIHelper.SetAsync<DVIRLog>(dvirLogToUpdate, adapterConfiguration.TimeoutSecondsForMyGeotabTasks);
                                                 deleteCurrentDbDVIRDefectUpdateRecord = true;
                                                 processedDbDVIRDefectUpdateCount += 1;
                                             }

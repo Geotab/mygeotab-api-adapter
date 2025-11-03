@@ -23,6 +23,7 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         // Known MyGeotab API exception detail constants,
         public const string MyGeotabException_WebServerInvoker = "WebServerInvoker";
         public const string MyGeotabTimeoutExceptionMessage_OperationTimedOut = "The operation has timed out.";
+        public const string MyGeotabExceptionType_ArgumentException = "ArgumentException";
 
         /// <summary>
         /// The maximum allowed number of retries for each MyGeotab API call.
@@ -58,7 +59,8 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
                     exception.Message.Contains(MyGeotabTimeoutExceptionMessage_OperationTimedOut) == false
                     && exception.Message.Contains(MyGeotabConnectionExceptionMessage_DbUnavailableException) == false
                     && exception.Message.Contains(MyGeotabConnectionExceptionMessage_HttpRequestException_Connection_refused) == false
-                    && exception.Message.Contains(MyGeotabConnectionExceptionMessage_ServiceUnavailableException_Service_temporarily_unavailable) == false)
+                    && exception.Message.Contains(MyGeotabConnectionExceptionMessage_ServiceUnavailableException_Service_temporarily_unavailable) == false
+                    && exception.Message.Contains(MyGeotabExceptionType_ArgumentException) == false)
                 .WaitAndRetryAsync(
                     retryCount: MaxRetries,
                     sleepDurationProvider: (retryAttempt) => 

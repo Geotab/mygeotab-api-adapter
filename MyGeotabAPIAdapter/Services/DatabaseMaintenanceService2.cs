@@ -39,12 +39,10 @@ namespace MyGeotabAPIAdapter.Services
         const int PG_ReindexThreshold_IndexSizeBytes = 1000;
         const int WaitTimeoutMinutesForPausingOtherServices = 5;
 
-        int serviceExecutionStartDelayMinutes = 15;
-        bool serviceExecutionStartDelayExecuted = false;
+        bool initialPartitioningOnStartupCompleted = false;
         int serviceExecutionIntervalMinutes = 5;
 
         // Polly-related items:
-        const int MaxRetries = 10;
         readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
 
         readonly IBaseRepository<DbDBMaintenanceLog2> dbDBMaintenanceLog2Repo;
@@ -183,13 +181,6 @@ namespace MyGeotabAPIAdapter.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                // Add a startup delay to give all other services a chance to start before this service begins executing.
-                if (serviceExecutionStartDelayExecuted == false)
-                { 
-                    await Task.Delay(TimeSpan.FromMinutes(serviceExecutionStartDelayMinutes), stoppingToken);
-                    serviceExecutionStartDelayExecuted = true;
-                }
-
                 // Wait if necessary.
                 var prerequisiteServices = new List<AdapterService> { };
                 await awaiter.WaitForPrerequisiteServicesIfNeededAsync(prerequisiteServices, stoppingToken);
@@ -204,25 +195,37 @@ namespace MyGeotabAPIAdapter.Services
                         var dbOServiceTracking = await serviceTracker.GetDatabaseMaintenanceService2InfoAsync();
                         var dbDBMaintenanceLog2sToPersist = new List<DbDBMaintenanceLog2>();
 
-                        // Execute database partition maintenance if needed.
-                        var dbDBMaintenanceLog2ToPersist = await PartitionDatabaseIfNeededAsync(cancellationTokenSource);
-                        if (dbDBMaintenanceLog2ToPersist != null)
+                        if (initialPartitioningOnStartupCompleted == false)
                         {
-                            dbDBMaintenanceLog2sToPersist.Add(dbDBMaintenanceLog2ToPersist);
+                            // Execute database partition maintenance if needed.
+                            var dbDBMaintenanceLog2ToPersist = await PartitionDatabaseIfNeededAsync(cancellationTokenSource);
+                            if (dbDBMaintenanceLog2ToPersist != null)
+                            {
+                                dbDBMaintenanceLog2sToPersist.Add(dbDBMaintenanceLog2ToPersist);
+                            }
                         }
-
-                        // Execute Level 1 database maintenance if needed.
-                        dbDBMaintenanceLog2ToPersist = await ExecuteLevel1DatabaseMaintenanceIfNeededAsync(cancellationTokenSource);
-                        if (dbDBMaintenanceLog2ToPersist != null)
+                        else 
                         {
-                            dbDBMaintenanceLog2sToPersist.Add(dbDBMaintenanceLog2ToPersist);
-                        }
+                            // Execute database partition maintenance if needed.
+                            var dbDBMaintenanceLog2ToPersist = await PartitionDatabaseIfNeededAsync(cancellationTokenSource);
+                            if (dbDBMaintenanceLog2ToPersist != null)
+                            {
+                                dbDBMaintenanceLog2sToPersist.Add(dbDBMaintenanceLog2ToPersist);
+                            }
 
-                        // Execute Level 2 database maintenance if needed.
-                        dbDBMaintenanceLog2ToPersist = await ExecuteLevel2DatabaseMaintenanceIfNeededAsync(cancellationTokenSource);
-                        if (dbDBMaintenanceLog2ToPersist != null)
-                        {
-                            dbDBMaintenanceLog2sToPersist.Add(dbDBMaintenanceLog2ToPersist);
+                            // Execute Level 1 database maintenance if needed.
+                            dbDBMaintenanceLog2ToPersist = await ExecuteLevel1DatabaseMaintenanceIfNeededAsync(cancellationTokenSource);
+                            if (dbDBMaintenanceLog2ToPersist != null)
+                            {
+                                dbDBMaintenanceLog2sToPersist.Add(dbDBMaintenanceLog2ToPersist);
+                            }
+
+                            // Execute Level 2 database maintenance if needed.
+                            dbDBMaintenanceLog2ToPersist = await ExecuteLevel2DatabaseMaintenanceIfNeededAsync(cancellationTokenSource);
+                            if (dbDBMaintenanceLog2ToPersist != null)
+                            {
+                                dbDBMaintenanceLog2sToPersist.Add(dbDBMaintenanceLog2ToPersist);
+                            }
                         }
 
                         // Persist changes to database.
@@ -739,7 +742,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <returns></returns>
         async Task<DbDBMaintenanceLog2> PartitionDatabaseIfNeededAsync(CancellationTokenSource methodCancellationTokenSource)
         {
-            const double DatabasePartitioningIntervalDays = 30;
+            const double DatabasePartitioningIntervalDays = 20;
             const string PartitionFunctionSQL_Postgres = @"SELECT public.""spManagePartitions""(@MinDateTimeUTC::timestamp without time zone, @PartitionInterval::text);";
             const string PartitionProcedureSQL_SQLServer = "EXEC [dbo].[spManagePartitions] @MinDateTimeUTC = @MinDateTimeUTC, @PartitionInterval = @PartitionInterval;";
 
@@ -748,14 +751,27 @@ namespace MyGeotabAPIAdapter.Services
             DbDBMaintenanceLog2 dbDBMaintenanceLog2 = null;
 
             // Partitioning needs to happen regardless of whether Level 1 or Level 2 maintenance are enabled. Otherwise, new data that doesn't fit into any existing partition will be inserted into the default partition, which defeats the purpose of partitioning.
-            if (LatestPartitionDbDBMaintenanceLog2 == null ||
+            if (initialPartitioningOnStartupCompleted == false || LatestPartitionDbDBMaintenanceLog2 == null ||
                 (LatestPartitionDbDBMaintenanceLog2.EndTimeUtc != null &&
                 (DateTime.UtcNow - LatestPartitionDbDBMaintenanceLog2.StartTimeUtc).TotalDays >= DatabasePartitioningIntervalDays))
             {
                 try
                 {
-                    // Trigger a pause and wait for the other services to pause before proceeding with database partition maintenance. If the other services don't pause within the timeout period, don't proceed with database partition maintenance.
-                    var otherServicesPaused = await PauseOtherServicesForDatabaseMaintenanceAsync(methodCancellationTokenSource, true);
+                    // On initial application start up, partitioning needs to happen before any other services write data to tables. This is to avoid data being written to the default partition when it should in fact be written to a yet-to-be-created partition (this could occur if other services started before the partitioning function is executed). Since other services all depend on this DatabaseMaintenanceService2 to be running before they start processing, it is necessary to run the initial partitioning logic without waiting for them. On subsequent iterations, wait for the other services to pause before executing database maintenance.
+                    bool otherServicesPaused = false;
+                    if (initialPartitioningOnStartupCompleted == false)
+                    {
+                        otherServicesPaused = true;
+                    }
+                    else 
+                    {
+                        // Set this to true so that all subsequent iterations will actually pause for other services.
+                        initialPartitioningOnStartupCompleted = true;
+
+                        // Trigger a pause and wait for the other services to pause before proceeding with database partition maintenance. If the other services don't pause within the timeout period, don't proceed with database partition maintenance.
+                        otherServicesPaused = await PauseOtherServicesForDatabaseMaintenanceAsync(methodCancellationTokenSource, true);
+                    }
+
                     if (otherServicesPaused == false)
                     {
                         logger.Warn($"Skipping database partition maintenance because other services did not pause within the timeout period of {WaitTimeoutMinutesForPausingOtherServices} minutes.");

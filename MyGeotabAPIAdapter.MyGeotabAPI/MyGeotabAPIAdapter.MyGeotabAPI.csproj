@@ -7,8 +7,8 @@
   <ItemGroup>
     <PackageReference Include="Geotab.Checkmate.ObjectModel" Version="11.83.265" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="6.0.4" />
-    <PackageReference Include="Polly" Version="8.6.3" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="6.0.5" />
+    <PackageReference Include="Polly" Version="8.6.4" />
   </ItemGroup>
 
   <ItemGroup>

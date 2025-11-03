@@ -76,7 +76,10 @@ namespace MyGeotabAPIAdapter.Services
             while (!stoppingToken.IsCancellationRequested)
             {
                 // Wait if necessary.
-                var prerequisiteServices = new List<AdapterService> { };
+                var prerequisiteServices = new List<AdapterService> 
+                {
+                    AdapterService.DatabaseMaintenanceService2
+                };
                 await awaiter.WaitForPrerequisiteServicesIfNeededAsync(prerequisiteServices, stoppingToken);
                 await awaiter.WaitForDatabaseMaintenanceCompletionIfNeededAsync(stoppingToken);
                 await awaiter.WaitForConnectivityRestorationIfNeededAsync(stoppingToken);

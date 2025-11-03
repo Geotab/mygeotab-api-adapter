@@ -6554,6 +6554,7 @@ GO
 /*** [END] Version 3.11.0.0 Updates ***/
 
 
+
 /*** [START] Version 3.12.0.0 Updates ***/
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- Remove the foreign keys associated with Users2.id and Rules2.id to fix the FK violation issue:
@@ -7055,9 +7056,65 @@ ALTER COLUMN [RuleId] [bigint] NULL;
 /*** [END] Version 3.12.0.0 Updates ***/
 
 
+
+/*** [START] Version 3.13.0.0 Updates ***/
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Create upd_DVIRDefectUpdates2 table:
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[upd_DVIRDefectUpdates2](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[DVIRLogId] [uniqueidentifier] NOT NULL,
+	[DVIRDefectId] [uniqueidentifier] NOT NULL,
+	[RepairDateTimeUtc] [datetime2](7) NULL,
+	[RepairStatusId] [smallint] NULL,
+	[RepairUserId] [bigint] NULL,
+	[Remark] [nvarchar](max) NULL,
+	[RemarkDateTimeUtc] [datetime2](7) NULL,
+	[RemarkUserId] [bigint] NULL,
+	[RecordCreationTimeUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_upd_DVIRDefectUpdates2] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Create fail_DVIRDefectUpdateFailures2 table:
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[fail_DVIRDefectUpdateFailures2](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[DVIRDefectUpdateId] [bigint] NOT NULL,
+	[DVIRLogId] [uniqueidentifier] NOT NULL,
+	[DVIRDefectId] [uniqueidentifier] NOT NULL,
+	[RepairDateTimeUtc] [datetime2](7) NULL,
+	[RepairStatusId] [smallint] NULL,
+	[RepairUserId] [bigint] NULL,
+	[Remark] [nvarchar](max) NULL,
+	[RemarkDateTimeUtc] [datetime2](7) NULL,
+	[RemarkUserId] [bigint] NULL,
+	[FailureMessage] [nvarchar](max) NULL,
+	[RecordCreationTimeUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_fail_DVIRDefectUpdateFailures2] PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/*** [END] Version 3.13.0.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO [dbo].[MiddlewareVersionInfo2] ([DatabaseVersion], [RecordCreationTimeUtc])
-VALUES ('3.12.0.0', GETUTCDATE());
+VALUES ('3.13.0.0', GETUTCDATE());
 /*** [END] Database Version Update ***/

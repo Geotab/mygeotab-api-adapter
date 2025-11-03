@@ -115,7 +115,6 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         /// <typeparam name="T">The type of <see cref="Entity"/> to be modified.</typeparam>
         /// <param name="entity">The <see cref="Entity"/> to be modified.</param>
         /// <param name="timeoutSeconds">The maximum number of seconds that the <see cref="System.Threading.Tasks.Task"/> can take to be completed before it is deemed that there is a MyGeotab connectivity issue and a <see cref="MyGeotabConnectionException"/> will be thrown.</param>
-        /// <returns>A list of objects of the subject <see cref="Type"/>.</returns>
-        Task<object> SetAsync<T>(T entity, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity;
+        Task SetAsync<T>(T entity, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity;
     }
 }

@@ -117,6 +117,7 @@ namespace MyGeotabAPIAdapter.Services
                 // Wait if necessary.
                 var prerequisiteServices = new List<AdapterService> 
                 {
+                    AdapterService.DatabaseMaintenanceService2,
                     AdapterService.ControllerProcessor2,
                     AdapterService.DeviceProcessor2,
                     AdapterService.DiagnosticProcessor2,

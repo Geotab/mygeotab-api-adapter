@@ -65,6 +65,9 @@
 -- ALTER TABLE public."StatusData2" DISABLE TRIGGER ALL;
 -- delete from public."StatusData2";
 -- ALTER TABLE public."StatusData2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."fail_DVIRDefectUpdateFailures2" DISABLE TRIGGER ALL;
+-- delete from public."fail_DVIRDefectUpdateFailures2";
+-- ALTER TABLE public."fail_DVIRDefectUpdateFailures2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."FaultDataLocations2" DISABLE TRIGGER ALL;
 -- delete from public."FaultDataLocations2";
 -- ALTER TABLE public."FaultDataLocations2" ENABLE TRIGGER ALL;
@@ -92,6 +95,9 @@
 -- ALTER TABLE public."Rules2" DISABLE TRIGGER ALL;
 -- delete from public."Rules2";
 -- ALTER TABLE public."Rules2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."upd_DVIRDefectUpdates2" DISABLE TRIGGER ALL;
+-- delete from public."upd_DVIRDefectUpdates2";
+-- ALTER TABLE public."upd_DVIRDefectUpdates2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."Users2" DISABLE TRIGGER ALL;
 -- delete from public."Users2";
 -- ALTER TABLE public."Users2" ENABLE TRIGGER ALL;
@@ -105,9 +111,11 @@
 -- ALTER SEQUENCE public."DiagnosticIds2_id_seq" RESTART;
 -- ALTER SEQUENCE public."Diagnostics2_id_seq" RESTART;
 -- ALTER SEQUENCE public."EntityMetadata2_id_seq" RESTART;
+-- ALTER SEQUENCE public."fail_DVIRDefectUpdateFailures2_id_seq" RESTART;
 -- ALTER SEQUENCE public."Groups2_id_seq" RESTART;
 -- ALTER SEQUENCE public."Rules2_id_seq" RESTART;
 -- ALTER SEQUENCE public."Trips2_id_seq" RESTART;
+-- ALTER SEQUENCE public."upd_DVIRDefectUpdates2_id_seq" RESTART;
 -- ALTER SEQUENCE public."ZoneTypes2_id_seq" RESTART;
 -- ALTER SEQUENCE public."OServiceTracking2_id_seq" RESTART;
 

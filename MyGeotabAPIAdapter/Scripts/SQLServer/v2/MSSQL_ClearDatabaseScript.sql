@@ -75,6 +75,7 @@ GO
 -- truncate table [dbo].[DriverChanges2];
 -- truncate table [dbo].[EntityMetadata2];
 -- truncate table [dbo].[ExceptionEvents2];
+-- truncate table [dbo].[fail_DVIRDefectUpdateFailures2];
 -- truncate table [dbo].[FaultData2];
 -- truncate table [dbo].[FaultDataLocations2];
 -- truncate table [dbo].[FuelAndEnergyUsed2];
@@ -86,6 +87,7 @@ GO
 -- truncate table [dbo].[StatusData2];
 -- truncate table [dbo].[StatusDataLocations2];
 -- truncate table [dbo].[Trips2];
+-- truncate table [dbo].[upd_DVIRDefectUpdates2];
 -- truncate table [dbo].[Users2];
 -- truncate table [dbo].[Zones2];
 -- truncate table [dbo].[ZoneTypes2];
@@ -93,9 +95,11 @@ GO
 -- DBCC CHECKIDENT ('dbo.DiagnosticIds2', RESEED, 0);
 -- DBCC CHECKIDENT ('dbo.Diagnostics2', RESEED, 0);
 -- DBCC CHECKIDENT ('dbo.EntityMetadata2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.fail_DVIRDefectUpdateFailures2', RESEED, 0);
 -- DBCC CHECKIDENT ('dbo.Groups2', RESEED, 0);
 -- DBCC CHECKIDENT ('dbo.Rules2', RESEED, 0);
 -- DBCC CHECKIDENT ('dbo.Trips2', RESEED, 0);
+-- DBCC CHECKIDENT ('dbo.upd_DVIRDefectUpdates2', RESEED, 0);
 -- DBCC CHECKIDENT ('dbo.ZoneTypes2', RESEED, 0);
 -- DBCC CHECKIDENT ('dbo.OServiceTracking2', RESEED, 0);
 
