@@ -7459,9 +7459,16 @@ END $$;
 
 
 
+/*** [START] Version 3.14.0.0 Updates ***/
+-- Changes covered by PG_0.0.0.1_spManagePartitions.sql and 
+-- PG_3.14.0.0_spManagePartitionsFixes.sql. No need to include here.
+/*** [END] Version 3.14.0.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/  
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO public."MiddlewareVersionInfo2" ("DatabaseVersion", "RecordCreationTimeUtc") 
-VALUES ('3.13.0.0', timezone('UTC', NOW())); 
+VALUES ('3.14.0.0', timezone('UTC', NOW())); 
 /*** [END] Database Version Update ***/

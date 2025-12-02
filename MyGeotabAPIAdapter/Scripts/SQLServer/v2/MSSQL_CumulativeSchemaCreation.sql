@@ -7112,9 +7112,16 @@ GO
 
 
 
+/*** [START] Version 3.14.0.0 Updates ***/
+-- Changes covered by MSSQL_0.0.0.1_spManagePartitions.sql and 
+-- MSSQL_3.14.0.0_spManagePartitionsFixes.sql. No need to include here.
+/*** [END] Version 3.14.0.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO [dbo].[MiddlewareVersionInfo2] ([DatabaseVersion], [RecordCreationTimeUtc])
-VALUES ('3.13.0.0', GETUTCDATE());
+VALUES ('3.14.0.0', GETUTCDATE());
 /*** [END] Database Version Update ***/
