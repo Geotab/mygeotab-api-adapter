@@ -30,8 +30,6 @@ namespace MyGeotabAPIAdapter.Database.Models
         public double? CentroidLatitude { get; set; }
         public double? CentroidLongitude { get; set; }
         public string Comment { get; set; }
-        [Write(false)]
-        public string CommentOracle { get => Comment; }
         public bool? Displayed { get; set; }
         public string ExternalReference { get; set; }
         public string? Groups { get; set; }

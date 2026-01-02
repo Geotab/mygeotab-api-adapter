@@ -9,16 +9,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using MyGeotabAPIAdapter.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Configuration;
-using MyGeotabAPIAdapter.Configuration.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.Caches;
 using MyGeotabAPIAdapter.Database.EntityMappers;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
 using MyGeotabAPIAdapter.Database.Models;
-using MyGeotabAPIAdapter.Database.Models.Add_Ons.VSS;
 using MyGeotabAPIAdapter.DataEnhancement;
 using MyGeotabAPIAdapter.Geospatial;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
@@ -89,29 +86,17 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IMessageLogger, MessageLogger>()
                         .AddSingleton<IMyGeotabAPIHelper, MyGeotabAPIHelper>()
                         .AddTransient<IStringHelper, StringHelper>()
-                        .AddSingleton<IUnmappedDiagnosticManager, UnmappedDiagnosticManager>()
-                        .AddTransient<IVSSObjectMapper, VSSObjectMapper>()
 
                         // Models for Dependency Injection:
-                        .AddTransient<DbCondition>()
-                        .AddTransient<DbDevice>()
                         .AddTransient<DbDevice2>()
-                        .AddTransient<DbDeviceStatusInfo>()
-                        .AddTransient<DbDiagnostic>()
                         .AddTransient<DbDiagnostic2>()
                         .AddTransient<DbDiagnosticId2>()
-                        .AddTransient<DbDutyStatusAvailability>()
-                        .AddTransient<DbGroup>()
                         .AddTransient<DbGroup2>()
                         .AddTransient<DbOServiceTracking>()
                         .AddTransient<DbOServiceTracking2>()
-                        .AddTransient<DbRule>()
                         .AddTransient<DbRule2>()
-                        .AddTransient<DbUser>()
                         .AddTransient<DbUser2>()
-                        .AddTransient<DbZone>()
                         .AddTransient<DbZone2>()
-                        .AddTransient<DbZoneType>()
                         .AddTransient<DbZoneType2>()
 
                         // Unit of Work:
@@ -135,13 +120,11 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IAdapterDatabaseConnectionInfoContainer, AdapterDatabaseConnectionInfoContainer>()
                         .AddSingleton<IAdapterDatabaseObjectNames, AdapterDatabaseObjectNames>()
                         .AddTransient<IConfigurationHelper, ConfigurationHelper>()
-                        .AddSingleton<IVSSConfiguration, VSSConfiguration>()
 
                         // Database Validator:
                         .AddSingleton<IDatabaseValidator, DatabaseValidator>()
 
                         // Database Entity to Database Entity Mappers:
-                        .AddTransient<IDbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper, DbDVIRDefectUpdateDbFailedDVIRDefectUpdateEntityMapper>()
                         .AddTransient<IDbFaultData2DbEntityMetadata2EntityMapper, DbFaultData2DbEntityMetadata2EntityMapper>()
                         .AddTransient<IDbLogRecord2DbEntityMetadata2EntityMapper, DbLogRecord2DbEntityMetadata2EntityMapper>()
                         .AddTransient<IDbStatusData2DbEntityMetadata2EntityMapper, DbStatusData2DbEntityMetadata2EntityMapper>()
@@ -152,103 +135,57 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGeotabDateTimeProviderComparer<StatusData>, GeotabDateTimeProviderComparer<StatusData>>()
 
                         // Geotab Object to Database Entity Mappers:
-                        .AddTransient<IGeotabBinaryDataDbBinaryDataObjectMapper, GeotabBinaryDataDbBinaryDataObjectMapper>()
                         .AddTransient<IGeotabBinaryDataDbBinaryData2ObjectMapper, GeotabBinaryDataDbBinaryData2ObjectMapper>()
-                        .AddTransient<IGeotabChargeEventDbChargeEventObjectMapper, GeotabChargeEventDbChargeEventObjectMapper>()
                         .AddTransient<IGeotabChargeEventDbStgChargeEvent2ObjectMapper, GeotabChargeEventDbStgChargeEvent2ObjectMapper>()
-                        .AddTransient<IGeotabConditionDbConditionObjectMapper, GeotabConditionDbConditionObjectMapper>()
-                        .AddTransient<IGeotabDebugDataDbDebugDataObjectMapper, GeotabDebugDataDbDebugDataObjectMapper>()
-                        .AddTransient<IGeotabDeviceDbDeviceObjectMapper, GeotabDeviceDbDeviceObjectMapper>()
                         .AddTransient<IGeotabDeviceDbStgDevice2ObjectMapper, GeotabDeviceDbStgDevice2ObjectMapper>()
-                        .AddTransient<IGeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper, GeotabDeviceStatusInfoDbDeviceStatusInfoObjectMapper>()
                         .AddTransient<IGeotabDeviceStatusInfoDbStgDeviceStatusInfo2ObjectMapper, GeotabDeviceStatusInfoDbStgDeviceStatusInfo2ObjectMapper>()
-                        .AddTransient<IGeotabDiagnosticDbDiagnosticObjectMapper, GeotabDiagnosticDbDiagnosticObjectMapper>()
                         .AddTransient<IGeotabDiagnosticDbStgDiagnostic2ObjectMapper, GeotabDiagnosticDbStgDiagnostic2ObjectMapper>()
-                        .AddTransient<IGeotabDriverChangeDbDriverChangeObjectMapper, GeotabDriverChangeDbDriverChangeObjectMapper>()
                         .AddTransient<IGeotabDriverChangeDbStgDriverChange2ObjectMapper, GeotabDriverChangeDbStgDriverChange2ObjectMapper>()
-                        .AddTransient<IGeotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper, GeotabDutyStatusAvailabilityDbDutyStatusAvailabilityObjectMapper>()
                         .AddTransient<IGeotabDutyStatusAvailabilityDbStgDutyStatusAvailability2ObjectMapper, GeotabDutyStatusAvailabilityDbStgDutyStatusAvailability2ObjectMapper>()
-                        .AddTransient<IGeotabDutyStatusLogDbDutyStatusLogObjectMapper, GeotabDutyStatusLogDbDutyStatusLogObjectMapper>()
                         .AddTransient<IGeotabDutyStatusLogDbStgDutyStatusLog2ObjectMapper, GeotabDutyStatusLogDbStgDutyStatusLog2ObjectMapper>()
-                        .AddTransient<IGeotabDVIRDefectDbDVIRDefectObjectMapper, GeotabDVIRDefectDbDVIRDefectObjectMapper>()
                         .AddTransient<IGeotabDVIRDefectDbStgDVIRDefect2ObjectMapper, GeotabDVIRDefectDbStgDVIRDefect2ObjectMapper>()
-                        .AddTransient<IGeotabDVIRDefectRemarkDbDVIRDefectRemarkObjectMapper, GeotabDVIRDefectRemarkDbDVIRDefectRemarkObjectMapper>()
                         .AddTransient<IGeotabDVIRDefectRemarkDbStgDVIRDefectRemark2ObjectMapper, GeotabDVIRDefectRemarkDbStgDVIRDefectRemark2ObjectMapper>()
-                        .AddTransient<IGeotabDVIRLogDbDVIRLogObjectMapper, GeotabDVIRLogDbDVIRLogObjectMapper>()
                         .AddTransient<IGeotabDVIRLogDbStgDVIRLog2ObjectMapper, GeotabDVIRLogDbStgDVIRLog2ObjectMapper>()
-                        .AddTransient<IGeotabExceptionEventDbExceptionEventObjectMapper, GeotabExceptionEventDbExceptionEventObjectMapper>()
                         .AddTransient<IGeotabExceptionEventDbStgExceptionEvent2ObjectMapper, GeotabExceptionEventDbStgExceptionEvent2ObjectMapper>()
-                        .AddTransient<IGeotabFaultDataDbFaultDataObjectMapper, GeotabFaultDataDbFaultDataObjectMapper>()
                         .AddTransient<IGeotabFuelAndEnergyUsedDbStgFuelAndEnergyUsed2ObjectMapper, GeotabFuelAndEnergyUsedDbStgFuelAndEnergyUsed2ObjectMapper>()
-                        .AddTransient<IGeotabGroupDbGroupObjectMapper, GeotabGroupDbGroupObjectMapper>()
                         .AddTransient<IGeotabGroupDbStgGroup2ObjectMapper, GeotabGroupDbStgGroup2ObjectMapper>()
                         .AddTransient<IGeotabFaultDataDbFaultData2ObjectMapper, GeotabFaultDataDbFaultData2ObjectMapper>()
-                        .AddTransient<IGeotabLogRecordDbLogRecordObjectMapper, GeotabLogRecordDbLogRecordObjectMapper>()
                         .AddTransient<IGeotabLogRecordDbLogRecord2ObjectMapper, GeotabLogRecordDbLogRecord2ObjectMapper>()
-                        .AddTransient<IGeotabRuleDbRuleObjectMapper, GeotabRuleDbRuleObjectMapper>()
                         .AddTransient<IGeotabRuleDbStgRule2ObjectMapper, GeotabRuleDbStgRule2ObjectMapper>()
-                        .AddTransient<IGeotabStatusDataDbStatusDataObjectMapper, GeotabStatusDataDbStatusDataObjectMapper>()
                         .AddTransient<IGeotabStatusDataDbStatusData2ObjectMapper, GeotabStatusDataDbStatusData2ObjectMapper>()
-                        .AddTransient<IGeotabTripDbTripObjectMapper, GeotabTripDbTripObjectMapper>()
                         .AddTransient<IGeotabTripDbStgTrip2ObjectMapper, GeotabTripDbStgTrip2ObjectMapper>()
-                        .AddTransient<IGeotabUserDbUserObjectMapper, GeotabUserDbUserObjectMapper>()
                         .AddTransient<IGeotabUserDbStgUser2ObjectMapper, GeotabUserDbStgUser2ObjectMapper>()
-                        .AddTransient<IGeotabZoneDbZoneObjectMapper, GeotabZoneDbZoneObjectMapper>()
                         .AddTransient<IGeotabZoneDbStgZone2ObjectMapper, GeotabZoneDbStgZone2ObjectMapper>()
-                        .AddTransient<IGeotabZoneTypeDbZoneTypeObjectMapper, GeotabZoneTypeDbZoneTypeObjectMapper>()
                         .AddTransient<IGeotabZoneTypeDbStgZoneType2ObjectMapper, GeotabZoneTypeDbStgZoneType2ObjectMapper>()
 
                         // Database Entity Persisters:
-                        .AddTransient<IGenericEntityPersister<DbBinaryData>, GenericEntityPersister<DbBinaryData>>()
                         .AddTransient<IGenericEntityPersister<DbBinaryData2>, GenericEntityPersister<DbBinaryData2>>()
-                        .AddTransient<IGenericEntityPersister<DbChargeEvent>, GenericEntityPersister<DbChargeEvent>>()
                         .AddTransient<IGenericEntityPersister<DbChargeEvent2>, GenericEntityPersister<DbChargeEvent2>>()
-                        .AddTransient<IGenericEntityPersister<DbCondition>, GenericEntityPersister<DbCondition>>()
                         .AddTransient<IGenericEntityPersister<DbDBMaintenanceLog2>, GenericEntityPersister<DbDBMaintenanceLog2>>()
-                        .AddTransient<IGenericEntityPersister<DbDebugData>, GenericEntityPersister<DbDebugData>>()
-                        .AddTransient<IGenericEntityPersister<DbDevice>, GenericEntityPersister<DbDevice>>()
                         .AddTransient<IGenericEntityPersister<DbDevice2>, GenericEntityPersister<DbDevice2>>()
-                        .AddTransient<IGenericEntityPersister<DbDeviceStatusInfo>, GenericEntityPersister<DbDeviceStatusInfo>>()
                         .AddTransient<IGenericEntityPersister<DbDeviceStatusInfo2>, GenericEntityPersister<DbDeviceStatusInfo2>>()
-                        .AddTransient<IGenericEntityPersister<DbDiagnostic>, GenericEntityPersister<DbDiagnostic>>()
                         .AddTransient<IGenericEntityPersister<DbDiagnostic2>, GenericEntityPersister<DbDiagnostic2>>()
                         .AddTransient<IGenericEntityPersister<DbDiagnosticId2>, GenericEntityPersister<DbDiagnosticId2>>()
-                        .AddTransient<IGenericEntityPersister<DbDriverChange>, GenericEntityPersister<DbDriverChange>>()
                         .AddTransient<IGenericEntityPersister<DbDriverChange2>, GenericEntityPersister<DbDriverChange2>>()
-                        .AddTransient<IGenericEntityPersister<DbDutyStatusAvailability>, GenericEntityPersister<DbDutyStatusAvailability>>()
                         .AddTransient<IGenericEntityPersister<DbDutyStatusAvailability2>, GenericEntityPersister<DbDutyStatusAvailability2>>()
-                        .AddTransient<IGenericEntityPersister<DbDutyStatusLog>, GenericEntityPersister<DbDutyStatusLog>>()
                         .AddTransient<IGenericEntityPersister<DbDutyStatusLog2>, GenericEntityPersister<DbDutyStatusLog2>>()
-                        .AddTransient<IGenericEntityPersister<DbDVIRLog>, GenericEntityPersister<DbDVIRLog>>()
                         .AddTransient<IGenericEntityPersister<DbDVIRLog2>, GenericEntityPersister<DbDVIRLog2>>()
-                        .AddTransient<IGenericEntityPersister<DbDVIRDefect>, GenericEntityPersister<DbDVIRDefect>>()
                         .AddTransient<IGenericEntityPersister<DbDVIRDefect2>, GenericEntityPersister<DbDVIRDefect2>>()
-                        .AddTransient<IGenericEntityPersister<DbDVIRDefectRemark>, GenericEntityPersister<DbDVIRDefectRemark>>()
                         .AddTransient<IGenericEntityPersister<DbDVIRDefectRemark2>, GenericEntityPersister<DbDVIRDefectRemark2>>()
-                        .AddTransient<IGenericEntityPersister<DbDVIRDefectUpdate>, GenericEntityPersister<DbDVIRDefectUpdate>>()
                         .AddTransient<IGenericEntityPersister<DbEntityMetadata2>, GenericEntityPersister<DbEntityMetadata2>>()
-                        .AddTransient<IGenericEntityPersister<DbExceptionEvent>, GenericEntityPersister<DbExceptionEvent>>()
                         .AddTransient<IGenericEntityPersister<DbExceptionEvent2>, GenericEntityPersister<DbExceptionEvent2>>()
                         .AddTransient<IGenericEntityPersister<DbFailDVIRDefectUpdateFailure2>, GenericEntityPersister<DbFailDVIRDefectUpdateFailure2>>()
-                        .AddTransient<IGenericEntityPersister<DbFailedDVIRDefectUpdate>, GenericEntityPersister<DbFailedDVIRDefectUpdate>>()
-                        .AddTransient<IGenericEntityPersister<DbFailedOVDSServerCommand>, GenericEntityPersister<DbFailedOVDSServerCommand>>()
-                        .AddTransient<IGenericEntityPersister<DbFaultData>, GenericEntityPersister<DbFaultData>>()
                         .AddTransient<IGenericEntityPersister<DbFuelAndEnergyUsed2>, GenericEntityPersister<DbFuelAndEnergyUsed2>>()
-                        .AddTransient<IGenericEntityPersister<DbGroup>, GenericEntityPersister<DbGroup>>()
                         .AddTransient<IGenericEntityPersister<DbGroup2>, GenericEntityPersister<DbGroup2>>()
                         .AddTransient<IGenericEntityPersister<DbFaultData2>, GenericEntityPersister<DbFaultData2>>()
                         .AddTransient<IGenericEntityPersister<DbFaultDataLocation2>, GenericEntityPersister<DbFaultDataLocation2>>()
-                        .AddTransient<IGenericEntityPersister<DbLogRecord>, GenericEntityPersister<DbLogRecord>>()
                         .AddTransient<IGenericEntityPersister<DbLogRecord2>, GenericEntityPersister<DbLogRecord2>>()
                         .AddTransient<IGenericEntityPersister<DbMyGeotabVersionInfo2>, GenericEntityPersister<DbMyGeotabVersionInfo2>>()
                         .AddTransient<IGenericEntityPersister<DbMyGeotabVersionInfo>, GenericEntityPersister<DbMyGeotabVersionInfo>>()
                         .AddTransient<IGenericEntityPersister<DbMyGeotabVersionInfo2>, GenericEntityPersister<DbMyGeotabVersionInfo2>>()
                         .AddSingleton<IGenericEntityPersister<DbOServiceTracking>, GenericEntityPersister<DbOServiceTracking>>()
                         .AddSingleton<IGenericEntityPersister<DbOServiceTracking2>, GenericEntityPersister<DbOServiceTracking2>>()
-                        .AddTransient<IGenericEntityPersister<DbOVDSServerCommand>, GenericEntityPersister<DbOVDSServerCommand>>()
-                        .AddTransient<IGenericEntityPersister<DbRule>, GenericEntityPersister<DbRule>>()
                         .AddTransient<IGenericEntityPersister<DbRule2>, GenericEntityPersister<DbRule2>>()
-                        .AddTransient<IGenericEntityPersister<DbStatusData>, GenericEntityPersister<DbStatusData>>()
                         .AddTransient<IGenericEntityPersister<DbStatusData2>, GenericEntityPersister<DbStatusData2>>()
                         .AddTransient<IGenericEntityPersister<DbStatusDataLocation2>, GenericEntityPersister<DbStatusDataLocation2>>()
                         .AddTransient<IGenericEntityPersister<DbStgChargeEvent2>, GenericEntityPersister<DbStgChargeEvent2>>()
@@ -269,53 +206,29 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGenericEntityPersister<DbStgUser2>, GenericEntityPersister<DbStgUser2>>()
                         .AddTransient<IGenericEntityPersister<DbStgZone2>, GenericEntityPersister<DbStgZone2>>()
                         .AddTransient<IGenericEntityPersister<DbStgZoneType2>, GenericEntityPersister<DbStgZoneType2>>()
-                        .AddTransient<IGenericEntityPersister<DbTrip>, GenericEntityPersister<DbTrip>>()
                         .AddTransient<IGenericEntityPersister<DbTrip2>, GenericEntityPersister<DbTrip2>>()
                         .AddTransient<IGenericEntityPersister<DbUpdDVIRDefectUpdate2>, GenericEntityPersister<DbUpdDVIRDefectUpdate2>>()
-                        .AddTransient<IGenericEntityPersister<DbUser>, GenericEntityPersister<DbUser>>()
                         .AddTransient<IGenericEntityPersister<DbUser2>, GenericEntityPersister<DbUser2>>()
-                        .AddTransient<IGenericEntityPersister<DbZone>, GenericEntityPersister<DbZone>>()
                         .AddTransient<IGenericEntityPersister<DbZone2>, GenericEntityPersister<DbZone2>>()
-                        .AddTransient<IGenericEntityPersister<DbZoneType>, GenericEntityPersister<DbZoneType>>()
                         .AddTransient<IGenericEntityPersister<DbZoneType2>, GenericEntityPersister<DbZoneType2>>()
 
                         // Database Object Caches:
-                        .AddSingleton<AdapterGenericDbObjectCache<DbCondition>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbCondition, AdapterGenericDbObjectCache<DbCondition>>, GenericGenericDbObjectCache<DbCondition, AdapterGenericDbObjectCache<DbCondition>>>()
-                        .AddSingleton<AdapterGenericDbObjectCache<DbDevice>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbDevice, AdapterGenericDbObjectCache<DbDevice>>, GenericGenericDbObjectCache<DbDevice, AdapterGenericDbObjectCache<DbDevice>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbDevice2>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbDevice2, AdapterGenericDbObjectCache<DbDevice2>>, GenericGenericDbObjectCache<DbDevice2, AdapterGenericDbObjectCache<DbDevice2>>>()
-                        .AddSingleton<AdapterGenericDbObjectCache<DbDeviceStatusInfo>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbDeviceStatusInfo, AdapterGenericDbObjectCache<DbDeviceStatusInfo>>, GenericGenericDbObjectCache<DbDeviceStatusInfo, AdapterGenericDbObjectCache<DbDeviceStatusInfo>>>()
-                        .AddSingleton<AdapterGenericDbObjectCache<DbDiagnostic>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbDiagnostic, AdapterGenericDbObjectCache<DbDiagnostic>>, GenericGenericDbObjectCache<DbDiagnostic, AdapterGenericDbObjectCache<DbDiagnostic>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbDiagnosticId2>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbDiagnosticId2, AdapterGenericDbObjectCache<DbDiagnosticId2>>, GenericGenericDbObjectCache<DbDiagnosticId2, AdapterGenericDbObjectCache<DbDiagnosticId2>>>()
-                        .AddSingleton<AdapterGenericDbObjectCache<DbDutyStatusAvailability>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbDutyStatusAvailability, AdapterGenericDbObjectCache<DbDutyStatusAvailability>>, GenericGenericDbObjectCache<DbDutyStatusAvailability, AdapterGenericDbObjectCache<DbDutyStatusAvailability>>>()
-                        .AddSingleton<AdapterGenericDbObjectCache<DbGroup>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbGroup, AdapterGenericDbObjectCache<DbGroup>>, GenericGenericDbObjectCache<DbGroup, AdapterGenericDbObjectCache<DbGroup>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbGroup2>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbGroup2, AdapterGenericDbObjectCache<DbGroup2>>, GenericGenericDbObjectCache<DbGroup2, AdapterGenericDbObjectCache<DbGroup2>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbOServiceTracking>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbOServiceTracking, AdapterGenericDbObjectCache<DbOServiceTracking>>, GenericGenericDbObjectCache<DbOServiceTracking, AdapterGenericDbObjectCache<DbOServiceTracking>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbOServiceTracking2>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbOServiceTracking2, AdapterGenericDbObjectCache<DbOServiceTracking2>>, GenericGenericDbObjectCache<DbOServiceTracking2, AdapterGenericDbObjectCache<DbOServiceTracking2>>>()
-                        .AddSingleton<AdapterGenericDbObjectCache<DbRule>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbRule, AdapterGenericDbObjectCache<DbRule>>, GenericGenericDbObjectCache<DbRule, AdapterGenericDbObjectCache<DbRule>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbRule2>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbRule2, AdapterGenericDbObjectCache<DbRule2>>, GenericGenericDbObjectCache<DbRule2, AdapterGenericDbObjectCache<DbRule2>>>()
-                        .AddSingleton<AdapterGenericDbObjectCache<DbUser>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>>, GenericGenericDbObjectCache<DbUser, AdapterGenericDbObjectCache<DbUser>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbUser2>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbUser2, AdapterGenericDbObjectCache<DbUser2>>, GenericGenericDbObjectCache<DbUser2, AdapterGenericDbObjectCache<DbUser2>>>()
-                        .AddSingleton<AdapterGenericDbObjectCache<DbZone>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbZone, AdapterGenericDbObjectCache<DbZone>>, GenericGenericDbObjectCache<DbZone, AdapterGenericDbObjectCache<DbZone>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbZone2>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>>, GenericGenericDbObjectCache<DbZone2, AdapterGenericDbObjectCache<DbZone2>>>()
-                        .AddSingleton<AdapterGenericDbObjectCache<DbZoneType>>()
-                        .AddSingleton<IGenericGenericDbObjectCache<DbZoneType, AdapterGenericDbObjectCache<DbZoneType>>, GenericGenericDbObjectCache<DbZoneType, AdapterGenericDbObjectCache<DbZoneType>>>()
                         .AddSingleton<AdapterGenericDbObjectCache<DbZoneType2>>()
                         .AddSingleton<IGenericGenericDbObjectCache<DbZoneType2, AdapterGenericDbObjectCache<DbZoneType2>>, GenericGenericDbObjectCache<DbZoneType2, AdapterGenericDbObjectCache<DbZoneType2>>>()
 
@@ -369,170 +282,134 @@ namespace MyGeotabAPIAdapter
                     var serviceProvider = services.BuildServiceProvider();
                     var adapterConfig = serviceProvider.GetRequiredService<IAdapterConfiguration>();
 
-                    // Conditionally register services based on which data model is being used.
-                    if (adapterConfig.UseDataModel2 == true)
+                    // Run the DatabaseValidator to ensure the adapter database version is correct.
+                    var databaseValidator = serviceProvider.GetRequiredService<IDatabaseValidator>();
+                    databaseValidator.ValidateDatabaseVersion();
+
+                    // Configure options for the services. This is necessary because the services are registered as hosted services and the options are used to determine whether the individual services should pause for database maintenance windows wherein operations such as reindexing could potentially cause exceptions.
+                    var serviceNames = new string[] { nameof(Orchestrator2), nameof(ChargeEventProcessor2), nameof(ControllerProcessor2), nameof(DeviceProcessor2), nameof(DeviceStatusInfoProcessor2), nameof(DiagnosticProcessor2), nameof(DriverChangeProcessor2), nameof(DutyStatusAvailabilityProcessor2), nameof(DutyStatusLogProcessor2), nameof(ExceptionEventProcessor2), nameof(FailureModeProcessor2), nameof(FaultDataLocationService2), nameof(FaultDataProcessor2), nameof(FuelAndEnergyUsedProcessor2), nameof(GroupProcessor2), nameof(LogRecordProcessor2), nameof(RuleProcessor2), nameof(StatusDataLocationService2), nameof(StatusDataProcessor2), nameof(TripProcessor2), nameof(UnitOfMeasureProcessor2), nameof(UserProcessor2), nameof(ZoneProcessor2), nameof(ZoneTypeProcessor2) };
+
+                    // Register the ServiceOprionsProvider.
+                    services.AddSingleton<IServiceOptionsProvider, ServiceOptionsProvider>();
+
+                    // Register the service names in the ServiceOptionsProvider. All services should be tracked (even if they don't need to e paused for database maintenance) so that it is possible to know when they have all been loaded on startup before initiating any database maintenance.
+                    services.AddSingleton<IServiceOptionsProvider>(sp =>
                     {
-                        // Run the DatabaseValidator to ensure the adapter database version is correct.
-                        var databaseValidator = serviceProvider.GetRequiredService<IDatabaseValidator>();
-                        databaseValidator.ValidateDatabaseVersion();
+                        // Resolve the required IOptionsMonitor<ServiceOptions> from the service provider.
+                        var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ServiceOptions>>();
 
-                        // Configure options for the services. This is necessary because the services are registered as hosted services and the options are used to determine whether the individual services should pause for database maintenance windows wherein operations such as reindexing could potentially cause exceptions.
-                        var serviceNames = new string[] { nameof(Orchestrator2), nameof(ChargeEventProcessor2), nameof(ControllerProcessor2), nameof(DeviceProcessor2), nameof(DeviceStatusInfoProcessor2), nameof(DiagnosticProcessor2), nameof(DriverChangeProcessor2), nameof(DutyStatusAvailabilityProcessor2), nameof(DutyStatusLogProcessor2), nameof(ExceptionEventProcessor2), nameof(FailureModeProcessor2), nameof(FaultDataLocationService2), nameof(FaultDataProcessor2), nameof(FuelAndEnergyUsedProcessor2), nameof(GroupProcessor2), nameof(LogRecordProcessor2), nameof(RuleProcessor2), nameof(StatusDataLocationService2), nameof(StatusDataProcessor2), nameof(TripProcessor2), nameof(UnitOfMeasureProcessor2), nameof(UserProcessor2), nameof(ZoneProcessor2), nameof(ZoneTypeProcessor2) };
+                        // Create an instance of ServiceOptionsProvider with the resolved dependency.
+                        var serviceOptionsProvider = new ServiceOptionsProvider(optionsMonitor);
 
-                        // Register the ServiceOprionsProvider.
-                        services.AddSingleton<IServiceOptionsProvider, ServiceOptionsProvider>();
-
-                        // Register the service names in the ServiceOptionsProvider. All services should be tracked (even if they don't need to e paused for database maintenance) so that it is possible to know when they have all been loaded on startup before initiating any database maintenance.
-                        services.AddSingleton<IServiceOptionsProvider>(sp =>
-                        {
-                            // Resolve the required IOptionsMonitor<ServiceOptions> from the service provider.
-                            var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<ServiceOptions>>();
-
-                            // Create an instance of ServiceOptionsProvider with the resolved dependency.
-                            var serviceOptionsProvider = new ServiceOptionsProvider(optionsMonitor);
-
-                            // Track all service names.
-                            foreach (var serviceName in serviceNames)
-                            {
-                                serviceOptionsProvider.TrackService(serviceName);
-                            }
-
-                            return serviceOptionsProvider;
-                        });
-
-                        // Configure the ServiceOptions for each service.
+                        // Track all service names.
                         foreach (var serviceName in serviceNames)
                         {
-                            services.Configure<ServiceOptions>(serviceName, options =>
-                            {
-                                options.ServiceName = serviceName;
-
-                                // Any services that don't interact with the adapter database should not pause for database maintenance and can be added to the to the line below. The rest should pause for database maintenance.
-                                if (serviceName == nameof(Orchestrator2) || serviceName == nameof(ControllerProcessor2) || serviceName == nameof(UnitOfMeasureProcessor2))
-                                {
-                                    options.PauseForDatabaseMaintenance = false;
-                                }
-                                else
-                                {
-                                    options.PauseForDatabaseMaintenance = true;
-                                }
-                            });
+                            serviceOptionsProvider.TrackService(serviceName);
                         }
 
-                        // Register the StateMachine
-                        services.AddSingleton<IStateMachine2<DbMyGeotabVersionInfo2>>(sp =>
-                        {
-                            var serviceOptionsProvider = sp.GetRequiredService<IServiceOptionsProvider>();
+                        return serviceOptionsProvider;
+                    });
 
-                            // Get all service names from configured ServiceOptions.
-                            var serviceNames = serviceOptionsProvider.GetAllServiceNames();
-
-                            // Retrieve all configured ServiceOptions using the service names.
-                            var serviceOptions = serviceOptionsProvider.GetAllServiceOptions(serviceNames);
-
-                            var adapterConfiguration = sp.GetRequiredService<IAdapterConfiguration>();
-                            var myGeotabAPIHelper = sp.GetRequiredService<IMyGeotabAPIHelper>();
-
-                            // Pass the service options and other dependencies to the StateMachine constructor.
-                            return new StateMachine2<DbMyGeotabVersionInfo2>(adapterConfiguration, myGeotabAPIHelper, serviceOptions);
-                        });
-
-                        // Register the services.
-                        services
-                        .AddHostedService<Orchestrator2>()
-                        .AddHostedService<DatabaseMaintenanceService2>()
-                        .AddHostedService<BinaryDataProcessor2>()
-                        .AddHostedService<ChargeEventProcessor2>()
-                        .AddHostedService<ControllerProcessor2>()
-                        .AddHostedService<DeviceProcessor2>()
-                        .AddHostedService<DeviceStatusInfoProcessor2>()
-                        .AddHostedService<DiagnosticProcessor2>()
-                        .AddHostedService<DriverChangeProcessor2>()
-                        .AddHostedService<DutyStatusAvailabilityProcessor2>()
-						.AddHostedService<DutyStatusLogProcessor2>()
-                        .AddHostedService<DVIRLogManipulator2>()
-                        .AddHostedService<DVIRLogProcessor2>()
-                        .AddHostedService<ExceptionEventProcessor2>()
-                        .AddHostedService<FailureModeProcessor2>()
-                        .AddHostedService<FaultDataLocationService2>()
-                        .AddHostedService<FaultDataProcessor2>()
-                        .AddHostedService<FuelAndEnergyUsedProcessor2>()
-                        .AddHostedService<GroupProcessor2>()
-                        .AddHostedService<LogRecordProcessor2>()
-                        .AddHostedService<RuleProcessor2>()
-                        .AddHostedService<StatusDataLocationService2>()
-                        .AddHostedService<StatusDataProcessor2>()
-                        .AddHostedService<TripProcessor2>()
-                        .AddHostedService<UnitOfMeasureProcessor2>()
-                        .AddHostedService<UserProcessor2>()
-                        .AddHostedService<ZoneProcessor2>()
-                        .AddHostedService<ZoneTypeProcessor2>()
-                        ;
-
-                        // Register a BackgroundServiceAwaiter for each service.
-                        services
-                        .AddSingleton<IBackgroundServiceAwaiter<Orchestrator2>, BackgroundServiceAwaiter<Orchestrator2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<DatabaseMaintenanceService2>, BackgroundServiceAwaiter<DatabaseMaintenanceService2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<BinaryDataProcessor2>, BackgroundServiceAwaiter<BinaryDataProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<ChargeEventProcessor2>, BackgroundServiceAwaiter<ChargeEventProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<ControllerProcessor2>, BackgroundServiceAwaiter<ControllerProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<DeviceProcessor2>, BackgroundServiceAwaiter<DeviceProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<DeviceStatusInfoProcessor2>, BackgroundServiceAwaiter<DeviceStatusInfoProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<DiagnosticProcessor2>, BackgroundServiceAwaiter<DiagnosticProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<DriverChangeProcessor2>, BackgroundServiceAwaiter<DriverChangeProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<DutyStatusAvailabilityProcessor2>, BackgroundServiceAwaiter<DutyStatusAvailabilityProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<DutyStatusLogProcessor2>, BackgroundServiceAwaiter<DutyStatusLogProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<DVIRLogManipulator2>, BackgroundServiceAwaiter<DVIRLogManipulator2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<DVIRLogProcessor2>, BackgroundServiceAwaiter<DVIRLogProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<ExceptionEventProcessor2>, BackgroundServiceAwaiter<ExceptionEventProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<FailureModeProcessor2>, BackgroundServiceAwaiter<FailureModeProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<FaultDataLocationService2>, BackgroundServiceAwaiter<FaultDataLocationService2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<FaultDataProcessor2>, BackgroundServiceAwaiter<FaultDataProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<FuelAndEnergyUsedProcessor2>, BackgroundServiceAwaiter<FuelAndEnergyUsedProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<GroupProcessor2>, BackgroundServiceAwaiter<GroupProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<LogRecordProcessor2>, BackgroundServiceAwaiter<LogRecordProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<RuleProcessor2>, BackgroundServiceAwaiter<RuleProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<StatusDataLocationService2>, BackgroundServiceAwaiter<StatusDataLocationService2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<StatusDataProcessor2>, BackgroundServiceAwaiter<StatusDataProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<TripProcessor2>, BackgroundServiceAwaiter<TripProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<UnitOfMeasureProcessor2>, BackgroundServiceAwaiter<UnitOfMeasureProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<UserProcessor2>, BackgroundServiceAwaiter<UserProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<ZoneProcessor2>, BackgroundServiceAwaiter<ZoneProcessor2>>()
-                        .AddSingleton<IBackgroundServiceAwaiter<ZoneTypeProcessor2>, BackgroundServiceAwaiter<ZoneTypeProcessor2>>()
-                        ;
-                    }
-                    else
+                    // Configure the ServiceOptions for each service.
+                    foreach (var serviceName in serviceNames)
                     {
-                        // Register the services.
-                        services
-                        .AddHostedService<Orchestrator>()
-                        .AddHostedService<BinaryDataProcessor>()
-                        .AddHostedService<ChargeEventProcessor>()
-                        .AddHostedService<ControllerProcessor>()
-                        .AddHostedService<DebugDataProcessor>()
-                        .AddHostedService<DeviceProcessor>()
-                        .AddHostedService<DeviceStatusInfoProcessor>()
-                        .AddHostedService<DiagnosticProcessor>()
-                        .AddHostedService<DriverChangeProcessor>()
-                        .AddHostedService<DutyStatusAvailabilityProcessor>()
-                        .AddHostedService<DutyStatusLogProcessor>()
-                        .AddHostedService<DVIRLogManipulator>()
-                        .AddHostedService<DVIRLogProcessor>()
-                        .AddHostedService<ExceptionEventProcessor>()
-                        .AddHostedService<FailureModeProcessor>()
-                        .AddHostedService<FaultDataProcessor>()
-                        .AddHostedService<GroupProcessor>()
-                        .AddHostedService<LogRecordProcessor>()
-                        .AddHostedService<OVDSClientWorker>()
-                        .AddHostedService<RuleProcessor>()
-                        .AddHostedService<StatusDataProcessor>()
-                        .AddHostedService<TripProcessor>()
-                        .AddHostedService<UnitOfMeasureProcessor>()
-                        .AddHostedService<UserProcessor>()
-                        .AddHostedService<ZoneProcessor>()
-                        .AddHostedService<ZoneTypeProcessor>()
-                        ;
+                        services.Configure<ServiceOptions>(serviceName, options =>
+                        {
+                            options.ServiceName = serviceName;
+
+                            // Any services that don't interact with the adapter database should not pause for database maintenance and can be added to the to the line below. The rest should pause for database maintenance.
+                            if (serviceName == nameof(Orchestrator2) || serviceName == nameof(ControllerProcessor2) || serviceName == nameof(UnitOfMeasureProcessor2))
+                            {
+                                options.PauseForDatabaseMaintenance = false;
+                            }
+                            else
+                            {
+                                options.PauseForDatabaseMaintenance = true;
+                            }
+                        });
                     }
+
+                    // Register the StateMachine
+                    services.AddSingleton<IStateMachine2<DbMyGeotabVersionInfo2>>(sp =>
+                    {
+                        var serviceOptionsProvider = sp.GetRequiredService<IServiceOptionsProvider>();
+
+                        // Get all service names from configured ServiceOptions.
+                        var serviceNames = serviceOptionsProvider.GetAllServiceNames();
+
+                        // Retrieve all configured ServiceOptions using the service names.
+                        var serviceOptions = serviceOptionsProvider.GetAllServiceOptions(serviceNames);
+
+                        var adapterConfiguration = sp.GetRequiredService<IAdapterConfiguration>();
+                        var myGeotabAPIHelper = sp.GetRequiredService<IMyGeotabAPIHelper>();
+
+                        // Pass the service options and other dependencies to the StateMachine constructor.
+                        return new StateMachine2<DbMyGeotabVersionInfo2>(adapterConfiguration, myGeotabAPIHelper, serviceOptions);
+                    });
+
+                    // Register the services.
+                    services
+                    .AddHostedService<Orchestrator2>()
+                    .AddHostedService<DatabaseMaintenanceService2>()
+                    .AddHostedService<BinaryDataProcessor2>()
+                    .AddHostedService<ChargeEventProcessor2>()
+                    .AddHostedService<ControllerProcessor2>()
+                    .AddHostedService<DeviceProcessor2>()
+                    .AddHostedService<DeviceStatusInfoProcessor2>()
+                    .AddHostedService<DiagnosticProcessor2>()
+                    .AddHostedService<DriverChangeProcessor2>()
+                    .AddHostedService<DutyStatusAvailabilityProcessor2>()
+                    .AddHostedService<DutyStatusLogProcessor2>()
+                    .AddHostedService<DVIRLogManipulator2>()
+                    .AddHostedService<DVIRLogProcessor2>()
+                    .AddHostedService<ExceptionEventProcessor2>()
+                    .AddHostedService<FailureModeProcessor2>()
+                    .AddHostedService<FaultDataLocationService2>()
+                    .AddHostedService<FaultDataProcessor2>()
+                    .AddHostedService<FuelAndEnergyUsedProcessor2>()
+                    .AddHostedService<GroupProcessor2>()
+                    .AddHostedService<LogRecordProcessor2>()
+                    .AddHostedService<RuleProcessor2>()
+                    .AddHostedService<StatusDataLocationService2>()
+                    .AddHostedService<StatusDataProcessor2>()
+                    .AddHostedService<TripProcessor2>()
+                    .AddHostedService<UnitOfMeasureProcessor2>()
+                    .AddHostedService<UserProcessor2>()
+                    .AddHostedService<ZoneProcessor2>()
+                    .AddHostedService<ZoneTypeProcessor2>()
+                    ;
+
+                    // Register a BackgroundServiceAwaiter for each service.
+                    services
+                    .AddSingleton<IBackgroundServiceAwaiter<Orchestrator2>, BackgroundServiceAwaiter<Orchestrator2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DatabaseMaintenanceService2>, BackgroundServiceAwaiter<DatabaseMaintenanceService2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<BinaryDataProcessor2>, BackgroundServiceAwaiter<BinaryDataProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<ChargeEventProcessor2>, BackgroundServiceAwaiter<ChargeEventProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<ControllerProcessor2>, BackgroundServiceAwaiter<ControllerProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DeviceProcessor2>, BackgroundServiceAwaiter<DeviceProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DeviceStatusInfoProcessor2>, BackgroundServiceAwaiter<DeviceStatusInfoProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DiagnosticProcessor2>, BackgroundServiceAwaiter<DiagnosticProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DriverChangeProcessor2>, BackgroundServiceAwaiter<DriverChangeProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DutyStatusAvailabilityProcessor2>, BackgroundServiceAwaiter<DutyStatusAvailabilityProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DutyStatusLogProcessor2>, BackgroundServiceAwaiter<DutyStatusLogProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DVIRLogManipulator2>, BackgroundServiceAwaiter<DVIRLogManipulator2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DVIRLogProcessor2>, BackgroundServiceAwaiter<DVIRLogProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<ExceptionEventProcessor2>, BackgroundServiceAwaiter<ExceptionEventProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<FailureModeProcessor2>, BackgroundServiceAwaiter<FailureModeProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<FaultDataLocationService2>, BackgroundServiceAwaiter<FaultDataLocationService2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<FaultDataProcessor2>, BackgroundServiceAwaiter<FaultDataProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<FuelAndEnergyUsedProcessor2>, BackgroundServiceAwaiter<FuelAndEnergyUsedProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<GroupProcessor2>, BackgroundServiceAwaiter<GroupProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<LogRecordProcessor2>, BackgroundServiceAwaiter<LogRecordProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<RuleProcessor2>, BackgroundServiceAwaiter<RuleProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<StatusDataLocationService2>, BackgroundServiceAwaiter<StatusDataLocationService2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<StatusDataProcessor2>, BackgroundServiceAwaiter<StatusDataProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<TripProcessor2>, BackgroundServiceAwaiter<TripProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<UnitOfMeasureProcessor2>, BackgroundServiceAwaiter<UnitOfMeasureProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<UserProcessor2>, BackgroundServiceAwaiter<UserProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<ZoneProcessor2>, BackgroundServiceAwaiter<ZoneProcessor2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<ZoneTypeProcessor2>, BackgroundServiceAwaiter<ZoneTypeProcessor2>>()
+                    ;
                 });
 
                 var host = hostBuilder.Build();

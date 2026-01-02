@@ -22,7 +22,7 @@ namespace MyGeotabAPIAdapter.Tests
             var testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "HAL 9000", "1.5.0.1");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.DeviceProcessor, false);
 
-            // The AdapterMachineName of the AdapterEnvironment being validated is THE SAME as the AdapterMachineName logged in the associated record in the OServiceTracking table in the optimizer database.
+            // The AdapterMachineName of the AdapterEnvironment being validated is THE SAME as the AdapterMachineName logged in the associated record in the OServiceTracking table in the adapter database.
             testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "HAL 9000", "1.5.0.1");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.DriverChangeProcessor, false);
 
@@ -33,7 +33,7 @@ namespace MyGeotabAPIAdapter.Tests
             testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "HAL 9000", "1.5.0.1");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.UserProcessor, true);
 
-            // The AdapterMachineName of the AdapterEnvironment being validated is DIFFERENT than the AdapterMachineName logged in the associated record in the OServiceTracking table in the optimizer database.
+            // The AdapterMachineName of the AdapterEnvironment being validated is DIFFERENT than the AdapterMachineName logged in the associated record in the OServiceTracking table in the adapter database.
             testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "Skynet", "1.5.0.1");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.DriverChangeProcessor, true);
         }
@@ -56,11 +56,11 @@ namespace MyGeotabAPIAdapter.Tests
             var testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "HAL 9000", "1.5.0.1");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.DeviceProcessor, false);
 
-            // The AdapterVersion of the AdapterEnvironment being validated is THE SAME as the version logged in the associated record in the OServiceTracking table in the optimizer database and there are no other records in the table with a higher AdapterVersion value.
+            // The AdapterVersion of the AdapterEnvironment being validated is THE SAME as the version logged in the associated record in the OServiceTracking table in the adapter database and there are no other records in the table with a higher AdapterVersion value.
             testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "HAL 9000", "1.5.0.1");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.DriverChangeProcessor, false);
 
-            // The AdapterVersion of the AdapterEnvironment being validated is HIGHER than the version logged in the associated record in the OServiceTracking table in the optimizer database and there are no other records in the table with a higher AdapterVersion value.
+            // The AdapterVersion of the AdapterEnvironment being validated is HIGHER than the version logged in the associated record in the OServiceTracking table in the adapter database and there are no other records in the table with a higher AdapterVersion value.
             testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "HAL 9000", "1.5.0.2");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.DriverChangeProcessor, false);
 
@@ -71,7 +71,7 @@ namespace MyGeotabAPIAdapter.Tests
             testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "HAL 9000", "1.5.0.1");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.UserProcessor, true);
 
-            // The AdapterVersion of the AdapterEnvironment being validated is LOWER than the version logged in the associated record in the OServiceTracking table in the optimizer database.
+            // The AdapterVersion of the AdapterEnvironment being validated is LOWER than the version logged in the associated record in the OServiceTracking table in the adapter database.
             testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "HAL 9000", "1.5.0.0");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.DriverChangeProcessor, true);
         }
@@ -91,7 +91,7 @@ namespace MyGeotabAPIAdapter.Tests
 
             // *** INVALID TESTS ***
 
-            // The AdapterVersion of the AdapterEnvironment being validated is THE SAME as the version logged in the associated record in the OServiceTracking table in the optimizer database, BUT one or more records in the table have a higher AdapterVersion value.
+            // The AdapterVersion of the AdapterEnvironment being validated is THE SAME as the version logged in the associated record in the OServiceTracking table in the adapter database, BUT one or more records in the table have a higher AdapterVersion value.
             var testAdapterEnvironment = new TestAdapterEnvironment("AdapterAssemblyName", "HAL 9000", "1.5.0.1");
             Add(testAdapterEnvironment, dbOServiceTrackings, AdapterService.DriverChangeProcessor, true);
         }
@@ -101,10 +101,10 @@ namespace MyGeotabAPIAdapter.Tests
     {
         [Theory]
         [ClassData(typeof(ValidateAdapterMachineNameTestData))]
-        public void ValidateAdapterMachineNameTests(IAdapterEnvironment<DbOServiceTracking> optimizerEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
+        public void ValidateAdapterMachineNameTests(IAdapterEnvironment<DbOServiceTracking> adapterEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
         {
-            var optimizerEnvironmentValidator = new AdapterEnvironmentValidator<DbOServiceTracking>();
-            var exception = Record.Exception(() => optimizerEnvironmentValidator.ValidateAdapterMachineName(optimizerEnvironment, dbOServiceTrackings, adapterService));
+            var adapterEnvironmentValidator = new AdapterEnvironmentValidator<DbOServiceTracking>();
+            var exception = Record.Exception(() => adapterEnvironmentValidator.ValidateAdapterMachineName(adapterEnvironment, dbOServiceTrackings, adapterService));
             if (shouldThrowException == true)
             {
                 Assert.NotNull(exception);
@@ -117,10 +117,10 @@ namespace MyGeotabAPIAdapter.Tests
 
         [Theory]
         [ClassData(typeof(ValidateAdapterVersionTestData))]
-        public void ValidateAdapterVersionTests(IAdapterEnvironment<DbOServiceTracking> optimizerEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
+        public void ValidateAdapterVersionTests(IAdapterEnvironment<DbOServiceTracking> adapterEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
         {
-            var optimizerEnvironmentValidator = new AdapterEnvironmentValidator<DbOServiceTracking>();
-            var exception = Record.Exception(() => optimizerEnvironmentValidator.ValidateAdapterVersion(optimizerEnvironment, dbOServiceTrackings, adapterService));
+            var adapterEnvironmentValidator = new AdapterEnvironmentValidator<DbOServiceTracking>();
+            var exception = Record.Exception(() => adapterEnvironmentValidator.ValidateAdapterVersion(adapterEnvironment, dbOServiceTrackings, adapterService));
             if (shouldThrowException == true)
             {
                 Assert.NotNull(exception);
@@ -133,10 +133,10 @@ namespace MyGeotabAPIAdapter.Tests
 
         [Theory]
         [ClassData(typeof(ValidateAdapterVersionTestData2))]
-        public void ValidateAdapterVersionTests2(IAdapterEnvironment<DbOServiceTracking> optimizerEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
+        public void ValidateAdapterVersionTests2(IAdapterEnvironment<DbOServiceTracking> adapterEnvironment, List<DbOServiceTracking> dbOServiceTrackings, AdapterService adapterService, bool shouldThrowException)
         {
-            var optimizerEnvironmentValidator = new AdapterEnvironmentValidator<DbOServiceTracking>();
-            var exception = Record.Exception(() => optimizerEnvironmentValidator.ValidateAdapterVersion(optimizerEnvironment, dbOServiceTrackings, adapterService));
+            var adapterEnvironmentValidator = new AdapterEnvironmentValidator<DbOServiceTracking>();
+            var exception = Record.Exception(() => adapterEnvironmentValidator.ValidateAdapterVersion(adapterEnvironment, dbOServiceTrackings, adapterService));
             if (shouldThrowException == true)
             {
                 Assert.NotNull(exception);

@@ -374,13 +374,10 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Register this service with the StateMachine. Set mustPauseForDatabaseMaintenance to true if the service is enabled or false otherwise.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(FaultDataLocationService2), adapterConfiguration.EnableFaultDataLocationService);
-            }
+            stateMachine.RegisterService(nameof(FaultDataLocationService2), adapterConfiguration.EnableFaultDataLocationService);
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.UseDataModel2 == true && adapterConfiguration.EnableFaultDataLocationService == true)
+            if (adapterConfiguration.EnableFaultDataLocationService == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -399,10 +396,7 @@ namespace MyGeotabAPIAdapter.Services
         public override Task StopAsync(CancellationToken cancellationToken)
         {
             // Update the registration of this service with the StateMachine. Set mustPauseForDatabaseMaintenance to false since it is stopping and will no longer be able to participate in pauses for database mainteance.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(FaultDataLocationService2), false);
-            }
+            stateMachine.RegisterService(nameof(FaultDataLocationService2), false);
 
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);

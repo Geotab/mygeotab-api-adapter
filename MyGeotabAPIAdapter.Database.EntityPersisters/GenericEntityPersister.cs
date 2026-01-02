@@ -772,17 +772,11 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// <inheritdoc/>
         public async Task PersistEntitiesToDatabaseAsync(IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext, IEnumerable<T> entitiesToPersist, CancellationTokenSource cancellationTokenSource, Logging.LogLevel logLevel, bool logPersistenceOperationDetails = true, bool useStandaloneDbConnection = false)
         {
-            await PersistEntitiesToDatabaseAsync(adapterContext, entitiesToPersist, cancellationTokenSource, logLevel, logPersistenceOperationDetails, adapterContext, null, useStandaloneDbConnection);
-        }
-
-        /// <inheritdoc/>
-        public async Task PersistEntitiesToDatabaseAsync(IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext> optimizerContext, IEnumerable<T> entitiesToPersist, CancellationTokenSource cancellationTokenSource, Logging.LogLevel logLevel, bool logPersistenceOperationDetails = true, bool useStandaloneDbConnection = false)
-        {
-            await PersistEntitiesToDatabaseAsync(optimizerContext, entitiesToPersist, cancellationTokenSource, logLevel, logPersistenceOperationDetails, null, optimizerContext, useStandaloneDbConnection);
+            await PersistEntitiesToDatabaseAsync(adapterContext, entitiesToPersist, cancellationTokenSource, logLevel, logPersistenceOperationDetails, adapterContext, useStandaloneDbConnection);
         }
 
         /// <summary>
-        /// Persists the <paramref name="entitiesToPersist"/> to database. Note: Either the <paramref name="adapterContext"/> or <paramref name="optimizerContext"/> must be supplied (depending on which database is being connected to).
+        /// Persists the <paramref name="entitiesToPersist"/> to database.
         /// </summary>
         /// <param name="context">The <see cref="IConnectionContext"/> to use.</param>
         /// <param name="entitiesToPersist">The list of entities to be persisted to database.</param>
@@ -790,16 +784,14 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// <param name="logLevel">The <see cref="LogLevel"/> to apply to the log message.</param>
         /// <param name="logPersistenceOperationDetails">Indicates whether to log the details of the persistence operation (i.e. number of records inserted/updated, etc.)</param>
         /// <param name="adapterContext">The <see cref="AdapterDatabaseUnitOfWorkContext"/> to use.</param>
-        /// <param name="optimizerContext">The <see cref="OptimizerDatabaseUnitOfWorkContext"/> to use.</param>
         /// <param name="useStandaloneDbConnection">USE WITH EXTREME CAUTION! Should be set to <c>false</c> except when there is a specific need to operate outside of a <see cref="UnitOfWork"/> or database transaction and where doing so would not lead to any data integrity issues.</param>
         /// <returns></returns>
-        /// <exception cref="ArgumentException">Thrown if null values are supplied for both <paramref name="adapterContext"/> and <paramref name="optimizerContext"/></exception>
-        async Task PersistEntitiesToDatabaseAsync(IConnectionContext context, IEnumerable<T> entitiesToPersist, CancellationTokenSource cancellationTokenSource, Logging.LogLevel logLevel, bool logPersistenceOperationDetails = true, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>? adapterContext = null, IGenericDatabaseUnitOfWorkContext<OptimizerDatabaseUnitOfWorkContext>? optimizerContext = null, bool useStandaloneDbConnection = false)
+        async Task PersistEntitiesToDatabaseAsync(IConnectionContext context, IEnumerable<T> entitiesToPersist, CancellationTokenSource cancellationTokenSource, Logging.LogLevel logLevel, bool logPersistenceOperationDetails = true, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>? adapterContext = null, bool useStandaloneDbConnection = false)
         {
             // One of the IGenericDatabaseUnitOfWorkContext implementations must be provided or a standalone DB connection must be used.
-            if (adapterContext == null && optimizerContext == null && useStandaloneDbConnection == false)
+            if (adapterContext == null && useStandaloneDbConnection == false)
             {
-                throw new ArgumentException($"Null values were provided to both the '{nameof(adapterContext)}' and '{nameof(optimizerContext)}' properties and the '{nameof(useStandaloneDbConnection)}' property was set to false. A value must be provided for one of the context properties, or '{nameof(useStandaloneDbConnection)}' must be set to true.");
+                throw new ArgumentException($"Null values was provided to the '{nameof(adapterContext)}' property and the '{nameof(useStandaloneDbConnection)}' property was set to false. A value must be provided for one of the the '{nameof(adapterContext)}' property, or '{nameof(useStandaloneDbConnection)}' must be set to true.");
             }
 
             try
@@ -835,13 +827,9 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                     {
                         providerType = adapterContext.ProviderType;
                     }
-                    else
-                    {
-                        providerType = optimizerContext.ProviderType;
-                    }
 
-                    // If PostgreSQL is the database type and the minimum number of entities for bulk operations is met, re-route to the bulk insert/update/delete method. For all other database types or if the entity count threshold is not met, process everything normally. Note: DbDiagnosticT and DbDiagnosticIdT run into an issue with bulk update. This can be investigated and remedied later, but for now just use regular CRUD operations for these. OProcessorTracking, OServiceTracking and DutyStatusAvailability must also use regular CRUD operations since they have no actual GeotabId column and bulk update logic uses GeotabId.
-                    if (providerType == ConnectionInfo.DataAccessProviderType.PostgreSQL && entitiesToPersist.Count() >= MinimumEntityCountForBulkOperations && typeParameterType != typeof(DbDiagnosticT) && typeParameterType != typeof(DbDiagnosticIdT) && typeParameterType != typeof(DbOProcessorTracking) && typeParameterType != typeof(DbOServiceTracking) && typeParameterType != typeof(DbDutyStatusAvailability))
+                    // If PostgreSQL is the database type and the minimum number of entities for bulk operations is met, re-route to the bulk insert/update/delete method. For all other database types or if the entity count threshold is not met, process everything normally. OServiceTracking must also use regular CRUD operations since it has no actual GeotabId column and bulk update logic uses GeotabId.
+                    if (providerType == ConnectionInfo.DataAccessProviderType.PostgreSQL && entitiesToPersist.Count() >= MinimumEntityCountForBulkOperations && typeParameterType != typeof(DbOServiceTracking))
                     {
                         var entitiesToBulkDelete = new List<T>();
                         var entitiesToBulkInsert = new List<T>();
@@ -872,14 +860,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                         if (entitiesToBulkInsert.Any())
                         {
                             startTimeUTC = DateTime.UtcNow;
-                            if (adapterContext != null)
-                            {
-                                await BulkInsertPostgreSQLAsync(adapterContext, entitiesToBulkInsert, databaseTableName, useStandaloneDbConnection);
-                            }
-                            else
-                            {
-                                await BulkInsertPostgreSQLAsync(optimizerContext, entitiesToBulkInsert, databaseTableName, useStandaloneDbConnection);
-                            }
+                            await BulkInsertPostgreSQLAsync(adapterContext, entitiesToBulkInsert, databaseTableName, useStandaloneDbConnection);
                             endTimeUTC = DateTime.UtcNow;
                             totalTimeForBulkInserts = endTimeUTC.Subtract(startTimeUTC);
                         }
@@ -889,14 +870,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                         if (entitiesToBulkUpdate.Any())
                         {
                             startTimeUTC = DateTime.UtcNow;
-                            if (adapterContext != null)
-                            {
-                                await BulkUpdatePostgreSQLAsync(adapterContext, entitiesToBulkUpdate, databaseTableName, useStandaloneDbConnection);
-                            }
-                            else
-                            {
-                                await BulkUpdatePostgreSQLAsync(optimizerContext, entitiesToBulkUpdate, databaseTableName, useStandaloneDbConnection);
-                            }
+                            await BulkUpdatePostgreSQLAsync(adapterContext, entitiesToBulkUpdate, databaseTableName, useStandaloneDbConnection);
                             endTimeUTC = DateTime.UtcNow;
                             totalTimeForBulkUpdates = endTimeUTC.Subtract(startTimeUTC);
                         }
@@ -906,20 +880,13 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                         if (entitiesToBulkDelete.Any())
                         {
                             startTimeUTC = DateTime.UtcNow;
-                            if (adapterContext != null)
-                            {
-                                await BulkDeletePostgreSQLAsync(adapterContext, entitiesToBulkDelete, databaseTableName, useStandaloneDbConnection);
-                            }
-                            else
-                            {
-                                await BulkDeletePostgreSQLAsync(optimizerContext, entitiesToBulkDelete, databaseTableName, useStandaloneDbConnection);
-                            }
+                            await BulkDeletePostgreSQLAsync(adapterContext, entitiesToBulkDelete, databaseTableName, useStandaloneDbConnection);
                             endTimeUTC = DateTime.UtcNow;
                             totalTimeForBulkDeletes = endTimeUTC.Subtract(startTimeUTC);
                         }
                     }
-                    // If SQL Server is the database type and the minimum number of entities for bulk operations is met, re-route to the bulk insert/update/delete method. For all other database types or if the entity count threshold is not met, process everything normally. Note: DbDiagnosticT and DbDiagnosticIdT run into an issue with bulk update. This can be investigated and remedied later, but for now just use regular CRUD operations for these. OProcessorTracking, OServiceTracking and DutyStatusAvailability must also use regular CRUD operations since they have no actual GeotabId column and bulk update logic uses GeotabId.
-                    else if (providerType == ConnectionInfo.DataAccessProviderType.SQLServer && entitiesToPersist.Count() >= MinimumEntityCountForBulkOperations && typeParameterType != typeof(DbDiagnosticT) && typeParameterType != typeof(DbDiagnosticIdT) && typeParameterType != typeof(DbOProcessorTracking) && typeParameterType != typeof(DbOServiceTracking) && typeParameterType != typeof(DbDutyStatusAvailability))
+                    // If SQL Server is the database type and the minimum number of entities for bulk operations is met, re-route to the bulk insert/update/delete method. For all other database types or if the entity count threshold is not met, process everything normally. OServiceTracking must also use regular CRUD operations since it has no actual GeotabId column and bulk update logic uses GeotabId.
+                    else if (providerType == ConnectionInfo.DataAccessProviderType.SQLServer && entitiesToPersist.Count() >= MinimumEntityCountForBulkOperations && typeParameterType != typeof(DbOServiceTracking))
                     {
                         var entitiesToBulkDelete = new List<T>();
                         var entitiesToBulkInsert = new List<T>();
@@ -950,14 +917,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                         if (entitiesToBulkInsert.Any())
                         {
                             startTimeUTC = DateTime.UtcNow;
-                            if (adapterContext != null)
-                            {
-                                await BulkInsertSqlServerAsync(adapterContext, entitiesToBulkInsert, databaseTableName, useStandaloneDbConnection);
-                            }
-                            else
-                            {
-                                await BulkInsertSqlServerAsync(optimizerContext, entitiesToBulkInsert, databaseTableName, useStandaloneDbConnection);
-                            }
+                            await BulkInsertSqlServerAsync(adapterContext, entitiesToBulkInsert, databaseTableName, useStandaloneDbConnection);
                             endTimeUTC = DateTime.UtcNow;
                             totalTimeForBulkInserts = endTimeUTC.Subtract(startTimeUTC);
                         }
@@ -967,14 +927,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                         if (entitiesToBulkUpdate.Any())
                         {
                             startTimeUTC = DateTime.UtcNow;
-                            if (adapterContext != null)
-                            {
-                                await BulkUpdateSqlServerAsync(adapterContext, entitiesToBulkUpdate, databaseTableName, useStandaloneDbConnection);
-                            }
-                            else
-                            {
-                                await BulkUpdateSqlServerAsync(optimizerContext, entitiesToBulkUpdate, databaseTableName, useStandaloneDbConnection);
-                            }
+                            await BulkUpdateSqlServerAsync(adapterContext, entitiesToBulkUpdate, databaseTableName, useStandaloneDbConnection);
                             endTimeUTC = DateTime.UtcNow;
                             totalTimeForBulkUpdates = endTimeUTC.Subtract(startTimeUTC);
                         }
@@ -984,14 +937,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                         if (entitiesToBulkDelete.Any())
                         {
                             startTimeUTC = DateTime.UtcNow;
-                            if (adapterContext != null)
-                            {
-                                await BulkDeleteSqlServerAsync(adapterContext, entitiesToBulkDelete, databaseTableName, useStandaloneDbConnection);
-                            }
-                            else
-                            {
-                                await BulkDeleteSqlServerAsync(optimizerContext, entitiesToBulkDelete, databaseTableName, useStandaloneDbConnection);
-                            }
+                            await BulkDeleteSqlServerAsync(adapterContext, entitiesToBulkDelete, databaseTableName, useStandaloneDbConnection);
                             endTimeUTC = DateTime.UtcNow;
                             totalTimeForBulkDeletes = endTimeUTC.Subtract(startTimeUTC);
                         }
@@ -1014,42 +960,21 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                             switch (entityToPersist.DatabaseWriteOperationType)
                             {
                                 case Common.DatabaseWriteOperationType.Insert:
-                                    if (adapterContext != null)
-                                    {
-                                        await entityRepo.InsertAsync(entityToPersist, cancellationTokenSource, useStandaloneDbConnection, adapterContext);
-                                    }
-                                    else
-                                    {
-                                        await entityRepo.InsertAsync(entityToPersist, cancellationTokenSource, useStandaloneDbConnection, optimizerContext);
-                                    }
+                                    await entityRepo.InsertAsync(entityToPersist, cancellationTokenSource, useStandaloneDbConnection, adapterContext);
                                     endTimeUTC = DateTime.UtcNow;
                                     elapsedTime = endTimeUTC.Subtract(startTimeUTC);
                                     totalTimeForInserts = totalTimeForInserts.Add(elapsedTime);
                                     insertedEntityCount++;
                                     break;
                                 case Common.DatabaseWriteOperationType.Update:
-                                    if (adapterContext != null)
-                                    {
-                                        await entityRepo.UpdateAsync(entityToPersist, cancellationTokenSource, useStandaloneDbConnection, adapterContext);
-                                    }
-                                    else
-                                    {
-                                        await entityRepo.UpdateAsync(entityToPersist, cancellationTokenSource, useStandaloneDbConnection, optimizerContext);
-                                    }
+                                    await entityRepo.UpdateAsync(entityToPersist, cancellationTokenSource, useStandaloneDbConnection, adapterContext);
                                     endTimeUTC = DateTime.UtcNow;
                                     elapsedTime = endTimeUTC.Subtract(startTimeUTC);
                                     totalTimeForUpdates = totalTimeForUpdates.Add(elapsedTime);
                                     updatedEntityCount++;
                                     break;
                                 case Common.DatabaseWriteOperationType.Delete:
-                                    if (adapterContext != null)
-                                    {
-                                        await entityRepo.DeleteAsync(entityToPersist, cancellationTokenSource, useStandaloneDbConnection, adapterContext);
-                                    }
-                                    else
-                                    {
-                                        await entityRepo.DeleteAsync(entityToPersist, cancellationTokenSource, useStandaloneDbConnection, optimizerContext);
-                                    }
+                                    await entityRepo.DeleteAsync(entityToPersist, cancellationTokenSource, useStandaloneDbConnection, adapterContext);
                                     endTimeUTC = DateTime.UtcNow;
                                     elapsedTime = endTimeUTC.Subtract(startTimeUTC);
                                     totalTimeForDeletes = totalTimeForDeletes.Add(elapsedTime);

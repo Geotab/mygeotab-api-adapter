@@ -1,14 +1,11 @@
 ﻿using Geotab.Checkmate.ObjectModel;
 using Microsoft.Extensions.Hosting;
-using MyGeotabAPIAdapter.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Configuration;
-using MyGeotabAPIAdapter.Configuration.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityMappers;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
 using MyGeotabAPIAdapter.Database.Models;
-using MyGeotabAPIAdapter.Database.Models.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Exceptions;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
 using MyGeotabAPIAdapter.Logging;
@@ -46,7 +43,6 @@ namespace MyGeotabAPIAdapter.Services
         readonly IForeignKeyServiceDependencyMap logRecordForeignKeyServiceDependencyMap;
         readonly IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister;
         readonly IGenericEntityPersister<DbLogRecord2> dbLogRecord2EntityPersister;
-        readonly IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister;
         readonly IGenericGeotabObjectFeeder<LogRecord> logRecordGeotabObjectFeeder;
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
         readonly IGeotabLogRecordDbLogRecord2ObjectMapper geotabLogRecordDbLogRecord2ObjectMapper;
@@ -54,8 +50,6 @@ namespace MyGeotabAPIAdapter.Services
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
-        readonly IVSSConfiguration vssConfiguration;
-        readonly IVSSObjectMapper vssObjectMapper;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -63,7 +57,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="LogRecordProcessor"/> class.
         /// </summary>
-        public LogRecordProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<LogRecordProcessor2> awaiter, IDbLogRecord2DbEntityMetadata2EntityMapper dbLogRecord2DbEntityMetadata2EntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister, IGenericEntityPersister<DbLogRecord2> dbLogRecord2EntityPersister, IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister, IGeotabDeviceFilterer geotabDeviceFilterer, IGenericGeotabObjectFeeder<LogRecord> logRecordGeotabObjectFeeder, IGeotabLogRecordDbLogRecord2ObjectMapper geotabLogRecordDbLogRecord2ObjectMapper, IMinimumIntervalSampler<LogRecord> minimumIntervalSampler, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IVSSConfiguration vssConfiguration, IVSSObjectMapper vssObjectMapper, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public LogRecordProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<LogRecordProcessor2> awaiter, IDbLogRecord2DbEntityMetadata2EntityMapper dbLogRecord2DbEntityMetadata2EntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister, IGenericEntityPersister<DbLogRecord2> dbLogRecord2EntityPersister, IGeotabDeviceFilterer geotabDeviceFilterer, IGenericGeotabObjectFeeder<LogRecord> logRecordGeotabObjectFeeder, IGeotabLogRecordDbLogRecord2ObjectMapper geotabLogRecordDbLogRecord2ObjectMapper, IMinimumIntervalSampler<LogRecord> minimumIntervalSampler, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
@@ -72,7 +66,6 @@ namespace MyGeotabAPIAdapter.Services
             this.exceptionHelper = exceptionHelper;
             this.dbEntityMetadata2EntityPersister = dbEntityMetadata2EntityPersister;
             this.dbLogRecord2EntityPersister = dbLogRecord2EntityPersister;
-            this.dbOVDSServerCommandEntityPersister = dbOVDSServerCommandEntityPersister;
             this.geotabDeviceFilterer = geotabDeviceFilterer;
             this.logRecordGeotabObjectFeeder = logRecordGeotabObjectFeeder;
             this.geotabLogRecordDbLogRecord2ObjectMapper = geotabLogRecordDbLogRecord2ObjectMapper;
@@ -80,8 +73,6 @@ namespace MyGeotabAPIAdapter.Services
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
-            this.vssConfiguration = vssConfiguration;
-            this.vssObjectMapper = vssObjectMapper;
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -132,17 +123,10 @@ namespace MyGeotabAPIAdapter.Services
                     {
                         var dbOServiceTracking = await serviceTracker.GetLogRecordService2InfoAsync();
 
-                        // For VSS Add-On: Adjust (i.e. reduce) the FeedResultsLimit for LogRecords if they are configured to be output as OVDS server commands.
-                        var getFeedResultsLimit = myGeotabAPIHelper.GetFeedResultLimitDefault;
-                        if (vssConfiguration.EnableVSSAddOn == true && vssConfiguration.OutputLogRecordsToOVDS == true)
-                        {
-                            getFeedResultsLimit = vssConfiguration.LogRecordFeedResultsLimitWhenOutputtingLogRecordsToOVDS;
-                        }
-
                         // Initialize the Geotab object feeder.
                         if (logRecordGeotabObjectFeeder.IsInitialized == false)
                         {
-                            await logRecordGeotabObjectFeeder.InitializeAsync(cancellationTokenSource, adapterConfiguration.LogRecordFeedIntervalSeconds, getFeedResultsLimit, (long?)dbOServiceTracking.LastProcessedFeedVersion);
+                            await logRecordGeotabObjectFeeder.InitializeAsync(cancellationTokenSource, adapterConfiguration.LogRecordFeedIntervalSeconds, myGeotabAPIHelper.GetFeedResultLimitDefault, (long?)dbOServiceTracking.LastProcessedFeedVersion);
                         }
 
                         // If this is the first iteration after a connectivity disruption, roll-back the LastFeedVersion of the GeotabObjectFeeder to the last processed feed version that was committed to the database and set the LastFeedRetrievalTimeUtc to DateTime.MinValue to start processing without further delay.
@@ -156,14 +140,10 @@ namespace MyGeotabAPIAdapter.Services
                         await logRecordGeotabObjectFeeder.GetFeedDataBatchAsync(cancellationTokenSource);
                         stoppingToken.ThrowIfCancellationRequested();
 
-                        // Determine LogRecord output option.
-                        VSSOutputOptions logRecordOutputOption = vssConfiguration.GetVSSOutputOptionForLogRecords();
-
                         // Process any returned LogRecords.
                         var logRecords = logRecordGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbLogRecord2sToPersist = new List<DbLogRecord2>();
                         var logRecord2DbEntityMetadata2sToPersist = new List<DbEntityMetadata2>();
-                        var dbOVDSServerCommandsToPersist = new List<DbOVDSServerCommand>();
                         if (logRecords.Count != 0)
                         {
                             // Apply tracked device filter and/or interval sampling (if configured in appsettings.json) and then map the LogRecords to DbLogRecord2s.
@@ -171,12 +151,6 @@ namespace MyGeotabAPIAdapter.Services
                             filteredLogRecords = await minimumIntervalSampler.ApplyMinimumIntervalAsync(cancellationTokenSource, filteredLogRecords);
                             dbLogRecord2sToPersist = geotabLogRecordDbLogRecord2ObjectMapper.CreateEntities(filteredLogRecords);
                             logRecord2DbEntityMetadata2sToPersist = dbLogRecord2DbEntityMetadata2EntityMapper.CreateEntities(dbLogRecord2sToPersist);
-
-                            // Generate DbOVDSServerCommands if dictated by the configured VSSOutputOption.
-                            if (logRecordOutputOption == VSSOutputOptions.DbOVDSServerCommandOnly || logRecordOutputOption == VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand)
-                            {
-                                dbOVDSServerCommandsToPersist = vssObjectMapper.GetDbOVDSServerSetCommands(filteredLogRecords);
-                            }
                         }
 
                         stoppingToken.ThrowIfCancellationRequested();
@@ -189,18 +163,9 @@ namespace MyGeotabAPIAdapter.Services
                                 try
                                 {
                                     // DbLogRecord2 and DbEntityMetadata2:
-                                    if (logRecordOutputOption == VSSOutputOptions.AdapterRecordOnly || logRecordOutputOption == VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand)
-                                    {
-                                        await dbLogRecord2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbLogRecord2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                    await dbLogRecord2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbLogRecord2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
-                                        await dbEntityMetadata2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, logRecord2DbEntityMetadata2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
-                                    }
-
-                                    // DbOVDSServerCommands:
-                                    if (logRecordOutputOption == VSSOutputOptions.DbOVDSServerCommandOnly || logRecordOutputOption == VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand)
-                                    {
-                                        await dbOVDSServerCommandEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbOVDSServerCommandsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
-                                    }
+                                    await dbEntityMetadata2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, logRecord2DbEntityMetadata2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking (for LogRecordProcessor):
                                     if (dbLogRecord2sToPersist.Count != 0)
@@ -314,13 +279,10 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Register this service with the StateMachine. Set mustPauseForDatabaseMaintenance to true if the service is enabled or false otherwise.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(LogRecordProcessor2), adapterConfiguration.EnableLogRecordFeed);
-            }
+            stateMachine.RegisterService(nameof(LogRecordProcessor2), adapterConfiguration.EnableLogRecordFeed);
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.UseDataModel2 == true && adapterConfiguration.EnableLogRecordFeed == true)
+            if (adapterConfiguration.EnableLogRecordFeed == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -339,26 +301,10 @@ namespace MyGeotabAPIAdapter.Services
         public override Task StopAsync(CancellationToken cancellationToken)
         {
             // Update the registration of this service with the StateMachine. Set mustPauseForDatabaseMaintenance to false since it is stopping and will no longer be able to participate in pauses for database mainteance.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(LogRecordProcessor2), false);
-            }
+            stateMachine.RegisterService(nameof(LogRecordProcessor2), false);
 
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
-        }
-
-        /// <summary>
-        /// If outputting to VSS, ensure that the VSSConfiguration is initialized. This is to allow the current service to operate independently of the OVDSClientWorker.
-        /// </summary>
-        /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
-        /// <returns></returns>
-        async Task WaitForVSSConfigurationIfNeededAsync(CancellationToken cancellationToken)
-        {
-            if (vssConfiguration.EnableVSSAddOn == true && vssConfiguration.OutputLogRecordsToOVDS == true && vssConfiguration.IsInitialized == false)
-            {
-                await vssConfiguration.InitializeAsync(AppContext.BaseDirectory, vssConfiguration.VSSPathMapFileName);
-            }
         }
     }
 }

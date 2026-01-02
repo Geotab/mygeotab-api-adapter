@@ -125,21 +125,11 @@ namespace MyGeotabAPIAdapter.Services
         public override async Task StartAsync(CancellationToken cancellationToken)
         {
             // Register this service with the StateMachine. Set mustPauseForDatabaseMaintenance to false as this service does not need to participate in pauses for database maintenance.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(Orchestrator2), false);
-            }
+            stateMachine.RegisterService(nameof(Orchestrator2), false);
 
-            // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
-                await base.StartAsync(cancellationToken);
-            }
-            else
-            {
-                logger.Warn($"******** WARNING - SERVICE DISABLED: The {CurrentClassName} service has not been enabled and will NOT be started.");
-            }
+            // Start this service.
+            logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
+            await base.StartAsync(cancellationToken);
         }
 
         /// <summary>
@@ -152,10 +142,7 @@ namespace MyGeotabAPIAdapter.Services
             orchestratorServiceTracker.OrchestratorServiceInitialized = false;
 
             // Update the registration of this service with the StateMachine. Set mustPauseForDatabaseMaintenance to false since it is stopping and will no longer be able to participate in pauses for database mainteance.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(Orchestrator2), false);
-            }
+            stateMachine.RegisterService(nameof(Orchestrator2), false);
 
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);

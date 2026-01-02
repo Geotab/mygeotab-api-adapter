@@ -11,16 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="appsettingsOptimizerTest.json" />
     <None Remove="appsettingsTest.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="appsettingsOptimizerTest.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
     <Content Include="appsettingsTest.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
@@ -29,9 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="Moq" Version="4.20.72" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.console" Version="2.9.3">
       <PrivateAssets>all</PrivateAssets>
@@ -50,7 +43,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MyGeotabAPIAdapter.Configuration\MyGeotabAPIAdapter.Configuration.csproj" />
     <ProjectReference Include="..\MyGeotabAPIAdapter.Database.EntityPersisters\MyGeotabAPIAdapter.Database.EntityPersisters.csproj" />
-    <ProjectReference Include="..\MyGeotabAPIAdapter.DataOptimizer\MyGeotabAPIAdapter.DataOptimizer.csproj" />
     <ProjectReference Include="..\MyGeotabAPIAdapter.Exceptions\MyGeotabAPIAdapter.Exceptions.csproj" />
     <ProjectReference Include="..\MyGeotabAPIAdapter.Geospatial\MyGeotabAPIAdapter.Geospatial.csproj" />
     <ProjectReference Include="..\MyGeotabAPIAdapter.Helpers\MyGeotabAPIAdapter.Helpers.csproj" />

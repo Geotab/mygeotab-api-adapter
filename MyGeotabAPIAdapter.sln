@@ -15,8 +15,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyGeotabAPIAdapter.DataOptimizer", "MyGeotabAPIAdapter.DataOptimizer\MyGeotabAPIAdapter.DataOptimizer.csproj", "{B5BD8A37-D7B6-4C48-A015-F2D5FF62EC7C}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyGeotabAPIAdapter.Logging", "MyGeotabAPIAdapter.Logging\MyGeotabAPIAdapter.Logging.csproj", "{D81C30E1-44FE-4E1C-BCCE-89FBE370D08C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyGeotabAPIAdapter.Exceptions", "MyGeotabAPIAdapter.Exceptions\MyGeotabAPIAdapter.Exceptions.csproj", "{ED993265-3C2B-4FFA-A81E-D5055814B113}"
@@ -30,14 +28,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyGeotabAPIAdapter.Database.EntityPersisters", "MyGeotabAPIAdapter.Database.EntityPersisters\MyGeotabAPIAdapter.Database.EntityPersisters.csproj", "{B4B64C84-96A9-43A7-B593-25C256382D5C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyGeotabAPIAdapter.Geospatial", "MyGeotabAPIAdapter.Geospatial\MyGeotabAPIAdapter.Geospatial.csproj", "{6F7B27AC-E0E4-4393-9F41-2AA080A8F0C7}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DeployToAzure", "DeployToAzure", "{A40F9DBE-A35C-455C-B574-EE41A7D2535A}"
-	ProjectSection(SolutionItems) = preProject
-		DeployToAzure\ARM_Template.json = DeployToAzure\ARM_Template.json
-		DeployToAzure\ARM_TemplateParameterValues.json = DeployToAzure\ARM_TemplateParameterValues.json
-		DeployToAzure\AzureCLI_ResourceCreationScript.ps1 = DeployToAzure\AzureCLI_ResourceCreationScript.ps1
-		DeployToAzure\MyGeotabAPIAdapterDeploymentScript.ps1 = DeployToAzure\MyGeotabAPIAdapterDeploymentScript.ps1
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyGeotabAPIAdapter.GeotabObjectMappers", "MyGeotabAPIAdapter.GeotabObjectMappers\MyGeotabAPIAdapter.GeotabObjectMappers.csproj", "{F0D05A23-BB61-4D70-9910-25CA44CC80FF}"
 EndProject
@@ -59,10 +49,6 @@ Global
 		{3525DB4B-3603-4EF7-94CF-F1BAA1E8F9EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3525DB4B-3603-4EF7-94CF-F1BAA1E8F9EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3525DB4B-3603-4EF7-94CF-F1BAA1E8F9EC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B5BD8A37-D7B6-4C48-A015-F2D5FF62EC7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B5BD8A37-D7B6-4C48-A015-F2D5FF62EC7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B5BD8A37-D7B6-4C48-A015-F2D5FF62EC7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B5BD8A37-D7B6-4C48-A015-F2D5FF62EC7C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D81C30E1-44FE-4E1C-BCCE-89FBE370D08C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D81C30E1-44FE-4E1C-BCCE-89FBE370D08C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D81C30E1-44FE-4E1C-BCCE-89FBE370D08C}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -98,9 +84,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{A40F9DBE-A35C-455C-B574-EE41A7D2535A} = {DE34361C-1C64-4D86-9D77-ECF12B7EC1C0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28B1EC99-3BB0-4B69-8342-3DB08CE2B3F4}

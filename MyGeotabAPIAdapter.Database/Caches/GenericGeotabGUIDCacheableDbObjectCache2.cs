@@ -25,7 +25,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
     /// <typeparam name="T2">The type of <see cref="IDatabaseUnitOfWorkContext"/> to use.</typeparam>
     public class GenericGeotabGUIDCacheableDbObjectCache2<T1, T2> : IGenericGeotabGUIDCacheableDbObjectCache2<T1, T2> where T1 : class, IGeotabGUIDCacheableDbEntity where T2 : IDatabaseUnitOfWorkContext
     {
-        static string CurrentClassName { get => $"{nameof(GenericGeotabGUIDCacheableDbObjectCache<T1>)}<{typeof(T1).Name}>"; }
+        static string CurrentClassName { get => $"{nameof(GenericGeotabGUIDCacheableDbObjectCache2<T1, T2>)}<{typeof(T1).Name}, {typeof(T2).Name}>"; }
 
         // Polly-related items:
         const int MaxRetries = 10;
@@ -66,7 +66,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         {
             get
             {
-                // The dbObjectFromDbIdCache may be empty if the source was not yet populated when the cache was initialized (e.g. if the API Adapter and Data Optimizer were started at the same time, or in some situations based on combinations of appsettings.json values). If this is the case, we want to re-initialize to capture the first batch of data that may have subsequently come-in.
+                // The dbObjectFromDbIdCache may be empty if the source was not yet populated when the cache was initialized (e.g. based on combinations of appsettings.json values). If this is the case, we want to re-initialize to capture the first batch of data that may have subsequently come-in.
                 if (dbObjectFromDbIdCache.IsEmpty && isUpdating == false)
                 {
                     isInitialized = false;

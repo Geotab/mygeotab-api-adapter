@@ -361,13 +361,10 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Register this service with the StateMachine. Set mustPauseForDatabaseMaintenance to true if the service is enabled or false otherwise.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(DeviceStatusInfoProcessor2), adapterConfiguration.EnableDeviceStatusInfoFeed);
-            }
+            stateMachine.RegisterService(nameof(DeviceStatusInfoProcessor2), adapterConfiguration.EnableDeviceStatusInfoFeed);
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.UseDataModel2 == true && adapterConfiguration.EnableDeviceStatusInfoFeed == true)
+            if (adapterConfiguration.EnableDeviceStatusInfoFeed == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -386,10 +383,7 @@ namespace MyGeotabAPIAdapter.Services
         public override Task StopAsync(CancellationToken cancellationToken)
         {
             // Update the registration of this service with the StateMachine. Set mustPauseForDatabaseMaintenance to false since it is stopping and will no longer be able to participate in pauses for database mainteance.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(DeviceStatusInfoProcessor2), false);
-            }
+            stateMachine.RegisterService(nameof(DeviceStatusInfoProcessor2), false);
 
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);

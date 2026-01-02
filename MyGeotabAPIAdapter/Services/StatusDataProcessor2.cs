@@ -1,15 +1,12 @@
 ﻿using Geotab.Checkmate.ObjectModel.Engine;
 using Microsoft.Extensions.Hosting;
-using MyGeotabAPIAdapter.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Configuration;
-using MyGeotabAPIAdapter.Configuration.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Caches;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityMappers;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
 using MyGeotabAPIAdapter.Database.Models;
-using MyGeotabAPIAdapter.Database.Models.Add_Ons.VSS;
 using MyGeotabAPIAdapter.Exceptions;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
 using MyGeotabAPIAdapter.Logging;
@@ -48,7 +45,6 @@ namespace MyGeotabAPIAdapter.Services
         readonly IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister;
         readonly IGenericEntityPersister<DbStatusData2> dbStatusData2EntityPersister;
         readonly IGenericEntityPersister<DbStatusDataLocation2> dbStatusDataLocation2EntityPersister;
-        readonly IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister;
         readonly IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache;
         readonly IGenericGeotabObjectFeeder<StatusData> statusDataGeotabObjectFeeder;
         readonly IGeotabDeviceFilterer geotabDeviceFilterer;
@@ -59,8 +55,6 @@ namespace MyGeotabAPIAdapter.Services
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
-        readonly IVSSConfiguration vssConfiguration;
-        readonly IVSSObjectMapper vssObjectMapper;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -68,7 +62,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="StatusDataProcessor2"/> class.
         /// </summary>
-        public StatusDataProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<StatusDataProcessor2> awaiter, IDbStatusData2DbEntityMetadata2EntityMapper dbStatusData2DbEntityMetadata2EntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister, IGenericEntityPersister<DbStatusData2> dbStatusData2EntityPersister, IGenericEntityPersister<DbStatusDataLocation2> dbStatusDataLocation2EntityPersister, IGenericEntityPersister<DbOVDSServerCommand> dbOVDSServerCommandEntityPersister, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDiagnosticFilterer geotabDiagnosticFilterer, IGeotabIdConverter geotabIdConverter, IGenericGeotabObjectFeeder<StatusData> statusDataGeotabObjectFeeder, IGeotabStatusDataDbStatusData2ObjectMapper geotabStatusDataDbStatusData2ObjectMapper, IMinimumIntervalSampler<StatusData> minimumIntervalSampler, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IVSSConfiguration vssConfiguration, IVSSObjectMapper vssObjectMapper, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public StatusDataProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<StatusDataProcessor2> awaiter, IDbStatusData2DbEntityMetadata2EntityMapper dbStatusData2DbEntityMetadata2EntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister, IGenericEntityPersister<DbStatusData2> dbStatusData2EntityPersister, IGenericEntityPersister<DbStatusDataLocation2> dbStatusDataLocation2EntityPersister, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDiagnosticFilterer geotabDiagnosticFilterer, IGeotabIdConverter geotabIdConverter, IGenericGeotabObjectFeeder<StatusData> statusDataGeotabObjectFeeder, IGeotabStatusDataDbStatusData2ObjectMapper geotabStatusDataDbStatusData2ObjectMapper, IMinimumIntervalSampler<StatusData> minimumIntervalSampler, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
@@ -78,7 +72,6 @@ namespace MyGeotabAPIAdapter.Services
             this.dbEntityMetadata2EntityPersister = dbEntityMetadata2EntityPersister;
             this.dbStatusData2EntityPersister = dbStatusData2EntityPersister;
             this.dbStatusDataLocation2EntityPersister = dbStatusDataLocation2EntityPersister;
-            this.dbOVDSServerCommandEntityPersister = dbOVDSServerCommandEntityPersister;
             this.dbDiagnosticId2ObjectCache = dbDiagnosticId2ObjectCache;
             this.geotabDeviceFilterer = geotabDeviceFilterer;
             this.geotabDiagnosticFilterer = geotabDiagnosticFilterer;
@@ -89,8 +82,6 @@ namespace MyGeotabAPIAdapter.Services
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
-            this.vssConfiguration = vssConfiguration;
-            this.vssObjectMapper = vssObjectMapper;
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -145,17 +136,10 @@ namespace MyGeotabAPIAdapter.Services
 
                         var dbOServiceTracking = await serviceTracker.GetStatusDataService2InfoAsync();
 
-                        // For VSS Add-On: Adjust (i.e. reduce) the FeedResultsLimit for StatusData records if they are configured to be output as OVDS server commands.
-                        var getFeedResultsLimit = myGeotabAPIHelper.GetFeedResultLimitDefault;
-                        if (vssConfiguration.EnableVSSAddOn == true && vssConfiguration.OutputStatusDataToOVDS == true)
-                        {
-                            getFeedResultsLimit = vssConfiguration.StatusDataFeedResultsLimitWhenOutputtingStatusDataToOVDS;
-                        }
-
                         // Initialize the Geotab object feeder.
                         if (statusDataGeotabObjectFeeder.IsInitialized == false)
                         {
-                            await statusDataGeotabObjectFeeder.InitializeAsync(cancellationTokenSource, adapterConfiguration.StatusDataFeedIntervalSeconds, getFeedResultsLimit, (long?)dbOServiceTracking.LastProcessedFeedVersion);
+                            await statusDataGeotabObjectFeeder.InitializeAsync(cancellationTokenSource, adapterConfiguration.StatusDataFeedIntervalSeconds, myGeotabAPIHelper.GetFeedResultLimitDefault, (long?)dbOServiceTracking.LastProcessedFeedVersion);
                         }
 
                         // If this is the first iteration after a connectivity disruption, roll-back the LastFeedVersion of the GeotabObjectFeeder to the last processed feed version that was committed to the database and set the LastFeedRetrievalTimeUtc to DateTime.MinValue to start processing without further delay.
@@ -169,15 +153,11 @@ namespace MyGeotabAPIAdapter.Services
                         await statusDataGeotabObjectFeeder.GetFeedDataBatchAsync(cancellationTokenSource);
                         stoppingToken.ThrowIfCancellationRequested();
 
-                        // Determine StatusData output option.
-                        VSSOutputOptions statusDataOutputOption = vssConfiguration.GetVSSOutputOptionForStatusData();
-
                         // Process any returned StatusDatas.
                         var statusDatas = statusDataGeotabObjectFeeder.GetFeedResultDataValuesList();
                         var dbStatusData2sToPersist = new List<DbStatusData2>();
                         var dbStatusDataLocation2sToPersist = new List<DbStatusDataLocation2>();
                         var statusData2DbEntityMetadata2sToPersist = new List<DbEntityMetadata2>();
-                        var dbOVDSServerCommandsToPersist = new List<DbOVDSServerCommand>();
                         if (statusDatas.Count != 0)
                         {
                             // Apply tracked device filter and/or tracked diagnostic filter and/or interval sampling (if configured in appsettings.json) and then map the StatusDatas to DbStatusData2s.
@@ -226,12 +206,6 @@ namespace MyGeotabAPIAdapter.Services
                                 };
                                 dbStatusDataLocation2sToPersist.Add(dbStatusDataLocation2);
                             }
-
-                            // Generate DbOVDSServerCommands if dictated by the configured VSSOutputOption.
-                            if (statusDataOutputOption == VSSOutputOptions.DbOVDSServerCommandOnly || statusDataOutputOption == VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand)
-                            {
-                                dbOVDSServerCommandsToPersist = vssObjectMapper.GetDbOVDSServerSetCommands(filteredStatusDatas);
-                            }
                         }
 
                         stoppingToken.ThrowIfCancellationRequested();
@@ -249,20 +223,11 @@ namespace MyGeotabAPIAdapter.Services
                                 try
                                 {
                                     // DbStatusData2, DbStatusDataLocation2 and DbEntityMetadata2:
-                                    if (statusDataOutputOption == VSSOutputOptions.AdapterRecordOnly || statusDataOutputOption == VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand)
-                                    {
-                                        await dbStatusData2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStatusData2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                    await dbStatusData2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStatusData2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
-                                        await dbStatusDataLocation2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStatusDataLocation2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
+                                    await dbStatusDataLocation2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbStatusDataLocation2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
-                                        await dbEntityMetadata2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, statusData2DbEntityMetadata2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
-                                    }
-
-                                    // DbOVDSServerCommands:
-                                    if (statusDataOutputOption == VSSOutputOptions.DbOVDSServerCommandOnly || statusDataOutputOption == VSSOutputOptions.AdapterRecordAndDbOVDSServerCommand)
-                                    {
-                                        await dbOVDSServerCommandEntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, dbOVDSServerCommandsToPersist, cancellationTokenSource, Logging.LogLevel.Info);
-                                    }
+                                    await dbEntityMetadata2EntityPersister.PersistEntitiesToDatabaseAsync(adapterContext, statusData2DbEntityMetadata2sToPersist, cancellationTokenSource, Logging.LogLevel.Info);
 
                                     // DbOServiceTracking (for StatusDataProcessor2):
                                     if (dbStatusData2sToPersist.Count != 0)
@@ -393,13 +358,10 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Register this service with the StateMachine. Set mustPauseForDatabaseMaintenance to true if the service is enabled or false otherwise.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(StatusDataProcessor2), adapterConfiguration.EnableStatusDataFeed);
-            }
+            stateMachine.RegisterService(nameof(StatusDataProcessor2), adapterConfiguration.EnableStatusDataFeed);
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.UseDataModel2 == true && adapterConfiguration.EnableStatusDataFeed == true)
+            if (adapterConfiguration.EnableStatusDataFeed == true)
             {
                 logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
                 await base.StartAsync(cancellationToken);
@@ -418,26 +380,10 @@ namespace MyGeotabAPIAdapter.Services
         public override Task StopAsync(CancellationToken cancellationToken)
         {
             // Update the registration of this service with the StateMachine. Set mustPauseForDatabaseMaintenance to false since it is stopping and will no longer be able to participate in pauses for database mainteance.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                stateMachine.RegisterService(nameof(StatusDataProcessor2), false);
-            }
+            stateMachine.RegisterService(nameof(StatusDataProcessor2), false);
 
             logger.Info($"******** STOPPED SERVICE: {CurrentClassName} ********");
             return base.StopAsync(cancellationToken);
-        }
-
-        /// <summary>
-        /// If outputting to VSS, ensure that the VSSConfiguration is initialized. This is to allow the current service to operate independently of the OVDSClientWorker.
-        /// </summary>
-        /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
-        /// <returns></returns>
-        async Task WaitForVSSConfigurationIfNeededAsync(CancellationToken cancellationToken)
-        {
-            if (vssConfiguration.EnableVSSAddOn == true && vssConfiguration.OutputStatusDataToOVDS == true && vssConfiguration.IsInitialized == false)
-            {
-                await vssConfiguration.InitializeAsync(AppContext.BaseDirectory, vssConfiguration.VSSPathMapFileName);
-            }
         }
     }
 }

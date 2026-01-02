@@ -41,13 +41,13 @@ namespace MyGeotabAPIAdapter.Tests
         }
 
         /// <summary>
-        /// Initializes the mock list of DbDevices.
+        /// Initializes the mock list of DbDevice2s.
         /// </summary>
-        public static List<DbDevice> GetMockDbDevices()
+        public static List<DbDevice2> GetMockDbDevice2s()
         {
-            return new List<DbDevice>
+            return new List<DbDevice2>
             {
-                new DbDevice
+                new DbDevice2
                 {
                     ActiveFrom = DateTime.MinValue,
                     ActiveTo = DateTime.MaxValue,
@@ -64,7 +64,7 @@ namespace MyGeotabAPIAdapter.Tests
                     SerialNumber = "000-000-0000",
                     VIN = ""
                 },
-                new DbDevice
+                new DbDevice2
                 {
                     ActiveFrom = DateTime.MinValue,
                     ActiveTo = DateTime.MaxValue,
@@ -81,7 +81,7 @@ namespace MyGeotabAPIAdapter.Tests
                     SerialNumber = "000-000-0000",
                     VIN = ""
                 },
-                new DbDevice
+                new DbDevice2
                 {
                     ActiveFrom = DateTime.MinValue,
                     ActiveTo = DateTime.MaxValue,
@@ -98,7 +98,7 @@ namespace MyGeotabAPIAdapter.Tests
                     SerialNumber = "000-000-0000",
                     VIN = ""
                 },
-                new DbDevice
+                new DbDevice2
                 {
                     ActiveFrom = DateTime.MinValue,
                     ActiveTo = DateTime.MaxValue,
@@ -122,89 +122,89 @@ namespace MyGeotabAPIAdapter.Tests
     /// <summary>
     /// TheoryData for <see cref="IGenericDbObjectCache{T}.GetObjectAsync(long)"/> (<see cref="IIdCacheableDbEntity.id"/>) method.
     /// </summary>
-    public class GenericDbObjectCacheTest_GetObjectAsyncById_TestData : TheoryData<MockBaseRepository2<DbDevice>, long , bool, long?>
+    public class GenericDbObjectCacheTest_GetObjectAsyncById_TestData : TheoryData<MockBaseRepository2<DbDevice2>, long , bool, long?>
     {
         public GenericDbObjectCacheTest_GetObjectAsyncById_TestData()
         {
-            var existingDbDevices = GenericDbObjectCacheTestMockData.GetMockDbDevices();
-            var mockDbDeviceRepository2 = new MockBaseRepository2<DbDevice>();
-            Task insertAsyncTask = Task.Run(() => mockDbDeviceRepository2.InsertAsync(existingDbDevices, new CancellationTokenSource()));
+            var existingDbDevice2s = GenericDbObjectCacheTestMockData.GetMockDbDevice2s();
+            var mockDbDevice2Repository2 = new MockBaseRepository2<DbDevice2>();
+            Task insertAsyncTask = Task.Run(() => mockDbDevice2Repository2.InsertAsync(existingDbDevice2s, new CancellationTokenSource()));
             insertAsyncTask.Wait();
 
-            Add(mockDbDeviceRepository2, 1, true, 1);
-            Add(mockDbDeviceRepository2, 100, false, null);
-            Add(mockDbDeviceRepository2, -100, false, null);
+            Add(mockDbDevice2Repository2, 1, true, 1);
+            Add(mockDbDevice2Repository2, 100, false, null);
+            Add(mockDbDevice2Repository2, -100, false, null);
         }
     }
 
     /// <summary>
     /// TheoryData for <see cref="IGenericDbObjectCache{T}.GetObjectAsync(string)"/> (<see cref="IIdCacheableDbEntity.GeotabId"/>) method.
     /// </summary>
-    public class GenericDbObjectCacheTest_GetObjectAsyncByGeotabId_TestData : TheoryData<MockBaseRepository2<DbDevice>, string, bool, long?>
+    public class GenericDbObjectCacheTest_GetObjectAsyncByGeotabId_TestData : TheoryData<MockBaseRepository2<DbDevice2>, string, bool, long?>
     {
         public GenericDbObjectCacheTest_GetObjectAsyncByGeotabId_TestData()
         {
-            var existingDbDevices = GenericDbObjectCacheTestMockData.GetMockDbDevices();
-            var mockDbDeviceRepository2 = new MockBaseRepository2<DbDevice>();
-            Task insertAsyncTask = Task.Run(() => mockDbDeviceRepository2.InsertAsync(existingDbDevices, new CancellationTokenSource()));
+            var existingDbDevice2s = GenericDbObjectCacheTestMockData.GetMockDbDevice2s();
+            var mockDbDevice2Repository2 = new MockBaseRepository2<DbDevice2>();
+            Task insertAsyncTask = Task.Run(() => mockDbDevice2Repository2.InsertAsync(existingDbDevice2s, new CancellationTokenSource()));
             insertAsyncTask.Wait();
 
-            Add(mockDbDeviceRepository2, "b2", true, 2);
-            Add(mockDbDeviceRepository2, "xx", false, null);
+            Add(mockDbDevice2Repository2, "b2", true, 2);
+            Add(mockDbDevice2Repository2, "xx", false, null);
         }
     }
 
     /// <summary>
     /// TheoryData for <see cref="IGenericDbObjectCache{T}.GetObjectIdAsync(string)"/> (<see cref="IIdCacheableDbEntity.GeotabId"/>) method.
     /// </summary>
-    public class GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId_TestData : TheoryData<MockBaseRepository2<DbDevice>, string, long?>
+    public class GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId_TestData : TheoryData<MockBaseRepository2<DbDevice2>, string, long?>
     {
         public GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId_TestData()
         {
-            var existingDbDevices = GenericDbObjectCacheTestMockData.GetMockDbDevices();
-            var mockDbDeviceRepository2 = new MockBaseRepository2<DbDevice>();
-            Task insertAsyncTask = Task.Run(() => mockDbDeviceRepository2.InsertAsync(existingDbDevices, new CancellationTokenSource()));
+            var existingDbDevice2s = GenericDbObjectCacheTestMockData.GetMockDbDevice2s();
+            var mockDbDevice2Repository2 = new MockBaseRepository2<DbDevice2>();
+            Task insertAsyncTask = Task.Run(() => mockDbDevice2Repository2.InsertAsync(existingDbDevice2s, new CancellationTokenSource()));
             insertAsyncTask.Wait();
 
-            Add(mockDbDeviceRepository2, "b2", 2);
-            Add(mockDbDeviceRepository2, "xx", null);
+            Add(mockDbDevice2Repository2, "b2", 2);
+            Add(mockDbDevice2Repository2, "xx", null);
         }
     }
 
     /// <summary>
     /// TheoryData for <see cref="IGenericDbObjectCache{T}.GetObjectsAsync()"/> method.
     /// </summary>
-    public class GenericDbObjectCacheTest_GetObjectsAsync_TestData : TheoryData<MockBaseRepository2<DbDevice>, bool, List<long>>
+    public class GenericDbObjectCacheTest_GetObjectsAsync_TestData : TheoryData<MockBaseRepository2<DbDevice2>, bool, List<long>>
     {
         public GenericDbObjectCacheTest_GetObjectsAsync_TestData()
         {
-            var existingDbDevices = GenericDbObjectCacheTestMockData.GetMockDbDevices();
-            var mockDbDeviceRepository2 = new MockBaseRepository2<DbDevice>();
-            Task insertAsyncTask = Task.Run(() => mockDbDeviceRepository2.InsertAsync(existingDbDevices, new CancellationTokenSource()));
+            var existingDbDevice2s = GenericDbObjectCacheTestMockData.GetMockDbDevice2s();
+            var mockDbDevice2Repository2 = new MockBaseRepository2<DbDevice2>();
+            Task insertAsyncTask = Task.Run(() => mockDbDevice2Repository2.InsertAsync(existingDbDevice2s, new CancellationTokenSource()));
             insertAsyncTask.Wait();
 
-            Add(mockDbDeviceRepository2, true, new List<long> { 1, 2, 3, 4 });
+            Add(mockDbDevice2Repository2, true, new List<long> { 1, 2, 3, 4 });
         }
     }
 
     /// <summary>
     /// TheoryData for <see cref="IGenericDbObjectCache{T}.GetObjectsAsync(DateTime)"/> (<see cref="IIdCacheableDbEntity.LastUpsertedUtc"/>) method.
     /// </summary>
-    public class GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime_TestData : TheoryData<MockBaseRepository2<DbDevice>, DateTime, bool, List<long>>
+    public class GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime_TestData : TheoryData<MockBaseRepository2<DbDevice2>, DateTime, bool, List<long>>
     {
         public GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime_TestData()
         {
-            var existingDbDevices = GenericDbObjectCacheTestMockData.GetMockDbDevices();
-            var mockDbDeviceRepository2 = new MockBaseRepository2<DbDevice>();
-            Task insertAsyncTask = Task.Run(() => mockDbDeviceRepository2.InsertAsync(existingDbDevices, new CancellationTokenSource()));
+            var existingDbDevice2s = GenericDbObjectCacheTestMockData.GetMockDbDevice2s();
+            var mockDbDevice2Repository2 = new MockBaseRepository2<DbDevice2>();
+            Task insertAsyncTask = Task.Run(() => mockDbDevice2Repository2.InsertAsync(existingDbDevice2s, new CancellationTokenSource()));
             insertAsyncTask.Wait();
 
-            Add(mockDbDeviceRepository2, DateTime.MinValue, true, new List<long> { 1, 2, 3, 4 });
-            Add(mockDbDeviceRepository2, DateTime.MaxValue, false, new List<long>());
-            Add(mockDbDeviceRepository2, GenericDbObjectCacheTestMockData.DateTime1, true, new List<long> { 1, 2, 3, 4 });
-            Add(mockDbDeviceRepository2, GenericDbObjectCacheTestMockData.DateTime2, true, new List<long> { 2, 3, 4 });
-            Add(mockDbDeviceRepository2, GenericDbObjectCacheTestMockData.DateTime3, true, new List<long> { 2, 3, 4 });
-            Add(mockDbDeviceRepository2, GenericDbObjectCacheTestMockData.DateTime4, true, new List<long> { 4 });
+            Add(mockDbDevice2Repository2, DateTime.MinValue, true, new List<long> { 1, 2, 3, 4 });
+            Add(mockDbDevice2Repository2, DateTime.MaxValue, false, new List<long>());
+            Add(mockDbDevice2Repository2, GenericDbObjectCacheTestMockData.DateTime1, true, new List<long> { 1, 2, 3, 4 });
+            Add(mockDbDevice2Repository2, GenericDbObjectCacheTestMockData.DateTime2, true, new List<long> { 2, 3, 4 });
+            Add(mockDbDevice2Repository2, GenericDbObjectCacheTestMockData.DateTime3, true, new List<long> { 2, 3, 4 });
+            Add(mockDbDevice2Repository2, GenericDbObjectCacheTestMockData.DateTime4, true, new List<long> { 4 });
         }
     }
 
@@ -245,87 +245,87 @@ namespace MyGeotabAPIAdapter.Tests
 
         //[Theory]
         //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectAsyncById_TestData))]
-        //public async Task GenericDbObjectCacheTest_GetObjectAsyncById(MockBaseRepository2<DbDevice> mockDbEntityRepo, long idOfObjectToGet, bool shouldReturnObject, long? expectedObjectId)
+        //public async Task GenericDbObjectCacheTest_GetObjectAsyncById(MockBaseRepository2<DbDevice2> mockDbEntityRepo, long idOfObjectToGet, bool shouldReturnObject, long? expectedObjectId)
         //{ 
-        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, adapterContext, mockDbEntityRepo);
-        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-        //    var dbDevice = await dbDeviceObjectCache.GetObjectAsync(idOfObjectToGet);
+        //    var DbDevice2ObjectCache = new AdapterGenericDbObjectCache<DbDevice2>(dateTimeHelper, adapterContext, mockDbEntityRepo);
+        //    await DbDevice2ObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var DbDevice2 = await DbDevice2ObjectCache.GetObjectAsync(idOfObjectToGet);
         //    if (shouldReturnObject)
         //    {
-        //        Assert.Equal(dbDevice.id, expectedObjectId);
+        //        Assert.Equal(DbDevice2.id, expectedObjectId);
         //    }
         //    else
         //    {
-        //        Assert.Null(dbDevice);
+        //        Assert.Null(DbDevice2);
         //    }
         //}
 
         //[Theory]
         //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectAsyncByGeotabId_TestData))]
-        //public async Task GenericDbObjectCacheTest_GetObjectAsyncByGeotabId(MockBaseRepository2<DbDevice> mockDbEntityRepo, string geotabIdOfObjectToGet, bool shouldReturnObject, long? expectedObjectId)
+        //public async Task GenericDbObjectCacheTest_GetObjectAsyncByGeotabId(MockBaseRepository2<DbDevice2> mockDbEntityRepo, string geotabIdOfObjectToGet, bool shouldReturnObject, long? expectedObjectId)
         //{
-        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
-        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-        //    var dbDevice = await dbDeviceObjectCache.GetObjectAsync(geotabIdOfObjectToGet);
+        //    var DbDevice2ObjectCache = new AdapterGenericDbObjectCache<DbDevice2>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
+        //    await DbDevice2ObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var DbDevice2 = await DbDevice2ObjectCache.GetObjectAsync(geotabIdOfObjectToGet);
         //    if (shouldReturnObject)
         //    {
-        //        Assert.Equal(dbDevice.id, expectedObjectId);
+        //        Assert.Equal(DbDevice2.id, expectedObjectId);
         //    }
         //    else
         //    {
-        //        Assert.Null(dbDevice);
+        //        Assert.Null(DbDevice2);
         //    }
         //}
 
         //[Theory]
         //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId_TestData))]
-        //public async Task GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId(MockBaseRepository2<DbDevice> mockDbEntityRepo, string geotabIdOfObjectIdGet, long? expectedObjectId)
+        //public async Task GenericDbObjectCacheTest_GetObjectIdAsyncByGeotabId(MockBaseRepository2<DbDevice2> mockDbEntityRepo, string geotabIdOfObjectIdGet, long? expectedObjectId)
         //{
-        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
-        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-        //    var objectId = await dbDeviceObjectCache.GetObjectIdAsync(geotabIdOfObjectIdGet);
+        //    var DbDevice2ObjectCache = new AdapterGenericDbObjectCache<DbDevice2>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
+        //    await DbDevice2ObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var objectId = await DbDevice2ObjectCache.GetObjectIdAsync(geotabIdOfObjectIdGet);
         //    Assert.Equal(objectId, expectedObjectId);
         //}
 
         //[Theory]
         //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectsAsync_TestData))]
-        //public async Task GenericDbObjectCacheTest_GetObjectsAsync(MockBaseRepository2<DbDevice> mockDbEntityRepo, bool shouldReturnObjects, List<long> expectedObjectIds)
+        //public async Task GenericDbObjectCacheTest_GetObjectsAsync(MockBaseRepository2<DbDevice2> mockDbEntityRepo, bool shouldReturnObjects, List<long> expectedObjectIds)
         //{
-        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
-        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-        //    var dbDevices = await dbDeviceObjectCache.GetObjectsAsync();
+        //    var DbDevice2ObjectCache = new AdapterGenericDbObjectCache<DbDevice2>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
+        //    await DbDevice2ObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var DbDevice2s = await DbDevice2ObjectCache.GetObjectsAsync();
         //    if (shouldReturnObjects)
         //    {
-        //        Assert.Equal(dbDevices.Count, expectedObjectIds.Count);
+        //        Assert.Equal(DbDevice2s.Count, expectedObjectIds.Count);
         //        foreach (var expectedObjectId in expectedObjectIds)
         //        {
-        //            Assert.Contains(dbDevices, dbDevice => dbDevice.id == expectedObjectId);
+        //            Assert.Contains(DbDevice2s, DbDevice2 => DbDevice2.id == expectedObjectId);
         //        }
         //    }
         //    else
         //    {
-        //        Assert.Empty(dbDevices);
+        //        Assert.Empty(DbDevice2s);
         //    }
         //}
 
         //[Theory]
         //[ClassData(typeof(GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime_TestData))]
-        //public async Task GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime(MockBaseRepository2<DbDevice> mockDbEntityRepo, DateTime changedSince, bool shouldReturnObjects, List<long> expectedObjectIds)
+        //public async Task GenericDbObjectCacheTest_GetObjectsAsyncByChangedDateTime(MockBaseRepository2<DbDevice2> mockDbEntityRepo, DateTime changedSince, bool shouldReturnObjects, List<long> expectedObjectIds)
         //{
-        //    var dbDeviceObjectCache = new AdapterGenericDbObjectCache<DbDevice>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
-        //    await dbDeviceObjectCache.InitializeAsync(Databases.AdapterDatabase);
-        //    var dbDevices = await dbDeviceObjectCache.GetObjectsAsync(changedSince);
+        //    var DbDevice2ObjectCache = new AdapterGenericDbObjectCache<DbDevice2>(dateTimeHelper, (IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext>)adapterContext, mockDbEntityRepo);
+        //    await DbDevice2ObjectCache.InitializeAsync(Databases.AdapterDatabase);
+        //    var DbDevice2s = await DbDevice2ObjectCache.GetObjectsAsync(changedSince);
         //    if (shouldReturnObjects)
         //    {
-        //        Assert.Equal(dbDevices.Count, expectedObjectIds.Count);
+        //        Assert.Equal(DbDevice2s.Count, expectedObjectIds.Count);
         //        foreach (var expectedObjectId in expectedObjectIds)
         //        {
-        //            Assert.Contains(dbDevices, dbDevice => dbDevice.id == expectedObjectId);
+        //            Assert.Contains(DbDevice2s, DbDevice2 => DbDevice2.id == expectedObjectId);
         //        }
         //    }
         //    else
         //    {
-        //        Assert.Empty(dbDevices);
+        //        Assert.Empty(DbDevice2s);
         //    }
         //}
     }

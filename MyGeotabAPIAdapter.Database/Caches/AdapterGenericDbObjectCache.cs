@@ -68,7 +68,7 @@ namespace MyGeotabAPIAdapter.Database.Caches
         {
             get
             {
-                // The objectCache may be empty if the source was not yet populated when the cache was initialized (e.g. if the API Adapter and Data Optimizer were started at the same time, or in some situations based on combinations of appsettings.json values). If this is the case, we want to re-initialize to capture the first batch of data that may have subsequently come-in.
+                // The objectCache may be empty if the source was not yet populated when the cache was initialized (e.g. in some situations based on combinations of appsettings.json values). If this is the case, we want to re-initialize to capture the first batch of data that may have subsequently come-in.
                 if (objectCache.IsEmpty)
                 {
                     isInitialized = false;

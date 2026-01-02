@@ -1121,18 +1121,10 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
 
             // Only start this service if it has been configured to be enabled.
-            if (adapterConfiguration.UseDataModel2 == true)
-            {
-                logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
-
-                await base.StartAsync(cancellationToken);
-                await GetCurrentDBPartitionInfoAsync();
-                await GetLatestDBMaintenanceLogsByTypeAsync();
-            }
-            else
-            {
-                logger.Warn($"******** WARNING - SERVICE DISABLED: The {CurrentClassName} service has not been enabled and will NOT be started.");
-            }
+            logger.Info($"******** STARTING SERVICE: {CurrentClassName}");
+            await base.StartAsync(cancellationToken);
+            await GetCurrentDBPartitionInfoAsync();
+            await GetLatestDBMaintenanceLogsByTypeAsync();
         }
 
         /// <summary>

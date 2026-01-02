@@ -56,7 +56,7 @@ namespace MyGeotabAPIAdapter.Logging
             bool connectivityIssueDetected = false;
             foreach (var exception in aggregateException.InnerExceptions)
             {
-                if (exception is MyGeotabConnectionException || exception is AdapterDatabaseConnectionException || exception is OptimizerDatabaseConnectionException)
+                if (exception is MyGeotabConnectionException || exception is AdapterDatabaseConnectionException)
                 {
                     connectivityIssueDetected = true;
                     break;
@@ -71,7 +71,7 @@ namespace MyGeotabAPIAdapter.Logging
             bool connectivityIssueDetected = false;
             foreach (var exception in aggregateException.InnerExceptions)
             {
-                if (exception is AdapterDatabaseConnectionException || exception is OptimizerDatabaseConnectionException)
+                if (exception is AdapterDatabaseConnectionException)
                 {
                     connectivityIssueDetected = true;
                     break;

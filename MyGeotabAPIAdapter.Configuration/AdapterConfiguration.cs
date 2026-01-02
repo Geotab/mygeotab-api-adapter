@@ -16,7 +16,6 @@ namespace MyGeotabAPIAdapter.Configuration
         // > OverrideSettings
         const string ArgNameDisableMachineNameValidation = "OverrideSettings:DisableMachineNameValidation";
         // > DatabaseSettings
-        const string ArgNameUseDataModel2 = "DatabaseSettings:UseDataModel2";
         const string ArgNameEnableLevel1DatabaseMaintenance = "DatabaseSettings:EnableLevel1DatabaseMaintenance";
         const string ArgNameLevel1DatabaseMaintenanceIntervalMinutes = "DatabaseSettings:Level1DatabaseMaintenanceIntervalMinutes";
         const string ArgNameEnableLevel2DatabaseMaintenance = "DatabaseSettings:EnableLevel2DatabaseMaintenance";
@@ -102,9 +101,6 @@ namespace MyGeotabAPIAdapter.Configuration
         // > AppSettings:Feeds:ChargeEvent
         const string ArgNameEnableChargeEventFeed = "AppSettings:Feeds:ChargeEvent:EnableChargeEventFeed";
         const string ArgNameChargeEventFeedIntervalSeconds = "AppSettings:Feeds:ChargeEvent:ChargeEventFeedIntervalSeconds";
-        // > AppSettings:Feeds:DebugData
-        const string ArgNameEnableDebugDataFeed = "AppSettings:Feeds:DebugData:EnableDebugDataFeed";
-        const string ArgNameDebugDataFeedIntervalSeconds = "AppSettings:Feeds:DebugData:DebugDataFeedIntervalSeconds";
         // > AppSettings:Feeds:DeviceStatusInfo
         const string ArgNameEnableDeviceStatusInfoFeed = "AppSettings:Feeds:DeviceStatusInfo:EnableDeviceStatusInfoFeed";
         const string ArgNameDeviceStatusInfoFeedIntervalSeconds = "AppSettings:Feeds:DeviceStatusInfo:DeviceStatusInfoFeedIntervalSeconds";
@@ -253,9 +249,6 @@ namespace MyGeotabAPIAdapter.Configuration
         public string DatabaseProviderType { get; private set; }
 
         /// <inheritdoc/>
-        public int DebugDataFeedIntervalSeconds { get; private set; }
-
-        /// <inheritdoc/>
         public DateTime DeviceCacheIntervalDailyReferenceStartTimeUTC { get; private set; }
 
         /// <inheritdoc/>
@@ -317,9 +310,6 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public bool EnableControllerCache { get; private set; }
-
-        /// <inheritdoc/>
-        public bool EnableDebugDataFeed { get; private set; }
 
         /// <inheritdoc/>
         public bool EnableDeviceCache { get; private set; }
@@ -583,9 +573,6 @@ namespace MyGeotabAPIAdapter.Configuration
         public int UnitOfMeasureCacheUpdateIntervalMinutes { get; private set; }
 
         /// <inheritdoc/>
-        public bool UseDataModel2 { get; private set; }
-
-        /// <inheritdoc/>
         public DateTime UserCacheIntervalDailyReferenceStartTimeUTC { get; private set; }
 
         /// <inheritdoc/>
@@ -640,7 +627,6 @@ namespace MyGeotabAPIAdapter.Configuration
             }
 
             // DatabaseSettings:
-            UseDataModel2 = configurationHelper.GetConfigKeyValueBoolean(ArgNameUseDataModel2);
             EnableLevel1DatabaseMaintenance = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableLevel1DatabaseMaintenance);
             Level1DatabaseMaintenanceIntervalMinutes = configurationHelper.GetConfigKeyValueInt(ArgNameLevel1DatabaseMaintenanceIntervalMinutes, null, false, MinDatabaseMaintenanceIntervalMinutes, MaxDatabaseMaintenanceIntervalMinutes, DefaultLevel1DatabaseMaintenanceIntervalMinutes);
             EnableLevel2DatabaseMaintenance = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableLevel2DatabaseMaintenance);
@@ -771,10 +757,6 @@ namespace MyGeotabAPIAdapter.Configuration
             // AppSettings:Feeds:ChargeEvent:
             EnableChargeEventFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableChargeEventFeed);
             ChargeEventFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameChargeEventFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
-
-            // AppSettings:Feeds:DebugData:
-            EnableDebugDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableDebugDataFeed);
-            DebugDataFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameDebugDataFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
             // AppSettings:Feeds:DeviceStatusInfo:
             EnableDeviceStatusInfoFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableDeviceStatusInfoFeed);

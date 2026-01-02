@@ -43,11 +43,6 @@ namespace MyGeotabAPIAdapter.Configuration
         string DatabaseProviderType { get; }
 
         /// <summary>
-        /// The minimum number of seconds to wait between GetFeed() calls for <see cref="DebugData"/> objects.
-        /// </summary>
-        int DebugDataFeedIntervalSeconds { get; }
-
-        /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="Device"/> cache.
         /// </summary>
         DateTime DeviceCacheIntervalDailyReferenceStartTimeUTC { get; }
@@ -151,11 +146,6 @@ namespace MyGeotabAPIAdapter.Configuration
         /// Indicates whether a <see cref="Controller"/> cache should be enabled. 
         /// </summary>
         bool EnableControllerCache { get; }
-
-        /// <summary>
-        /// Indicates whether a <see cref="DebugData"/> data feed should be enabled. 
-        /// </summary>
-        bool EnableDebugDataFeed { get; }
 
         /// <summary>
         /// Indicates whether a <see cref="Device"/> cache should be enabled. 
@@ -591,11 +581,6 @@ namespace MyGeotabAPIAdapter.Configuration
         /// The number of seconds to wait, after updating the <see cref="UnitOfMeasure"/> cache, before initiating the next update of the subject cache.
         /// </summary>
         int UnitOfMeasureCacheUpdateIntervalMinutes { get; }
-
-        /// <summary>
-        /// Indicates whether the adapter database with which the application is paired is using version 2 of the data model. Services will be configured to use the appropriate data model based on the value provided here. 
-        /// </summary>
-        bool UseDataModel2 { get; }
 
         /// <summary>
         /// The <see cref="DateTime"/> of which the time of day portion will be used as the basis for calculation of cache update and refresh intervals for the <see cref="User"/> cache.

@@ -48,7 +48,7 @@ namespace MyGeotabAPIAdapter.Tests
         public void GetConfigKeyValueDateTime_MethodTests()
         {
             //Arrange
-            DateTime.TryParse("2020-06-23T08:00:00Z", null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime expected);
+            DateTime.TryParse("2020-06-23T06:00:00Z", null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime expected);
 
             //Act
             string keyString = "AppSettings:GeneralFeedSettings:FeedStartSpecificTimeUTC";
