@@ -1,6 +1,5 @@
 ﻿using MyGeotabAPIAdapter.Helpers;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace MyGeotabAPIAdapter.Tests
 {

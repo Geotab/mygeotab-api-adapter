@@ -276,6 +276,16 @@ namespace MyGeotabAPIAdapter.Database.Caches
             }
         }
 
+        /// <summary>
+        /// Determines whether the given string is a proper GUID format.
+        /// </summary>
+        /// <param name="value">The string to check.</param>
+        /// <returns>True if the string is a valid GUID; otherwise, false.</returns>
+        static bool IsProperGuid(string value)
+        {
+            return Guid.TryParse(value, out _);
+        }
+
         /// <inheritdoc/>
         public async Task UpdateAsync(bool ForceUpdate = false)
         {
@@ -373,17 +383,40 @@ namespace MyGeotabAPIAdapter.Database.Caches
                             return existingEntityId;
                         });
 
-                    // Add or update to geotabGuidFromGeotabIdCache.
+                    // Add or update to geotabGuidStringFromGeotabIdCache.
+                    // Handle the case where the same GeotabId may have multiple GeotabGUIDString values
+                    // (e.g., when a diagnostic transitions between GUID and KnownId representations).
                     _ = geotabGuidStringFromGeotabIdCache.AddOrUpdate(dbEntity.GeotabId, dbEntity.GeotabGUIDString,
-                        (geotabID, existingEntityGeotabGUID) =>
+                        (geotabID, existingGeotabGUIDString) =>
                         {
-                            // If this delegate is invoked, then the key already exists. Validate against duplicates to ensure we don't add another item to the geotabGuidFromGeotabIdCache that has the same GeotabId, but a different GeotabGUID.
-                            if (dbEntity.GeotabGUIDString != existingEntityGeotabGUID)
+                            // If this delegate is invoked, then the key already exists with a (potentially) different value.
+                            if (dbEntity.GeotabGUIDString != existingGeotabGUIDString)
                             {
-                                throw new ArgumentException($"A {typeof(T1).Name} with GeotabId \"{dbEntity.GeotabId}\" already exists in the geotabGuidFromGeotabIdCache. Duplicates are not allowed. The existing {typeof(T1).Name} has a GeotabGUID of \"{existingEntityGeotabGUID}\". The {typeof(T1).Name} with the same GeotabId that cannot be added to the geotabGuidFromGeotabIdCache has a GeotabGUID of \"{dbEntity.GeotabGUIDString}\".");
+                                // Prefer a proper GUID over a KnownId string, as a proper GUID is the canonical identifier.
+                                bool existingIsProperGuid = IsProperGuid(existingGeotabGUIDString);
+                                bool newIsProperGuid = IsProperGuid(dbEntity.GeotabGUIDString);
+
+                                if (newIsProperGuid && !existingIsProperGuid)
+                                {
+                                    // New value is a proper GUID, existing is a KnownId string - use the new one.
+                                    logger.Debug($"Updating GeotabGUIDString for GeotabId \"{geotabID}\" from \"{existingGeotabGUIDString}\" to \"{dbEntity.GeotabGUIDString}\" (preferring proper GUID).");
+                                    return dbEntity.GeotabGUIDString;
+                                }
+                                else if (!newIsProperGuid && existingIsProperGuid)
+                                {
+                                    // Existing is a proper GUID, new is a KnownId string - keep existing.
+                                    logger.Debug($"Keeping GeotabGUIDString \"{existingGeotabGUIDString}\" for GeotabId \"{geotabID}\" (ignoring KnownId \"{dbEntity.GeotabGUIDString}\").");
+                                    return existingGeotabGUIDString;
+                                }
+                                else
+                                {
+                                    // Both are the same type - prefer the newer one (higher database id).
+                                    logger.Debug($"Multiple GeotabGUIDString values for GeotabId \"{geotabID}\": existing=\"{existingGeotabGUIDString}\", new=\"{dbEntity.GeotabGUIDString}\". Using newer value.");
+                                    return dbEntity.GeotabGUIDString;
+                                }
                             }
-                            // Nothing to do here, since the GeotabGUID is the only updatable property.
-                            return existingEntityGeotabGUID;
+                            // Same GeotabGUIDString - nothing to update.
+                            return existingGeotabGUIDString;
                         });
                 }
             }

@@ -2,7 +2,6 @@
 using MyGeotabAPIAdapter.Logging;
 using System;
 using Xunit;
-using Xunit.Abstractions;
 using MyGeotabAPIAdapter.Geospatial;
 
 namespace MyGeotabAPIAdapter.Tests
