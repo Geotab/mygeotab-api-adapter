@@ -38,6 +38,7 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 ActiveFrom = entityToMapTo.ActiveFrom,
                 ActiveTo = entityToMapTo.ActiveTo,
                 DatabaseWriteOperationType = Database.Common.DatabaseWriteOperationType.Insert,
+                Designation = entityToMapTo.Designation,
                 EmployeeNo = entityToMapTo.EmployeeNo,
                 EntityStatus = (int)Common.DatabaseRecordStatus.Active, // Set to Active by default. Database logic will handle setting to inactive if necessary (i.e. for detected deletions on the MYG side).
                 FirstName = entityToMapTo.FirstName,

@@ -95,6 +95,9 @@ namespace MyGeotabAPIAdapter.Configuration
         const string ArgNameEnableMinimunIntervalSamplingForStatusData = "AppSettings:GeneralFeedSettings:EnableMinimunIntervalSamplingForStatusData";
         const string ArgNameMinimumIntervalSamplingDiagnostics = "AppSettings:GeneralFeedSettings:MinimumIntervalSamplingDiagnostics";
         const string ArgNameMinimumIntervalSamplingIntervalSeconds = "AppSettings:GeneralFeedSettings:MinimumIntervalSamplingIntervalSeconds";
+        // > AppSettings:Feeds:AuditLog
+        const string ArgNameEnableAuditLogFeed = "AppSettings:Feeds:AuditLog:EnableAuditLogFeed";
+        const string ArgNameAuditLogFeedIntervalSeconds = "AppSettings:Feeds:AuditLog:AuditLogFeedIntervalSeconds";
         // > AppSettings:Feeds:BinaryData
         const string ArgNameEnableBinaryDataFeed = "AppSettings:Feeds:BinaryData:EnableBinaryDataFeed";
         const string ArgNameBinaryDataFeedIntervalSeconds = "AppSettings:Feeds:BinaryData:BinaryDataFeedIntervalSeconds";
@@ -228,6 +231,9 @@ namespace MyGeotabAPIAdapter.Configuration
         const int DefaultStatusDataLocationServiceBufferMinutes = 1440;
 
         /// <inheritdoc/>
+        public int AuditLogFeedIntervalSeconds { get; private set; }
+
+        /// <inheritdoc/>
         public int BinaryDataFeedIntervalSeconds { get; private set; }
 
         /// <inheritdoc/>
@@ -301,6 +307,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public int DVIRLogManipulatorIntervalSeconds { get; private set; }
+
+        /// <inheritdoc/>
+        public bool EnableAuditLogFeed { get; private set; }
 
         /// <inheritdoc/>
         public bool EnableBinaryDataFeed { get; private set; }
@@ -749,6 +758,10 @@ namespace MyGeotabAPIAdapter.Configuration
             MinimumIntervalSamplingDiagnosticsList = configurationHelper.GetConfigKeyValueString(ArgNameMinimumIntervalSamplingDiagnostics);
             MinimumIntervalSamplingIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameMinimumIntervalSamplingIntervalSeconds, null, false, MinSamplingIntervalSeconds, MaxSamplingIntervalSeconds, DefaultSamplingIntervalSeconds);
             ValidateMinimumIntervalSamplingDiagnosticsList();
+
+            // AppSettings:Feeds:AuditLog:
+            EnableAuditLogFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableAuditLogFeed);
+            AuditLogFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameAuditLogFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
             // AppSettings:Feeds:BinaryData:
             EnableBinaryDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableBinaryDataFeed);

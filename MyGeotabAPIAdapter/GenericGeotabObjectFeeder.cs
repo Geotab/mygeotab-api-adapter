@@ -108,6 +108,7 @@ namespace MyGeotabAPIAdapter
         /// </summary>
         AdapterService GetAdapterServiceMemberForT()
         {
+            if (typeParameterType == typeof(Audit)) { return AdapterService.AuditLogProcessor2; }
             if (typeParameterType == typeof(Geotab.Checkmate.ObjectModel.BinaryData)) { return AdapterService.BinaryDataProcessor; }
             if (typeParameterType == typeof(ChargeEvent)) { return AdapterService.ChargeEventProcessor; }
             if (typeParameterType == typeof(Controller)) { return AdapterService.ControllerProcessor; }

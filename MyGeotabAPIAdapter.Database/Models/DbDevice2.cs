@@ -29,6 +29,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public DateTime? ActiveTo { get; set; }
         public string? Comment { get; set; }
         public string DeviceType { get; set; }
+        public string? CustomProperties { get; set; }
         public string? Groups { get; set; }
         public string LicensePlate { get; set; }
         public string LicenseState { get; set; }

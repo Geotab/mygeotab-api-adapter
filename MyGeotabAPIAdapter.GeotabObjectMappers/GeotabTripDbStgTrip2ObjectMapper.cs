@@ -30,11 +30,13 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 Distance = entityToMapTo.Distance,
                 DriverId = driverId,
                 DrivingDuration = entityToMapTo.DrivingDuration,
+                EngineHours = entityToMapTo.EngineHours,
                 EntityStatus = (int)Common.DatabaseRecordStatus.Active, // Set to Active by default. Database logic will handle setting to inactive if necessary (i.e. for detected deletions on the MYG side).
                 GeotabId = entityToMapTo.Id.ToString(),
                 IdlingDuration = entityToMapTo.IdlingDuration,
                 MaximumSpeed = entityToMapTo.MaximumSpeed,
                 NextTripStart = entityToMapTo.NextTripStart,
+                Odometer = entityToMapTo.Odometer,
                 SpeedRange1 = entityToMapTo.SpeedRange1,
                 SpeedRange1Duration = entityToMapTo.SpeedRange1Duration,
                 SpeedRange2 = entityToMapTo.SpeedRange2,

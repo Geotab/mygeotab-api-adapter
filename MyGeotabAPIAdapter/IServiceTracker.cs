@@ -32,6 +32,11 @@ namespace MyGeotabAPIAdapter
         Task<PrerequisiteServiceOperationCheckResult> CheckOperationOfPrerequisiteServicesAsync(List<AdapterService> prerequisiteServices, bool includeCheckForWhetherServicesHaveProcessedAnyData = false);
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.AuditLogProcessor2"/>.
+        /// </summary>
+        Task<T> GetAuditLogService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.BinaryDataProcessor"/>.
         /// </summary>
         Task<T> GetBinaryDataServiceInfoAsync();

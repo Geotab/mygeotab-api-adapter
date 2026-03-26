@@ -118,8 +118,9 @@ namespace MyGeotabAPIAdapter
         /// Updates the cache of Geotab <see cref="Entity"/>s maintained by the current <see cref="IGenericGeotabObjectCacher<T>"/> instance.
         /// </summary>
         /// <param name="cancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <param name="forceUpdate">If <c>true</c>, bypasses the configured update interval gate and forces an immediate cache update. Default is <c>false</c>.</param>
         /// <returns>Asynchronous task</returns>
-        Task UpdateGeotabObjectCacheAsync(CancellationTokenSource cancellationTokenSource);
+        Task UpdateGeotabObjectCacheAsync(CancellationTokenSource cancellationTokenSource, bool forceUpdate = false);
 
         /// <summary>
         /// Waits until <see cref="IsUpdating"/> is <c>false</c>. Intended for use by methods that enumerate and retrieve cached objects.

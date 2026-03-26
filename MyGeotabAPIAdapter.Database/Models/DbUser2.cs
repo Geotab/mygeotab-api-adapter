@@ -28,6 +28,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public DateTime? ActiveFrom { get; set; }
         public DateTime? ActiveTo { get; set; }
         public string? CompanyGroups { get; set; }
+        public string? Designation { get; set; }
         public string EmployeeNo { get; set; }
         public string FirstName { get; set; }
         public string HosRuleSet { get; set; }

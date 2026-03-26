@@ -46,6 +46,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
+        readonly IUnknownDiagnosticIdTracker unknownDiagnosticIdTracker;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -53,7 +54,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="DiagnosticProcessor2"/> class.
         /// </summary>
-        public DiagnosticProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<DiagnosticProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnostic2, AdapterDatabaseUnitOfWorkContext> dbDiagnostic2ObjectCache, IGenericEntityPersister<DbStgDiagnostic2> dbStgDiagnostic2EntityPersister, IGeotabDiagnosticDbStgDiagnostic2ObjectMapper geotabDiagnosticDbStgDiagnostic2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericGeotabObjectCacher<Diagnostic> diagnosticGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public DiagnosticProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<DiagnosticProcessor2> awaiter, IExceptionHelper exceptionHelper, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnostic2, AdapterDatabaseUnitOfWorkContext> dbDiagnostic2ObjectCache, IGenericEntityPersister<DbStgDiagnostic2> dbStgDiagnostic2EntityPersister, IGeotabDiagnosticDbStgDiagnostic2ObjectMapper geotabDiagnosticDbStgDiagnostic2ObjectMapper, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IUnknownDiagnosticIdTracker unknownDiagnosticIdTracker, IGenericGeotabObjectCacher<Diagnostic> diagnosticGeotabObjectCacher, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
@@ -66,6 +67,7 @@ namespace MyGeotabAPIAdapter.Services
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
+            this.unknownDiagnosticIdTracker = unknownDiagnosticIdTracker;
             this.diagnosticGeotabObjectCacher = diagnosticGeotabObjectCacher;
 
             dbStgDiagnostic2Repo = new BaseRepository<DbStgDiagnostic2>(adapterContext);
@@ -269,7 +271,14 @@ namespace MyGeotabAPIAdapter.Services
             }
             else
             {
-                dbObjectCacheInitializationAndUpdateTasks.Add(diagnosticGeotabObjectCacher.UpdateGeotabObjectCacheAsync(cancellationTokenSource));
+                // Check if data processors have reported unknown diagnostic IDs. If so, consume them and force an out-of-cycle update to fetch any new diagnostics from the MyGeotab API.
+                bool forceGeotabCacheUpdate = unknownDiagnosticIdTracker.HasUnknownDiagnosticIdStrings;
+                if (forceGeotabCacheUpdate)
+                {
+                    var consumedIds = unknownDiagnosticIdTracker.ConsumeUnknownDiagnosticIdStrings();
+                    logger.Info($"Unknown diagnostic IDs were reported by data processors ({consumedIds.Count} unique ID(s)). Forcing out-of-cycle Diagnostic cache update.");
+                }
+                dbObjectCacheInitializationAndUpdateTasks.Add(diagnosticGeotabObjectCacher.UpdateGeotabObjectCacheAsync(cancellationTokenSource, forceUpdate: forceGeotabCacheUpdate));
             }
 
             // Update the in-memory cache of database objects that correspond with Geotab objects.

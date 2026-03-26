@@ -64,6 +64,7 @@ namespace MyGeotabAPIAdapter.Database.Models
             }
         }
         public long? DrivingDurationTicks { get; set; }
+        public double? EngineHours { get; set; }
         [Write(false)]
         public TimeSpan? IdlingDuration
         {
@@ -79,6 +80,7 @@ namespace MyGeotabAPIAdapter.Database.Models
         public long? IdlingDurationTicks { get; set; }
         public float? MaximumSpeed { get; set; }
         public DateTime? NextTripStart { get; set; }
+        public double? Odometer { get; set; }
         public int? SpeedRange1 { get; set; }
         [Write(false)]
         public TimeSpan? SpeedRange1Duration

@@ -133,7 +133,17 @@ namespace MyGeotabAPIAdapter.Configuration
         int DVIRLogManipulatorIntervalSeconds { get; }
 
         /// <summary>
-        /// Indicates whether a <see cref="BinaryData"/> data feed should be enabled. 
+        /// Indicates whether an <see cref="Audit"/> data feed should be enabled.
+        /// </summary>
+        bool EnableAuditLogFeed { get; }
+
+        /// <summary>
+        /// The minimum number of seconds to wait between GetFeed() calls for <see cref="Audit"/> objects.
+        /// </summary>
+        int AuditLogFeedIntervalSeconds { get; }
+
+        /// <summary>
+        /// Indicates whether a <see cref="BinaryData"/> data feed should be enabled.
         /// </summary>
         bool EnableBinaryDataFeed { get; }
 

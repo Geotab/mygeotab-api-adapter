@@ -222,7 +222,7 @@ namespace MyGeotabAPIAdapter
         }
 
         /// <inheritdoc/>
-        public async Task UpdateGeotabObjectCacheAsync(CancellationTokenSource cancellationTokenSource)
+        public async Task UpdateGeotabObjectCacheAsync(CancellationTokenSource cancellationTokenSource, bool forceUpdate = false)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
             await updateLock.WaitAsync();
@@ -238,7 +238,12 @@ namespace MyGeotabAPIAdapter
 
                 // Process cache based on required cache operation type:
                 CacheOperationType requiredCacheOperationType = GetRequiredCacheOperationType();
-                if (requiredCacheOperationType == CacheOperationType.None)
+                if (requiredCacheOperationType == CacheOperationType.None && forceUpdate)
+                {
+                    logger.Debug($"{typeParameterType.Name} cache force-update requested. Overriding interval gate.");
+                    requiredCacheOperationType = CacheOperationType.Update;
+                }
+                else if (requiredCacheOperationType == CacheOperationType.None)
                 {
                     logger.Debug($"{typeParameterType.Name} cache not updated; {CacheUpdateIntervalMinutes} minutes have not passed since last update.");
                 }

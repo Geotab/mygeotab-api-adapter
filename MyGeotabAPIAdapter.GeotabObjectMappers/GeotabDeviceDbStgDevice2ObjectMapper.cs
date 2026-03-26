@@ -3,6 +3,7 @@ using Microsoft.CSharp.RuntimeBinder;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.MyGeotabAPI;
+using Newtonsoft.Json;
 using System.Text;
 
 namespace MyGeotabAPIAdapter.GeotabObjectMappers
@@ -105,11 +106,21 @@ namespace MyGeotabAPIAdapter.GeotabObjectMappers
                 SerialNumber = entityToMapTo.SerialNumber,
                 VIN = deviceVIN
             };
+            if (entityToMapTo.CustomProperties != null && entityToMapTo.CustomProperties.Count > 0)
+            {
+                var jsonSettings = new JsonSerializerSettings
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    Converters = new List<JsonConverter> { new GeotabIdJsonConverter() },
+                    Formatting = Formatting.Indented
+                };
+                dbStgDevice2.CustomProperties = JsonConvert.SerializeObject(entityToMapTo.CustomProperties, jsonSettings);
+            }
             if (entityToMapTo.Groups != null && entityToMapTo.Groups.Count > 0)
             {
                 dbStgDevice2.Groups = GetDeviceGroupsJSON(entityToMapTo.Groups);
             }
-            // Until Trailer Ids have been fully migrated to Device Ids from the perspective of other enity types such as DVIRLog, it will be be necessary to use TmpTrailerId as the only possible way to associate Traler Id with Device Id. 
+            // Until Trailer Ids have been fully migrated to Device Ids from the perspective of other enity types such as DVIRLog, it will be be necessary to use TmpTrailerId as the only possible way to associate Traler Id with Device Id.
             if (entityToMapTo.TmpTrailerId != null)
             {
                 dbStgDevice2.TmpTrailerGeotabId = entityToMapTo.TmpTrailerId.ToString();

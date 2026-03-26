@@ -18,6 +18,7 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ using System.Threading.Tasks;
 namespace MyGeotabAPIAdapter.Services
 {
     /// <summary>
-    /// A <see cref="BackgroundService"/> that extracts <see cref="FaultData"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database. 
+    /// A <see cref="BackgroundService"/> that extracts <see cref="FaultData"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database.
     /// </summary>
     class FaultDataProcessor2 : BackgroundService
     {
@@ -58,6 +59,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
+        readonly IUnknownDiagnosticIdTracker unknownDiagnosticIdTracker;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -65,7 +67,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="FaultDataProcessor2"/> class.
         /// </summary>
-        public FaultDataProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<FaultDataProcessor2> awaiter, IDbFaultData2DbEntityMetadata2EntityMapper dbFaultData2DbEntityMetadata2EntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister, IGenericEntityPersister<DbFaultData2> dbFaultData2EntityPersister, IGenericEntityPersister<DbFaultDataLocation2> dbFaultDataLocation2EntityPersister, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGenericGeotabObjectFeeder<FaultData> faultDataGeotabObjectFeeder, IGenericGeotabObjectHydrator<Controller> controllerGeotabObjectHydrator, IGenericGeotabObjectHydrator<FailureMode> failureModeGeotabObjectHydrator, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDiagnosticFilterer geotabDiagnosticFilterer, IGeotabFaultDataDbFaultData2ObjectMapper geotabFaultDataDbFaultData2ObjectMapper, IGeotabIdConverter geotabIdConverter, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public FaultDataProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<FaultDataProcessor2> awaiter, IDbFaultData2DbEntityMetadata2EntityMapper dbFaultData2DbEntityMetadata2EntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister, IGenericEntityPersister<DbFaultData2> dbFaultData2EntityPersister, IGenericEntityPersister<DbFaultDataLocation2> dbFaultDataLocation2EntityPersister, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGenericGeotabObjectFeeder<FaultData> faultDataGeotabObjectFeeder, IGenericGeotabObjectHydrator<Controller> controllerGeotabObjectHydrator, IGenericGeotabObjectHydrator<FailureMode> failureModeGeotabObjectHydrator, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDiagnosticFilterer geotabDiagnosticFilterer, IGeotabFaultDataDbFaultData2ObjectMapper geotabFaultDataDbFaultData2ObjectMapper, IGeotabIdConverter geotabIdConverter, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IUnknownDiagnosticIdTracker unknownDiagnosticIdTracker, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
@@ -86,6 +88,7 @@ namespace MyGeotabAPIAdapter.Services
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
+            this.unknownDiagnosticIdTracker = unknownDiagnosticIdTracker;
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -115,7 +118,7 @@ namespace MyGeotabAPIAdapter.Services
             while (!stoppingToken.IsCancellationRequested)
             {
                 // Wait if necessary.
-                var prerequisiteServices = new List<AdapterService> 
+                var prerequisiteServices = new List<AdapterService>
                 {
                     AdapterService.DatabaseMaintenanceService2,
                     AdapterService.ControllerProcessor2,
@@ -181,6 +184,8 @@ namespace MyGeotabAPIAdapter.Services
                             }
 
                             // Map the FaultData objects to DbFaultData2 entities.
+                            // Phase 1: Attempt cache lookup for all records; defer any with unknown diagnostics.
+                            var deferredFaultDatas = new List<(FaultData faultData, long faultDataDeviceId, long? faultDataDismissUserId)>();
                             foreach (var faultData in filteredFaultDatas)
                             {
                                 long? faultDataDeviceId = null;
@@ -222,7 +227,7 @@ namespace MyGeotabAPIAdapter.Services
                                     }
                                 }
 
-                                // Get the id of the record in the DiagnosticIds2 database table that corresponds with the faultData.Diagnostic. Diagnostic Ids are mostly GUIDs, but there may be some that are "ShimIds" that don't have an underlying GUID. For efficiency, where possible, the dbDiagnosticId2ObjectCache is queried using the GUID version of the Id. Otherwise, the "GuidString" is used.
+                                // Check for NoDiagnostic (not a cache miss — legitimately invalid data).
                                 var faultDataDiagnostic = faultData.Diagnostic;
                                 if (faultDataDiagnostic != null)
                                 {
@@ -232,39 +237,42 @@ namespace MyGeotabAPIAdapter.Services
                                         continue;
                                     }
                                 }
-                                var faultDataDiagnosticId = faultDataDiagnostic.Id;
-                                var faultDataDiagnosticGeotabIdType = geotabIdConverter.GetGeotabIdType(faultDataDiagnosticId);
-                                long? faultDataDiagnosticDbId = null;
-                                if (faultDataDiagnosticGeotabIdType == GeotabIdType.GuidId)
-                                {
-                                    var faultDataDiagnosticGuid = geotabIdConverter.ToGuid(faultDataDiagnosticId);
-                                    faultDataDiagnosticDbId = await dbDiagnosticId2ObjectCache.GetObjectIdByGeotabGUIDAsync(faultDataDiagnosticGuid);
-                                }
-                                else if (faultDataDiagnosticGeotabIdType == GeotabIdType.NamedGuidId || faultDataDiagnosticGeotabIdType == GeotabIdType.ShimId)
-                                {
-                                    var faultDataDiagnosticGuidString = geotabIdConverter.ToGuidString(faultDataDiagnosticId);
-                                    faultDataDiagnosticDbId = await dbDiagnosticId2ObjectCache.GetObjectIdByGeotabGUIDStringAsync(faultDataDiagnosticGuidString);
-                                }
 
+                                var faultDataDiagnosticDbId = await TryResolveDiagnosticDbIdAsync(faultData.Diagnostic.Id);
                                 if (faultDataDiagnosticDbId == null)
                                 {
-                                    logger.Warn($"Could not process {nameof(FaultData)} with GeotabId '{faultData.Id}' because a {nameof(DbDiagnosticId2)} with a {nameof(DbDiagnosticId2.GeotabId)} matching the {nameof(FaultData.Diagnostic.Id)} could not be found.");
+                                    deferredFaultDatas.Add((faultData, (long)faultDataDeviceId, faultDataDismissUserId));
                                     continue;
                                 }
+                                MapFaultDataToDbEntities(faultData, (long)faultDataDeviceId, (long)faultDataDiagnosticDbId, faultDataDismissUserId, dbFaultData2sToPersist, dbFaultDataLocation2sToPersist);
+                            }
 
-                                var dbFaultData2 = geotabFaultDataDbFaultData2ObjectMapper.CreateEntity(faultData, (long)faultDataDeviceId, (long)faultDataDiagnosticDbId, faultDataDismissUserId, adapterConfiguration.PopulateEffectOnComponentAndRecommendation);
-                                dbFaultData2sToPersist.Add(dbFaultData2);
+                            // Phase 2: If any records were deferred, force a DB cache refresh and retry.
+                            if (deferredFaultDatas.Count > 0)
+                            {
+                                logger.Debug($"{deferredFaultDatas.Count} {nameof(FaultData)} record(s) deferred due to unknown diagnostic IDs. Forcing DB cache refresh and retrying.");
+                                await dbDiagnosticId2ObjectCache.UpdateAsync(true);
 
-                                DbFaultDataLocation2 dbFaultDataLocation2 = new()
-                                { 
-                                    id = dbFaultData2.id,
-                                    DeviceId = dbFaultData2.DeviceId,
-                                    DateTime = dbFaultData2.DateTime,
-                                    DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert,
-                                    LongLatProcessed = false,
-                                    RecordLastChangedUtc = dbFaultData2.RecordCreationTimeUtc
-                                };
-                                dbFaultDataLocation2sToPersist.Add(dbFaultDataLocation2);
+                                var stillUnresolvedDiagnosticIdStrings = new List<string>();
+                                foreach (var (faultData, faultDataDeviceId, faultDataDismissUserId) in deferredFaultDatas)
+                                {
+                                    var faultDataDiagnosticId = faultData.Diagnostic.Id;
+                                    var faultDataDiagnosticDbId = await TryResolveDiagnosticDbIdAsync(faultDataDiagnosticId);
+                                    if (faultDataDiagnosticDbId == null)
+                                    {
+                                        logger.Warn($"Could not process {nameof(FaultData)} with GeotabId '{faultData.Id}' because a {nameof(DbDiagnosticId2)} with a {nameof(DbDiagnosticId2.GeotabId)} matching the {nameof(FaultData.Diagnostic)}.{nameof(FaultData.Diagnostic.Id)} '{faultDataDiagnosticId}' could not be found (after forced cache refresh). Record will be permanently skipped for this batch.");
+                                        stillUnresolvedDiagnosticIdStrings.Add(geotabIdConverter.ToGuidString(faultDataDiagnosticId));
+                                        continue;
+                                    }
+                                    logger.Debug($"{nameof(FaultData)} with GeotabId '{faultData.Id}' resolved on retry after forced DB cache refresh.");
+                                    MapFaultDataToDbEntities(faultData, faultDataDeviceId, (long)faultDataDiagnosticDbId, faultDataDismissUserId, dbFaultData2sToPersist, dbFaultDataLocation2sToPersist);
+                                }
+
+                                // Register still-unresolved diagnostic IDs for out-of-cycle DiagnosticProcessor2 sync.
+                                if (stillUnresolvedDiagnosticIdStrings.Count > 0)
+                                {
+                                    unknownDiagnosticIdTracker.RegisterUnknownDiagnosticIdStrings(stillUnresolvedDiagnosticIdStrings);
+                                }
                             }
                         }
 
@@ -387,6 +395,45 @@ namespace MyGeotabAPIAdapter.Services
             }
 
             await Task.WhenAll(dbObjectCacheInitializationAndUpdateTasks);
+        }
+
+        /// <summary>
+        /// Maps a <see cref="FaultData"/> object to <see cref="DbFaultData2"/> and <see cref="DbFaultDataLocation2"/> entities and adds them to the respective lists.
+        /// </summary>
+        void MapFaultDataToDbEntities(FaultData faultData, long faultDataDeviceId, long faultDataDiagnosticDbId, long? faultDataDismissUserId, List<DbFaultData2> dbFaultData2sToPersist, List<DbFaultDataLocation2> dbFaultDataLocation2sToPersist)
+        {
+            var dbFaultData2 = geotabFaultDataDbFaultData2ObjectMapper.CreateEntity(faultData, faultDataDeviceId, faultDataDiagnosticDbId, faultDataDismissUserId, adapterConfiguration.PopulateEffectOnComponentAndRecommendation);
+            dbFaultData2sToPersist.Add(dbFaultData2);
+
+            DbFaultDataLocation2 dbFaultDataLocation2 = new()
+            {
+                id = dbFaultData2.id,
+                DeviceId = dbFaultData2.DeviceId,
+                DateTime = dbFaultData2.DateTime,
+                DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert,
+                LongLatProcessed = false,
+                RecordLastChangedUtc = dbFaultData2.RecordCreationTimeUtc
+            };
+            dbFaultDataLocation2sToPersist.Add(dbFaultDataLocation2);
+        }
+
+        /// <summary>
+        /// Attempts to resolve the database ID for a diagnostic from the <see cref="dbDiagnosticId2ObjectCache"/>. Returns <c>null</c> if the diagnostic is not found in the cache.
+        /// </summary>
+        async Task<long?> TryResolveDiagnosticDbIdAsync(Id diagnosticId)
+        {
+            var diagnosticGeotabIdType = geotabIdConverter.GetGeotabIdType(diagnosticId);
+            if (diagnosticGeotabIdType == GeotabIdType.GuidId)
+            {
+                var diagnosticGuid = geotabIdConverter.ToGuid(diagnosticId);
+                return await dbDiagnosticId2ObjectCache.GetObjectIdByGeotabGUIDAsync(diagnosticGuid);
+            }
+            else if (diagnosticGeotabIdType == GeotabIdType.NamedGuidId || diagnosticGeotabIdType == GeotabIdType.ShimId)
+            {
+                var diagnosticGuidString = geotabIdConverter.ToGuidString(diagnosticId);
+                return await dbDiagnosticId2ObjectCache.GetObjectIdByGeotabGUIDStringAsync(diagnosticGuidString);
+            }
+            return null;
         }
 
         /// <summary>

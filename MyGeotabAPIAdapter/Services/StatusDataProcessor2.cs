@@ -1,4 +1,5 @@
-﻿using Geotab.Checkmate.ObjectModel.Engine;
+﻿using Geotab.Checkmate.ObjectModel;
+using Geotab.Checkmate.ObjectModel.Engine;
 using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
@@ -16,6 +17,7 @@ using Polly;
 using Polly.Retry;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +25,7 @@ using System.Threading.Tasks;
 namespace MyGeotabAPIAdapter.Services
 {
     /// <summary>
-    /// A <see cref="BackgroundService"/> that extracts <see cref="StatusData"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database. 
+    /// A <see cref="BackgroundService"/> that extracts <see cref="StatusData"/> objects from a MyGeotab database and inserts/updates corresponding records in the Adapter database.
     /// </summary>
     class StatusDataProcessor2 : BackgroundService
     {
@@ -55,6 +57,7 @@ namespace MyGeotabAPIAdapter.Services
         readonly IMyGeotabAPIHelper myGeotabAPIHelper;
         readonly IServiceTracker<DbOServiceTracking2> serviceTracker;
         readonly IStateMachine2<DbMyGeotabVersionInfo2> stateMachine;
+        readonly IUnknownDiagnosticIdTracker unknownDiagnosticIdTracker;
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -62,7 +65,7 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="StatusDataProcessor2"/> class.
         /// </summary>
-        public StatusDataProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<StatusDataProcessor2> awaiter, IDbStatusData2DbEntityMetadata2EntityMapper dbStatusData2DbEntityMetadata2EntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister, IGenericEntityPersister<DbStatusData2> dbStatusData2EntityPersister, IGenericEntityPersister<DbStatusDataLocation2> dbStatusDataLocation2EntityPersister, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDiagnosticFilterer geotabDiagnosticFilterer, IGeotabIdConverter geotabIdConverter, IGenericGeotabObjectFeeder<StatusData> statusDataGeotabObjectFeeder, IGeotabStatusDataDbStatusData2ObjectMapper geotabStatusDataDbStatusData2ObjectMapper, IMinimumIntervalSampler<StatusData> minimumIntervalSampler, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+        public StatusDataProcessor2(IAdapterConfiguration adapterConfiguration, IAdapterEnvironment<DbOServiceTracking2> adapterEnvironment, IBackgroundServiceAwaiter<StatusDataProcessor2> awaiter, IDbStatusData2DbEntityMetadata2EntityMapper dbStatusData2DbEntityMetadata2EntityMapper, IExceptionHelper exceptionHelper, IGenericEntityPersister<DbEntityMetadata2> dbEntityMetadata2EntityPersister, IGenericEntityPersister<DbStatusData2> dbStatusData2EntityPersister, IGenericEntityPersister<DbStatusDataLocation2> dbStatusDataLocation2EntityPersister, IGenericGeotabGUIDCacheableDbObjectCache2<DbDiagnosticId2, AdapterDatabaseUnitOfWorkContext> dbDiagnosticId2ObjectCache, IGeotabDeviceFilterer geotabDeviceFilterer, IGeotabDiagnosticFilterer geotabDiagnosticFilterer, IGeotabIdConverter geotabIdConverter, IGenericGeotabObjectFeeder<StatusData> statusDataGeotabObjectFeeder, IGeotabStatusDataDbStatusData2ObjectMapper geotabStatusDataDbStatusData2ObjectMapper, IMinimumIntervalSampler<StatusData> minimumIntervalSampler, IMyGeotabAPIHelper myGeotabAPIHelper, IServiceTracker<DbOServiceTracking2> serviceTracker, IStateMachine2<DbMyGeotabVersionInfo2> stateMachine, IUnknownDiagnosticIdTracker unknownDiagnosticIdTracker, IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterEnvironment = adapterEnvironment;
@@ -82,6 +85,7 @@ namespace MyGeotabAPIAdapter.Services
             this.myGeotabAPIHelper = myGeotabAPIHelper;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
+            this.unknownDiagnosticIdTracker = unknownDiagnosticIdTracker;
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
@@ -166,45 +170,45 @@ namespace MyGeotabAPIAdapter.Services
                             filteredStatusDatas = await minimumIntervalSampler.ApplyMinimumIntervalAsync(cancellationTokenSource, filteredStatusDatas);
 
                             // Map the filtered StatusDatas to DbStatusData2s.
+                            // Phase 1: Attempt cache lookup for all records; defer any with unknown diagnostics.
+                            var deferredStatusDatas = new List<StatusData>();
                             foreach (var statusData in filteredStatusDatas)
                             {
-                                var statusDataDeviceId = geotabIdConverter.ToLong(statusData.Device.Id);
-
-                                // Get the id of the record in the DiagnosticIds2 database table that corresponds with the statusData.Diagnostic. Diagnostic Ids are mostly GUIDs, but there may be some that are "ShimIds" that don't have an underlying GUID. For efficiency, where possible, the dbDiagnosticId2ObjectCache is queried using the GUID version of the Id. Otherwise, the "GuidString" is used.
-                                var statusDataDiagnostic = statusData.Diagnostic;
-                                var statusDataDiagnosticId = statusDataDiagnostic.Id;
-                                var statusDataDiagnosticGeotabIdType = geotabIdConverter.GetGeotabIdType(statusDataDiagnosticId);
-                                long? statusDataDiagnosticDbId = null;
-                                if (statusDataDiagnosticGeotabIdType == GeotabIdType.GuidId)
-                                {
-                                    var statusDataDiagnosticGuid = geotabIdConverter.ToGuid(statusDataDiagnosticId);
-                                    statusDataDiagnosticDbId = await dbDiagnosticId2ObjectCache.GetObjectIdByGeotabGUIDAsync(statusDataDiagnosticGuid);
-                                }
-                                else if (statusDataDiagnosticGeotabIdType == GeotabIdType.NamedGuidId || statusDataDiagnosticGeotabIdType == GeotabIdType.ShimId)
-                                {
-                                    var statusDataDiagnosticGuidString = geotabIdConverter.ToGuidString(statusDataDiagnosticId);
-                                    statusDataDiagnosticDbId = await dbDiagnosticId2ObjectCache.GetObjectIdByGeotabGUIDStringAsync(statusDataDiagnosticGuidString);
-                                }
-  
+                                var statusDataDiagnosticDbId = await TryResolveDiagnosticDbIdAsync(statusData.Diagnostic.Id);
                                 if (statusDataDiagnosticDbId == null)
                                 {
-                                    logger.Warn($"Could not process {nameof(StatusData)} with GeotabId {statusData.Id}' because a {nameof(DbDiagnosticId2)} with a {nameof(DbDiagnosticId2.GeotabId)} matching the {nameof(StatusData.Diagnostic.Id)} could not be found.");
+                                    deferredStatusDatas.Add(statusData);
                                     continue;
                                 }
+                                MapStatusDataToDbEntities(statusData, (long)statusDataDiagnosticDbId, dbStatusData2sToPersist, dbStatusDataLocation2sToPersist);
+                            }
 
-                                var dbStatusData2 = geotabStatusDataDbStatusData2ObjectMapper.CreateEntity(statusData, statusDataDeviceId, (long)statusDataDiagnosticDbId);
-                                dbStatusData2sToPersist.Add(dbStatusData2);
+                            // Phase 2: If any records were deferred, force a DB cache refresh and retry.
+                            if (deferredStatusDatas.Count > 0)
+                            {
+                                logger.Debug($"{deferredStatusDatas.Count} {nameof(StatusData)} record(s) deferred due to unknown diagnostic IDs. Forcing DB cache refresh and retrying.");
+                                await dbDiagnosticId2ObjectCache.UpdateAsync(true);
 
-                                DbStatusDataLocation2 dbStatusDataLocation2 = new()
-                                { 
-                                    id = dbStatusData2.id,
-                                    DeviceId = dbStatusData2.DeviceId,
-                                    DateTime = dbStatusData2.DateTime,
-                                    DatabaseWriteOperationType  = Common.DatabaseWriteOperationType.Insert,
-                                    LongLatProcessed = false,
-                                    RecordLastChangedUtc = dbStatusData2.RecordCreationTimeUtc
-                                };
-                                dbStatusDataLocation2sToPersist.Add(dbStatusDataLocation2);
+                                var stillUnresolvedDiagnosticIdStrings = new List<string>();
+                                foreach (var statusData in deferredStatusDatas)
+                                {
+                                    var statusDataDiagnosticId = statusData.Diagnostic.Id;
+                                    var statusDataDiagnosticDbId = await TryResolveDiagnosticDbIdAsync(statusDataDiagnosticId);
+                                    if (statusDataDiagnosticDbId == null)
+                                    {
+                                        logger.Warn($"Could not process {nameof(StatusData)} with GeotabId '{statusData.Id}' because a {nameof(DbDiagnosticId2)} with a {nameof(DbDiagnosticId2.GeotabId)} matching the {nameof(StatusData.Diagnostic)}.{nameof(StatusData.Diagnostic.Id)} '{statusDataDiagnosticId}' could not be found (after forced cache refresh). Record will be permanently skipped for this batch.");
+                                        stillUnresolvedDiagnosticIdStrings.Add(geotabIdConverter.ToGuidString(statusDataDiagnosticId));
+                                        continue;
+                                    }
+                                    logger.Debug($"{nameof(StatusData)} with GeotabId '{statusData.Id}' resolved on retry after forced DB cache refresh.");
+                                    MapStatusDataToDbEntities(statusData, (long)statusDataDiagnosticDbId, dbStatusData2sToPersist, dbStatusDataLocation2sToPersist);
+                                }
+
+                                // Register still-unresolved diagnostic IDs for out-of-cycle DiagnosticProcessor2 sync.
+                                if (stillUnresolvedDiagnosticIdStrings.Count > 0)
+                                {
+                                    unknownDiagnosticIdTracker.RegisterUnknownDiagnosticIdStrings(stillUnresolvedDiagnosticIdStrings);
+                                }
                             }
                         }
 
@@ -328,6 +332,46 @@ namespace MyGeotabAPIAdapter.Services
             }
 
             await Task.WhenAll(dbObjectCacheInitializationAndUpdateTasks);
+        }
+
+        /// <summary>
+        /// Maps a <see cref="StatusData"/> object to <see cref="DbStatusData2"/> and <see cref="DbStatusDataLocation2"/> entities and adds them to the respective lists.
+        /// </summary>
+        void MapStatusDataToDbEntities(StatusData statusData, long diagnosticDbId, List<DbStatusData2> dbStatusData2sToPersist, List<DbStatusDataLocation2> dbStatusDataLocation2sToPersist)
+        {
+            var statusDataDeviceId = geotabIdConverter.ToLong(statusData.Device.Id);
+            var dbStatusData2 = geotabStatusDataDbStatusData2ObjectMapper.CreateEntity(statusData, statusDataDeviceId, diagnosticDbId);
+            dbStatusData2sToPersist.Add(dbStatusData2);
+
+            DbStatusDataLocation2 dbStatusDataLocation2 = new()
+            {
+                id = dbStatusData2.id,
+                DeviceId = dbStatusData2.DeviceId,
+                DateTime = dbStatusData2.DateTime,
+                DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert,
+                LongLatProcessed = false,
+                RecordLastChangedUtc = dbStatusData2.RecordCreationTimeUtc
+            };
+            dbStatusDataLocation2sToPersist.Add(dbStatusDataLocation2);
+        }
+
+        /// <summary>
+        /// Attempts to resolve the database ID for a diagnostic from the <see cref="dbDiagnosticId2ObjectCache"/>. Returns <c>null</c> if the diagnostic is not found in the cache.
+        /// </summary>
+        async Task<long?> TryResolveDiagnosticDbIdAsync(Id diagnosticId)
+        {
+            var diagnosticGeotabIdType = geotabIdConverter.GetGeotabIdType(diagnosticId);
+            if (diagnosticGeotabIdType == GeotabIdType.GuidId)
+            {
+                var diagnosticGuid = geotabIdConverter.ToGuid(diagnosticId);
+                return await dbDiagnosticId2ObjectCache.GetObjectIdByGeotabGUIDAsync(diagnosticGuid);
+            }
+            else if (diagnosticGeotabIdType == GeotabIdType.NamedGuidId || diagnosticGeotabIdType == GeotabIdType.ShimId)
+            {
+                var diagnosticGuidString = geotabIdConverter.ToGuidString(diagnosticId);
+                return await dbDiagnosticId2ObjectCache.GetObjectIdByGeotabGUIDStringAsync(diagnosticGuidString);
+            }
+            return null;
         }
 
         /// <summary>

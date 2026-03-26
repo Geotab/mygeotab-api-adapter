@@ -86,6 +86,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IMessageLogger, MessageLogger>()
                         .AddSingleton<IMyGeotabAPIHelper, MyGeotabAPIHelper>()
                         .AddTransient<IStringHelper, StringHelper>()
+                        .AddSingleton<IUnknownDiagnosticIdTracker, UnknownDiagnosticIdTracker>()
 
                         // Models for Dependency Injection:
                         .AddTransient<DbDevice2>()
@@ -150,6 +151,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGeotabFuelAndEnergyUsedDbStgFuelAndEnergyUsed2ObjectMapper, GeotabFuelAndEnergyUsedDbStgFuelAndEnergyUsed2ObjectMapper>()
                         .AddTransient<IGeotabGroupDbStgGroup2ObjectMapper, GeotabGroupDbStgGroup2ObjectMapper>()
                         .AddTransient<IGeotabFaultDataDbFaultData2ObjectMapper, GeotabFaultDataDbFaultData2ObjectMapper>()
+                        .AddTransient<IGeotabAuditDbAuditLog2ObjectMapper, GeotabAuditDbAuditLog2ObjectMapper>()
                         .AddTransient<IGeotabLogRecordDbLogRecord2ObjectMapper, GeotabLogRecordDbLogRecord2ObjectMapper>()
                         .AddTransient<IGeotabRuleDbStgRule2ObjectMapper, GeotabRuleDbStgRule2ObjectMapper>()
                         .AddTransient<IGeotabStatusDataDbStatusData2ObjectMapper, GeotabStatusDataDbStatusData2ObjectMapper>()
@@ -179,6 +181,7 @@ namespace MyGeotabAPIAdapter
                         .AddTransient<IGenericEntityPersister<DbGroup2>, GenericEntityPersister<DbGroup2>>()
                         .AddTransient<IGenericEntityPersister<DbFaultData2>, GenericEntityPersister<DbFaultData2>>()
                         .AddTransient<IGenericEntityPersister<DbFaultDataLocation2>, GenericEntityPersister<DbFaultDataLocation2>>()
+                        .AddTransient<IGenericEntityPersister<DbAuditLog2>, GenericEntityPersister<DbAuditLog2>>()
                         .AddTransient<IGenericEntityPersister<DbLogRecord2>, GenericEntityPersister<DbLogRecord2>>()
                         .AddTransient<IGenericEntityPersister<DbMyGeotabVersionInfo2>, GenericEntityPersister<DbMyGeotabVersionInfo2>>()
                         .AddTransient<IGenericEntityPersister<DbMyGeotabVersionInfo>, GenericEntityPersister<DbMyGeotabVersionInfo>>()
@@ -249,6 +252,7 @@ namespace MyGeotabAPIAdapter
                         .AddSingleton<IGenericGeotabObjectCacher<ZoneType>, GenericGeotabObjectCacher<ZoneType>>()
 
                         // Geotab Object Feeders:
+                        .AddSingleton<IGenericGeotabObjectFeeder<Audit>, GenericGeotabObjectFeeder<Audit>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<Geotab.Checkmate.ObjectModel.BinaryData>, GenericGeotabObjectFeeder<Geotab.Checkmate.ObjectModel.BinaryData>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<ChargeEvent>, GenericGeotabObjectFeeder<ChargeEvent>>()
                         .AddSingleton<IGenericGeotabObjectFeeder<DebugData>, GenericGeotabObjectFeeder<DebugData>>()
@@ -351,6 +355,7 @@ namespace MyGeotabAPIAdapter
                     services
                     .AddHostedService<Orchestrator2>()
                     .AddHostedService<DatabaseMaintenanceService2>()
+                    .AddHostedService<AuditLogProcessor2>()
                     .AddHostedService<BinaryDataProcessor2>()
                     .AddHostedService<ChargeEventProcessor2>()
                     .AddHostedService<ControllerProcessor2>()
@@ -383,6 +388,7 @@ namespace MyGeotabAPIAdapter
                     services
                     .AddSingleton<IBackgroundServiceAwaiter<Orchestrator2>, BackgroundServiceAwaiter<Orchestrator2>>()
                     .AddSingleton<IBackgroundServiceAwaiter<DatabaseMaintenanceService2>, BackgroundServiceAwaiter<DatabaseMaintenanceService2>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<AuditLogProcessor2>, BackgroundServiceAwaiter<AuditLogProcessor2>>()
                     .AddSingleton<IBackgroundServiceAwaiter<BinaryDataProcessor2>, BackgroundServiceAwaiter<BinaryDataProcessor2>>()
                     .AddSingleton<IBackgroundServiceAwaiter<ChargeEventProcessor2>, BackgroundServiceAwaiter<ChargeEventProcessor2>>()
                     .AddSingleton<IBackgroundServiceAwaiter<ControllerProcessor2>, BackgroundServiceAwaiter<ControllerProcessor2>>()
