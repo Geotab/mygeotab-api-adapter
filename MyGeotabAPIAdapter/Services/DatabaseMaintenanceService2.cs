@@ -763,11 +763,8 @@ namespace MyGeotabAPIAdapter.Services
                     {
                         otherServicesPaused = true;
                     }
-                    else 
+                    else
                     {
-                        // Set this to true so that all subsequent iterations will actually pause for other services.
-                        initialPartitioningOnStartupCompleted = true;
-
                         // Trigger a pause and wait for the other services to pause before proceeding with database partition maintenance. If the other services don't pause within the timeout period, don't proceed with database partition maintenance.
                         otherServicesPaused = await PauseOtherServicesForDatabaseMaintenanceAsync(methodCancellationTokenSource, true);
                     }
@@ -826,6 +823,9 @@ namespace MyGeotabAPIAdapter.Services
                         Success = true,
                         RecordLastChangedUtc = DateTime.UtcNow
                     };
+
+                    // Mark initial partitioning as complete so that subsequent iterations will pause other services before executing maintenance and will also run Level 1 and Level 2 maintenance.
+                    initialPartitioningOnStartupCompleted = true;
 
                     methodCancellationToken.ThrowIfCancellationRequested();
                 }
