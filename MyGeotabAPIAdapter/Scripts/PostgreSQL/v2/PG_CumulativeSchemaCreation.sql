@@ -4675,6 +4675,13 @@ GRANT ALL ON FUNCTION public.pg_stat_statements_info(OUT dealloc bigint, OUT sta
 
 
 --
+-- Name: FUNCTION pgstattuple(regclass); Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT EXECUTE ON FUNCTION public.pgstattuple(regclass) TO geotabadapter_client;
+
+
+--
 -- Name: FUNCTION "spFaultData2WithLagLeadLongLatBatch"("MaxDaysPerBatch" integer, "MaxBatchSize" integer, "BufferMinutes" integer); Type: ACL; Schema: public; Owner: geotabadapter_client
 --
 
@@ -7922,9 +7929,20 @@ ALTER TABLE ONLY public."AuditLogs2"
 
 
 
+/*** [START] Version 4.1.2.0 Updates ***/
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- Grant execute permission on pgstattuple function to geotabadapter_client.
+-- Required for vwStatsForLevel2DBMaintenance (Level 2 database maintenance).
+-- GitHub issue #25.
+GRANT EXECUTE ON FUNCTION public.pgstattuple(regclass) TO geotabadapter_client;
+-- <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+/*** [END] Version 4.1.2.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO public."MiddlewareVersionInfo2" ("DatabaseVersion", "RecordCreationTimeUtc")
-VALUES ('4.1.0.0', timezone('UTC', NOW()));
+VALUES ('4.1.2.0', timezone('UTC', NOW()));
 /*** [END] Database Version Update ***/

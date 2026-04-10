@@ -7609,9 +7609,16 @@ GO
 
 
 
+/*** [START] Version 4.1.2.0 Updates ***/
+-- No SQL Server schema changes required. The pgstattuple GRANT fix
+-- (GitHub issue #25) applies to PostgreSQL only. Version bump for consistency.
+/*** [END] Version 4.1.2.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO [dbo].[MiddlewareVersionInfo2] ([DatabaseVersion], [RecordCreationTimeUtc])
-VALUES ('4.1.0.0', GETUTCDATE());
+VALUES ('4.1.2.0', GETUTCDATE());
 /*** [END] Database Version Update ***/
