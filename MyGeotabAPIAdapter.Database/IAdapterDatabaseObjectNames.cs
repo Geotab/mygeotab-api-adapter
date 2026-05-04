@@ -157,10 +157,6 @@ namespace MyGeotabAPIAdapter.Database
         /// </summary>
         string DbFailedDVIRDefectUpdatesTableName { get; }
 
-        /// <summary>
-        /// The name of the database table associated with <see cref="DbFailedOVDSServerCommand"/> entities.
-        /// </summary>
-        string DbFailedOVDSServerCommandTableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbFaultData"/> entities.
@@ -212,10 +208,6 @@ namespace MyGeotabAPIAdapter.Database
         /// </summary>
         string DbLogRecord2TableName { get; }
 
-        /// <summary>
-        /// The name of the database table associated with <see cref="DbOVDSServerCommand"/> entities.
-        /// </summary>
-        string DbOVDSServerCommandTableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbDBPartitionInfo2"/> entities.

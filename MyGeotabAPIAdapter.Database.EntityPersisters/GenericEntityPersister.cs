@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Dapper;
+using Dapper.Contrib.Extensions;
 using FastMember;
 using Microsoft.Data.SqlClient;
 using MyGeotabAPIAdapter.Database.DataAccess;
@@ -59,7 +60,9 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// <returns></returns>
         async Task BulkDeletePostgreSQLAsync(IDatabaseUnitOfWorkContext pgContext, IEnumerable<T> entitiesToDelete, string destinationTableName, bool useStandaloneDbConnection = false)
         {
-            var tempTableName = $"_MyGeotabAPIAdapter_BulkDelete_{destinationTableName}";
+            // Format table name for schema-qualified names
+            var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(destinationTableName, "npgsqlconnection");
+            var tempTableName = $"_MyGeotabAPIAdapter_BulkDelete_{destinationTableName.Replace(".", "_")}";
             NpgsqlConnection? npgSqlConnection = null;
             NpgsqlTransaction? npgSqlTransaction = null;
             string sql = "";
@@ -88,7 +91,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                 var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
                 var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                sql = $"CREATE TEMP TABLE \"{tempTableName}\" AS SELECT \"{EntityIdFieldName}\" FROM \"{destinationTableName}\" WHERE FALSE;";
+                sql = $"CREATE TEMP TABLE \"{tempTableName}\" AS SELECT \"{EntityIdFieldName}\" FROM {formattedTableName} WHERE FALSE;";
                 _ = await npgSqlConnection.ExecuteAsync(sql, null, npgSqlTransaction, timeoutSeconds);
             }, new Context());
 
@@ -114,7 +117,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                 var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
                 var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                sql = $"DELETE FROM \"{destinationTableName}\" D USING \"{tempTableName}\" T WHERE T.\"{EntityIdFieldName}\" = D.\"{EntityIdFieldName}\";";
+                sql = $"DELETE FROM {formattedTableName} D USING \"{tempTableName}\" T WHERE T.\"{EntityIdFieldName}\" = D.\"{EntityIdFieldName}\";";
                 deletedRecordCount = await npgSqlConnection.ExecuteAsync(sql, null, npgSqlTransaction, timeoutSeconds);
             }, new Context());
 
@@ -152,7 +155,9 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// <returns></returns>
         async Task BulkDeleteSqlServerAsync(IDatabaseUnitOfWorkContext sqlContext, IEnumerable<T> entitiesToDelete, string destinationTableName, bool useStandaloneDbConnection = false)
         {
-            var tempTableName = $"#_MyGeotabAPIAdapter_BulkDelete_{destinationTableName}";
+            // Format table name for schema-qualified names
+            var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(destinationTableName, "sqlconnection");
+            var tempTableName = $"#_MyGeotabAPIAdapter_BulkDelete_{destinationTableName.Replace(".", "_")}";
             var clusteredIndexName = $"IX_{tempTableName}";
             SqlConnection? sqlConnection = null;
             SqlTransaction? sqlTransaction = null;
@@ -182,7 +187,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                 var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
                 var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                sql = $"SELECT [{EntityIdFieldName}] INTO [{tempTableName}] FROM [{destinationTableName}] WHERE (1 = 0);";
+                sql = $"SELECT [{EntityIdFieldName}] INTO [{tempTableName}] FROM {formattedTableName} WHERE (1 = 0);";
                 _ = await sqlConnection.ExecuteAsync(sql, null, sqlTransaction, timeoutSeconds);
             }, new Context());
 
@@ -218,7 +223,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                 var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
                 var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                sql = $"DELETE D FROM [{destinationTableName}] D INNER JOIN [{tempTableName}] T ON (T.[{EntityIdFieldName}] = D.[{EntityIdFieldName}]);";
+                sql = $"DELETE D FROM {formattedTableName} D INNER JOIN [{tempTableName}] T ON (T.[{EntityIdFieldName}] = D.[{EntityIdFieldName}]);";
                 deletedRecordCount = await sqlConnection.ExecuteAsync(sql, null, sqlTransaction, timeoutSeconds);
             }, new Context());
 
@@ -256,6 +261,9 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// <returns></returns>
         async Task BulkInsertPostgreSQLAsync(IDatabaseUnitOfWorkContext pgContext, IEnumerable<T> entitiesToInsert, string destinationTableName, bool useStandaloneDbConnection = false)
         {
+            // Format table name for schema-qualified names
+            var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(destinationTableName, "npgsqlconnection");
+            
             // Setup a database command timeout and retry policy wrap.
             if (bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap == null)
             {
@@ -280,7 +288,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                     npgSqlConnection = await pgContext.GetStandaloneNpgsqlConnectionAsync();
                 }
 
-                using var writer = npgSqlConnection.BeginBinaryImport($"COPY \"{destinationTableName}\" ({string.Join(", ", insertableProperties.Select(p => $"\"{p}\""))}) FROM STDIN (FORMAT BINARY)");
+                using var writer = npgSqlConnection.BeginBinaryImport($"COPY {formattedTableName} ({string.Join(", ", insertableProperties.Select(p => $"\"{p}\""))}) FROM STDIN (FORMAT BINARY)");
                 foreach (var entity in entitiesToInsert)
                 {
                     writer.StartRow();
@@ -334,6 +342,9 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// <returns></returns>
         async Task BulkInsertSqlServerAsync(IDatabaseUnitOfWorkContext sqlContext, IEnumerable<T> entitiesToInsert, string destinationTableName, bool useStandaloneDbConnection = false)
         {
+            // Format table name for schema-qualified names
+            var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(destinationTableName, "sqlconnection");
+            
             // Setup a database command timeout and retry policy wrap.
             if (bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap == null)
             {
@@ -359,7 +370,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                 }
 
                 using var sqlBulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, sqlTransaction);
-                sqlBulkCopy.DestinationTableName = destinationTableName;
+                sqlBulkCopy.DestinationTableName = formattedTableName;
                 sqlBulkCopy.BatchSize = BulkOperationBatchSize;
                 sqlBulkCopy.BulkCopyTimeout = timeoutSeconds;
                 var insertableProperties = PropertyHelper.GetInsertablePropertyNames(typeof(T));
@@ -390,7 +401,9 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// <exception cref="Exception"></exception>
         public async Task BulkUpdatePostgreSQLAsync(IDatabaseUnitOfWorkContext pgContext, IEnumerable<T> entitiesToUpdate, string destinationTableName, bool useStandaloneDbConnection = false)
         {
-            var tempTableName = $"temp_{destinationTableName}";
+            // Format table name for schema-qualified names
+            var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(destinationTableName, "npgsqlconnection");
+            var tempTableName = $"temp_{destinationTableName.Replace(".", "_")}";
             var indexName = $"ix_{tempTableName}";
             NpgsqlConnection? npgSqlConnection = null;
             NpgsqlTransaction? npgSqlTransaction = null;
@@ -430,12 +443,12 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                 }
             }
 
-            sqlBuilder.Append($" FROM \"{destinationTableName}\" WHERE false;");
+            sqlBuilder.Append($" FROM {formattedTableName} WHERE false;");
             string sqlForTempTableCreate = sqlBuilder.ToString();
 
             // Build SQL statement required for update of the entitiesToUpdate in the destination table using the entities that will be bulk inserted into the temporary table.
             sqlBuilder = new StringBuilder();
-            sqlBuilder.Append($"UPDATE \"{destinationTableName}\" AS D ");
+            sqlBuilder.Append($"UPDATE {formattedTableName} AS D ");
             sqlBuilder.Append($"SET ");
             var firstPropertyAddedToSql = false;
             foreach (var insertableProperty in insertableProperties)
@@ -558,8 +571,11 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         /// <returns></returns>
         async Task BulkUpdateSqlServerAsync(IDatabaseUnitOfWorkContext sqlContext, IEnumerable<T> entitiesToUpdate, string destinationTableName, bool useStandaloneDbConnection = false)
         {
-            var tempTableName = $"#_MyGeotabAPIAdapter_BulkUpdate_{destinationTableName}";
+            // Format table name for schema-qualified names
+            var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(destinationTableName, "sqlconnection");
+            var tempTableName = $"#_MyGeotabAPIAdapter_BulkUpdate_{destinationTableName.Replace(".", "_")}";
             var clusteredIndexName = $"IX_{tempTableName}";
+            
             SqlConnection? sqlConnection = null;
             SqlTransaction? sqlTransaction = null;
             var sql = "";
@@ -597,7 +613,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                     sqlBuilder.Append($", [{property}]");
                 }
             }
-            sqlBuilder.Append($" INTO [{tempTableName}] FROM [{destinationTableName}] WHERE (1 = 0);");
+            sqlBuilder.Append($" INTO [{tempTableName}] FROM {formattedTableName} WHERE (1 = 0);");
             var sqlForTempTableInsert = sqlBuilder.ToString();
 
             // Build SQL statement required for update of the entitiesToUpdate in the destination table using the entities that will be bulk inserted into the temporary table.
@@ -617,7 +633,7 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
                     firstPropertyAddedToSql |= true;
                 }
             }
-            sqlBuilder.Append($" FROM [{destinationTableName}] D INNER JOIN [{tempTableName}] T ON (T.[{EntityIdFieldName}] = D.[{EntityIdFieldName}]);");
+            sqlBuilder.Append($" FROM {formattedTableName} D INNER JOIN [{tempTableName}] T ON (T.[{EntityIdFieldName}] = D.[{EntityIdFieldName}]);");
             var sqlForDestinationTableUpdate = sqlBuilder.ToString();
 
             // Create a temporary table.

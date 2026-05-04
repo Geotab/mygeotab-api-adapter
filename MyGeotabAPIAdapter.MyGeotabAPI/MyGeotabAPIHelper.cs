@@ -428,6 +428,50 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         }
 
         /// <inheritdoc/>
+        public async Task<Id> AddAsync<T>(T entity, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
+        {
+            ValidateTimeoutSeconds(timeoutSeconds);
+            SetAsyncPolicyWrapForMyGeotabAPICalls(timeoutSeconds);
+
+            // Obtain the type parameter type (for logging purposes).
+            Type typeParameterType = typeof(T);
+
+            Id result = null;
+            try
+            {
+                await asyncMyGeotabAPICallTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+                {
+                    using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                    {
+                        result = await MyGeotabAPI.CallAsync<Id>("Add", typeof(T), new { entity }, cancellationTokenSource.Token);
+                    }
+                }, new Context());
+            }
+            catch (OperationCanceledException exception)
+            {
+                throw new MyGeotabConnectionException($"MyGeotab API AddAsync call for type '{typeParameterType.Name}' did not return within the allowed time of {timeoutSeconds} seconds. This may be due to a loss of connectivity with the MyGeotab server.", exception);
+            }
+            catch (Exception exception)
+            {
+                // If the exception is related to connectivity, wrap it in a MyGeotabConnectionException. Otherwise, just pass it along.
+                if (exceptionHelper.ExceptionIsRelatedToMyGeotabConnectivityLoss(exception))
+                {
+                    throw new MyGeotabConnectionException("An exception occurred while attempting to add data to the Geotab API via CallAsync (Add).", exception);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            if (result != null)
+            {
+                return result;
+            }
+            throw new Exception($"AddAsync<T> method failed to return a result for entity type '{typeof(T).Name}'.");
+        }
+
+        /// <inheritdoc/>
         public async Task SetAsync<T>(T entity, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity
         {
             ValidateTimeoutSeconds(timeoutSeconds);

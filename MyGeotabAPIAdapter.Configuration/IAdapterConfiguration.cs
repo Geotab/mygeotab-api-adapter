@@ -5,7 +5,7 @@ namespace MyGeotabAPIAdapter.Configuration
     /// <summary>
     /// Interface for a class that reads (from appsettings.json) and stores application configuration settings. Intended for association with the MyGeotabAPIAdapter project.
     /// </summary>
-    public interface IAdapterConfiguration
+    public interface IAdapterConfiguration : IDatabaseConfiguration
     {
         /// <summary>
         /// The minimum number of seconds to wait between GetFeed() calls for <see cref="BinaryData"/> objects.
@@ -556,11 +556,6 @@ namespace MyGeotabAPIAdapter.Configuration
         /// Indicates whether the <c>Speed</c> column in the <c>StatusDataLocations2</c> table should be populated.
         /// </summary>
         bool StatusDataLocationServicePopulateSpeed { get; }
-
-        /// <summary>
-        /// The maximum number of seconds that a database <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a database connectivity issue and a <see cref="Database.DatabaseConnectionException"/> will be thrown.
-        /// </summary>
-        int TimeoutSecondsForDatabaseTasks { get; }
 
         /// <summary>
         /// The maximum number of seconds that a MyGeotab API call <see cref="System.Threading.Tasks.Task"/> or batch thereof can take to be completed before it is deemed that there is a MyGeotab connectivity issue and a <see cref="MyGeotabConnectionException"/> will be thrown.

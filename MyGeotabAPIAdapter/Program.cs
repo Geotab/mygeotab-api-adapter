@@ -118,6 +118,7 @@ namespace MyGeotabAPIAdapter
 
                         // Configuration:
                         .AddSingleton<IAdapterConfiguration, AdapterConfiguration>()
+                        .AddSingleton<IDatabaseConfiguration>(sp => sp.GetRequiredService<IAdapterConfiguration>())
                         .AddTransient<IAdapterDatabaseConnectionInfoContainer, AdapterDatabaseConnectionInfoContainer>()
                         .AddSingleton<IAdapterDatabaseObjectNames, AdapterDatabaseObjectNames>()
                         .AddTransient<IConfigurationHelper, ConfigurationHelper>()

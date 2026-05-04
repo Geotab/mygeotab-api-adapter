@@ -147,6 +147,37 @@ namespace MyGeotabAPIAdapter.Tests
         }
     }
 
+    /// <summary>
+    /// Test data for GetSqlForGetAllAsync with schema-qualified table names.
+    /// </summary>
+    public class GetSqlForGetAllAsync_SchemaQualifiedTableName_TestData : TheoryData<string, string, string, string, int?, DateTime?, string>
+    {
+        public GetSqlForGetAllAsync_SchemaQualifiedTableName_TestData()
+        {
+            // (tableName, keyColumnName, changedSinceColumnName, connectionProviderType, resultsLimit, changedSince, expectedSqlContains)
+
+            // PostgreSQL with schema-qualified table name
+            Add("gda.OServiceTracking", "id", null, "Npgsql", null, null,
+                "select * from \"gda\".\"OServiceTracking\"");
+
+            // PostgreSQL with simple table name
+            Add("OServiceTracking", "id", null, "Npgsql", null, null,
+                "select * from \"OServiceTracking\"");
+
+            // SQL Server with schema-qualified table name
+            Add("gda.OServiceTracking", "id", null, "Microsoft.Data.SqlClient", null, null,
+                "select * from \"gda\".\"OServiceTracking\"");
+
+            // PostgreSQL with results limit
+            Add("gda.OServiceTracking", "id", null, "Npgsql", 100, null,
+                "limit 100");
+
+            // SQL Server with results limit (uses TOP)
+            Add("gda.OServiceTracking", "id", null, "Microsoft.Data.SqlClient", 100, null,
+                "select top (100)");
+        }
+    }
+
     public class SqlMapperSqlBuilderTests
     {
         [Theory]
@@ -179,6 +210,159 @@ namespace MyGeotabAPIAdapter.Tests
                 (string, DynamicParameters) result = SqlMapperSqlBuilder.GetSqlForGetByParamAsync(tableName, keyColumnName, parms, changedSinceColumnName, connectionProviderType, resultsLimit, changedSince);
                 Assert.Equal(expectedOutput.Item1, result.Item1);
             }
+        }
+
+        /// <summary>
+        /// Tests that GetSqlForGetAllAsync generates SQL with properly formatted schema-qualified table names.
+        /// </summary>
+        [Theory]
+        [ClassData(typeof(GetSqlForGetAllAsync_SchemaQualifiedTableName_TestData))]
+        public void GetSqlForGetAllAsync_SchemaQualifiedTableName_GeneratesProperSql(
+            string tableName,
+            string keyColumnName,
+            string? changedSinceColumnName,
+            string connectionProviderType,
+            int? resultsLimit,
+            DateTime? changedSince,
+            string expectedSqlContains)
+        {
+            // Act
+            var result = SqlMapperSqlBuilder.GetSqlForGetAllAsync(
+                tableName,
+                keyColumnName,
+                changedSinceColumnName,
+                connectionProviderType,
+                resultsLimit,
+                changedSince);
+
+            // Assert
+            Assert.Contains(expectedSqlContains, result, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Tests that GetSqlForGetAllAsync generates proper ORDER BY clause with quoted column names.
+        /// </summary>
+        [Fact]
+        public void GetSqlForGetAllAsync_PostgreSQL_GeneratesOrderByWithQuotedColumnName()
+        {
+            // Arrange
+            var tableName = "gda.OServiceTracking";
+            var keyColumnName = "RecordLastChangedUtc";
+
+            // Act
+            var result = SqlMapperSqlBuilder.GetSqlForGetAllAsync(
+                tableName,
+                keyColumnName,
+                null,
+                "Npgsql",
+                null,
+                null);
+
+            // Assert
+            Assert.Contains("order by \"RecordLastChangedUtc\"", result);
+        }
+
+        /// <summary>
+        /// Tests that GetSqlForGetAllAsync generates proper WHERE clause for changedSince filter.
+        /// </summary>
+        [Fact]
+        public void GetSqlForGetAllAsync_WithChangedSince_GeneratesWhereClause()
+        {
+            // Arrange
+            var tableName = "OServiceTracking";
+            var keyColumnName = "id";
+            var changedSinceColumnName = "RecordLastChangedUtc";
+            var changedSince = new DateTime(2024, 1, 15, 10, 30, 0);
+
+            // Act
+            var result = SqlMapperSqlBuilder.GetSqlForGetAllAsync(
+                tableName,
+                keyColumnName,
+                changedSinceColumnName,
+                "Npgsql",
+                null,
+                changedSince);
+
+            // Assert
+            Assert.Contains("where \"RecordLastChangedUtc\"", result);
+            Assert.Contains("2024-01-15", result);
+        }
+
+        /// <summary>
+        /// Tests that GetSqlForGetByParamAsync generates SQL with properly formatted schema-qualified table names.
+        /// </summary>
+        [Fact]
+        public void GetSqlForGetByParamAsync_SchemaQualifiedTableName_GeneratesProperSql()
+        {
+            // Arrange
+            var tableName = "gda.OServiceTracking";
+            var keyColumnName = "id";
+            var parms = new { ServiceId = "MyService" };
+
+            // Act
+            var (sqlStatement, _) = SqlMapperSqlBuilder.GetSqlForGetByParamAsync(
+                tableName,
+                keyColumnName,
+                parms,
+                null,
+                "Npgsql",
+                null,
+                null);
+
+            // Assert
+            Assert.Contains("\"gda\".\"OServiceTracking\"", sqlStatement);
+        }
+
+        /// <summary>
+        /// Tests that GetSqlForGetByParamAsync generates proper SQL for SQL Server.
+        /// </summary>
+        [Fact]
+        public void GetSqlForGetByParamAsync_SqlServer_GeneratesProperSql()
+        {
+            // Arrange
+            var tableName = "dbo.OServiceTracking";
+            var keyColumnName = "id";
+            var parms = new { ServiceId = "MyService" };
+
+            // Act
+            var (sqlStatement, _) = SqlMapperSqlBuilder.GetSqlForGetByParamAsync(
+                tableName,
+                keyColumnName,
+                parms,
+                null,
+                "Microsoft.Data.SqlClient",
+                100,
+                null);
+
+            // Assert
+            Assert.Contains("select top (100)", sqlStatement, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Tests that GetSqlForGetByParamAsync includes dynamic parameters in the SQL.
+        /// </summary>
+        [Fact]
+        public void GetSqlForGetByParamAsync_WithParameters_IncludesParametersInSql()
+        {
+            // Arrange
+            var tableName = "OServiceTracking";
+            var keyColumnName = "id";
+            var parms = new { ServiceId = "TestService", AdapterVersion = "1.0.0" };
+
+            // Act
+            var (sqlStatement, dynParms) = SqlMapperSqlBuilder.GetSqlForGetByParamAsync(
+                tableName,
+                keyColumnName,
+                parms,
+                null,
+                "Npgsql",
+                null,
+                null);
+
+            // Assert
+            Assert.Contains("ServiceId = @ServiceId", sqlStatement);
+            Assert.Contains("AdapterVersion = @AdapterVersion", sqlStatement);
+            Assert.Contains("and", sqlStatement.ToLower());
         }
     }
 }

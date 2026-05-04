@@ -47,8 +47,6 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>", Scope = "member", Target = "~P:MyGeotabAPIAdapter.Database.Models.DbDriverChange.id")]
 [assembly: SuppressMessage("Design", "CA1050:Declare types in namespaces", Justification = "<Pending>", Scope = "type", Target = "~T:OracleAdapter")]
 [assembly: SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>", Scope = "member", Target = "~P:MyGeotabAPIAdapter.Database.Models.DbOProcessorTracking.id")]
-[assembly: SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>", Scope = "member", Target = "~P:MyGeotabAPIAdapter.Database.Models.Add_Ons.VSS.DbFailedOVDSServerCommand.id")]
-[assembly: SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>", Scope = "member", Target = "~P:MyGeotabAPIAdapter.Database.Models.Add_Ons.VSS.DbOVDSServerCommand.id")]
 [assembly: SuppressMessage("Style", "IDE0074:Use compound assignment", Justification = "<Pending>", Scope = "member", Target = "~M:MyGeotabAPIAdapter.Database.Caches.AdapterGenericDbObjectCache`1.UpdateAsync(System.Boolean)~System.Threading.Tasks.Task")]
 [assembly: SuppressMessage("Style", "IDE0074:Use compound assignment", Justification = "<Pending>", Scope = "member", Target = "~M:MyGeotabAPIAdapter.Database.Caches.GenericGeotabGUIDCacheableDbObjectCache2`1.UpdateAsync(System.Boolean)~System.Threading.Tasks.Task")]
 [assembly: SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>", Scope = "member", Target = "~M:MyGeotabAPIAdapter.Database.Caches.GenericGenericDbObjectCache`2.#ctor(`0,`1)")]

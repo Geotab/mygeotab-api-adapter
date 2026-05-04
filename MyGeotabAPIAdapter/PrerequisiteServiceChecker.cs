@@ -10,7 +10,7 @@ namespace MyGeotabAPIAdapter
     /// <summary>
     /// A class that handles checking whether prerequisite services are running.
     /// </summary>
-    internal class PrerequisiteServiceChecker<T> : IPrerequisiteServiceChecker<T> where T : IDbOServiceTracking
+    public class PrerequisiteServiceChecker<T> : IPrerequisiteServiceChecker<T> where T : IDbOServiceTracking
     {
         const int OrchestratorServiceInitializationCheckIntervalSeconds = 5;
 

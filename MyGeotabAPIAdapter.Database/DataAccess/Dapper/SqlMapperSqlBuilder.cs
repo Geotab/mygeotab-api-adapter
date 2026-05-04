@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Dapper;
+using Dapper.Contrib.Extensions;
 using System;
 using System.Text;
 
@@ -27,6 +28,9 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <returns></returns>
         public static string GetSqlForGetAllAsync(string tableName, string keyColumnName, string? changedSinceColumnName, string connectionProviderType, int? resultsLimit = null, DateTime? changedSince = null)
         {
+            // Format table name to handle schema-qualified names
+            var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(tableName);
+
             var whereChangedSincePortionOfSqlStatement = "";
             if (changedSince != null && changedSinceColumnName != null)
             {
@@ -47,18 +51,18 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             // If a resultsLimit is specified, apply the limit to the SQL statement based on the database provider type.
             if (resultsLimit == null || resultsLimit < 1)
             {
-                sqlStatement = $"select * from \"{tableName}\"{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\"";
+                sqlStatement = $"select * from {formattedTableName}{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\"";
             }
             else
             {
                 sqlStatement = connectionProviderType switch
                 {
                     ConnectionProviderTypeNpgsql =>
-                        $"select * from \"{tableName}\"{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\" limit {resultsLimit}",
+                        $"select * from {formattedTableName}{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\" limit {resultsLimit}",
                     ConnectionProviderTypeMicrosoftSqlClient or ConnectionProviderTypeSystemSqlClient =>
-                        $"select top ({resultsLimit}) * from \"{tableName}\"{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\"",
+                        $"select top ({resultsLimit}) * from {formattedTableName}{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\"",
                     ConnectionProviderTypeOracle =>
-                        $"select * from (select * from \"{tableName}\"{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\") where rownum <= {resultsLimit};",
+                        $"select * from (select * from {formattedTableName}{whereChangedSincePortionOfSqlStatement} order by \"{keyColumnName}\") where rownum <= {resultsLimit};",
                     _ => throw new NotImplementedException($"Support for the '{connectionProviderType}' connection provider type has not been implemented in this method."),
                 };
             }
@@ -78,6 +82,9 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         /// <returns></returns>
         public static (string sqlStatement, DynamicParameters dynParms) GetSqlForGetByParamAsync(string tableName, string keyColumnName, dynamic parms, string? changedSinceColumnName, string connectionProviderType, int? resultsLimit = null, DateTime? changedSince = null)
         {
+            // Format table name to handle schema-qualified names
+            var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(tableName);
+
             var whereChangedSincePortionOfSqlStatement = "where ";
             var sqlParameterChar = "@";
 
@@ -102,27 +109,27 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
             switch (connectionProviderType)
             {
                 case ConnectionProviderTypeNpgsql:
-                    sb.Append($"select * from \"{tableName}\" {whereChangedSincePortionOfSqlStatement} ");
+                    sb.Append($"select * from {formattedTableName} {whereChangedSincePortionOfSqlStatement} ");
                     break;
                 case ConnectionProviderTypeMicrosoftSqlClient:
                 case ConnectionProviderTypeSystemSqlClient:
                     if (resultsLimit == null || resultsLimit < 1)
                     {
-                        sb.Append($"select * from \"{tableName}\" {whereChangedSincePortionOfSqlStatement} ");
+                        sb.Append($"select * from {formattedTableName} {whereChangedSincePortionOfSqlStatement} ");
                     }
                     else
                     {
-                        sb.Append($"select top ({resultsLimit}) * from \"{tableName}\" {whereChangedSincePortionOfSqlStatement} ");
+                        sb.Append($"select top ({resultsLimit}) * from {formattedTableName} {whereChangedSincePortionOfSqlStatement} ");
                     }
                     break;
                 case ConnectionProviderTypeOracle:
                     if (resultsLimit == null || resultsLimit < 1)
                     {
-                        sb.Append($"select * from \"{tableName}\" {whereChangedSincePortionOfSqlStatement} ");
+                        sb.Append($"select * from {formattedTableName} {whereChangedSincePortionOfSqlStatement} ");
                     }
                     else
                     {
-                        sb.Append($"select * from (select * from \"{tableName}\" {whereChangedSincePortionOfSqlStatement} ");
+                        sb.Append($"select * from (select * from {formattedTableName} {whereChangedSincePortionOfSqlStatement} ");
                     }
                     break;
                 default:

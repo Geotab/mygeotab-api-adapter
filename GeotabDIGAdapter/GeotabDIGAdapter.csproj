@@ -1,0 +1,65 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>dotnet-GeotabDIGAdapter-974c532e-e158-438b-851e-7f495d95c710</UserSecretsId>
+	<RootNamespace>GeotabDIGAdapter</RootNamespace>
+	<Authors>Geotab Inc.</Authors>
+	<Product>Geotab DIG Adapter</Product>
+	<Description>A middleware solution designed to make it easier to push data into the Geotab platform via Geotab's Data Intake Gateway (DIG). Modify as required to meet individual solution objectives.</Description>
+	  <Copyright></Copyright>
+	  <Version>5.0.0.0</Version>
+	  <InformationalVersion>5.0.0.0</InformationalVersion>
+	  <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+	  <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Geotab.Checkmate.ObjectModel" Version="11.118.421" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.7" />
+	<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.7" />
+	<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.7" />
+	<PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.4" />
+	<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+	<PackageReference Include="NLog.Extensions.Logging" Version="6.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<Content Update="appsettings.json">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</Content>
+  </ItemGroup>
+
+  <ItemGroup>
+	<Content Remove="appsettings.Development.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<None Include="appsettings.Development.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Scripts\PostgreSQL\v2\" />
+    <Folder Include="Scripts\SQLServer\v2\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GeotabDIGAdapter.Core\GeotabDIGAdapter.Core.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Configuration\MyGeotabAPIAdapter.Configuration.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Database.EntityPersisters\MyGeotabAPIAdapter.Database.EntityPersisters.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Database\MyGeotabAPIAdapter.Database.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Exceptions\MyGeotabAPIAdapter.Exceptions.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.GeotabObjectMappers\MyGeotabAPIAdapter.GeotabObjectMappers.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Helpers\MyGeotabAPIAdapter.Helpers.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter.Logging\MyGeotabAPIAdapter.Logging.csproj" />
+    <ProjectReference Include="..\MyGeotabAPIAdapter\MyGeotabAPIAdapter.csproj" />
+  </ItemGroup>
+
+  <Target Name="CreateProjectFolders" BeforeTargets="Build">
+    <Message Importance="high" Text="Creating project folders on disk..." />
+    <MakeDir Directories="@(Folder)" />
+  </Target>
+
+</Project>

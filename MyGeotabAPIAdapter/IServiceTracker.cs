@@ -11,7 +11,7 @@ namespace MyGeotabAPIAdapter
     /// Interface for a class that helps manage <see cref="T"/> information for all <see cref="AdapterService"/>s.
     /// </summary>
     /// <typeparam name="T">The type of <see cref="IDbOServiceTracking"/> implementation to be used.</typeparam>
-    internal interface IServiceTracker<T> where T : IDbOServiceTracking
+    public interface IServiceTracker<T> where T : IDbOServiceTracking
     {
         /// <summary>
         /// A unique identifier assigned during instantiation. Intended for debugging purposes.

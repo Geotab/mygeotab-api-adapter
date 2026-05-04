@@ -5,7 +5,7 @@ namespace MyGeotabAPIAdapter
     /// <summary>
     /// A class that tracks the <see cref="Orchestrator"/> service.
     /// </summary>
-    internal class OrchestratorServiceTracker : IOrchestratorServiceTracker
+    public class OrchestratorServiceTracker : IOrchestratorServiceTracker
     {
         /// <inheritdoc/>
         public string Id { get; private set; }

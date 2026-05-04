@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Reflection.Emit;
 using Dapper;
+using Dapper.Contrib.Extensions;
 
 namespace Dapper.Contrib.Extensions
 {
@@ -345,13 +346,15 @@ namespace Dapper.Contrib.Extensions
         public static async Task<T> GetAsync<T>(this IDbConnection connection, dynamic id, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
         {
             var type = typeof(T);
+            var dbType = GetDatabaseTypeFromConnection(connection);
 
             if (!GetQueries.TryGetValue(type.TypeHandle, out string sql))
             {
                 var key = GetSingleKey<T>(nameof(GetAsync));
                 var name = GetTableName(type);
+                var (openQuote, closeQuote) = GetQuoteCharacters(dbType);
 
-                sql = $"select * from \"{name}\" where \"{key.Name}\" = \'@id\'";
+                sql = $"select * from {FormatTableNameForSql(name, dbType)} where {openQuote}{key.Name}{closeQuote} = @id";
                 GetQueries[type.TypeHandle] = sql;
             }
 
@@ -362,7 +365,7 @@ namespace Dapper.Contrib.Extensions
 
             if (type.IsInterface)
             {
-                var res = await connection.QueryAsync(sql, dynParms).Result.FirstOrDefault() as IDictionary<string, object>;
+                var res = (await connection.QueryAsync(sql, dynParms)).FirstOrDefault() as IDictionary<string, object>;
 
                 if (res == null)
                     return null;
@@ -388,7 +391,6 @@ namespace Dapper.Contrib.Extensions
             }
             else
             {
-                //obj = connection.Query<T>(sql, dynParms, transaction, commandTimeout: commandTimeout).FirstOrDefault();
                 var result = await connection.QueryAsync<T>(sql, dynParms, transaction, commandTimeout: commandTimeout);
                 obj = result.FirstOrDefault();
             }
@@ -537,6 +539,55 @@ namespace Dapper.Contrib.Extensions
             }
             return list;
         }
+        #endregion
+
+        #region Customizations
+        ///// <summary>
+        ///// Returns a collection of objects representing records in a database table that match the specified search criteria.
+        ///// </summary>
+        ///// <typeparam name="T">The type of entity to be used for representation of database records and for which CRUD operations are to be performed.</typeparam>
+        ///// <param name="connection">The database connection to be used to perform the subject operation.</param>
+        ///// <param name="parms">The dynamic parameters to be used comprise the WHERE clause of the subject operation.</param>
+        ///// <param name="transaction">The database transaction within which to perform the subject operation.</param>
+        ///// <param name="commandTimeout">The command timeout setting.</param>
+        ///// <returns></returns>
+        //public static IEnumerable<T> GetByParam<T>(this IDbConnection connection, dynamic parms, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
+        //{
+        //    var type = typeof(T);
+        //    string sqlStmt;
+
+        //    var name = GetTableName(type);
+        //    //ISqlAdapter adapter = GetFormatter(connection);
+        //    #region Customizations
+        //    //char sqlParameterChar = adapter.SqlParameterChar();
+
+        //    //Sunan
+        //    //string sqlParameterChar = ":";
+
+        //    string sqlParameterChar = "@";
+
+        //    #endregion
+        //    var sb = new StringBuilder();
+        //    sb.AppendFormat("SELECT * FROM {0} WHERE ", name);
+
+        //    var allProperties = parms.GetType().GetProperties();
+
+        //    var dynParms = new DynamicParameters();
+
+        //    for (var i = 0; i < allProperties.Length; i++)
+        //    {
+        //        // Create the SQL statement with where clause based on dynamic parameters
+        //        var property = allProperties[i];
+        //        sb.AppendFormat("{0} = {1}{2}", property.Name, sqlParameterChar, property.Name);
+        //        if (i < allProperties.Length - 1)
+        //            sb.AppendFormat(" and ");
+
+        //        // Create the DynamicParameters
+        //        dynParms.Add(String.Format("{0}{1}", sqlParameterChar, property.Name), property.GetValue(parms, null));
+        //    }
+        //    sqlStmt = sb.ToString();
+        //    return connection.Query<T>(sqlStmt, dynParms, transaction: transaction, commandTimeout: commandTimeout);
+        //}
         #endregion
 
         /// <summary>
@@ -856,8 +907,9 @@ namespace Dapper.Contrib.Extensions
         /// <returns>true if updated, false if not found or not modified (tracked entities)</returns>
         public static async Task<bool> UpdateAsync<T>(this IDbConnection connection, T entityToUpdate, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
         {
-
             string connectionProviderType = connection.GetType().Namespace;
+            var dbType = GetDatabaseTypeFromConnection(connection);
+
             if (connectionProviderType == "Oracle.ManagedDataAccess.Client")
             {
                 SqlMapper.AddTypeMap(typeof(bool), DbType.Int32);
@@ -888,7 +940,7 @@ namespace Dapper.Contrib.Extensions
                 }
             }
 
-            var keyProperties = KeyPropertiesCache(type).ToList();  //added ToList() due to issue #418, must work on a list copy
+            var keyProperties = KeyPropertiesCache(type).ToList();
             var explicitKeyProperties = ExplicitKeyPropertiesCache(type);
             if (keyProperties.Count == 0 && explicitKeyProperties.Count == 0)
                 throw new ArgumentException("Entity must have at least one [Key] or [ExplicitKey] property");
@@ -896,7 +948,7 @@ namespace Dapper.Contrib.Extensions
             var name = GetTableName(type);
 
             var sb = new StringBuilder();
-            sb.AppendFormat("update \"{0}\" set ", name);
+            sb.AppendFormat("update {0} set ", FormatTableNameForSql(name, dbType));
 
             var allProperties = TypePropertiesCache(type);
             keyProperties.AddRange(explicitKeyProperties);
@@ -908,7 +960,7 @@ namespace Dapper.Contrib.Extensions
             for (var i = 0; i < nonIdProps.Count; i++)
             {
                 var property = nonIdProps[i];
-                adapter.AppendColumnNameEqualsValue(sb, property.Name);  //fix for issue #336
+                adapter.AppendColumnNameEqualsValue(sb, property.Name);
                 if (i < nonIdProps.Count - 1)
                     sb.Append(", ");
             }
@@ -916,7 +968,7 @@ namespace Dapper.Contrib.Extensions
             for (var i = 0; i < keyProperties.Count; i++)
             {
                 var property = keyProperties[i];
-                adapter.AppendColumnNameEqualsValue(sb, property.Name);  //fix for issue #336
+                adapter.AppendColumnNameEqualsValue(sb, property.Name);
                 if (i < keyProperties.Count - 1)
                     sb.Append(" and ");
             }
@@ -995,6 +1047,8 @@ namespace Dapper.Contrib.Extensions
         public static async Task<bool> DeleteAsync<T>(this IDbConnection connection, T entityToDelete, IDbTransaction transaction = null, int? commandTimeout = null) where T : class
         {
             string connectionProviderType = connection.GetType().Namespace;
+            var dbType = GetDatabaseTypeFromConnection(connection);
+
             if (connectionProviderType == "Oracle.ManagedDataAccess.Client")
             {
                 SqlMapper.AddTypeMap(typeof(bool), DbType.Int32);
@@ -1022,7 +1076,7 @@ namespace Dapper.Contrib.Extensions
                 }
             }
 
-            var keyProperties = KeyPropertiesCache(type).ToList();  //added ToList() due to issue #418, must work on a list copy
+            var keyProperties = KeyPropertiesCache(type).ToList();
             var explicitKeyProperties = ExplicitKeyPropertiesCache(type);
             if (keyProperties.Count == 0 && explicitKeyProperties.Count == 0)
                 throw new ArgumentException("Entity must have at least one [Key] or [ExplicitKey] property");
@@ -1031,14 +1085,14 @@ namespace Dapper.Contrib.Extensions
             keyProperties.AddRange(explicitKeyProperties);
 
             var sb = new StringBuilder();
-            sb.AppendFormat("delete from \"{0}\" where ", name);
+            sb.AppendFormat("delete from {0} where ", FormatTableNameForSql(name, dbType));
 
             var adapter = GetFormatter(connection);
 
             for (var i = 0; i < keyProperties.Count; i++)
             {
                 var property = keyProperties[i];
-                adapter.AppendColumnNameEqualsValue(sb, property.Name);  //fix for issue #336
+                adapter.AppendColumnNameEqualsValue(sb, property.Name);
                 if (i < keyProperties.Count - 1)
                     sb.Append(" and ");
             }
@@ -1077,14 +1131,15 @@ namespace Dapper.Contrib.Extensions
         {
             var type = typeof(T);
             var name = GetTableName(type);
-            var statement = $"delete from \"{name}\"";
+            var dbType = GetDatabaseTypeFromConnection(connection);
+            var statement = $"delete from {FormatTableNameForSql(name, dbType)}";
             var deleted = await connection.ExecuteAsync(statement, null, transaction, commandTimeout);
             return deleted > 0;
         }
         #endregion
 
         /// <summary>
-        /// Specifies a custom callback that detects the database type instead of relying on the default strategy (the name of the connection type object).
+        /// Specify a custom callback that detects the database type instead of relying on the default strategy (the name of the connection type object).
         /// Please note that this callback is global and will be used by all the calls that require a database specific adapter.
         /// </summary>
         public static GetDatabaseTypeDelegate GetDatabaseType;
@@ -1344,6 +1399,64 @@ namespace Dapper.Contrib.Extensions
             return await connection.QueryAsync<T>(sqlStmt, dynParms, transaction: transaction, commandTimeout: commandTimeout);
         }
         #endregion
+
+        /// <summary>
+        /// Formats a table name for use in SQL statements, properly handling schema-qualified names.
+        /// Uses the appropriate quoting convention based on the database type.
+        /// </summary>
+        /// <param name="tableName">The table name, optionally including schema prefix (schema.table).</param>
+        /// <param name="databaseType">The database type identifier (e.g., "npgsqlconnection", "sqlconnection", "oracleconnection", "mysqlconnection", "fbconnection").</param>
+        /// <returns>A properly quoted table name for use in SQL statements.</returns>
+        public static string FormatTableNameForSql(string tableName, string databaseType = "npgsqlconnection")
+        {
+            if (string.IsNullOrEmpty(tableName))
+            {
+                return tableName;
+            }
+
+            // Determine quote characters based on database type
+            var (openQuote, closeQuote) = GetQuoteCharacters(databaseType);
+
+            // Check if the table name contains a schema prefix
+            var dotIndex = tableName.IndexOf('.');
+            if (dotIndex > 0 && dotIndex < tableName.Length - 1)
+            {
+                var schemaName = tableName.Substring(0, dotIndex);
+                var tableNameOnly = tableName.Substring(dotIndex + 1);
+                return $"{openQuote}{schemaName}{closeQuote}.{openQuote}{tableNameOnly}{closeQuote}";
+            }
+
+            // No schema prefix, just quote the table name
+            return $"{openQuote}{tableName}{closeQuote}";
+        }
+
+        /// <summary>
+        /// Gets the appropriate quote characters for the specified database type.
+        /// </summary>
+        /// <param name="databaseType">The database type identifier.</param>
+        /// <returns>A tuple containing the opening and closing quote characters.</returns>
+        private static (string openQuote, string closeQuote) GetQuoteCharacters(string databaseType)
+        {
+            return databaseType?.ToLowerInvariant() switch
+            {
+                "sqlconnection" or "sqlceconnection" or "microsoft.data.sqlclient" or "system.data.sqlclient" => ("[", "]"),
+                "mysqlconnection" => ("`", "`"),
+                "npgsqlconnection" or "npgsql" => ("\"", "\""),
+                "oracleconnection" or "oracle.manageddataaccess.client" => ("\"", "\""),
+                "fbconnection" => ("\"", "\""),
+                _ => ("\"", "\"") // Default to double quotes (ANSI SQL standard)
+            };
+        }
+
+        /// <summary>
+        /// Gets the database type identifier from a connection.
+        /// </summary>
+        /// <param name="connection">The database connection.</param>
+        /// <returns>The database type identifier.</returns>
+        public static string GetDatabaseTypeFromConnection(IDbConnection connection)
+        {
+            return connection?.GetType().Name.ToLowerInvariant() ?? "npgsqlconnection";
+        }
     }
 
     /// <summary>
@@ -1467,6 +1580,7 @@ public partial class SqlServerAdapter : ISqlAdapter
     /// <returns>The Id of the row created.</returns>
     public long Insert(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, string tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
     {
+        tableName = Dapper.Contrib.Extensions.SqlMapperExtensions.FormatTableNameForSql(tableName, "sqlconnection");
         var cmd = $"insert into {tableName} ({columnList}) values ({parameterList});select SCOPE_IDENTITY() id";
         var multi = connection.QueryMultiple(cmd, entityToInsert, transaction, commandTimeout);
 
@@ -1523,6 +1637,7 @@ public partial class SqlCeServerAdapter : ISqlAdapter
     /// <returns>The Id of the row created.</returns>
     public long Insert(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, string tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
     {
+        tableName = Dapper.Contrib.Extensions.SqlMapperExtensions.FormatTableNameForSql(tableName, "sqlceconnection");
         var cmd = $"insert into {tableName} ({columnList}) values ({parameterList})";
         connection.Execute(cmd, entityToInsert, transaction, commandTimeout);
         var r = connection.Query("select @@IDENTITY id", transaction: transaction, commandTimeout: commandTimeout).ToList();
@@ -1579,6 +1694,7 @@ public partial class MySqlAdapter : ISqlAdapter
     /// <returns>The Id of the row created.</returns>
     public long Insert(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, string tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
     {
+        tableName = Dapper.Contrib.Extensions.SqlMapperExtensions.FormatTableNameForSql(tableName, "mysqlconnection");
         var cmd = $"insert into {tableName} ({columnList}) values ({parameterList})";
         connection.Execute(cmd, entityToInsert, transaction, commandTimeout);
         var r = connection.Query("Select LAST_INSERT_ID() id", transaction: transaction, commandTimeout: commandTimeout);
@@ -1634,7 +1750,7 @@ public partial class PostgresAdapter : ISqlAdapter
     /// <returns>The Id of the row created.</returns>
     public long Insert(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, string tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
     {
-        tableName = $"\"{tableName}\"";
+        tableName = Dapper.Contrib.Extensions.SqlMapperExtensions.FormatTableNameForSql(tableName, "npgsqlconnection");
         var sb = new StringBuilder();
         sb.AppendFormat("insert into {0} ({1}) values ({2})", tableName, columnList, parameterList);
 
@@ -1659,7 +1775,7 @@ public partial class PostgresAdapter : ISqlAdapter
 
         var results = connection.Query(sb.ToString(), entityToInsert, transaction, commandTimeout: commandTimeout).ToList();
 
-        // Return the key by assinging the corresponding property in the object - by product is that it supports compound primary keys
+        // Return the key by assiging the corresponding property in the object - by product is that it supports compound primary keys
         long id = 0;
         foreach (var p in propertyInfos)
         {
@@ -1711,6 +1827,7 @@ public partial class FbAdapter : ISqlAdapter
     /// <returns>The Id of the row created.</returns>
     public long Insert(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, string tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
     {
+        tableName = Dapper.Contrib.Extensions.SqlMapperExtensions.FormatTableNameForSql(tableName, "fbconnection");
         var cmd = $"insert into {tableName} ({columnList}) values ({parameterList})";
         connection.Execute(cmd, entityToInsert, transaction, commandTimeout);
 
@@ -1769,14 +1886,12 @@ public partial class OracleAdapter : ISqlAdapter
     /// <returns>The Id of the row created.</returns>
     public long Insert(IDbConnection connection, IDbTransaction transaction, int? commandTimeout, string tableName, string columnList, string parameterList, IEnumerable<PropertyInfo> keyProperties, object entityToInsert)
     {
+        tableName = Dapper.Contrib.Extensions.SqlMapperExtensions.FormatTableNameForSql(tableName, "oracleconnection");
+        var cmd = $"insert into {tableName} ({columnList}) values ({parameterList})";
 
-        var cmd = $"insert into \"{tableName}\" ({columnList}) values ({parameterList})";
-        
         connection.Execute(cmd, entityToInsert, transaction, commandTimeout);
 
-        //var r = connection.Query($"Select id from {tableName} where rownum = 1 ORDER BY id DESC", transaction: transaction, commandTimeout: commandTimeout);
-
-        var r = connection.Query($"Select \"id\" from \"{tableName}\" where ROWNUM = 1 ORDER BY \"id\" DESC", transaction: transaction, commandTimeout: commandTimeout);
+        var r = connection.Query($"Select \"id\" from {tableName} where ROWNUM = 1 ORDER BY \"id\" DESC", transaction: transaction, commandTimeout: commandTimeout);
 
         var id = r.First().id;
         if (id == null) return 0;
@@ -1787,7 +1902,6 @@ public partial class OracleAdapter : ISqlAdapter
         idp.SetValue(entityToInsert, Convert.ChangeType(id, idp.PropertyType), null);
 
         return Convert.ToInt64(id);
-
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Dapper.Contrib.Extensions;
+using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
@@ -26,9 +27,6 @@ namespace MyGeotabAPIAdapter.Services
     /// </summary>
     class FaultDataLocationService2 : BackgroundService
     {
-        const string spFaultData2WithLagLeadLongLatBatchSQL_Postgres = @"SELECT * FROM public.""spFaultData2WithLagLeadLongLatBatch""(@MaxDaysPerBatch::integer, @MaxBatchSize::integer, @BufferMinutes::integer);";
-        const string spFaultData2WithLagLeadLongLatBatchSQL_SQLServer = "EXEC [dbo].[spFaultData2WithLagLeadLongLatBatch] @MaxDaysPerBatch = @MaxDaysPerBatch, @MaxBatchSize = @MaxBatchSize, @BufferMinutes = @BufferMinutes;";
-
         string CurrentClassName { get => $"{GetType().Assembly.GetName().Name}.{GetType().Name} (v{GetType().Assembly.GetName().Version})"; }
         string DefaultErrorMessagePrefix { get => $"{CurrentClassName} process caught an exception"; }
         static int ThrottleEngagingBatchRecordCount { get => 1; }
@@ -83,6 +81,24 @@ namespace MyGeotabAPIAdapter.Services
 
             // Setup a database transaction retry policy.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
+        }
+
+        /// <summary>
+        /// Builds the SQL statement for calling the spFaultData2WithLagLeadLongLatBatch stored procedure/function based on the database provider type.
+        /// </summary>
+        /// <returns>The SQL statement formatted for the current database provider.</returns>
+        string BuildSpFaultData2WithLagLeadLongLatBatchSql()
+        {
+            var storedProcedureName = adapterDatabaseObjectNames.DbFaultData2WithLagLeadLongLatStoredProcedureName;
+            
+            return adapterContext.ProviderType switch
+            {
+                ConnectionInfo.DataAccessProviderType.PostgreSQL => 
+                    $@"SELECT * FROM {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "npgsqlconnection")}(@MaxDaysPerBatch::integer, @MaxBatchSize::integer, @BufferMinutes::integer);",
+                ConnectionInfo.DataAccessProviderType.SQLServer => 
+                    $"EXEC {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "sqlconnection")} @MaxDaysPerBatch = @MaxDaysPerBatch, @MaxBatchSize = @MaxBatchSize, @BufferMinutes = @BufferMinutes;",
+                _ => throw new NotSupportedException($"The provider type '{adapterContext.ProviderType}' is not supported.")
+            };
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -141,13 +157,8 @@ namespace MyGeotabAPIAdapter.Services
                         {
                             DbFaultData2BatchLastRetrievedUtc = DateTime.UtcNow;
 
-                            // Choose the SQL statement to use based on database provider type.
-                            var sql = adapterContext.ProviderType switch
-                            {
-                                ConnectionInfo.DataAccessProviderType.PostgreSQL => spFaultData2WithLagLeadLongLatBatchSQL_Postgres,
-                                ConnectionInfo.DataAccessProviderType.SQLServer => spFaultData2WithLagLeadLongLatBatchSQL_SQLServer,
-                                _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
-                            };
+                            // Build the SQL statement for the stored procedure/function call.
+                            var sql = BuildSpFaultData2WithLagLeadLongLatBatchSql();
 
                             // Set the parameters for the spFaultData2WithLagLeadLongLatBatchSQL stored procedure / function.
                             var parameters = new

@@ -2,7 +2,6 @@
 using MyGeotabAPIAdapter.Logging;
 using NLog;
 using System;
-using System.Reflection;
 
 namespace MyGeotabAPIAdapter.Database
 {
@@ -11,7 +10,7 @@ namespace MyGeotabAPIAdapter.Database
     /// </summary>
     public class AdapterDatabaseConnectionInfoContainer : IAdapterDatabaseConnectionInfoContainer
     {
-        readonly IAdapterConfiguration adapterConfiguration;
+        readonly IDatabaseConfiguration databaseConfiguration;
         readonly IExceptionHelper exceptionHelper;
         readonly Logger logger = LogManager.GetCurrentClassLogger();
 
@@ -21,15 +20,15 @@ namespace MyGeotabAPIAdapter.Database
         /// <summary>
         /// Initializes a new instance of the <see cref="AdapterDatabaseConnectionInfoContainer"/> class.
         /// </summary>
-        public AdapterDatabaseConnectionInfoContainer(IAdapterConfiguration adapterConfiguration, IExceptionHelper exceptionHelper)
+        public AdapterDatabaseConnectionInfoContainer(IDatabaseConfiguration databaseConfiguration, IExceptionHelper exceptionHelper)
         {
-            this.adapterConfiguration = adapterConfiguration;
+            this.databaseConfiguration = databaseConfiguration;
             this.exceptionHelper = exceptionHelper;
 
             try
             {
                 // Instantiate the ConnectionInfo object.
-                AdapterDatabaseConnectionInfo = new ConnectionInfo(adapterConfiguration.DatabaseConnectionString, adapterConfiguration.DatabaseProviderType, Databases.AdapterDatabase, adapterConfiguration.TimeoutSecondsForDatabaseTasks);
+                AdapterDatabaseConnectionInfo = new ConnectionInfo(databaseConfiguration.DatabaseConnectionString, databaseConfiguration.DatabaseProviderType, Databases.AdapterDatabase, databaseConfiguration.TimeoutSecondsForDatabaseTasks);
             }
             catch (Exception ex)
             {

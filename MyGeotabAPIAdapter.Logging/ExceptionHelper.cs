@@ -20,9 +20,6 @@ namespace MyGeotabAPIAdapter.Logging
         public const string MyGeotabConnectionExceptionStackTraceSource_Geotab_Checkmate_Web_WebServerInvoker = "Geotab.Checkmate.Web.WebServerInvoker";
 
         /// <inheritdoc/>
-        public ConnectivityIssueType ConnectivityIssueType { get; }
-
-        /// <inheritdoc/>
         public NLogLogLevelName NLogLogLevelName { get; }
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
@@ -101,7 +98,7 @@ namespace MyGeotabAPIAdapter.Logging
         }
 
         /// <inheritdoc/>
-        public void HandleConnectivityRelatedAggregateException(AggregateException aggregateException, ConnectivityIssueType connectivityIssueType, string errorMessage)
+        public virtual void HandleConnectivityRelatedAggregateException(AggregateException aggregateException, ConnectivityIssueType connectivityIssueType, string errorMessage)
         {
             MethodBase methodBase = MethodBase.GetCurrentMethod();
 
@@ -112,27 +109,33 @@ namespace MyGeotabAPIAdapter.Logging
 
             if (connectivityIssueDetected == true)
             {
-                switch (connectivityIssueType)
+                if (connectivityIssueType == ConnectivityIssueType.Database)
                 {
-                    case ConnectivityIssueType.Database:
-                        throw new AdapterDatabaseConnectionException($"{errorMessage}", aggregateException);
-                    case ConnectivityIssueType.MyGeotab:
+                    throw new AdapterDatabaseConnectionException($"{errorMessage}", aggregateException);
+                }
+                else if (connectivityIssueType == ConnectivityIssueType.MyGeotab)
+                {
+                    throw new MyGeotabConnectionException($"{errorMessage}", aggregateException);
+                }
+                else if (connectivityIssueType == ConnectivityIssueType.MyGeotabOrDatabase)
+                {
+                    // In cases where it is not explicitly known whether the connectivity issue is on the MyGeotab side or the database side (e.g. when running a series of tasks that include both MyGeotab and database operations), check if the AggregateException includes a MyGeotabConnectionException and, if so, handle it. If not, then it must be a database-related connectivity issue, since connectivityIssueDetected == true. In the event that the AggregateException contains both types of connectivity exceptions, the MyGeotab one will be handled (the database one will be dealt with if it still persists once MyGeotab connectivity has been restored).
+                    bool myGeotabConnectivityIssueDetected = MyGeotabConnectivityIssueDetected(aggregateException);
+                    if (myGeotabConnectivityIssueDetected)
+                    {
                         throw new MyGeotabConnectionException($"{errorMessage}", aggregateException);
-                    case ConnectivityIssueType.MyGeotabOrDatabase:
-                        // In cases where it is not explicitly known whether the connectivity issue is on the MyGeotab side or the database side (e.g. when running a series of tasks that include both MyGeotab and database operations), check if the AggregateException includes a MyGeotabConnectionException and, if so, handle it. If not, then it must be a database-related connectivity issue, since connectivityIssueDetected == true. In the event that the AggregateException contains both types of connectivity exceptions, the MyGeotab one will be handled (the database one will be dealt with if it still persists once MyGeotab connectivity has been restored).
-                        bool myGeotabConnectivityIssueDetected = MyGeotabConnectivityIssueDetected(aggregateException);
-                        if (myGeotabConnectivityIssueDetected)
-                        {
-                            throw new MyGeotabConnectionException($"{errorMessage}", aggregateException);
-                        }
-                        else
-                        {
-                            throw new AdapterDatabaseConnectionException($"{errorMessage}", aggregateException);
-                        }
-                    default:
-                        errorMessage = $"The ConnectivityIssueType type '{nameof(connectivityIssueType)}' is not supported by the '{methodBase.ReflectedType.Name}.{methodBase.Name}' method.";
-                        logger.Error(errorMessage);
-                        throw new Exception(errorMessage);
+                    }
+                    else
+                    {
+                        throw new AdapterDatabaseConnectionException($"{errorMessage}", aggregateException);
+                    }
+                }
+                else
+                {
+                    // Unknown connectivity issue type - let derived classes handle or throw
+                    string unsupportedTypeError = $"The ConnectivityIssueType '{connectivityIssueType.Name}' is not supported by the '{methodBase.ReflectedType.Name}.{methodBase.Name}' method.";
+                    logger.Error(unsupportedTypeError);
+                    throw new NotSupportedException(unsupportedTypeError);
                 }
             }
             else if (allInnerExceptionsAreTaskCanceledExceptions == false)

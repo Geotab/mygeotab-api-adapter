@@ -110,6 +110,15 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         Task<VersionInformation> GetVersionInformationAsync(int timeoutSeconds = DefaultTimeoutSeconds);
 
         /// <summary>
+        /// Adds the <paramref name="entity"/> to the MyGeotab database.
+        /// </summary>
+        /// <typeparam name="T">The type of <see cref="Entity"/> to be added.</typeparam>
+        /// <param name="entity">The <see cref="Entity"/> to be added.</param>
+        /// <param name="timeoutSeconds">The maximum number of seconds that the <see cref="System.Threading.Tasks.Task"/> can take to be completed before it is deemed that there is a MyGeotab connectivity issue and a <see cref="MyGeotabConnectionException"/> will be thrown.</param>
+        /// <returns>The <see cref="Id"/> of the newly-added entity.</returns>
+        Task<Id> AddAsync<T>(T entity, int timeoutSeconds = DefaultTimeoutSeconds) where T : class, IEntity;
+
+        /// <summary>
         /// Modifies the <paramref name="entity"/> in the MyGeotab database.
         /// </summary>
         /// <typeparam name="T">The type of <see cref="Entity"/> to be modified.</typeparam>

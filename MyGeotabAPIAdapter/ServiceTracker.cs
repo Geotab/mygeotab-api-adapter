@@ -18,7 +18,7 @@ namespace MyGeotabAPIAdapter
     /// <summary>
     /// A class that helps manage <see cref="T"/> information for all <see cref="AdapterService"/>s.
     /// </summary>
-    internal class ServiceTracker<T> : IServiceTracker<T> where T : class, IDbOServiceTracking, new()
+    public class ServiceTracker<T> : IServiceTracker<T> where T : class, IDbOServiceTracking, new()
     {
         string CurrentClassName { get => $"{GetType().Assembly.GetName().Name}.{GetType().Name} (v{GetType().Assembly.GetName().Version})"; }
         string DefaultErrorMessagePrefix { get => $"{CurrentClassName} process caught an exception"; }

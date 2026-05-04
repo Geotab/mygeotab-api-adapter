@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Dapper.Contrib.Extensions;
+using Microsoft.Extensions.Hosting;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
@@ -27,10 +28,6 @@ namespace MyGeotabAPIAdapter.Services
     /// </summary>
     class StatusDataLocationService2 : BackgroundService
     {
-        // SQL statements for the spStatusData2WithLagLeadLongLatBatch stored procedure / function.
-        const string spStatusData2WithLagLeadLongLatBatchSQL_Postgres = @"SELECT * FROM public.""spStatusData2WithLagLeadLongLatBatch""(@MaxDaysPerBatch::integer, @MaxBatchSize::integer, @BufferMinutes::integer);";
-        const string spStatusData2WithLagLeadLongLatBatchSQL_SQLServer = "EXEC [dbo].[spStatusData2WithLagLeadLongLatBatch] @MaxDaysPerBatch = @MaxDaysPerBatch, @MaxBatchSize = @MaxBatchSize, @BufferMinutes = @BufferMinutes;";
-
         string CurrentClassName { get => $"{GetType().Assembly.GetName().Name}.{GetType().Name} (v{GetType().Assembly.GetName().Version})"; }
         string DefaultErrorMessagePrefix { get => $"{CurrentClassName} process caught an exception"; }
         static int ThrottleEngagingBatchRecordCount { get => 1; }
@@ -160,12 +157,7 @@ namespace MyGeotabAPIAdapter.Services
                             DbStatusData2BatchLastRetrievedUtc = DateTime.UtcNow;
 
                             // Choose the SQL statement to use based on database provider type.
-                            var sql = adapterContext.ProviderType switch
-                            {
-                                ConnectionInfo.DataAccessProviderType.PostgreSQL => spStatusData2WithLagLeadLongLatBatchSQL_Postgres,
-                                ConnectionInfo.DataAccessProviderType.SQLServer => spStatusData2WithLagLeadLongLatBatchSQL_SQLServer,
-                                _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
-                            };
+                            var sql = BuildSpStatusData2WithLagLeadLongLatBatchSql();
 
                             // Set the parameters for the spStatusData2WithLagLeadLongLatBatchSQL stored procedure / function.
                             var parameters = new
@@ -362,6 +354,24 @@ namespace MyGeotabAPIAdapter.Services
                     stateMachine.HandleException(ex, NLogLogLevelName.Fatal);
                 }
             }
+        }
+
+        /// <summary>
+        /// Builds the SQL statement for calling the spStatusData2WithLagLeadLongLatBatch stored procedure/function based on the database provider type.
+        /// </summary>
+        /// <returns>The SQL statement formatted for the current database provider.</returns>
+        string BuildSpStatusData2WithLagLeadLongLatBatchSql()
+        {
+            var storedProcedureName = adapterDatabaseObjectNames.DbStatusData2WithLagLeadLongLatStoredProcedureName;
+            
+            return adapterContext.ProviderType switch
+            {
+                ConnectionInfo.DataAccessProviderType.PostgreSQL => 
+                    $@"SELECT * FROM {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "npgsqlconnection")}(@MaxDaysPerBatch::integer, @MaxBatchSize::integer, @BufferMinutes::integer);",
+                ConnectionInfo.DataAccessProviderType.SQLServer => 
+                    $"EXEC {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "sqlconnection")} @MaxDaysPerBatch = @MaxDaysPerBatch, @MaxBatchSize = @MaxBatchSize, @BufferMinutes = @BufferMinutes;",
+                _ => throw new NotSupportedException($"The provider type '{adapterContext.ProviderType}' is not supported.")
+            };
         }
 
         /// <summary>

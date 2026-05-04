@@ -95,8 +95,6 @@
         /// <inheritdoc/>
         public string DbFailedDVIRDefectUpdatesTableName => "FailedDVIRDefectUpdates";
 
-        /// <inheritdoc/>
-        public string DbFailedOVDSServerCommandTableName => "FailedOVDSServerCommands";
 
         /// <inheritdoc/>
         public string DbFaultDataTableName => "FaultData";
@@ -127,8 +125,6 @@
         /// <inheritdoc/>
         public string DbLogRecord2TableName => "LogRecords2";
 
-        /// <inheritdoc/>
-        public string DbOVDSServerCommandTableName => "OVDSServerCommands";
 
         /// <inheritdoc/>
         public string DBPartitionInfo2TableName => "DBPartitionInfo2";

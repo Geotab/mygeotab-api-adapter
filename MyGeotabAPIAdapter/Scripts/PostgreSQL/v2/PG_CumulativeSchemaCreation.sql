@@ -7928,7 +7928,6 @@ ALTER TABLE ONLY public."AuditLogs2"
 /*** [END] Version 4.1.0.0 Updates ***/
 
 
-
 /*** [START] Version 4.1.2.0 Updates ***/
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- Grant execute permission on pgstattuple function to geotabadapter_client.
@@ -7940,9 +7939,16 @@ GRANT EXECUTE ON FUNCTION public.pgstattuple(regclass) TO geotabadapter_client;
 
 
 
+/*** [START] Version 5.0.0.0 Updates ***/
+-- No MyGeotab API Adapter schema changes in this version. The Geotab DIG Adapter
+-- was introduced as a new component of the solution in version 5.0.0.0.
+/*** [END] Version 5.0.0.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO public."MiddlewareVersionInfo2" ("DatabaseVersion", "RecordCreationTimeUtc")
-VALUES ('4.1.2.0', timezone('UTC', NOW()));
+VALUES ('5.0.0.0', timezone('UTC', NOW()));
 /*** [END] Database Version Update ***/

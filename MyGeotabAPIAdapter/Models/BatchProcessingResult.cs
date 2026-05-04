@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MyGeotabAPIAdapter.Models
 {
@@ -27,10 +23,22 @@ namespace MyGeotabAPIAdapter.Models
         public required int FailureCount { get; init; }
 
         /// <summary>
+        /// A delegate that allows for custom throttling logic. If not set, the default logic is used.
+        /// The arguments are: TotalCount, SuccessCount, throttleThreshold.
+        /// </summary>
+        public Func<int, int, int, bool> CustomShouldThrottleLogic { get; set; }
+
+        /// <summary>
         /// Indicates whether throttling (e.g. adding a delay before initiating processing of the next batch of items or tasks) should be engaged.
         /// </summary>
         /// <param name="throttleThreshold">The threshold by which <c>true</c> will be returned if the provided value is greater than <see cref="TotalCount"/>.</param>
         public bool ShouldThrottle(int throttleThreshold)
-            => TotalCount < throttleThreshold;
+        {
+            if (CustomShouldThrottleLogic != null)
+            {
+                return CustomShouldThrottleLogic(TotalCount, SuccessCount, throttleThreshold);
+            }
+            return TotalCount < throttleThreshold;
+        }
     }
 }

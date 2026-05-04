@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MyGeotabAPIAdapter.Helpers;
+using System;
 
 namespace MyGeotabAPIAdapter.Logging
 {
@@ -7,11 +8,6 @@ namespace MyGeotabAPIAdapter.Logging
     /// </summary>
     public interface IExceptionHelper
     {
-        /// <summary>
-        /// Types of connectivity issues that may be encountered.
-        /// </summary>
-        ConnectivityIssueType ConnectivityIssueType { get; }
-
         /// <summary>
         /// NLog log level names.
         /// </summary>
@@ -81,9 +77,18 @@ namespace MyGeotabAPIAdapter.Logging
     }
 
     /// <summary>
-    /// Types of connectivity issues that may be encountered.
+    /// Types of connectivity issues that may be encountered. Extensible class-based enumeration.
     /// </summary>
-    public enum ConnectivityIssueType { Database, MyGeotab, MyGeotabOrDatabase }
+    public class ConnectivityIssueType : Enumeration
+    {
+        public static readonly ConnectivityIssueType Database = new(1, nameof(Database));
+        public static readonly ConnectivityIssueType MyGeotab = new(2, nameof(MyGeotab));
+        public static readonly ConnectivityIssueType MyGeotabOrDatabase = new(3, nameof(MyGeotabOrDatabase));
+
+        public ConnectivityIssueType() : base(0, string.Empty) { }
+
+        public ConnectivityIssueType(int id, string name) : base(id, name) { }
+    }
 
     /// <summary>
     /// NLog log level names.

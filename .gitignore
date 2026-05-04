@@ -5,6 +5,11 @@
 /.vs
 *.log
 *.user
+/GeotabDIGAdapter/bin
+/GeotabDIGAdapter/obj
+/GeotabDIGAdapter.Core/bin
+/GeotabDIGAdapter.Core/obj
+/GeotabDIGAdapter/appsettings.Development.json
 /MyGeotabAPIAdapter/bin
 /MyGeotabAPIAdapter/obj
 /MyGeotabAPIAdapter/appsettings.Development.json
@@ -39,3 +44,8 @@
 /MyGeotabAPIAdapter.MyGeotabAPI/obj
 /MyGeotabAPIAdapter.Tests/bin
 /MyGeotabAPIAdapter.Tests/obj
+/DocsForLLMs
+/.claude/
+
+# VS 2022 bug - creates literal 'nul' file instead of writing to null device
+nul

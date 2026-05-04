@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace MyGeotabAPIAdapter
@@ -9,7 +8,7 @@ namespace MyGeotabAPIAdapter
     /// <summary>
     /// A class that contains the results of a check to determine whether all prerequisite services are running.
     /// </summary>
-    internal class PrerequisiteServiceOperationCheckResult
+    public class PrerequisiteServiceOperationCheckResult
     {
         readonly TimeSpan recommendedDelayBeforeNextCheck = TimeSpan.FromSeconds(10);
 

@@ -1,0 +1,38 @@
+using Dapper.Contrib.Extensions;
+
+namespace MyGeotabAPIAdapter.Database.Models
+{
+    /// <summary>
+    /// A class with properties that map to the columns of the gda.Q_GenericStatusRecordsFail database table.
+    /// </summary>
+    [Table("gda.Q_GenericStatusRecordsFail")]
+    public class DbGdaQGenericStatusRecordFail : IDbEntity
+    {
+        /// <inheritdoc/>
+        [Write(false)]
+        public string DatabaseTableName => "gda.Q_GenericStatusRecordsFail";
+
+        /// <inheritdoc/>
+        [Write(false)]
+        public Common.DatabaseWriteOperationType DatabaseWriteOperationType { get; set; }
+
+        [Key]
+        public long id { get; set; }
+
+        public long OriginalQueueId { get; set; }
+
+        public string ThirdPartyId { get; set; }
+
+        public DateTime DateTime { get; set; }
+
+        public int Code { get; set; }
+
+        public int Value { get; set; }
+
+        public DateTime OriginalRecordLastChangedUtc { get; set; }
+
+        public string FailureReason { get; set; }
+
+        public DateTime RecordCreationTimeUtc { get; set; }
+    }
+}

@@ -5,7 +5,7 @@ namespace MyGeotabAPIAdapter
     /// <summary>
     /// Interface for a class that tracks the <see cref="Orchestrator"/> service.
     /// </summary>
-    internal interface IOrchestratorServiceTracker
+    public interface IOrchestratorServiceTracker
     {
         /// <summary>
         /// A unique identifier assigned during instantiation. Intended for debugging purposes.
