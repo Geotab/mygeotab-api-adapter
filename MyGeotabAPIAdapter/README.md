@@ -141,10 +141,10 @@ The latest version of the MyGeotab API Adapter is available on GitHub as a pre-p
 
 | Database | File to Download |
 |----------|------------------|
-| SQL Server | `SQLServer_MyGeotabAPIAdapter.zip` |
-| PostgreSQL | `PostgreSQL_MyGeotabAPIAdapter.zip` |
+| SQL Server | `SQLServer.zip` |
+| PostgreSQL | `PostgreSQL.zip` |
 
-> **Tip:** Developers working from source code can find the database scripts directly in `MyGeotabAPIAdapter/Scripts/`.
+> **Tip:** Developers working from source code can find the database scripts in `MyGeotabAPIAdapter/Scripts/SQLServer/v2/` (SQL Server) and `MyGeotabAPIAdapter/Scripts/PostgreSQL/v2/` (PostgreSQL).
 
 ### 1.3 Database Setup
 
@@ -1622,7 +1622,7 @@ CREATE ROLE geotabadapter_client WITH
 
 ##### Step 2: Create Database
 
-> **Note:** Depending on the version of PostgreSQL being used, it may be necessary to change the values of `LC_COLLATE` and `LC_CTYPE` (e.g., from `en_US.utf8` to `English_United States.1252`).
+> **Note:** The `LC_COLLATE` and `LC_CTYPE` values are OS-dependent. On **Linux/macOS**, use `en_US.utf8`. On **Windows**, use `English_United States.1252` — the `en_US.utf8` locale is not available and will cause the `CREATE DATABASE` statement to fail.
 
 ```sql
 CREATE DATABASE geotabadapterdb WITH

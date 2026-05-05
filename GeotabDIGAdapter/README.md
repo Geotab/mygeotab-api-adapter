@@ -96,7 +96,7 @@ The latest version of the Geotab DIG Adapter is available on GitHub:
 | SQL Server | `SQLServer_GeotabDIGAdapter.zip` |
 | PostgreSQL | `PostgreSQL_GeotabDIGAdapter.zip` |
 
-> **Tip:** Developers working from source code can find the database scripts directly in `GeotabDIGAdapter/Scripts/`.
+> **Tip:** Developers working from source code can find the database scripts in `GeotabDIGAdapter/Scripts/SQLServer/v2/` (SQL Server) and `GeotabDIGAdapter/Scripts/PostgreSQL/v2/` (PostgreSQL).
 
 ### 1.3 Database Setup
 
@@ -290,6 +290,8 @@ All Geotab DIG Adapter tables reside in the `gda` schema within the `geotabadapt
 This section covers day-to-day operation: how to populate queue tables, what fields are required, and how data flows through the system.
 
 > **Important — Before you begin:** Read the [Device Lifecycle](#device-lifecycle) diagram in Section 2. Devices must be provisioned **and** added to a MyGeotab database before telemetry data will flow. The adapter handles provisioning, but adding the device to a MyGeotab database is an external action performed by the customer or their Geotab partner.
+
+> **Note (SQL Server / sqlcmd users):** When executing INSERT statements against `gda` schema tables using `sqlcmd`, you must first run `SET QUOTED_IDENTIFIER ON;` in your session. Without this, INSERT operations will fail with a `SET options have incorrect settings: 'QUOTED_IDENTIFIER'` error. This is not required when using SQL Server Management Studio, Azure Data Studio, or other tools that enable `QUOTED_IDENTIFIER` by default.
 
 ### 3.1 Device Provisioning
 
@@ -1332,7 +1334,7 @@ CREATE ROLE geotabdigadapter_client WITH
 
 If the database does not already exist (standalone installations), create it:
 
-> **Note:** Depending on the version of PostgreSQL being used, it may be necessary to change the values of `LC_COLLATE` and `LC_CTYPE` (e.g., from `en_US.utf8` to `English_United States.1252`).
+> **Note:** The `LC_COLLATE` and `LC_CTYPE` values are OS-dependent. On **Linux/macOS**, use `en_US.utf8`. On **Windows**, use `English_United States.1252` — the `en_US.utf8` locale is not available and will cause the `CREATE DATABASE` statement to fail.
 
 ```sql
 CREATE DATABASE geotabadapterdb WITH
