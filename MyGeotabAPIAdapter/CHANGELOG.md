@@ -12,6 +12,12 @@ Help us prioritize future efforts and better understand how the API Adapter is u
 
 ---
 
+## Version 5.0.0.1
+
+- **NOTE:** There are **no database schema or configuration file changes from version 5.0.0 to version 5.0.0.1**. It is safe to upgrade from version 5.0.0 to version 5.0.0.1 by simply replacing the application files. See the [Upgrade Guide](docs/upgrade-guides/v5.0.0.1.md).
+- Bug Fix: Resolved an issue with `DatabaseMaintenanceService2` whereby Level 2 database maintenance (index rebuild) on SQL Server fails for non-partitioned indexes (such as those on staging tables) with the error `Cannot specify partition number in the alter index statement as the index '...' is not partitioned.` The `RebuildMSSQLIndexPartitionAsync` method now checks `TotalPartitions` before generating partition-specific syntax, matching the existing pattern in `ReorganizeMSSQLIndexPartitionAsync`.
+- Updated version to 5.0.0.1.
+
 ## Version 5.0.0
 
 - **NOTE:** This build **includes changes to the `appsettings.json` file** (deprecated VSS/OVDS AddOns section removed) and **requires a database upgrade script to be run** (version alignment only — no schema changes).

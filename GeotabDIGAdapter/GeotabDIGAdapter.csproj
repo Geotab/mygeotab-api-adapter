@@ -10,8 +10,8 @@
 	<Product>Geotab DIG Adapter</Product>
 	<Description>A middleware solution designed to make it easier to push data into the Geotab platform via Geotab's Data Intake Gateway (DIG). Modify as required to meet individual solution objectives.</Description>
 	  <Copyright></Copyright>
-	  <Version>5.0.0.0</Version>
-	  <InformationalVersion>5.0.0.0</InformationalVersion>
+	  <Version>5.0.0.1</Version>
+	  <InformationalVersion>5.0.0.1</InformationalVersion>
 	  <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 	  <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>

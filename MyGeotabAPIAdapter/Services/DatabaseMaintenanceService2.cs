@@ -966,7 +966,17 @@ namespace MyGeotabAPIAdapter.Services
             }
 
             // Build the SQL statement.
-            var sql = $"ALTER INDEX [{dbvwStatForLevel2DBMaintenance_MSSQL.IndexName}] ON [{dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}].[{dbvwStatForLevel2DBMaintenance_MSSQL.TableName}] REBUILD PARTITION = {dbvwStatForLevel2DBMaintenance_MSSQL.PartitionNumber};";
+            var sql = "";
+            if (dbvwStatForLevel2DBMaintenance_MSSQL.TotalPartitions == 1)
+            {
+                // If there is only one partition, rebuild the entire index.
+                sql = $"ALTER INDEX [{dbvwStatForLevel2DBMaintenance_MSSQL.IndexName}] ON [{dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}].[{dbvwStatForLevel2DBMaintenance_MSSQL.TableName}] REBUILD;";
+            }
+            else
+            {
+                // If there are multiple partitions, rebuild the specified partition.
+                sql = $"ALTER INDEX [{dbvwStatForLevel2DBMaintenance_MSSQL.IndexName}] ON [{dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}].[{dbvwStatForLevel2DBMaintenance_MSSQL.TableName}] REBUILD PARTITION = {dbvwStatForLevel2DBMaintenance_MSSQL.PartitionNumber};";
+            }
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
@@ -984,7 +994,14 @@ namespace MyGeotabAPIAdapter.Services
             }, new Context());
             var duration = DateTime.UtcNow - startTimeUtc;
 
-            logger.Info($"Rebuilt index {dbvwStatForLevel2DBMaintenance_MSSQL.IndexName} partition {dbvwStatForLevel2DBMaintenance_MSSQL.PartitionNumber} on table {dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel2DBMaintenance_MSSQL.TableName} in {duration.TotalSeconds} seconds.");
+            if (dbvwStatForLevel2DBMaintenance_MSSQL.TotalPartitions == 1)
+            {
+                logger.Info($"Rebuilt index {dbvwStatForLevel2DBMaintenance_MSSQL.IndexName} on table {dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel2DBMaintenance_MSSQL.TableName} in {duration.TotalSeconds} seconds.");
+            }
+            else
+            {
+                logger.Info($"Rebuilt index {dbvwStatForLevel2DBMaintenance_MSSQL.IndexName} partition {dbvwStatForLevel2DBMaintenance_MSSQL.PartitionNumber} on table {dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel2DBMaintenance_MSSQL.TableName} in {duration.TotalSeconds} seconds.");
+            }
 
             methodCancellationToken.ThrowIfCancellationRequested();
         }

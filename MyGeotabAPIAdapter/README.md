@@ -1,6 +1,6 @@
 # MyGeotab API Adapter
 
-**Current Version:** 5.0.0.0 | [Change Log](CHANGELOG.md)
+**Current Version:** 5.0.0.1 | [Change Log](CHANGELOG.md)
 
 > **Using AI to query your adapter database?** See [Section 8.6 AI-Assisted SQL Generation](#86-ai-assisted-sql-generation) for guidance on which files to provide as context to your LLM and key points that ensure accurate query results.
 
