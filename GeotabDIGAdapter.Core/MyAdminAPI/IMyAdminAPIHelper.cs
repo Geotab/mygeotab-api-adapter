@@ -36,6 +36,19 @@ namespace MyGeotabAPIAdapter.MyAdminAPI
         Task<GetDeviceDatabaseNamesResult> GetDeviceDatabaseNamesAsync(IList<string> serialNumbers, int requestTimeoutSeconds = DefaultTimeoutSeconds);
 
         /// <summary>
+        /// Calls the MyAdmin API <see href="https://developers.geotab.com/myAdmin/apiReference/methods/ProvisionDevicesBulk/index.html">ProvisionDevicesBulk</see> method to provision multiple devices in a single call (up to 1000 per call).
+        /// </summary>
+        /// <param name="productId">The product ID for the devices to provision.</param>
+        /// <param name="quantity">The number of devices to provision (1-1000).</param>
+        /// <param name="erpNo">Optional ERP number for the account.</param>
+        /// <param name="hardwareId">Optional hardware ID.</param>
+        /// <param name="promoCode">Optional promo code for third-party devices.</param>
+        /// <param name="subPlan">Optional subscription plan for OEM devices.</param>
+        /// <param name="requestTimeoutSeconds">The timeout, in seconds, for API requests.</param>
+        /// <returns>A list of <see cref="ProvisionDeviceResult"/> — one per provisioned device.</returns>
+        Task<IList<ProvisionDeviceResult>> ProvisionDevicesBulkAsync(int productId, int quantity, string? erpNo = null, int? hardwareId = null, string? promoCode = null, string? subPlan = null, int requestTimeoutSeconds = DefaultTimeoutSeconds);
+
+        /// <summary>
         /// Calls the MyAdmin API <see href="https://developers.geotab.com/myAdmin/apiReference/methods/ProvisionDeviceToAccount/index.html">ProvisionDeviceToAccount</see> method.
         /// </summary>
         /// <param name="dbGdaQProvisionDevice">The <see cref="DbGdaQProvisionDevice"/> entity containing device provisioning parameters.</param>

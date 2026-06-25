@@ -263,73 +263,76 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         {
             // Format table name for schema-qualified names
             var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(destinationTableName, "npgsqlconnection");
-            
-            // Setup a database command timeout and retry policy wrap.
-            if (bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap == null)
+            var insertableProperties = PropertyHelper.GetInsertablePropertyNames(typeof(T));
+            NpgsqlConnection? npgSqlConnection;
+
+            // Obtain a database connection or a standalone database connection. Acquired once outside the retry policy so that a retry cannot leak a previously-opened standalone connection.
+            if (useStandaloneDbConnection == false)
             {
-                bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(pgContext.TimeoutSecondsForDatabaseTasks, MaxRetries, logger);
+                npgSqlConnection = pgContext.GetNpgsqlConnection();
             }
-            await bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            else
             {
-                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
-                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+                npgSqlConnection = await pgContext.GetStandaloneNpgsqlConnectionAsync();
+            }
 
-                var insertableProperties = PropertyHelper.GetInsertablePropertyNames(typeof(T));
-                
-                NpgsqlConnection? npgSqlConnection = null;
-
-                // Obtain a database connection and transaction or a standalone database connection.
-                if (useStandaloneDbConnection == false)
+            try
+            {
+                // Setup a database command timeout and retry policy wrap.
+                if (bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap == null)
                 {
-                    npgSqlConnection = pgContext.GetNpgsqlConnection();
+                    bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(pgContext.TimeoutSecondsForDatabaseTasks, MaxRetries, logger);
                 }
-                else
+                await bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                 {
-                    npgSqlConnection = await pgContext.GetStandaloneNpgsqlConnectionAsync();
-                }
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                using var writer = npgSqlConnection.BeginBinaryImport($"COPY {formattedTableName} ({string.Join(", ", insertableProperties.Select(p => $"\"{p}\""))}) FROM STDIN (FORMAT BINARY)");
-                foreach (var entity in entitiesToInsert)
-                {
-                    writer.StartRow();
-                    foreach (var insertableProperty in insertableProperties)
+                    using var writer = npgSqlConnection.BeginBinaryImport($"COPY {formattedTableName} ({string.Join(", ", insertableProperties.Select(p => $"\"{p}\""))}) FROM STDIN (FORMAT BINARY)");
+                    foreach (var entity in entitiesToInsert)
                     {
-                        var propertyValue = entity.GetType().GetProperty(insertableProperty)?.GetValue(entity);
-                        if (propertyValue != null)
+                        writer.StartRow();
+                        foreach (var insertableProperty in insertableProperties)
                         {
-                            if (propertyValue is DateTime dateTimeValue)
+                            var propertyValue = entity.GetType().GetProperty(insertableProperty)?.GetValue(entity);
+                            if (propertyValue != null)
                             {
-                                if (dateTimeValue.Kind == DateTimeKind.Unspecified)
+                                if (propertyValue is DateTime dateTimeValue)
                                 {
-                                    // Convert DateTimeKind.Unspecified to DateTimeKind.Utc
-                                    dateTimeValue = DateTime.SpecifyKind(dateTimeValue, DateTimeKind.Utc);
-                                }
+                                    if (dateTimeValue.Kind == DateTimeKind.Unspecified)
+                                    {
+                                        // Convert DateTimeKind.Unspecified to DateTimeKind.Utc
+                                        dateTimeValue = DateTime.SpecifyKind(dateTimeValue, DateTimeKind.Utc);
+                                    }
 
-                                // Specify NpgsqlDbType as TimestampTz to ensure correct mapping
-                                writer.Write(dateTimeValue, NpgsqlDbType.TimestampTz);
+                                    // Specify NpgsqlDbType as TimestampTz to ensure correct mapping
+                                    writer.Write(dateTimeValue, NpgsqlDbType.TimestampTz);
+                                }
+                                else
+                                {
+                                    // For properties of other types, use the GetNpgsqlDbType method.
+                                    var npgDbType = GetNpgsqlDbType(propertyValue.GetType());
+                                    writer.Write(propertyValue, npgDbType);
+                                }
                             }
                             else
                             {
-                                // For properties of other types, use the GetNpgsqlDbType method.
-                                var npgDbType = GetNpgsqlDbType(propertyValue.GetType());
-                                writer.Write(propertyValue, npgDbType);
+                                writer.WriteNull();
                             }
                         }
-                        else
-                        {
-                            writer.WriteNull();
-                        }
                     }
-                }
-                writer.Complete();
-
+                    writer.Complete();
+                }, new Context());
+            }
+            finally
+            {
                 // Close the connection if it's a standalone database connection.
                 if (useStandaloneDbConnection == true)
                 {
                     await npgSqlConnection.CloseAsync();
-                    npgSqlConnection.Dispose();
+                    await npgSqlConnection.DisposeAsync();
                 }
-            }, new Context());
+            }
         }
 
         /// <summary>
@@ -344,50 +347,54 @@ namespace MyGeotabAPIAdapter.Database.EntityPersisters
         {
             // Format table name for schema-qualified names
             var formattedTableName = SqlMapperExtensions.FormatTableNameForSql(destinationTableName, "sqlconnection");
-            
-            // Setup a database command timeout and retry policy wrap.
-            if (bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap == null)
+            SqlConnection? sqlConnection;
+            SqlTransaction? sqlTransaction = null;
+
+            // Obtain a database connection and transaction or a standalone database connection. Acquired once outside the retry policy so that a retry cannot leak a previously-opened standalone connection.
+            if (useStandaloneDbConnection == false)
             {
-                bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(sqlContext.TimeoutSecondsForDatabaseTasks, MaxRetries, logger);
+                sqlConnection = sqlContext.GetSqlConnection();
+                sqlTransaction = sqlContext.GetSqlTransaction();
             }
-            await bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
+            else
             {
-                var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
-                var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
+                sqlConnection = await sqlContext.GetStandaloneSqlConnectionAsync();
+            }
 
-                SqlConnection? sqlConnection = null;
-                SqlTransaction? sqlTransaction = null;
-
-                // Obtain a database connection and transaction or a standalone database connection.
-                if (useStandaloneDbConnection == false)
+            try
+            {
+                // Setup a database command timeout and retry policy wrap.
+                if (bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap == null)
                 {
-                    sqlConnection = sqlContext.GetSqlConnection();
-                    sqlTransaction = sqlContext.GetSqlTransaction();
+                    bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(sqlContext.TimeoutSecondsForDatabaseTasks, MaxRetries, logger);
                 }
-                else
+                await bulkInsertAsyncDatabaseCommandTimeoutAndRetryPolicyWrap.ExecuteAsync(async pollyContext =>
                 {
-                    sqlConnection = await sqlContext.GetStandaloneSqlConnectionAsync();
-                }
+                    var timeoutTimeSpan = (TimeSpan)pollyContext[DatabaseResilienceHelper.PollyContextKeyRetryAttemptTimeoutTimeSpan];
+                    var timeoutSeconds = (int)timeoutTimeSpan.TotalSeconds;
 
-                using var sqlBulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, sqlTransaction);
-                sqlBulkCopy.DestinationTableName = formattedTableName;
-                sqlBulkCopy.BatchSize = BulkOperationBatchSize;
-                sqlBulkCopy.BulkCopyTimeout = timeoutSeconds;
-                var insertableProperties = PropertyHelper.GetInsertablePropertyNames(typeof(T));
-                foreach (var insertableProperty in insertableProperties)
-                {
-                    sqlBulkCopy.ColumnMappings.Add(insertableProperty, insertableProperty);
-                }
-                using var reader = ObjectReader.Create(entitiesToInsert, insertableProperties);
-                await sqlBulkCopy.WriteToServerAsync(reader);
-
+                    using var sqlBulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, sqlTransaction);
+                    sqlBulkCopy.DestinationTableName = formattedTableName;
+                    sqlBulkCopy.BatchSize = BulkOperationBatchSize;
+                    sqlBulkCopy.BulkCopyTimeout = timeoutSeconds;
+                    var insertableProperties = PropertyHelper.GetInsertablePropertyNames(typeof(T));
+                    foreach (var insertableProperty in insertableProperties)
+                    {
+                        sqlBulkCopy.ColumnMappings.Add(insertableProperty, insertableProperty);
+                    }
+                    using var reader = ObjectReader.Create(entitiesToInsert, insertableProperties);
+                    await sqlBulkCopy.WriteToServerAsync(reader);
+                }, new Context());
+            }
+            finally
+            {
                 // Close the connection if it's a standalone database connection.
                 if (useStandaloneDbConnection == true)
                 {
                     await sqlConnection.CloseAsync();
-                    sqlConnection.Dispose();
+                    await sqlConnection.DisposeAsync();
                 }
-            }, new Context());
+            }
         }
 
         /// <summary>

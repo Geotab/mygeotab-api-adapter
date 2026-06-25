@@ -249,6 +249,102 @@ namespace MyGeotabAPIAdapter.MyAdminAPI
         }
 
         /// <inheritdoc/>
+        public async Task<IList<ProvisionDeviceResult>> ProvisionDevicesBulkAsync(int productId, int quantity, string? erpNo = null, int? hardwareId = null, string? promoCode = null, string? subPlan = null, int requestTimeoutSeconds = DefaultTimeoutSeconds)
+        {
+            const string MYAMethodName = "ProvisionDevicesBulk";
+            const int MaxQuantityPerCall = 1000;
+
+            if (quantity < 1)
+                throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be at least 1.");
+
+            logger.Debug($"Bulk provisioning {quantity} device(s) with ProductId '{productId}'.");
+
+            EnsureAuthenticated();
+            ValidateTimeoutSeconds(requestTimeoutSeconds);
+            SetAsyncPolicyWrapForMyAdminAPICallsWithReauthentication(requestTimeoutSeconds);
+
+            var allResults = new List<ProvisionDeviceResult>();
+            var remainingQuantity = quantity;
+
+            while (remainingQuantity > 0)
+            {
+                var batchQuantity = Math.Min(remainingQuantity, MaxQuantityPerCall);
+
+                try
+                {
+                    var pollyContext = MyAdminAPIResilienceHelper.CreateContextWithMethodName(MYAMethodName);
+
+                    ProvisionResult[]? batchProvisionResults = null;
+
+                    await asyncMyAdminAPICallWithReauthPolicyWrap!.ExecuteAsync(async ctx =>
+                    {
+                        await rateLimiter.WaitForPermitAsync(MYAMethodName);
+                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(requestTimeoutSeconds));
+
+                        Dictionary<string, object> parameters = new()
+                        {
+                            { "apiKey", myAdminAPIKey! },
+                            { "sessionId", myAdminSessionId! },
+                            { "productId", productId },
+                            { "quantity", batchQuantity }
+                        };
+
+                        if (!string.IsNullOrEmpty(erpNo))
+                            parameters.Add("erpNo", erpNo);
+                        if (hardwareId.HasValue)
+                            parameters.Add("hardwareId", hardwareId.Value);
+                        if (!string.IsNullOrEmpty(promoCode))
+                            parameters.Add("promoCode", promoCode);
+                        if (!string.IsNullOrEmpty(subPlan))
+                            parameters.Add("subPlan", subPlan);
+
+                        batchProvisionResults = await myAdminApi!.InvokeAsync<ProvisionResult[]>(MYAMethodName, parameters, cts.Token);
+                    }, pollyContext);
+
+                    if (batchProvisionResults != null)
+                    {
+                        foreach (var pr in batchProvisionResults)
+                        {
+                            allResults.Add(new ProvisionDeviceResult
+                            {
+                                IsSuccess = pr.IsSuccess,
+                                GeotabSerialNumber = pr?.SerialNo ?? string.Empty,
+                                ErrorMessage = pr?.Error ?? string.Empty,
+                                ErrorSource = pr!.IsSuccess ? ErrorSource.None : ErrorSource.MyAdminAPI
+                            });
+                        }
+                        var successCount = batchProvisionResults.Count(r => r.IsSuccess);
+                        logger.Info($"Bulk provisioning batch: {successCount}/{batchQuantity} succeeded.");
+                    }
+                }
+                catch (Exception exception)
+                {
+                    if (exceptionHelper.ExceptionIsRelatedToMyAdminConnectivityLoss(exception))
+                    {
+                        throw new MyAdminConnectionException($"An exception occurred during bulk provisioning (batch of {batchQuantity}).", exception);
+                    }
+
+                    for (int i = 0; i < batchQuantity; i++)
+                    {
+                        allResults.Add(new ProvisionDeviceResult
+                        {
+                            IsSuccess = false,
+                            GeotabSerialNumber = string.Empty,
+                            ErrorMessage = exception.Message,
+                            ErrorSource = ErrorSource.Middleware
+                        });
+                    }
+                    logger.Error($"MyAdmin API {MYAMethodName} failed for batch of {batchQuantity}: {exception.Message}");
+                }
+
+                remainingQuantity -= batchQuantity;
+            }
+
+            logger.Info($"Bulk provisioning complete. Total: {allResults.Count(r => r.IsSuccess)}/{quantity} succeeded.");
+            return allResults;
+        }
+
+        /// <inheritdoc/>
         public async Task<ProvisionDeviceResult> ProvisionDeviceToAccountAsync(DbGdaQProvisionDevice dbGdaQProvisionDevice, int requestTimeoutSeconds = DefaultTimeoutSeconds)
         {
             const string MYAMethodName = "ProvisionDeviceToAccount";

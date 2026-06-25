@@ -12,6 +12,12 @@ Help us prioritize future efforts and better understand how the API Adapter is u
 
 ---
 
+## Version 5.0.0.3
+
+- **NOTE:** There are **no changes to the MyGeotab API Adapter in version 5.0.0.3**. The version is updated for alignment with the broader MyGeotab API Adapter solution, in which a bug fix was made to a different component (the Geotab DIG Adapter — see its [CHANGELOG](../GeotabDIGAdapter/CHANGELOG.md) for details). The MyGeotab API Adapter binaries are functionally identical between v5.0.0.1 and v5.0.0.3; existing v5.0.0.1 installations do not need to be upgraded.
+  - To upgrade an existing installation from version 5.0.0.1 to version 5.0.0.3 (for version alignment only), see the [Upgrade Guide](docs/upgrade-guides/v5.0.0.3.md).
+- Updated version to 5.0.0.3.
+
 ## Version 5.0.0.1
 
 - **NOTE:** There are **no database schema or configuration file changes from version 5.0.0 to version 5.0.0.1**. It is safe to upgrade from version 5.0.0 to version 5.0.0.1 by simply replacing the application files. See the [Upgrade Guide](docs/upgrade-guides/v5.0.0.1.md).

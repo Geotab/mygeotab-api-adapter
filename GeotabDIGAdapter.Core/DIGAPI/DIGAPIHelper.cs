@@ -42,6 +42,16 @@ namespace MyGeotabAPIAdapter.DIGAPI
         // Keeps track of the current session generation for re-authentication
         long digSessionGeneration = 0;
 
+        /// <summary>
+        /// The bearer token is proactively re-authenticated once its remaining lifetime falls to this buffer (in
+        /// minutes) ahead of expiry. This is an internal resilience heuristic, not an operator setting — see
+        /// <see cref="ShouldProactivelyRefreshBearerToken"/>, which additionally caps the effective buffer at half
+        /// the token's lifetime so short-lived tokens are not refreshed on every call.
+        /// </summary>
+        public const int ProactiveTokenRefreshBufferMinutes = 60;
+
+        static readonly TimeSpan ProactiveTokenRefreshBuffer = TimeSpan.FromMinutes(ProactiveTokenRefreshBufferMinutes);
+
         /// <inheritdoc/>
         public bool DIGAPIIsAuthenticated { get; private set; }
 
@@ -321,6 +331,7 @@ namespace MyGeotabAPIAdapter.DIGAPI
             EnsureAuthenticated();
             ValidateTimeoutSeconds(requestTimeoutSeconds);
             SetAsyncPolicyWrapForDIGAPICallsWithReauthentication(requestTimeoutSeconds);
+            await EnsureBearerTokenFreshAsync();
 
             PostRecordsResult? result = null;
             var stopwatch = Stopwatch.StartNew();
@@ -385,7 +396,9 @@ namespace MyGeotabAPIAdapter.DIGAPI
                         }
 
                         // All other errors — throw so Polly policies can handle retries, token refresh, or rate limiting.
-                        throw new Exception($"DIG API returned {response.StatusCode}: {errorDetail}");
+                        // The numeric status code MUST appear in the message: the token-expiry/rate-limit Polly predicates
+                        // match on "401"/"403"/"429", whereas {response.StatusCode} renders the enum name (e.g. "Unauthorized").
+                        throw new Exception($"DIG API returned {statusCode} ({response.StatusCode}): {errorDetail}");
                     }
                 }, pollyContext);
             }
@@ -446,6 +459,7 @@ namespace MyGeotabAPIAdapter.DIGAPI
             EnsureAuthenticated();
             ValidateTimeoutSeconds(requestTimeoutSeconds);
             SetAsyncPolicyWrapForDIGAPICallsWithReauthentication(requestTimeoutSeconds);
+            await EnsureBearerTokenFreshAsync();
 
             GetInvalidRecordsResult? result = null;
             var stopwatch = Stopwatch.StartNew();
@@ -538,7 +552,9 @@ namespace MyGeotabAPIAdapter.DIGAPI
                         }
 
                         // All other errors — throw so Polly policies can handle retries, token refresh, or rate limiting.
-                        throw new Exception($"DIG API returned {response.StatusCode}: {errorDetail}");
+                        // The numeric status code MUST appear in the message: the token-expiry/rate-limit Polly predicates
+                        // match on "401"/"403"/"429", whereas {response.StatusCode} renders the enum name (e.g. "Unauthorized").
+                        throw new Exception($"DIG API returned {statusCode} ({response.StatusCode}): {errorDetail}");
                     }
                 }, pollyContext);
             }
@@ -574,6 +590,59 @@ namespace MyGeotabAPIAdapter.DIGAPI
             }
 
             return result ?? throw new InvalidOperationException($"{MethodName} failed to return a result.");
+        }
+
+        /// <summary>
+        /// Determines whether the supplied bearer token should be proactively re-authenticated ahead of expiry.
+        /// Refresh is triggered once the token's remaining lifetime falls to <paramref name="buffer"/>, except that
+        /// the buffer is capped at half the token's total lifetime (when the token's <see cref="DIGToken.Created"/>
+        /// time is known) so that short-lived tokens are not refreshed on every call. Returns <c>false</c> when the
+        /// token is null or has no known expiry, in which case the reactive 401/403 retry policy is relied upon.
+        /// </summary>
+        /// <param name="bearerToken">The current bearer token.</param>
+        /// <param name="buffer">How close to expiry the token may be before a proactive refresh is warranted.</param>
+        public static bool ShouldProactivelyRefreshBearerToken(DIGToken? bearerToken, TimeSpan buffer)
+        {
+            if (bearerToken == null || bearerToken.Expires == default)
+            {
+                return false;
+            }
+
+            var effectiveBuffer = buffer;
+            if (bearerToken.Created != default && bearerToken.Expires > bearerToken.Created)
+            {
+                var halfLifetime = TimeSpan.FromTicks((bearerToken.Expires - bearerToken.Created).Ticks / 2);
+                if (halfLifetime < effectiveBuffer)
+                {
+                    effectiveBuffer = halfLifetime;
+                }
+            }
+
+            return bearerToken.TimeUntilExpiry <= effectiveBuffer;
+        }
+
+        /// <summary>
+        /// Proactively re-authenticates ahead of bearer-token expiry when the token is within
+        /// <see cref="ProactiveTokenRefreshBuffer"/> of expiring. Best-effort: any failure is logged and swallowed so
+        /// the reactive 401/403 re-authentication retry policy can still recover on the subsequent API call.
+        /// </summary>
+        async Task EnsureBearerTokenFreshAsync()
+        {
+            var token = bearerToken;
+            if (!ShouldProactivelyRefreshBearerToken(token, ProactiveTokenRefreshBuffer))
+            {
+                return;
+            }
+
+            logger.Info($"DIG bearer token expires in {token!.TimeUntilExpiry.TotalSeconds:F0}s; re-authenticating ahead of expiry.");
+            try
+            {
+                await ReauthenticateAsync();
+            }
+            catch (Exception exception)
+            {
+                logger.Warn($"Proactive DIG token refresh failed; the reactive 401/403 re-authentication retry policy remains as a backstop. Error: {exception.Message}");
+            }
         }
 
         /// <summary>
