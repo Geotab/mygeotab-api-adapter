@@ -210,6 +210,11 @@ namespace MyGeotabAPIAdapter
         Task<T> GetRuleService2InfoAsync();
 
         /// <summary>
+        /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.ShipmentLogProcessor2"/>.
+        /// </summary>
+        Task<T> GetShipmentLogService2InfoAsync();
+
+        /// <summary>
         /// Retrieves the <see cref="T"/> entity associated with the <see cref="AdapterService.StatusDataLocationService2"/>.
         /// </summary>
         Task<T> GetStatusDataLocationService2InfoAsync();

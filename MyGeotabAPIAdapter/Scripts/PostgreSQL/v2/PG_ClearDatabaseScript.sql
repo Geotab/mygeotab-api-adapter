@@ -23,6 +23,9 @@
 -- delete from public."MyGeotabVersionInfo2";
 -- delete from public."DBMaintenanceLogs2";
 -- delete from public."OServiceTracking2";
+-- ALTER TABLE public."AuditLogs2" DISABLE TRIGGER ALL;
+-- delete from public."AuditLogs2";
+-- ALTER TABLE public."AuditLogs2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."DeviceStatusInfo2" DISABLE TRIGGER ALL;
 -- delete from public."DeviceStatusInfo2";
 -- ALTER TABLE public."DeviceStatusInfo2" ENABLE TRIGGER ALL;
@@ -65,6 +68,9 @@
 -- ALTER TABLE public."StatusData2" DISABLE TRIGGER ALL;
 -- delete from public."StatusData2";
 -- ALTER TABLE public."StatusData2" ENABLE TRIGGER ALL;
+-- ALTER TABLE public."ShipmentLogs2" DISABLE TRIGGER ALL;
+-- delete from public."ShipmentLogs2";
+-- ALTER TABLE public."ShipmentLogs2" ENABLE TRIGGER ALL;
 -- ALTER TABLE public."fail_DVIRDefectUpdateFailures2" DISABLE TRIGGER ALL;
 -- delete from public."fail_DVIRDefectUpdateFailures2";
 -- ALTER TABLE public."fail_DVIRDefectUpdateFailures2" ENABLE TRIGGER ALL;

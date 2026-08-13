@@ -195,7 +195,14 @@ Each queue table also has a filtered index `IX_Q_<Name>_PendingWork` on `id` whe
 | `Speed` | real | YES | Speed in km/h |
 | `IsGpsValid` | bit / boolean | YES | Must be `true` for device to show as active in MyGeotab |
 | `IsIgnitionOn` | bit / boolean | YES | Ignition state (DIG uses this for trip boundary detection) |
-| `IsAuxiliary1On` ... `IsAuxiliary8On` | bit / boolean | YES | Auxiliary input states (8 columns) |
+| `IsAuxiliary1On` | bit / boolean | YES | Auxiliary input 1 state |
+| `IsAuxiliary2On` | bit / boolean | YES | Auxiliary input 2 state |
+| `IsAuxiliary3On` | bit / boolean | YES | Auxiliary input 3 state |
+| `IsAuxiliary4On` | bit / boolean | YES | Auxiliary input 4 state |
+| `IsAuxiliary5On` | bit / boolean | YES | Auxiliary input 5 state |
+| `IsAuxiliary6On` | bit / boolean | YES | Auxiliary input 6 state |
+| `IsAuxiliary7On` | bit / boolean | YES | Auxiliary input 7 state |
+| `IsAuxiliary8On` | bit / boolean | YES | Auxiliary input 8 state |
 
 [↑ Table Inventory](#table-inventory)
 

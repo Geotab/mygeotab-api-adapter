@@ -55,6 +55,7 @@ Most tables in the adapter database have `GeotabId` and `id` columns:
 | [`OServiceTracking2`](#oservicetracking2) | System info | No | A system table used by the MyGeotab API Adapter. |
 | [`RepairStatuses2`](#repairstatuses2) | Reference data | No | Represents the list of values in the MyGeotab [RepairStatusType](https://developers.geotab.com/myGeotab/apiReference/objects/RepairStatusType) entity. |
 | [`Rules2`](#rules2) | Reference data | No | Contains data corresponding to MyGeotab [Rule](https://developers.geotab.com/myGeotab/apiReference/objects/Rule) objects. |
+| [`ShipmentLogs2`](#shipmentlogs2) | Feed data | Yes | Contains data corresponding to MyGeotab [ShipmentLog](https://developers.geotab.com/myGeotab/apiReference/objects/ShipmentLog) objects. |
 | [`StatusData2`](#statusdata2) | Feed data | Yes | Contains data corresponding to MyGeotab [StatusData](https://developers.geotab.com/myGeotab/apiReference/objects/StatusData) objects. |
 | [`StatusDataLocations2`](#statusdatalocations2) | Enhanced data | Yes | Contains interpolated location data for MyGeotab [StatusData](https://developers.geotab.com/myGeotab/apiReference/objects/StatusData) objects. For each record inserted into the StatusData2 table, a corresponding record is inserted into this table. If the [EnableStatusDataLocationService](README.md#48-dataenhancementservices) setting is set to true, records in this table will be updated with location information interpolated using data from the LogRecords2 table. |
 | [`stg_*`](#staging-tables) | System info | No | Staging tables with a "stg_" prefix (e.g. stg_Devices2) are used in the cache update/refresh process for corresponding unprefixed tables of the same names (e.g. Devices2). DO NOT use or alter data in any stg_* tables. |
@@ -135,6 +136,8 @@ The adapter database uses a mix of physical foreign key constraints and logical 
 | `FaultDataLocations2.DeviceId` | `Devices2.id` | Logical | Device for location interpolation |
 | `FuelAndEnergyUsed2.DeviceId` | `Devices2.id` | FK | Device for fuel/energy data |
 | `LogRecords2.DeviceId` | `Devices2.id` | FK | Device that reported the location |
+| `ShipmentLogs2.DeviceId` | `Devices2.id` | FK | Device for the shipment log |
+| `ShipmentLogs2.DriverId` | `Users2.id` | Logical | Driver for the shipment log |
 | `StatusData2.DeviceId` | `Devices2.id` | FK | Device that reported the status |
 | `StatusData2.DiagnosticId` | `DiagnosticIds2.id` | FK | Diagnostic definition |
 | `StatusDataLocations2.id` | `StatusData2.id` | FK | Links interpolated location to status record |
@@ -208,7 +211,7 @@ Contains data corresponding to MyGeotab [BinaryData](https://developers.geotab.c
 | `Version` | bigint | bigint | YES | The version of the entity. |
 | `RecordCreationTimeUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating when the subject record was inserted into this table. |
 
-**PK**: (`id`, `DateTime`) — Partitioned by `DateTime`
+**PK**: (`DateTime`, `id`) — Partitioned by `DateTime`
 
 ```mermaid
 erDiagram
@@ -246,7 +249,7 @@ Contains data corresponding to MyGeotab [ChargeEvent](https://developers.geotab.
 | `Version` | bigint | bigint | YES | The version of the entity. |
 | `RecordLastChangedUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating the last time that the subject record was updated in this table. |
 
-**PK**: (`id`, `StartTime`) — Partitioned by `StartTime`
+**PK**: (`StartTime`, `id`) — Partitioned by `StartTime`
 
 ```mermaid
 erDiagram
@@ -270,7 +273,7 @@ Contains data corresponding to MyGeotab [DriverChange](https://developers.geotab
 | `Version` | bigint | bigint | YES | The version of the entity. |
 | `RecordLastChangedUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating the last time that the subject record was updated in this table. |
 
-**PK**: (`id`, `DateTime`) — Partitioned by `DateTime`
+**PK**: (`DateTime`, `id`) — Partitioned by `DateTime`
 
 ```mermaid
 erDiagram
@@ -321,7 +324,7 @@ Contains data corresponding to MyGeotab [DutyStatusLog](https://developers.geota
 | `Version` | bigint | bigint | YES | The version of the entity. |
 | `RecordCreationTimeUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating when the subject record was created in this table. |
 
-**PK**: (`id`, `DateTime`) — Partitioned by `DateTime`
+**PK**: (`DateTime`, `id`) — Partitioned by `DateTime`
 
 ```mermaid
 erDiagram
@@ -346,7 +349,7 @@ Contains data corresponding to MyGeotab [DefectRemark](https://developers.geotab
 | `RemarkUserId` | bigint | bigint | YES | The Id of the [User](https://developers.geotab.com/myGeotab/apiReference/objects/User) (in the Users2 table) who created the remark. |
 | `RecordLastChangedUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating the last time that the subject record was updated in this table. |
 
-**PK**: (`id`, `DVIRLogDateTime`) — Partitioned by `DVIRLogDateTime`
+**PK**: (`DVIRLogDateTime`, `id`) — Partitioned by `DVIRLogDateTime`
 
 ```mermaid
 erDiagram
@@ -379,7 +382,7 @@ Contains data corresponding to defects associated with DVIRLogs. It includes dat
 | `RepairUserId` | bigint | bigint | YES | The Id of the [User](https://developers.geotab.com/myGeotab/apiReference/objects/User) (in the Users2 table) who repaired the [DVIRDefect](https://developers.geotab.com/myGeotab/apiReference/objects/DVIRDefect). |
 | `RecordLastChangedUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating the last time that the subject record was updated in this table. |
 
-**PK**: (`id`, `DVIRLogDateTime`) — Partitioned by `DVIRLogDateTime`
+**PK**: (`DVIRLogDateTime`, `id`) — Partitioned by `DVIRLogDateTime`
 
 ```mermaid
 erDiagram
@@ -447,7 +450,7 @@ Used to store the combination of DeviceId + DateTime + EntityType + EntityId. Ea
 | `IsDeleted` | bit | boolean | YES | For future use. |
 | `RecordCreationTimeUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating when the subject record was inserted into this table. |
 
-**PK**: `id`
+**PK**: PostgreSQL (`DateTime`, `id`); SQL Server (`id`, `DateTime`) — Partitioned by `DateTime`
 
 ```mermaid
 erDiagram
@@ -479,7 +482,7 @@ Contains data corresponding to MyGeotab [ExceptionEvent](https://developers.geot
 | `Version` | bigint | bigint | YES | The version of the entity. |
 | `RecordLastChangedUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating the last time that the subject record was updated in this table. |
 
-**PK**: (`id`, `ActiveFrom`) — Partitioned by `ActiveFrom`
+**PK**: (`ActiveFrom`, `id`) — Partitioned by `ActiveFrom`
 
 ```mermaid
 erDiagram
@@ -526,7 +529,7 @@ Contains data corresponding to MyGeotab [FaultData](https://developers.geotab.co
 | `SourceAddress` | int | integer | YES | The source address for enhanced faults. |
 | `RecordCreationTimeUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating when the subject record was inserted into this table. |
 
-**PK**: (`id`, `DateTime`) — Partitioned by `DateTime`
+**PK**: PostgreSQL (`DateTime`, `id`); SQL Server (`id`, `DateTime`) — Partitioned by `DateTime`
 
 ```mermaid
 erDiagram
@@ -555,7 +558,7 @@ Contains data corresponding to MyGeotab [FuelAndEnergyUsed](https://developers.g
 | `Version` | bigint | bigint | YES | The version of the entity. |
 | `RecordLastChangedUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating the last time that the subject record was updated in this table. |
 
-**PK**: (`id`, `DateTime`) — Partitioned by `DateTime`
+**PK**: (`DateTime`, `id`) — Partitioned by `DateTime`
 
 ```mermaid
 erDiagram
@@ -573,17 +576,46 @@ Contains data corresponding to MyGeotab [LogRecord](https://developers.geotab.co
 | `id` | bigint | bigint | NO | The unique identifier for the record in this table. * **NOTE** : This is also the **GeotabId** converted to its underlying numeric value. |
 | `GeotabId` | nvarchar(50) | varchar(50) | NO | The unique identifier for the Entity in the Geotab system. |
 | `DateTime` | datetime2(7) | timestamp | NO | The date and time the log was recorded. |
-| `DeviceId` | bigint | bigint | NO | The Id of the [Device](https://developers.geotab.com/myGeotab/apiReference/objects/Device) (in the Devices2 table) associated with the subject FaultData. |
+| `DeviceId` | bigint | bigint | NO | The Id of the [Device](https://developers.geotab.com/myGeotab/apiReference/objects/Device) (in the Devices2 table) associated with the subject LogRecord. |
 | `Latitude` | float | double precision | NO | The latitude of the log record. |
 | `Longitude` | float | double precision | NO | The longitude of the log record. |
 | `Speed` | real | real | NO | The logged speed or an invalid speed (in km/h). |
 | `RecordCreationTimeUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating when the subject record was inserted into this table. |
 
-**PK**: (`id`, `DateTime`) — Partitioned by `DateTime`
+**PK**: PostgreSQL (`DateTime`, `id`); SQL Server (`id`, `DateTime`) — Partitioned by `DateTime`
 
 ```mermaid
 erDiagram
     Devices2 ||--o{ LogRecords2 : "DeviceId"
+```
+
+[↑ Table Inventory](#table-inventory)
+
+### ShipmentLogs2
+
+Contains data corresponding to MyGeotab [ShipmentLog](https://developers.geotab.com/myGeotab/apiReference/objects/ShipmentLog) objects.
+
+| Column | MSSQL Type | PG Type | Nullable | Description |
+|--------|-----------|---------|----------|-------------|
+| `id` | uniqueidentifier | uuid | NO | The unique identifier for the record in this table. * **NOTE** : This is also the **GeotabId** converted to its underlying GUID value. |
+| `GeotabId` | nvarchar(50) | varchar(50) | NO | The unique identifier for the Entity in the Geotab system. |
+| `ActiveFrom` | datetime2(7) | timestamp | YES | The date and time from which the shipment log is active. |
+| `ActiveTo` | datetime2(7) | timestamp | YES | The date and time until which the shipment log is active. Set when a shipment ends. |
+| `Commodity` | nvarchar(255) | varchar(255) | YES | The commodity being shipped. |
+| `DateTime` | datetime2(7) | timestamp | NO | The date and time the log was created. |
+| `DeviceId` | bigint | bigint | YES | The Id of the [Device](https://developers.geotab.com/myGeotab/apiReference/objects/Device) (in the Devices2 table) associated with the subject ShipmentLog. |
+| `DocumentNumber` | nvarchar(max) | text | YES | The document number associated with the shipment. |
+| `DriverId` | bigint | bigint | YES | The Id of the [User](https://developers.geotab.com/myGeotab/apiReference/objects/User) (corresponding to the Id in the Users2 table) who created this log. |
+| `ShipperName` | nvarchar(max) | text | YES | The name of the shipper. |
+| `Version` | bigint | bigint | YES | The version of the entity. |
+| `RecordLastChangedUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating the last time that the subject record was updated in this table. |
+
+**PK**: (`DateTime`, `id`) — Partitioned by `DateTime`
+
+```mermaid
+erDiagram
+    Devices2 ||--o{ ShipmentLogs2 : "DeviceId"
+    Users2 o|..o{ ShipmentLogs2 : "DriverId (logical)"
 ```
 
 [↑ Table Inventory](#table-inventory)
@@ -602,7 +634,19 @@ Contains data corresponding to MyGeotab [StatusData](https://developers.geotab.c
 | `DiagnosticId` | bigint | bigint | NO | The Id of the [Diagnostic](https://developers.geotab.com/myGeotab/apiReference/objects/Diagnostic) (in the DiagnosticIds2 table) associated with the subject StatusData. |
 | `RecordCreationTimeUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating when the subject record was inserted into this table. |
 
-**PK**: (`id`, `DateTime`) — Partitioned by `DateTime`
+**PK**: PostgreSQL (`DateTime`, `id`); SQL Server (`id`, `DateTime`) — Partitioned by `DateTime`
+
+#### Odometer-type diagnostics and source detection
+
+Neither the MyGeotab [StatusData](https://developers.geotab.com/myGeotab/apiReference/objects/StatusData) object nor this table carries any indication of whether an odometer value originated from the vehicle's engine bus or from GPS. The "(now using GPS)" annotation shown next to **Odometer/total distance** in the MyGeotab UI is a server-side inference — MyGeotab displays it when the device is not reporting engine-bus odometer readings — and it is not exposed through the API or stored by the adapter.
+
+The odometer-type diagnostics behave differently from one another, and only some of them ever produce rows in this table. Resolve a row's diagnostic by joining `StatusData2.DiagnosticId` → `DiagnosticIds2.id`, then `DiagnosticIds2.GeotabGUIDString` → `Diagnostics2.GeotabGUIDString`, filtering on `Diagnostics2.GeotabId` (all `Data` values in meters):
+
+- **`DiagnosticOdometerId`** ("Odometer", `DiagnosticCode` 5) — the calibrated odometer ([raw odometer × odometer factor] + odometer offset), logged at ignition on/off and periodically while driving. Stored records; delivered by the StatusData feed into this table.
+- **`DiagnosticRawOdometerId`** ("Raw odometer", `DiagnosticCode` 4) — the uncalibrated engine-bus reading, stored alongside the calibrated records (typically as same-timestamp pairs). Also delivered into this table. When the device cannot read an engine-bus odometer, both of these diagnostics stop producing records.
+- **`DiagnosticOdometerAdjustmentId`** ("Odometer adjustment", `DiagnosticCode` 248) — MyGeotab's continuously-advancing odometer *estimate* (most recent anchor plus GPS-derived distance accumulated since), and the value the MyGeotab UI displays. This value is **calculated on demand**: it is returned only by per-device `Get<StatusData>` calls (`DeviceSearch` + `DiagnosticSearch`), as dynamically generated records without an ID or version. Generated records are never stored, so they **never appear in the data feed or in this table**. The only records stored under this diagnostic — and therefore the only ones that reach this table — are actual odometer *corrections* (a user editing the odometer value in the MyGeotab UI, or an `Add<StatusData>` call). A row here means "the odometer was adjusted at this time", not "current odometer".
+
+A device is therefore effectively "using GPS" for its odometer when it shows recent activity (for example, recent `Trips2` rows) while `DiagnosticOdometerId`/`DiagnosticRawOdometerId` records are absent over the same period. For a warehouse-side odometer value, use `Trips2.Odometer` — MyGeotab's odometer estimate as of each trip's end, delivered by the Trip feed. Rows exist only for the feeds and diagnostics the adapter is configured to collect (`EnableStatusDataFeed`, `DiagnosticsToTrack`, `EnableTripFeed` — see the README). GPS-derived distance is estimated from positions rather than wheel rotations and may differ slightly from the true driven distance.
 
 ```mermaid
 erDiagram
@@ -650,11 +694,11 @@ Contains data corresponding to MyGeotab [Trip](https://developers.geotab.com/myG
 | `WorkDrivingDurationTicks` | bigint | bigint | YES | The duration the vehicle was driven during work hours as measured in ticks. A tick is equal to 100 nanoseconds or one ten-millionth of a second. There are 10,000 ticks in a millisecond and 10 million ticks in a second. |
 | `WorkStopDurationTicks` | bigint | bigint | YES | The duration the vehicle was stopped during work hours as measured in ticks. A tick is equal to 100 nanoseconds or one ten-millionth of a second. There are 10,000 ticks in a millisecond and 10 million ticks in a second. |
 | `EngineHours` | float | double precision | YES | A value indicating the engine hours as of the end of the trip (measured **in seconds**). |
-| `Odometer` | float | double precision | YES | A value indicating the vehicle odometer value as of the end of the trip (**in meters**). |
+| `Odometer` | float | double precision | YES | MyGeotab's odometer estimate for the vehicle as of the end of the trip (**in meters**; NULL for trips loaded before schema version 4.1.0.0 introduced the column). The value is computed server-side and carries no indicator of its source: for vehicles not reporting an engine-bus odometer (shown as "(now using GPS)" in the MyGeotab UI), it is GPS-derived. This is the only continuously-updating odometer value available in the adapter database — see [Odometer-type diagnostics and source detection](#odometer-type-diagnostics-and-source-detection) under StatusData2. |
 | `EntityStatus` | int | integer | NO | Indicates whether the subject corresponding object is active or deleted in the MyGeotab database. **1 = Active. 0 = Deleted**. |
 | `RecordLastChangedUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating the last time that the subject record was updated in this table. |
 
-**PK**: (`id`, `Start`) — Partitioned by `Start`
+**PK**: PostgreSQL (`Start`, `id`); SQL Server (`id`) — Partitioned by `Start`
 
 ```mermaid
 erDiagram
@@ -983,7 +1027,7 @@ Contains interpolated location data for MyGeotab [FaultData](https://developers.
 | `LongLatReason` | tinyint | smallint | YES | If **not null** and **LongLatProcessed = true**, indicates the reason why it was not possible to interpolate Longitude and Latitude values for the subject record. See [LocationInterpolationResultReason](#locationinterpolationresultreason-enumeration). |
 | `RecordLastChangedUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating the last time that the subject record was updated in this table. |
 
-**PK**: (`id`, `DateTime`) — Partitioned by `DateTime`
+**PK**: PostgreSQL (`DateTime`, `id`); SQL Server (`id`, `DateTime`) — Partitioned by `DateTime`
 
 ```mermaid
 erDiagram
@@ -1111,6 +1155,7 @@ Each staging table mirrors the column structure of its destination table. Data i
 | `stg_FuelAndEnergyUsed2` | `FuelAndEnergyUsed2` | `spMerge_stg_FuelAndEnergyUsed2` |
 | `stg_Groups2` | `Groups2` | `spMerge_stg_Groups2` |
 | `stg_Rules2` | `Rules2` | `spMerge_stg_Rules2` |
+| `stg_ShipmentLogs2` | `ShipmentLogs2` | `spMerge_stg_ShipmentLogs2` |
 | `stg_Trips2` | `Trips2` | `spMerge_stg_Trips2` |
 | `stg_Users2` | `Users2` | `spMerge_stg_Users2` |
 | `stg_Zones2` | `Zones2` | `spMerge_stg_Zones2` |
@@ -1185,7 +1230,7 @@ Contains software version information (obtained from MyGeotab API [VersionInform
 | `GoTalkVersion` | nvarchar(50) | varchar(50) | NO | The Text to Speech firmware version provided by the server. |
 | `RecordCreationTimeUtc` | datetime2(7) | timestamp | NO | A timestamp, in Coordinated Universal Time (UTC), indicating when the subject record was inserted into this table. |
 
-**PK**: `DatabaseName`
+**PK**: none — this table has no primary key or unique constraint (only a non-unique index on `RecordCreationTimeUtc`).
 
 [↑ Table Inventory](#table-inventory)
 
@@ -1241,6 +1286,7 @@ Each staging table has a corresponding merge stored procedure that upserts stagi
 | `spMerge_stg_FuelAndEnergyUsed2` | stg_FuelAndEnergyUsed2 | FuelAndEnergyUsed2 |
 | `spMerge_stg_Groups2` | stg_Groups2 | Groups2 |
 | `spMerge_stg_Rules2` | stg_Rules2 | Rules2 |
+| `spMerge_stg_ShipmentLogs2` | stg_ShipmentLogs2 | ShipmentLogs2 |
 | `spMerge_stg_Trips2` | stg_Trips2 | Trips2 |
 | `spMerge_stg_Users2` | stg_Users2 | Users2 |
 | `spMerge_stg_Zones2` | stg_Zones2 | Zones2 |
@@ -1287,7 +1333,7 @@ SELECT
     "EntitiesLastProcessedUtc",
     "LastProcessedFeedVersion",
     "RecordLastChangedUtc"
-FROM "OServiceTracking2"
+FROM public."OServiceTracking2"
 ORDER BY "ServiceId"
 LIMIT 100;
 ```
@@ -1301,7 +1347,7 @@ SELECT * FROM [dbo].[vwStatsForLocationInterpolationProgress] WITH (NOLOCK);
 **Location interpolation progress (PostgreSQL):**
 
 ```sql
-SELECT * FROM "vwStatsForLocationInterpolationProgress";
+SELECT * FROM public."vwStatsForLocationInterpolationProgress";
 ```
 
 **Database schema version (SQL Server):**
@@ -1313,5 +1359,5 @@ SELECT * FROM [dbo].[MiddlewareVersionInfo2] WITH (NOLOCK);
 **Database schema version (PostgreSQL):**
 
 ```sql
-SELECT * FROM "MiddlewareVersionInfo2";
+SELECT * FROM public."MiddlewareVersionInfo2";
 ```

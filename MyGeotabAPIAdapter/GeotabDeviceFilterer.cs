@@ -104,6 +104,10 @@ namespace MyGeotabAPIAdapter
                             var logRecordToBeEvaluated = entityToBeEvaluated as LogRecord;
                             entityToBeEvaluatedDevice = logRecordToBeEvaluated.Device;
                             break;
+                        case nameof(ShipmentLog):
+                            var shipmentLogToBeEvaluated = entityToBeEvaluated as ShipmentLog;
+                            entityToBeEvaluatedDevice = shipmentLogToBeEvaluated.Device;
+                            break;
                         case nameof(Trip):
                             var tripToBeEvaluated = entityToBeEvaluated as Trip;
                             entityToBeEvaluatedDevice = tripToBeEvaluated.Device;

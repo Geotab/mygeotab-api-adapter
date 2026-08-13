@@ -216,7 +216,12 @@ namespace MyGeotabAPIAdapter.DIGAPI
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        throw new DIGConnectionException($"DIG API token refresh failed with status {response.StatusCode}: {responseContent}");
+                        // Emit the NUMERIC status code (mirroring PostRecordsAsync/GetInvalidRecordsAsync) so a rejected
+                        // refresh token (401/403) is NOT swallowed by the generic non-reauth retry policy
+                        // (CreateAsyncRetryPolicyForDIGAPICallsNotTimedOut excludes messages containing "401"/"403"). With the
+                        // numeric code present, the exception propagates to ReauthenticateAsync's catch, which escalates to a
+                        // full re-login (AuthenticateDIGAPIAsync) instead of retrying the dead refresh token forever.
+                        throw new DIGConnectionException($"DIG API token refresh failed with status {(int)response.StatusCode} ({response.StatusCode}): {responseContent}");
                     }
 
                     var refreshResponse = JsonSerializer.Deserialize<DIGAPIResponse<DIGAuthenticationResult>>(

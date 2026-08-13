@@ -58,7 +58,7 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         public int GetFeedResultLimitZone { get => GetFeedResultLimitZoneConst; }
 
         /// <inheritdoc/>
-        public API MyGeotabAPI { get; private set; }
+        public IApi MyGeotabAPI { get; internal set; }
 
         /// <inheritdoc/>
         public bool MyGeotabAPIIsAuthenticated
@@ -158,7 +158,8 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
             { 
                 return result;
             }
-            throw new Exception($"GetAsync<T> method failed to return a result for entity type '{typeof(T).Name}'.");
+            // Treat a null result as a MyGeotab availability issue so that the adapter's connectivity-restoration logic responds, rather than the process terminating on an unhandled exception.
+            throw new MyGeotabConnectionException($"GetAsync<T> method failed to return a result for entity type '{typeof(T).Name}'. This may be due to a loss of connectivity with the MyGeotab server.");
         }
 
         /// <inheritdoc/>
@@ -272,7 +273,8 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
             {
                 return result;
             }
-            throw new Exception($"GetFeedAsync<T>(fromDate...) method failed to return a result for entity type '{typeof(T).Name}'.");
+            // Treat a null result as a MyGeotab availability issue so that the adapter's connectivity-restoration logic responds, rather than the process terminating on an unhandled exception.
+            throw new MyGeotabConnectionException($"GetFeedAsync<T>(fromDate...) method failed to return a result for entity type '{typeof(T).Name}'. This may be due to a loss of connectivity with the MyGeotab server.");
         }
 
         /// <inheritdoc/>
@@ -383,7 +385,8 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
             {
                 return result;
             }
-            throw new Exception($"GetFeedAsync<T>(fromVersion...) method failed to return a result for entity type '{typeof(T).Name}'.");
+            // Treat a null result as a MyGeotab availability issue so that the adapter's connectivity-restoration logic responds, rather than the process terminating on an unhandled exception.
+            throw new MyGeotabConnectionException($"GetFeedAsync<T>(fromVersion...) method failed to return a result for entity type '{typeof(T).Name}'. This may be due to a loss of connectivity with the MyGeotab server.");
         }
 
         /// <inheritdoc/>
@@ -424,7 +427,8 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
             {
                 return result;
             }
-            throw new Exception($"GetVersionInformationAsync method failed to return a result.");
+            // Treat a null result as a MyGeotab availability issue so that the adapter's connectivity-restoration logic responds, rather than the process terminating on an unhandled exception.
+            throw new MyGeotabConnectionException($"GetVersionInformationAsync method failed to return a result. This may be due to a loss of connectivity with the MyGeotab server.");
         }
 
         /// <inheritdoc/>
@@ -468,7 +472,8 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
             {
                 return result;
             }
-            throw new Exception($"AddAsync<T> method failed to return a result for entity type '{typeof(T).Name}'.");
+            // Treat a null result as a MyGeotab availability issue so that the adapter's connectivity-restoration logic responds, rather than the process terminating on an unhandled exception.
+            throw new MyGeotabConnectionException($"AddAsync<T> method failed to return a result for entity type '{typeof(T).Name}'. This may be due to a loss of connectivity with the MyGeotab server.");
         }
 
         /// <inheritdoc/>

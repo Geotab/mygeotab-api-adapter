@@ -268,7 +268,12 @@ namespace MyGeotabAPIAdapter.Configuration
         bool EnableRuleCache { get; }
 
         /// <summary>
-        /// Indicates whether a <see cref="StatusData"/> data feed should be enabled. 
+        /// Indicates whether a <see cref="ShipmentLog"/> data feed should be enabled.
+        /// </summary>
+        bool EnableShipmentLogFeed { get; }
+
+        /// <summary>
+        /// Indicates whether a <see cref="StatusData"/> data feed should be enabled.
         /// </summary>
         bool EnableStatusDataFeed { get; }
 
@@ -496,6 +501,11 @@ namespace MyGeotabAPIAdapter.Configuration
         /// The number of seconds to wait, after updating the <see cref="Rule"/> cache, before initiating the next update of the subject cache.
         /// </summary>
         int RuleCacheUpdateIntervalMinutes { get; }
+
+        /// <summary>
+        /// The minimum number of seconds to wait between GetFeed() calls for <see cref="ShipmentLog"/> objects.
+        /// </summary>
+        int ShipmentLogFeedIntervalSeconds { get; }
 
         /// <summary>
         /// The minimum number of seconds to wait between GetFeed() calls for <see cref="StatusData"/> objects.

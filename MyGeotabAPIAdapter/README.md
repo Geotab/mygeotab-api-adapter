@@ -1,6 +1,6 @@
 # MyGeotab API Adapter
 
-**Current Version:** 5.0.0.3 | [Change Log](CHANGELOG.md)
+**Current Version:** 5.1.0.0 | [Change Log](CHANGELOG.md)
 
 > **Using AI to query your adapter database?** See [Section 8.6 AI-Assisted SQL Generation](#86-ai-assisted-sql-generation) for guidance on which files to provide as context to your LLM and key points that ensure accurate query results.
 
@@ -33,7 +33,7 @@ Highlights of the MyGeotab API Adapter solution are as follows:
 
 - **Efficiency** — The number of MyGeotab API calls is minimized via data feeds and caching. Chattiness with the adapter database is also minimized. Asynchronous methods and parallel processing are incorporated where possible.
 - **Data Integrity** — Feed tokens are tracked and persisted. Write operations are executed within transactions to ensure all-or-none processing. Feeds continue from the last feed versions upon restart. Safeguards are in place to prevent missing or duplicating data or inadvertently mixing data from multiple MyGeotab databases.
-- **Data Feeds** — Fourteen data feed processors pull incremental data from MyGeotab, and ten cache processors maintain up-to-date reference data. Each processor runs independently and can be enabled or disabled individually.
+- **Data Feeds** — Fifteen data feed processors pull incremental data from MyGeotab, and ten cache processors maintain up-to-date reference data. Each processor runs independently and can be enabled or disabled individually.
 - **Data Enhancement** — Location interpolation services enrich FaultData and StatusData records with latitude, longitude, speed, bearing, and compass direction by interpolating from nearby GPS log records.
 - **Database-Agnosticity** — Both SQL Server and PostgreSQL are supported. The [Dapper](https://github.com/DapperLib/Dapper) ORM is used to map .NET objects to database rows, and a repository pattern separates data-access code from application logic.
 - **Configurability** — Via `appsettings.json`, individual feeds and caches can be enabled or disabled, polling intervals can be tuned, device and diagnostic filtering can be applied, and data enhancement services can be independently controlled.
@@ -297,7 +297,7 @@ The adapter uses the MyGeotab SDK's [data feed](https://geotab.github.io/sdk/sof
 
 ```mermaid
 flowchart LR
-    MG[MyGeotab Database] -->|SDK Data Feeds| FP[Feed Processors x14]
+    MG[MyGeotab Database] -->|SDK Data Feeds| FP[Feed Processors x15]
     MG -->|SDK Get Calls| CP[Cache Processors x10]
     FP -->|Stage + Merge| DB[(Adapter Database)]
     CP -->|Upsert| DB
@@ -330,21 +330,22 @@ The adapter runs 29 hosted background services. Each service runs independently 
 | 12 | FaultDataProcessor2 | Feed Processor | Pulls fault diagnostic records from MyGeotab | Yes |
 | 13 | FuelAndEnergyUsedProcessor2 | Feed Processor | Pulls fuel and energy usage records from MyGeotab | Yes |
 | 14 | LogRecordProcessor2 | Feed Processor | Pulls GPS log records from MyGeotab | Yes |
-| 15 | StatusDataProcessor2 | Feed Processor | Pulls status diagnostic records from MyGeotab | Yes |
-| 16 | TripProcessor2 | Feed Processor | Pulls trip records from MyGeotab | Yes |
-| 17 | ControllerProcessor2 | Cache Processor | Maintains Controller reference data | No |
-| 18 | DeviceProcessor2 | Cache Processor | Maintains Device reference data | Yes |
-| 19 | DiagnosticProcessor2 | Cache Processor | Maintains Diagnostic reference data | Yes |
-| 20 | FailureModeProcessor2 | Cache Processor | Maintains FailureMode reference data | Yes |
-| 21 | GroupProcessor2 | Cache Processor | Maintains Group reference data | Yes |
-| 22 | RuleProcessor2 | Cache Processor | Maintains Rule reference data | Yes |
-| 23 | UnitOfMeasureProcessor2 | Cache Processor | Maintains UnitOfMeasure reference data | No |
-| 24 | UserProcessor2 | Cache Processor | Maintains User reference data | Yes |
-| 25 | ZoneProcessor2 | Cache Processor | Maintains Zone reference data | Yes |
-| 26 | ZoneTypeProcessor2 | Cache Processor | Maintains ZoneType reference data | Yes |
-| 27 | FaultDataLocationService2 | Data Enhancement | Interpolates location data for FaultData records | Yes |
-| 28 | StatusDataLocationService2 | Data Enhancement | Interpolates location data for StatusData records | Yes |
-| 29 | DVIRLogManipulator2 | Manipulator | Propagates DVIR defect updates from adapter database back to MyGeotab | Yes |
+| 15 | ShipmentLogProcessor2 | Feed Processor | Pulls shipment log records from MyGeotab | Yes |
+| 16 | StatusDataProcessor2 | Feed Processor | Pulls status diagnostic records from MyGeotab | Yes |
+| 17 | TripProcessor2 | Feed Processor | Pulls trip records from MyGeotab | Yes |
+| 18 | ControllerProcessor2 | Cache Processor | Maintains Controller reference data | No |
+| 19 | DeviceProcessor2 | Cache Processor | Maintains Device reference data | Yes |
+| 20 | DiagnosticProcessor2 | Cache Processor | Maintains Diagnostic reference data | Yes |
+| 21 | FailureModeProcessor2 | Cache Processor | Maintains FailureMode reference data | Yes |
+| 22 | GroupProcessor2 | Cache Processor | Maintains Group reference data | Yes |
+| 23 | RuleProcessor2 | Cache Processor | Maintains Rule reference data | Yes |
+| 24 | UnitOfMeasureProcessor2 | Cache Processor | Maintains UnitOfMeasure reference data | No |
+| 25 | UserProcessor2 | Cache Processor | Maintains User reference data | Yes |
+| 26 | ZoneProcessor2 | Cache Processor | Maintains Zone reference data | Yes |
+| 27 | ZoneTypeProcessor2 | Cache Processor | Maintains ZoneType reference data | Yes |
+| 28 | FaultDataLocationService2 | Data Enhancement | Interpolates location data for FaultData records | Yes |
+| 29 | StatusDataLocationService2 | Data Enhancement | Interpolates location data for StatusData records | Yes |
+| 30 | DVIRLogManipulator2 | Manipulator | Propagates DVIR defect updates from adapter database back to MyGeotab | Yes |
 
 ### Data Feed Processing Model
 
@@ -498,6 +499,7 @@ The following table lists the direct service dependencies for each service. Note
 | LogRecordProcessor2 | DeviceProcessor2 |
 | Orchestrator2 | None |
 | RuleProcessor2 | None |
+| ShipmentLogProcessor2 | DeviceProcessor2, UserProcessor2 |
 | StatusDataLocationService2 | None |
 | StatusDataProcessor2 | DeviceProcessor2, DiagnosticProcessor2 |
 | TripProcessor2 | DeviceProcessor2, UserProcessor2 |
@@ -727,18 +729,166 @@ Despite the database partitioning and automated maintenance capabilities offered
 
 The fact that the adapter database is partitioned lends well to data retention strategies as it is much easier to separate older data by partition. For example, to keep only the last 12 months of data in the adapter database and archive older data:
 
+The procedures below were validated end-to-end on PostgreSQL 16 and SQL Server 2019. Examples assume monthly partitions — adjust dates for weekly or daily intervals.
+
+**Packaged utility scripts:**
+
+Both procedures are also available as guarded, on-demand utility scripts that automate the steps below while leaving every destructive decision explicit. They are standalone — not part of database creation or upgrade — and discover the partitioned tables, boundaries, filegroups and non-aligned indexes from metadata at execution time, so they work for monthly, weekly or daily partition intervals on any database at schema version 3.13.0.0 or later:
+
+- `Scripts/SQLServer/v2/MSSQL_PartitionRetirementUtility.sql` installs three stored procedures (run as a member of db_owner; adjust the `USE` statement if your database is not named `geotabadapterdb`):
+  1. `spAdapterPartitionRetirement_Preview @OlderThan` — always read-only; reports retirable periods, per-table row counts, non-aligned indexes and constraints, foreign keys that switching would drop/recreate, staging tables awaiting archive, and removable filegroups.
+  2. `spAdapterPartitionRetirement_SwitchOut @OlderThan, @Execute = 0, @AcknowledgeSessionCheckUnavailable = 0` — steps 2–5 below for every affected table, handling whatever blocks each switch: foreign keys that reference a table being switched (both sides of each pair retire the same periods in the same run; the keys are recreated `WITH CHECK` afterwards), non-aligned `PRIMARY KEY`/`UNIQUE` constraints, and non-aligned nonclustered indexes. Staging tables clone each table's actual clustered structure. With the default `@Execute = 0` it only prints the exact statements. The switched-out rows always remain in the database, in `<Table>_retired_<period>` staging tables.
+  3. `spAdapterPartitionRetirement_Cleanup @OlderThan, @ConfirmDataArchivedOrNotNeeded = 0, @Execute = 0, @AcknowledgeSessionCheckUnavailable = 0` — steps 6–8 below. Refuses to drop staging tables unless `@ConfirmDataArchivedOrNotNeeded = 1` (back up or export the staged data first if it must be kept), and independently refuses any staging table that still holds rows dated on or after `@OlderThan`. Verifies each period's partition is empty in every partitioned table before merging its boundary, then removes the freed files and filegroups (only filegroups carrying the adapter's naming signature — `FG_..._yyyyMM` with a `<FilegroupName>_DataFile` logical file — are ever considered).
+- `Scripts/PostgreSQL/v2/PG_PartitionRetirementUtility.sql` installs a single function (run as the adapter table owner or a superuser): `SELECT * FROM public."fnAdapterPartitionRetirement"('<cutoff date>');` reports the plan; pass `true` as the second argument to perform the detaches (step 3 below). Only partitioned tables carrying the adapter's partition-management signature (a `<Parent>_default` DEFAULT child and `<Parent>_<period>` child naming) are touched — any other partitioned table in the database is reported and skipped. Parents are processed in foreign-key dependency order, and a partition whose detach would violate a foreign key is skipped and reported without aborting the run. Backing up and dropping the detached tables (steps 4–5) remain manual. On databases with hundreds of retirable partitions, advance the cutoff in stages (e.g. one month at a time) — all of one call's detaches share a single transaction and its lock budget.
+
+When executing (`@Execute = 1` / `Execute => true`), the procedures refuse to run while any other session is connected to the database — stop the adapter first. On SQL Server the connected-session check requires `VIEW SERVER STATE` (not included in db_owner); without it, execution refuses unless `@AcknowledgeSessionCheckUnavailable = 1` explicitly accepts responsibility for ensuring nothing else is connected. Every phase is re-runnable after an interruption: on SQL Server, the definition of every foreign key, constraint and non-aligned index is saved as an extended property on its table (name prefixes `PartitionRetirement_Fk_`, `PartitionRetirement_Cns_`, `PartitionRetirement_Idx_`) before anything is dropped, and each property is removed only once its object is recreated, so a re-run always restores them. Only whole periods entirely older than the cutoff are ever touched.
+
+The manual procedures below remain the reference for what the utilities do at each step (their messages cite these step numbers) and can be followed directly where finer control is needed. A dedicated operator guide for the utility — what happens to retired data, a quick-start for each engine, an FAQ, and a troubleshooting reference covering every message the procedures can produce — is available at [docs/partition-retirement-utility.md](docs/partition-retirement-utility.md).
+
 **PostgreSQL:**
 
-1. Identify and detach partitions older than 12 months from the parent tables.
-2. Backup the old partitions (to CSV, to an archive database, or using `pg_dump`).
-3. Drop the detached partitions after successful backup.
-4. Run `ANALYZE` and `VACUUM FULL` for cleanup and performance.
+Partition retirement on PostgreSQL requires no index changes: every partition carries its own local indexes, which travel with the partition when it is detached and are removed when it is dropped.
+
+1. **Stop the adapter.** `DETACH PARTITION` briefly requires an `ACCESS EXCLUSIVE` lock on the parent table.
+2. **Identify partitions older than the retention window** (example for `StatusData2`):
+
+```sql
+SELECT child.relname AS partition_name,
+       pg_get_expr(child.relpartbound, child.oid) AS bounds
+FROM pg_inherits i
+JOIN pg_class parent ON parent.oid = i.inhparent
+JOIN pg_class child  ON child.oid  = i.inhrelid
+WHERE parent.relname = 'StatusData2'
+ORDER BY child.relname;
+```
+
+3. **Detach each partition being retired** (repeat per partitioned table). The partition becomes an ordinary standalone table with its data and indexes intact:
+
+```sql
+ALTER TABLE public."StatusData2" DETACH PARTITION public."StatusData2_202301";
+```
+
+> **Note:** The `DETACH PARTITION ... CONCURRENTLY` variant cannot be used with the adapter database. Every partitioned adapter table includes a `DEFAULT` partition, and PostgreSQL rejects the concurrent form when one exists (`cannot detach partitions concurrently when a default partition exists`). The plain form shown above completes in milliseconds but needs the brief exclusive lock — hence stopping the adapter first.
+
+4. **Backup the detached tables** if the data must be kept (`pg_dump --table`, `COPY ... TO`, or copy to an archive database).
+5. **Drop the detached tables** to reclaim disk space immediately: `DROP TABLE public."StatusData2_202301";`
+6. **Restart the adapter** and run `ANALYZE` on the affected parent tables.
+
+> **Note:** Rows older than the earliest partition boundary reside in each table's `<TableName>_default` partition and cannot be retired by time period using this method.
 
 **SQL Server:**
 
-1. Identify partitions older than 12 months and switch them to archive tables.
-2. Backup the archive tables (using SQL Backup or export to CSV).
-3. Drop the old partitions from the partition function.
+SQL Server partition retirement uses `ALTER TABLE ... SWITCH`, which detaches a whole partition into a staging table as a metadata-only operation — effectively instant regardless of size. Three kinds of schema objects block a switch and must be handled first:
+
+- **Non-aligned indexes.** SQL Server refuses to switch a partition while the table carries any index that is not partition-aligned (`Msg 7733: 'ALTER TABLE SWITCH' statement failed. The table '...' is partitioned while index '...' is not partitioned.`). Most partitioned adapter tables carry a `UI_<TableName>_Id` UNIQUE nonclustered index created `ON [PRIMARY]` — it enforces global uniqueness of `id` across all partitions, a guarantee an aligned (partitioned) unique index cannot provide without including the partitioning column, so it is intentionally non-aligned. Several tables carry additional non-aligned `IX_` indexes on `[PRIMARY]`: `ChargeEvents2` (2), `DriverChanges2` (4), `ExceptionEvents2` (5), `FuelAndEnergyUsed2` (2, and it has no `UI_` index), `Trips2` (2). Every non-aligned index on a table must be dropped before that table's partitions can be switched, and recreated afterwards.
+- **Non-aligned constraints.** `Trips2` is shaped differently from the other tables: its clustered index (`CI_Trips2_Start_Id`) is non-unique and lives on the partition scheme, while `PK_Trips2` is a NONCLUSTERED primary key on `[PRIMARY]` and `UK_Trips2_DeviceId_Start_EntityStatus` is a UNIQUE constraint on `[PRIMARY]`. Constraint-backed indexes cannot be dropped with `DROP INDEX` — use `ALTER TABLE ... DROP CONSTRAINT` and recreate with `ALTER TABLE ... ADD CONSTRAINT`.
+- **Inbound foreign keys.** A table referenced by an enabled foreign key cannot be a switch source (`Msg 4967`), and the four `UI_` indexes that back such references cannot even be dropped while the key exists (`Msg 3723`): `FK_StatusDataLocations2_StatusData2` → `UI_StatusData2_Id`, `FK_FaultDataLocations2_FaultData2` → `UI_FaultData2_Id`, `FK_DVIRDefects2_DVIRLogs2` → `UI_DVIRLogs2_Id`, `FK_DVIRDefectRemarks2_DVIRDefects2` → `UI_DVIRDefects2_Id`. Drop the foreign key first, switch the same periods out of BOTH tables of the pair in the same window, then recreate the key `WITH CHECK` (revalidation scans the referencing table, so its duration scales with table size).
+
+> **Warning:** Take a full database backup before the first retirement run, and always perform the procedure with the adapter stopped.
+
+**Order of operations for one maintenance window:**
+
+1. Stop the adapter and take a backup.
+2. For each period (month/week/day) being retired:
+   1. Drop the foreign keys whose referenced tables hold rows in that period (see above). Then, for each partitioned table holding rows in that period: create its staging table, drop its non-aligned indexes and constraints, `SWITCH` the partition out, recreate them — steps 1–5 below. Recreate the dropped foreign keys `WITH CHECK` once both tables of each pair are switched.
+   2. Backup and drop the staging tables — step 6.
+   3. Verify the period's partition is empty in every partitioned table, `MERGE` the boundary, and remove the period's file and filegroup — steps 7–8.
+3. Restart the adapter — step 9.
+
+The worked example below retires the February 2025 partition of `ShipmentLogs2`. Repeat steps 2–5 for each partitioned table holding data in the period, then perform steps 6–8 once for the period.
+
+1. **Resolve the partition number and filegroup at execution time.** Partition numbers shift after every merge/split — never reuse numbers from a previous run:
+
+```sql
+DECLARE @p int = $PARTITION.DateTimePartitionFunction_MyGeotabApiAdapter('2025-02-15');
+SELECT dds.destination_id AS partition_number, fg.name AS filegroup
+FROM sys.partition_schemes ps
+JOIN sys.destination_data_spaces dds ON dds.partition_scheme_id = ps.data_space_id
+JOIN sys.filegroups fg ON fg.data_space_id = dds.data_space_id
+WHERE ps.name = 'DateTimePartitionScheme_MyGeotabApiAdapter' AND dds.destination_id = @p;
+```
+
+2. **Create a staging table on that partition's filegroup.** Clone the columns and the table's actual clustered structure — a clustered primary key for most tables; for `Trips2`, clone its non-unique clustered index (`CI_Trips2_Start_Id`) instead, NOT its nonclustered primary key. Script the table in SSMS and strip everything else; nonclustered indexes and foreign keys are not required for switching a partition out. For `ShipmentLogs2`:
+
+```sql
+CREATE TABLE [dbo].[ShipmentLogs2_retired_202502](
+    [id] [uniqueidentifier] NOT NULL,
+    [GeotabId] [nvarchar](50) NOT NULL,
+    [ActiveFrom] [datetime2](7) NULL,
+    [ActiveTo] [datetime2](7) NULL,
+    [Commodity] [nvarchar](255) NULL,
+    [DateTime] [datetime2](7) NOT NULL,
+    [DeviceId] [bigint] NULL,
+    [DocumentNumber] [nvarchar](max) NULL,
+    [DriverId] [bigint] NULL,
+    [ShipperName] [nvarchar](max) NULL,
+    [Version] [bigint] NULL,
+    [RecordLastChangedUtc] [datetime2](7) NOT NULL,
+ CONSTRAINT [PK_ShipmentLogs2_retired_202502] PRIMARY KEY CLUSTERED ([DateTime] ASC, [id] ASC)
+) ON [<partition filegroup from step 1>];
+```
+
+3. **Drop every non-aligned index and constraint on the table** (see the three-kinds list above — record each definition first for step 5). Plain indexes use `DROP INDEX`; constraint-backed ones (`PK_Trips2`, `UK_Trips2_DeviceId_Start_EntityStatus`) use `ALTER TABLE ... DROP CONSTRAINT`; the four foreign-key-enforcing `UI_` indexes require their inbound foreign key dropped first:
+
+```sql
+DROP INDEX [UI_ShipmentLogs2_Id] ON [dbo].[ShipmentLogs2];
+```
+
+4. **Switch the partition out** (metadata-only):
+
+```sql
+DECLARE @p int = $PARTITION.DateTimePartitionFunction_MyGeotabApiAdapter('2025-02-15');
+ALTER TABLE [dbo].[ShipmentLogs2] SWITCH PARTITION @p TO [dbo].[ShipmentLogs2_retired_202502];
+```
+
+5. **Recreate the unique index**, using its exact definition from the schema creation script:
+
+```sql
+CREATE UNIQUE NONCLUSTERED INDEX [UI_ShipmentLogs2_Id] ON [dbo].[ShipmentLogs2]([id] ASC)
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF,
+      DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON,
+      OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
+```
+
+> **Note:** Recreating the dropped indexes/constraints (and `WITH CHECK` revalidation of recreated foreign keys) are the only steps whose duration scales with table size — on large tables they dominate the maintenance window. When retiring several periods in one window, drop each object once, perform all of the table's switches, and recreate each object once at the end. On Enterprise Edition, `ONLINE = ON` can be used for index recreation.
+
+6. **Backup and drop the staging tables.** Export the data if it must be kept (`bcp` out, backup, or copy to an archive database), then `DROP TABLE` the staging table. This must happen before step 8 — the staging table occupies the filegroup being removed.
+
+7. **Merge the emptied boundary — once the period's partition is empty in EVERY partitioned table.** The partition function is shared by all partitioned tables; merging a boundary while any table still holds rows in that partition physically moves those rows and can run for a long time. Verify first:
+
+```sql
+-- must return no rows before merging
+DECLARE @p int = $PARTITION.DateTimePartitionFunction_MyGeotabApiAdapter('2025-02-15');
+SELECT t.name AS table_name, p.rows
+FROM sys.partitions p
+JOIN sys.tables t ON t.object_id = p.object_id
+JOIN sys.indexes i ON i.object_id = p.object_id AND i.index_id = p.index_id
+JOIN sys.partition_schemes ps ON ps.data_space_id = i.data_space_id
+WHERE i.index_id IN (0, 1) AND p.partition_number = @p AND p.rows > 0;
+
+ALTER PARTITION FUNCTION DateTimePartitionFunction_MyGeotabApiAdapter() MERGE RANGE ('2025-02-01');
+```
+
+8. **Remove the period's file and filegroup** to release the disk space:
+
+```sql
+SELECT f.name AS logical_file_name
+FROM sys.database_files f
+JOIN sys.filegroups fg ON fg.data_space_id = f.data_space_id
+WHERE fg.name = '<partition filegroup from step 1>';
+
+ALTER DATABASE [<database name>] REMOVE FILE [<logical file name>];
+ALTER DATABASE [<database name>] REMOVE FILEGROUP [<partition filegroup from step 1>];
+```
+
+> **Note:** If `REMOVE FILE` reports that the file is not empty, run `DBCC SHRINKFILE ('<logical file name>', EMPTYFILE);` and retry.
+
+9. **Restart the adapter.** Automated partition management (`spManagePartitions` / `DBPartitionInfo2`) stores only the initial configuration and creates future partitions, so it is unaffected by removed historical boundaries.
+
+Additional notes:
+
+- **Rows older than the first partition boundary** live in partition 1, which resides on the `PRIMARY` filegroup. They can be retired the same way: create the staging table `ON [PRIMARY]` and switch partition 1 out (steps 7–8 do not apply — there is no dedicated file or filegroup to remove).
+- **Restoring archived data by switching back in is much stricter** than switching out: the staging table must additionally carry identical nonclustered indexes (`Msg 4947`), matching foreign keys (`Msg 4968`), and a trusted `CHECK` constraint matching the partition's range. Plan to restore archived data from exported files rather than relying on switching partitions back in.
 
 > **Warning:** It is possible for the database to grow very large very quickly, resulting in potential disk space and performance issues. For example, running the adapter against a MyGeotab database with a fleet of ~20,000 devices and pulling data for all supported feeds could result in a PostgreSQL database growing to ~40 GB in size within 7 days, including ~225,000,000 StatusData, ~65,000,000 LogRecord and ~10,000,000 Trip records.
 
@@ -1134,6 +1284,7 @@ Each feed can be individually enabled or disabled; however, some feeds depend on
 | FaultData | `false` | 10 | `PopulateEffectOnComponentAndRecommendation`: `true` |
 | FuelAndEnergyUsed | `false` | 10 | — |
 | LogRecord | `false` | 10 | — |
+| ShipmentLog | `false` | 10 | — |
 | StatusData | `false` | 10 | — |
 | Trip | `false` | 10 | — |
 
@@ -1343,8 +1494,9 @@ The adapter uses the MyGeotab SDK's `GetFeed` method to pull incremental data fo
 | 10 | FaultData | FaultDataProcessor2 | FaultData2 | `EnableFaultDataFeed` |
 | 11 | FuelAndEnergyUsed | FuelAndEnergyUsedProcessor2 | FuelAndEnergyUsed2 | `EnableFuelAndEnergyUsedFeed` |
 | 12 | LogRecord | LogRecordProcessor2 | LogRecords2 | `EnableLogRecordFeed` |
-| 13 | StatusData | StatusDataProcessor2 | StatusData2 | `EnableStatusDataFeed` |
-| 14 | Trip | TripProcessor2 | Trips2 | `EnableTripFeed` |
+| 13 | ShipmentLog | ShipmentLogProcessor2 | ShipmentLogs2 | `EnableShipmentLogFeed` |
+| 14 | StatusData | StatusDataProcessor2 | StatusData2 | `EnableStatusDataFeed` |
+| 15 | Trip | TripProcessor2 | Trips2 | `EnableTripFeed` |
 
 ### 6.2 MyGeotab Cache Types
 
@@ -1391,6 +1543,7 @@ The following table lists all MyGeotab SDK API methods called by the adapter, al
 | `GetFeed<FaultData>` | FaultDataProcessor2 | Pull incremental FaultData records |
 | `GetFeed<FuelAndEnergyUsed>` | FuelAndEnergyUsedProcessor2 | Pull incremental FuelAndEnergyUsed data |
 | `GetFeed<LogRecord>` | LogRecordProcessor2 | Pull incremental LogRecord data |
+| `GetFeed<ShipmentLog>` | ShipmentLogProcessor2 | Pull incremental ShipmentLog data |
 | `GetFeed<StatusData>` | StatusDataProcessor2 | Pull incremental StatusData records |
 | `GetFeed<Trip>` | TripProcessor2 | Pull incremental Trip data |
 | `Get<Controller>` | ControllerProcessor2 | Retrieve Controller data |
@@ -1434,6 +1587,7 @@ The following table maps each adapter database table to the service or processor
 | FaultData2 | FaultDataProcessor2 |
 | FuelAndEnergyUsed2 | FuelAndEnergyUsedProcessor2 |
 | LogRecords2 | LogRecordProcessor2 |
+| ShipmentLogs2 | ShipmentLogProcessor2 |
 | StatusData2 | StatusDataProcessor2 |
 | Trips2 | TripProcessor2 |
 

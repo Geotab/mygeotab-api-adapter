@@ -136,6 +136,9 @@
         public string DbRule2TableName => "Rules2";
 
         /// <inheritdoc/>
+        public string DbShipmentLog2TableName => "ShipmentLogs2";
+
+        /// <inheritdoc/>
         public string DbStatusDataTableName => "StatusData";
 
         /// <inheritdoc/>
@@ -191,6 +194,9 @@
 
         /// <inheritdoc/>
         public string DbStgRule2TableName => "stg_Rules2";
+
+        /// <inheritdoc/>
+        public string DbStgShipmentLog2TableName => "stg_ShipmentLogs2";
 
         /// <inheritdoc/>
         public string DbStgTrip2TableName => "stg_Trips2";
@@ -272,6 +278,9 @@
 
         /// <inheritdoc/>
         public string MergeStagingRulesProcedureName => "spMerge_stg_Rules2";
+
+        /// <inheritdoc/>
+        public string MergeStagingShipmentLogsProcedureName => "spMerge_stg_ShipmentLogs2";
 
         /// <inheritdoc/>
         public string MergeStagingTripsProcedureName => "spMerge_stg_Trips2";

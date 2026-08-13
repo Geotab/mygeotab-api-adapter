@@ -51,9 +51,9 @@ namespace MyGeotabAPIAdapter.MyGeotabAPI
         int GetFeedResultLimitZone { get; }
 
         /// <summary>
-        /// A <see cref="API"/> instance to be used for interfacing with the MyGeotab platform.
+        /// An <see cref="IApi"/> instance to be used for interfacing with the MyGeotab platform.
         /// </summary>
-        API MyGeotabAPI { get; }
+        IApi MyGeotabAPI { get; }
 
         /// <summary>
         /// Indicates whether the <see cref="MyGeotabAPI"/> is authenticated.

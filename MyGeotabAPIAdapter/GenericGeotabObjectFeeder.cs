@@ -127,6 +127,7 @@ namespace MyGeotabAPIAdapter
             if (typeParameterType == typeof(Group)) { return AdapterService.GroupProcessor; }
             if (typeParameterType == typeof(LogRecord)) { return AdapterService.LogRecordProcessor; }
             if (typeParameterType == typeof(Rule)) { return AdapterService.RuleProcessor; }
+            if (typeParameterType == typeof(ShipmentLog)) { return AdapterService.ShipmentLogProcessor2; }
             if (typeParameterType == typeof(StatusData)) { return AdapterService.StatusDataProcessor; }
             if (typeParameterType == typeof(Trip)) { return AdapterService.TripProcessor; }
             if (typeParameterType == typeof(UnitOfMeasure)) { return AdapterService.UnitOfMeasureProcessor; }

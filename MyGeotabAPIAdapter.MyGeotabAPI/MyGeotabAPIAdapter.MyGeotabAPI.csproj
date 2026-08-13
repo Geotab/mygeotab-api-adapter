@@ -17,4 +17,8 @@
     <ProjectReference Include="..\MyGeotabAPIAdapter.Logging\MyGeotabAPIAdapter.Logging.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="MyGeotabAPIAdapter.Tests" />
+  </ItemGroup>
+
 </Project>

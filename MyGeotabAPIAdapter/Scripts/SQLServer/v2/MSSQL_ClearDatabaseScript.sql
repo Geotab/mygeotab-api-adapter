@@ -62,6 +62,7 @@ GO
 
 --    -- Step 3: Truncate tables and reseed indexes: 
 --    truncate table [dbo].[DBMaintenanceLogs2];
+--    truncate table [dbo].[AuditLogs2];
 --    truncate table [dbo].[BinaryData2];
 --    truncate table [dbo].[ChargeEvents2];
 --    truncate table [dbo].[DutyStatusAvailabilities2];
@@ -85,6 +86,7 @@ GO
 --    truncate table [dbo].[MyGeotabVersionInfo2];
 --    truncate table [dbo].[OServiceTracking2];
 --    truncate table [dbo].[Rules2];
+--    truncate table [dbo].[ShipmentLogs2];
 --    truncate table [dbo].[StatusData2];
 --    truncate table [dbo].[StatusDataLocations2];
 --    truncate table [dbo].[Trips2];

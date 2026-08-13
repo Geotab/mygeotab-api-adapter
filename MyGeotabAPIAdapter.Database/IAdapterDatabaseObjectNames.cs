@@ -225,6 +225,11 @@ namespace MyGeotabAPIAdapter.Database
         string DbRule2TableName { get; }
 
         /// <summary>
+        /// The name of the database table associated with <see cref="DbShipmentLog2"/> entities.
+        /// </summary>
+        string DbShipmentLog2TableName { get; }
+
+        /// <summary>
         /// The name of the database table associated with <see cref="DbStatusData"/> entities.
         /// </summary>
         string DbStatusDataTableName { get; }
@@ -317,6 +322,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the database table associated with <see cref="DbStgRule2"/> entities.
         /// </summary>
         string DbStgRule2TableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbStgShipmentLog2"/> entities.
+        /// </summary>
+        string DbStgShipmentLog2TableName { get; }
 
         /// <summary>
         /// The name of the database table associated with <see cref="DbStgTrip2"/> entities.
@@ -451,6 +461,11 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the stored procedure or function responsible for merging staging Rules into the main Rules2 table.
         /// </summary>
         string MergeStagingRulesProcedureName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staging ShipmentLogs into the main ShipmentLogs2 table.
+        /// </summary>
+        string MergeStagingShipmentLogsProcedureName { get; }
 
         /// <summary>
         /// The name of the stored procedure or function responsible for merging staging Trips into the main Trips2 table.

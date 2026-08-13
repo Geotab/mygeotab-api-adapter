@@ -12,6 +12,13 @@ Help us prioritize future efforts and better understand how the Geotab DIG Adapt
 
 ---
 
+## Version 5.1.0.0
+
+- **NOTE:** There are **no database schema or configuration file changes from version 5.0.0.3 to version 5.1.0.0**. It is safe to upgrade from version 5.0.0.3 to version 5.1.0.0 by simply downloading the new version and overwriting the respective `appsettings.json` and `nlog.config` files with those that were configured for version 5.0.0.3.
+  - To upgrade an existing installation from version 5.0.0.3 to version 5.1.0.0, see the [Upgrade Guide](docs/upgrade-guides/v5.1.0.0.md).
+- **Bug Fix:** Resolved an issue whereby a rejected **refresh token** halted record delivery until the adapter was manually restarted. Version 5.0.0.3 corrected this for the bearer token used on record-posting calls, but the token *refresh* call itself still reported a `401 Unauthorized` or `403 Forbidden` rejection without the numeric HTTP status code. As a result the rejection was absorbed by the general retry policy and retried against the same dead refresh token, so it never reached the logic that escalates to a full re-login. The refresh call now reports the numeric status code, matching the record-posting calls, so a rejected refresh token escalates to a full re-authentication automatically and delivery resumes without intervention.
+- Updated version to 5.1.0.0.
+
 ## Version 5.0.0.3
 
 - **NOTE:** There are **no database schema or configuration file changes from version 5.0.0.1 to version 5.0.0.3**. It is safe to upgrade from version 5.0.0.1 to version 5.0.0.3 by simply downloading the new version and overwriting the respective `appsettings.json` and `nlog.config` files with those that were configured for version 5.0.0.1.

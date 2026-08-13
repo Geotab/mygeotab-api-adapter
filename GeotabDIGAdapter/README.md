@@ -1,6 +1,6 @@
 # Geotab DIG Adapter
 
-**Current Version:** 5.0.0.3
+**Current Version:** 5.1.0.0
 
 > **Using AI to query your adapter database?** See [Section 7.8 AI-Assisted SQL Generation](#78-ai-assisted-sql-generation) for guidance on which files to provide as context to your LLM and key points that ensure accurate query results.
 

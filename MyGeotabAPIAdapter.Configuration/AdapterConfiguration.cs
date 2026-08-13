@@ -134,6 +134,9 @@ namespace MyGeotabAPIAdapter.Configuration
         // > AppSettings:Feeds:LogRecord
         const string ArgNameEnableLogRecordFeed = "AppSettings:Feeds:LogRecord:EnableLogRecordFeed";
         const string ArgNameLogRecordFeedIntervalSeconds = "AppSettings:Feeds:LogRecord:LogRecordFeedIntervalSeconds";
+        // > AppSettings:Feeds:ShipmentLog
+        const string ArgNameEnableShipmentLogFeed = "AppSettings:Feeds:ShipmentLog:EnableShipmentLogFeed";
+        const string ArgNameShipmentLogFeedIntervalSeconds = "AppSettings:Feeds:ShipmentLog:ShipmentLogFeedIntervalSeconds";
         // > AppSettings:Feeds:StatusData
         const string ArgNameEnableStatusDataFeed = "AppSettings:Feeds:StatusData:EnableStatusDataFeed";
         const string ArgNameStatusDataFeedIntervalSeconds = "AppSettings:Feeds:StatusData:StatusDataFeedIntervalSeconds";
@@ -387,6 +390,9 @@ namespace MyGeotabAPIAdapter.Configuration
         public bool EnableRuleCache { get; private set; }
 
         /// <inheritdoc/>
+        public bool EnableShipmentLogFeed { get; private set; }
+
+        /// <inheritdoc/>
         public bool EnableStatusDataFeed { get; private set; }
 
         /// <inheritdoc/>
@@ -523,6 +529,9 @@ namespace MyGeotabAPIAdapter.Configuration
 
         /// <inheritdoc/>
         public int RuleCacheUpdateIntervalMinutes { get; private set; }
+
+        /// <inheritdoc/>
+        public int ShipmentLogFeedIntervalSeconds { get; private set; }
 
         /// <inheritdoc/>
         public int StatusDataFeedIntervalSeconds { get; private set; }
@@ -809,6 +818,10 @@ namespace MyGeotabAPIAdapter.Configuration
             // AppSettings:Feeds:LogRecord:
             EnableLogRecordFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableLogRecordFeed);
             LogRecordFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameLogRecordFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
+
+            // AppSettings:Feeds:ShipmentLog:
+            EnableShipmentLogFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableShipmentLogFeed);
+            ShipmentLogFeedIntervalSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameShipmentLogFeedIntervalSeconds, null, false, MinFeedIntervalSeconds, MaxFeedIntervalSeconds, DefaultFeedIntervalSeconds);
 
             // AppSettings:Feeds:StatusData:
             EnableStatusDataFeed = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableStatusDataFeed);

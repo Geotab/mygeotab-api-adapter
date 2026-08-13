@@ -1,51 +1,46 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+# .gitignore for the MyGeotab API Adapter solution.
+#
+# Uses standard, GLOBAL (project-agnostic) rules so build output and per-user
+# files are ignored in every project — current and future — with no per-project
+# entries to maintain. (This file previously listed bin/obj per project, which
+# had to be updated for every new project and was easy to miss on merges.)
+#
+# Anything below the "Repo-specific" divider is an intentional ignore that the
+# standard rules above do not cover. Keep those; do not fold them away.
 ################################################################################
 
-/.vs
-*.log
+# Build output (any project, configuration, or target framework)
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio working folder, per-user and cache files
+.vs/
 *.user
-/GeotabDIGAdapter/bin
-/GeotabDIGAdapter/obj
-/GeotabDIGAdapter.Core/bin
-/GeotabDIGAdapter.Core/obj
-/GeotabDIGAdapter/appsettings.Development.json
-/MyGeotabAPIAdapter/bin
-/MyGeotabAPIAdapter/obj
-/MyGeotabAPIAdapter/appsettings.Development.json
-/MyGeotabAPIAdapter/MyGeotabAPIAdapter.csproj.user
-/MyGeotabAPIAdapter/Properties/PublishProfiles/MyGeotabAPIAdapter_Release_SCD_Target_win-x64.pubxml.user
-/MyGeotabAPIAdapter/Properties/PublishProfiles/MyGeotabAPIAdapter_Release_SCD_Target_ubuntu.19.10-x64.pubxml.user
-/MyGeotabAPIAdapter/Properties/PublishProfiles/MyGeotabAPIAdapter_Release_SCD_Target_linux-x64.pubxml.user
-/MyGeotabAPIAdapter.Configuration/bin
-/MyGeotabAPIAdapter.Configuration/obj
-/MyGeotabAPIAdapter.Database/bin
-/MyGeotabAPIAdapter.Database/obj
-/MyGeotabAPIAdapter.Database.EntityPersisters/bin
-/MyGeotabAPIAdapter.Database.EntityPersisters/obj
-/MyGeotabAPIAdapter.DataOptimizer/bin
-/MyGeotabAPIAdapter.DataOptimizer/obj
-/MyGeotabAPIAdapter.DataOptimizer/appsettings.Development.json
-/MyGeotabAPIAdapter.DataOptimizer.EntityBrokers/bin
-/MyGeotabAPIAdapter.DataOptimizer.EntityBrokers/obj
-/MyGeotabAPIAdapter.DataOptimizer.ObjectMappers/bin
-/MyGeotabAPIAdapter.DataOptimizer.ObjectMappers/obj
-/MyGeotabAPIAdapter.Exceptions/bin
-/MyGeotabAPIAdapter.Exceptions/obj
-/MyGeotabAPIAdapter.Geospatial/bin
-/MyGeotabAPIAdapter.Geospatial/obj
-/MyGeotabAPIAdapter.GeotabObjectMappers/bin
-/MyGeotabAPIAdapter.GeotabObjectMappers/obj
-/MyGeotabAPIAdapter.Helpers/bin
-/MyGeotabAPIAdapter.Helpers/obj
-/MyGeotabAPIAdapter.Logging/bin
-/MyGeotabAPIAdapter.Logging/obj
-/MyGeotabAPIAdapter.MyGeotabAPI/bin
-/MyGeotabAPIAdapter.MyGeotabAPI/obj
-/MyGeotabAPIAdapter.Tests/bin
-/MyGeotabAPIAdapter.Tests/obj
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+
+# =============================================================================
+# Repo-specific ignores (not covered by the standard rules above)
+# =============================================================================
+
+# Environment-specific developer configuration — never committed.
+# appsettings.Development.json recurs in every service project, so it is global;
+# devices.Development.json exists only in the SolEng feeder, so it stays explicit.
+appsettings.Development.json
+
+# Local-only documentation staging folder
 /DocsForLLMs
+
+# Claude Code local settings
 /.claude/
 
-# VS 2022 bug - creates literal 'nul' file instead of writing to null device
+# VS 2022 bug: creates a literal 'nul' file instead of writing to the null device
 nul
+
+# macOS Finder metadata
+.DS_Store
