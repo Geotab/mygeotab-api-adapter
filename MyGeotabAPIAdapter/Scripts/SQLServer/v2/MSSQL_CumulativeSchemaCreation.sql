@@ -119,29 +119,65 @@ GO
 -- ==========================================================================================
 -- Description:	Returns a list of tables that have had at least 1000 modifications since the
 --				last time statistics were updated.
+--
+--				Each table's row count is taken from its heap or clustered index alone, and
+--				its statistics are aggregated separately. Before version 5.2.0.0 this view
+--				joined the per-index partition statistics to the statistics objects before
+--				summing, which repeated every row count once per statistics object: the row
+--				count was multiplied by the number of indexes times the number of statistics,
+--				and PctModsSinceLastStatsUpdate was divided by the same factor.
+--
+--				Only tables in the dbo schema are returned. A database shared with the
+--				Geotab DIG Adapter also holds its gda schema, which it maintains itself.
 -- ==========================================================================================
 CREATE VIEW [dbo].[vwStatsForLevel1DBMaintenance]
 AS
-WITH TableStats AS (
-    SELECT sch.name AS SchemaName,
-        tbl.name AS TableName,
-        SUM(ps.row_count) AS RecordCount,
+WITH UserTables AS (
+    SELECT tbl.object_id,
+        sch.name AS SchemaName,
+        tbl.name AS TableName
+    FROM sys.tables tbl
+    INNER JOIN sys.schemas sch
+		ON tbl.schema_id = sch.schema_id
+    WHERE sch.name = 'dbo'
+),
+TableRows AS (
+    SELECT ut.object_id,
+        SUM(CASE WHEN ps.index_id IN (0, 1) THEN ps.row_count ELSE 0 END) AS RecordCount,
         SUM(ps.used_page_count * 8) AS UsedSpaceKB,
         SUM(ps.reserved_page_count * 8) AS ReservedSpaceKB,
-        (SUM(ps.reserved_page_count) - SUM(ps.used_page_count)) * 8 AS FreeSpaceKB,
+        (SUM(ps.reserved_page_count) - SUM(ps.used_page_count)) * 8 AS FreeSpaceKB
+    FROM UserTables ut
+    INNER JOIN sys.dm_db_partition_stats ps
+		ON ps.object_id = ut.object_id
+    GROUP BY ut.object_id
+),
+TableModifications AS (
+    SELECT ut.object_id,
         MAX(sp.modification_counter) AS ModsSinceLastStatsUpdate,
         MAX(sp.last_updated) AS LastStatsUpdate
-    FROM sys.tables tbl
-    INNER JOIN sys.schemas sch 
-		ON tbl.schema_id = sch.schema_id
-    INNER JOIN sys.dm_db_partition_stats ps 
-		ON tbl.object_id = ps.object_id
-    INNER JOIN sys.stats st 
-		ON tbl.object_id = st.object_id
-    CROSS APPLY sys.dm_db_stats_properties(tbl.object_id, st.stats_id) sp
-    GROUP BY sch.name, tbl.name
+    FROM UserTables ut
+    INNER JOIN sys.stats st
+		ON st.object_id = ut.object_id
+    CROSS APPLY sys.dm_db_stats_properties(st.object_id, st.stats_id) sp
+    GROUP BY ut.object_id
+),
+TableStats AS (
+    SELECT ut.SchemaName,
+        ut.TableName,
+        tr.RecordCount,
+        tr.UsedSpaceKB,
+        tr.ReservedSpaceKB,
+        tr.FreeSpaceKB,
+        tm.ModsSinceLastStatsUpdate,
+        tm.LastStatsUpdate
+    FROM UserTables ut
+    INNER JOIN TableRows tr
+		ON tr.object_id = ut.object_id
+    INNER JOIN TableModifications tm
+		ON tm.object_id = ut.object_id
 )
-SELECT 
+SELECT
     ROW_NUMBER() OVER (ORDER BY ModsSinceLastStatsUpdate DESC) AS RowId,
     SchemaName,
     TableName,
@@ -150,7 +186,7 @@ SELECT
     ReservedSpaceKB,
     FreeSpaceKB,
     ModsSinceLastStatsUpdate,
-    CASE 
+    CASE
         WHEN RecordCount > 0 THEN (CAST(ModsSinceLastStatsUpdate AS FLOAT) / RecordCount) * 100
         ELSE 0
     END AS PctModsSinceLastStatsUpdate,
@@ -174,24 +210,44 @@ GO
 --				fragmentation of over 30% for the subject index. These can help in
 --				determining whether to reorgainize or rebuild an entire index or just 
 --				specific partitions.
+--
+--				Only indexes on tables in the dbo schema are returned, and the index
+--				statistics are read table by table so that nothing outside dbo is read at
+--				all. A database shared with the Geotab DIG Adapter also holds its gda
+--				schema, which it maintains itself.
 -- ==========================================================================================
 CREATE VIEW [dbo].[vwStatsForLevel2DBMaintenance]
 AS
-WITH RawPartitionStats AS (
-    SELECT sch.name AS SchemaName,
-        obj.name AS TableName,
+WITH DboTables AS (
+    -- TOP stops the optimizer applying the schema filter after the index statistics have been read.
+    -- Without it the plan applies the function below to every table in the database and discards the
+    -- rows outside this schema afterwards - so it reads them all.
+    SELECT TOP (2147483647) obj.object_id,
+        sch.name AS SchemaName,
+        obj.name AS TableName
+    FROM sys.objects obj
+    INNER JOIN sys.schemas sch
+		ON obj.schema_id = sch.schema_id
+    WHERE sch.name = 'dbo'
+        AND obj.type = 'U'
+),
+RawPartitionStats AS (
+    SELECT dt.SchemaName,
+        dt.TableName,
         idx.name AS IndexName,
         ps.partition_number AS PartitionNumber,
         ps.avg_fragmentation_in_percent AS FragmentationPct,
         ps.page_count * 8 AS IndexSizeKB
-    FROM sys.dm_db_index_physical_stats(DB_ID(), NULL, NULL, NULL, 'DETAILED') ps
-    INNER JOIN sys.indexes idx 
+    FROM DboTables dt
+    -- LIMITED reports each index's leaf level, which is what REORGANIZE and REBUILD act on, and reads only the pages
+    -- above it. DETAILED returned a row for every upper level too, and the highest fragmentation among them - often a
+    -- small upper level's - decided, so a healthy index could be offered for a rebuild.
+    CROSS APPLY sys.dm_db_index_physical_stats(DB_ID(), dt.object_id, NULL, NULL, 'LIMITED') ps
+    INNER JOIN sys.indexes idx
 		ON ps.object_id = idx.object_id AND ps.index_id = idx.index_id
-    INNER JOIN sys.objects obj 
-		ON idx.object_id = obj.object_id
-    INNER JOIN sys.schemas sch 
-		ON obj.schema_id = sch.schema_id
     WHERE ps.index_id > 0 -- (exclude heap indexes)
+      -- In-row data only, so that each row's fragmentation and size describe the same allocation unit.
+      AND ps.alloc_unit_type_desc = N'IN_ROW_DATA'
 ),
 PartitionStats AS (
     SELECT SchemaName,
@@ -203,38 +259,38 @@ PartitionStats AS (
     FROM RawPartitionStats
     GROUP BY SchemaName, TableName, IndexName, PartitionNumber
 ),
-AggregateStats AS (
+WithAggregates AS (
+    -- The per-index totals are window aggregates over the same rows, so PartitionStats - and
+    -- the index statistics function inside it - is read ONCE. SQL Server evaluates a CTE once
+    -- per reference, and an aggregate CTE joined back to PartitionStats read every page of
+    -- every index twice per run. COUNT(*) equals a count of distinct partitions here because
+    -- PartitionStats already holds one row per partition of each index.
     SELECT SchemaName,
         TableName,
         IndexName,
-        COUNT(DISTINCT PartitionNumber) AS TotalPartitions,
-        SUM(CASE WHEN FragmentationPct > 30 THEN 1 ELSE 0 END) AS HighFragPartitions
+        PartitionNumber,
+        FragmentationPct,
+        IndexSizeKB,
+        COUNT(*) OVER (PARTITION BY SchemaName, TableName, IndexName) AS TotalPartitions,
+        SUM(CASE WHEN FragmentationPct > 30 THEN 1 ELSE 0 END) OVER (PARTITION BY SchemaName, TableName, IndexName) AS HighFragPartitions
     FROM PartitionStats
-    GROUP BY SchemaName, TableName, IndexName
 )
-SELECT ROW_NUMBER() OVER (ORDER BY ps.TableName ASC, ps.IndexName ASC, ps.PartitionNumber ASC) AS RowId,
-    ps.SchemaName,
-    ps.TableName,
-    ps.IndexName,
-    ps.PartitionNumber,
-    ps.FragmentationPct,
-    ps.IndexSizeKB,
-    ag.TotalPartitions,
-    ag.HighFragPartitions,
-    CASE 
-        WHEN ag.TotalPartitions > 0 THEN (CAST(ag.HighFragPartitions AS FLOAT) / ag.TotalPartitions) * 100
+SELECT ROW_NUMBER() OVER (ORDER BY TableName ASC, IndexName ASC, PartitionNumber ASC) AS RowId,
+    SchemaName,
+    TableName,
+    IndexName,
+    PartitionNumber,
+    FragmentationPct,
+    IndexSizeKB,
+    TotalPartitions,
+    HighFragPartitions,
+    CASE
+        WHEN TotalPartitions > 0 THEN (CAST(HighFragPartitions AS FLOAT) / TotalPartitions) * 100
         ELSE 0
     END AS PctHighFragPartitions
-FROM 
-    PartitionStats ps
-INNER JOIN 
-    AggregateStats ag
-    ON ps.SchemaName = ag.SchemaName
-    AND ps.TableName = ag.TableName
-    AND ps.IndexName = ag.IndexName
-WHERE 
-    ps.FragmentationPct > 10
-    AND ps.IndexSizeKB > 1;
+FROM WithAggregates
+WHERE FragmentationPct > 10
+    AND IndexSizeKB > 1;
 GO
 ALTER AUTHORIZATION ON [dbo].[vwStatsForLevel2DBMaintenance] TO  SCHEMA OWNER 
 GO
@@ -7883,9 +7939,21 @@ GO
 
 
 
+/*** [START] Version 5.2.0.0 Updates ***/
+-- No tables, columns or indexes change in this version. Both maintenance views,
+-- vwStatsForLevel1DBMaintenance and vwStatsForLevel2DBMaintenance, are corrected and
+-- limited to the dbo schema - in place above. spManagePartitions' check for an
+-- existing partition boundary now looks only in this adapter's own partition
+-- function - in MSSQL_0.0.0.1_spManagePartitions.sql, which a fresh install runs;
+-- MSSQL_5.2.0.0_spManagePartitionsSchemaScoping.sql applies both to an existing
+-- database.
+/*** [END] Version 5.2.0.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO [dbo].[MiddlewareVersionInfo2] ([DatabaseVersion], [RecordCreationTimeUtc])
-VALUES ('5.1.0.0', GETUTCDATE());
+VALUES ('5.2.0.0', GETUTCDATE());
 /*** [END] Database Version Update ***/

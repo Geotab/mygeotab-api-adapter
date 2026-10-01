@@ -19,6 +19,7 @@ using MyGeotabAPIAdapter.Database.Caches;
 using MyGeotabAPIAdapter.Database.EntityMappers;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
 using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.DeviceLookup;
 using MyGeotabAPIAdapter.GeotabObjectMappers;
 using MyGeotabAPIAdapter.Helpers;
 using MyGeotabAPIAdapter.Logging;
@@ -93,6 +94,9 @@ namespace GeotabDIGAdapter
                         .AddSingleton<IDIGAPIRateLimiter, DIGAPIRateLimiter>()
                         .AddSingleton<IDIGAPIHelper, DIGAPIHelper>()
                         .AddSingleton<IProvisionedDeviceCache, ProvisionedDeviceCache>()
+                        .AddSingleton<IDeviceSubscriptionCache, DeviceSubscriptionCache>()
+                        .AddTransient<IDeviceLookupComposer, DeviceLookupComposer>()
+                        .AddSingleton<IDeviceLookup, CompositeDeviceLookup>()
                         .AddSingleton<IMyGeotabAPIHelper, MyGeotabAPIHelper>()
                         .AddTransient<IStringHelper, StringHelper>()
 
@@ -126,6 +130,8 @@ namespace GeotabDIGAdapter
                         // Database Entity to Database Entity Mappers:
                         .AddTransient<IDbGdaQProvisionDeviceDbGdaProvisionedDeviceEntityMapper, DbGdaQProvisionDeviceDbGdaProvisionedDeviceEntityMapper>()
                         .AddTransient<IDbGdaQProvisionDeviceDbGdaQProvisionDeviceFailEntityMapper, DbGdaQProvisionDeviceDbGdaQProvisionDeviceFailEntityMapper>()
+                        .AddTransient<IDbGdaQDeviceSubscriptionDbGdaStgDeviceSubscriptionEntityMapper, DbGdaQDeviceSubscriptionDbGdaStgDeviceSubscriptionEntityMapper>()
+                        .AddTransient<IDbGdaQDeviceSubscriptionDbGdaQDeviceSubscriptionFailEntityMapper, DbGdaQDeviceSubscriptionDbGdaQDeviceSubscriptionFailEntityMapper>()
 
                         // Telemetry Record Queue to DIG Record Mappers:
                         .AddTransient<IDbGdaQGpsRecordDIGGpsRecordEntityMapper, DbGdaQGpsRecordDIGGpsRecordEntityMapper>()
@@ -164,6 +170,9 @@ namespace GeotabDIGAdapter
                         .AddTransient<IGenericEntityPersister<DbGdaProvisionedDevice>, GenericEntityPersister<DbGdaProvisionedDevice>>()
                         .AddTransient<IGenericEntityPersister<DbGdaQProvisionDevice>, GenericEntityPersister<DbGdaQProvisionDevice>>()
                         .AddTransient<IGenericEntityPersister<DbGdaQProvisionDeviceFail>, GenericEntityPersister<DbGdaQProvisionDeviceFail>>()
+                        .AddTransient<IGenericEntityPersister<DbGdaQDeviceSubscription>, GenericEntityPersister<DbGdaQDeviceSubscription>>()
+                        .AddTransient<IGenericEntityPersister<DbGdaQDeviceSubscriptionFail>, GenericEntityPersister<DbGdaQDeviceSubscriptionFail>>()
+                        .AddTransient<IGenericEntityPersister<DbGdaStgDeviceSubscription>, GenericEntityPersister<DbGdaStgDeviceSubscription>>()
 
                         // Telemetry Record Queue Entity Persisters:
                         .AddTransient<IGenericEntityPersister<DbGdaQGpsRecord>, GenericEntityPersister<DbGdaQGpsRecord>>()
@@ -192,6 +201,9 @@ namespace GeotabDIGAdapter
                         // Invalid Record Retrieval Entity Persisters:
                         .AddTransient<IGenericEntityPersister<DbGdaDIGInvalidRecord>, GenericEntityPersister<DbGdaDIGInvalidRecord>>()
                         .AddTransient<IGenericEntityPersister<DbGdaDIGInvalidRecordsCursor>, GenericEntityPersister<DbGdaDIGInvalidRecordsCursor>>()
+
+                        // Database Maintenance Entity Persisters:
+                        .AddTransient<IGenericEntityPersister<DbGdaDigMaintenanceLog>, GenericEntityPersister<DbGdaDigMaintenanceLog>>()
 
                         // Database Object Caches:
                         .AddSingleton<AdapterGenericDbObjectCache<DbGdaOServiceTracking>>()
@@ -222,7 +234,8 @@ namespace GeotabDIGAdapter
                     databaseValidator.ValidateDatabaseVersion();
 
                     // Configure options for the services. This is necessary because the services are registered as hosted services and the options are used to determine whether the individual services should pause for database maintenance windows wherein operations such as reindexing could potentially cause exceptions.
-                    var serviceNames = new string[] { nameof(Orchestrator), nameof(DeviceDIGReadinessService), nameof(DeviceProvisioningService), nameof(InvalidRecordRetrievalService), nameof(TelemetryDataService) };
+                    // DatabaseMaintenanceService is deliberately absent: it is the service that requests those pauses, and listing it here would make it wait for itself.
+                    var serviceNames = new string[] { nameof(Orchestrator), nameof(DeviceDIGReadinessService), nameof(DeviceProvisioningService), nameof(DeviceSubscriptionService), nameof(InvalidRecordRetrievalService), nameof(TelemetryDataService) };
 
                     // Register the ServiceOptionsProvider.
                     // Register the service names in the ServiceOptionsProvider. All services should be tracked (even if they don't need to e paused for database maintenance) so that it is possible to know when they have all been loaded on startup before initiating any database maintenance.
@@ -283,8 +296,10 @@ namespace GeotabDIGAdapter
                     // Register the services.
                     services
                     .AddHostedService<Orchestrator>()
+                    .AddHostedService<DatabaseMaintenanceService>()
                     .AddHostedService<DeviceDIGReadinessService>()
                     .AddHostedService<DeviceProvisioningService>()
+                    .AddHostedService<DeviceSubscriptionService>()
                     .AddHostedService<InvalidRecordRetrievalService>()
                     .AddHostedService<TelemetryDataService>()
                     ;
@@ -292,8 +307,10 @@ namespace GeotabDIGAdapter
                     // Register a BackgroundServiceAwaiter for each service.
                     services
                     .AddSingleton<IBackgroundServiceAwaiter<Orchestrator>, BackgroundServiceAwaiter<Orchestrator>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DatabaseMaintenanceService>, BackgroundServiceAwaiter<DatabaseMaintenanceService>>()
                     .AddSingleton<IBackgroundServiceAwaiter<DeviceDIGReadinessService>, BackgroundServiceAwaiter<DeviceDIGReadinessService>>()
                     .AddSingleton<IBackgroundServiceAwaiter<DeviceProvisioningService>, BackgroundServiceAwaiter<DeviceProvisioningService>>()
+                    .AddSingleton<IBackgroundServiceAwaiter<DeviceSubscriptionService>, BackgroundServiceAwaiter<DeviceSubscriptionService>>()
                     .AddSingleton<IBackgroundServiceAwaiter<InvalidRecordRetrievalService>, BackgroundServiceAwaiter<InvalidRecordRetrievalService>>()
                     .AddSingleton<IBackgroundServiceAwaiter<TelemetryDataService>, BackgroundServiceAwaiter<TelemetryDataService>>()
                     ;

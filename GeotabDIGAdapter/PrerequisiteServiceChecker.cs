@@ -1,4 +1,4 @@
-using MyGeotabAPIAdapter;
+﻿using MyGeotabAPIAdapter;
 using MyGeotabAPIAdapter.Database.Models;
 using MyGeotabAPIAdapter.Logging;
 using NLog;
@@ -11,6 +11,13 @@ namespace GeotabDIGAdapter
     public class PrerequisiteServiceChecker<T> : IPrerequisiteServiceChecker<T> where T : IDbOServiceTracking
     {
         const int OrchestratorServiceInitializationCheckIntervalSeconds = 5;
+
+        /// <summary>
+        /// How often a service that is still waiting repeats its wait message. Logging only once makes a
+        /// permanent wait indistinguishable from a transient one: the log simply goes quiet, which reads as a
+        /// healthy idle adapter. Repeating it keeps a wait that will never end visible.
+        /// </summary>
+        const int WaitMessageRepeatIntervalMinutes = 15;
 
         readonly IMessageLogger messageLogger;
         readonly IOrchestratorServiceTracker orchestratorServiceTracker;
@@ -41,6 +48,10 @@ namespace GeotabDIGAdapter
             // If all prerequisite services are not running, keep checking until they are.
             var waitForOrchestratorMessageLogged = false;
             var waitForPrerequisiteServicesMessageLogged = false;
+            var waitStartedUtc = DateTime.UtcNow;
+            DateTime? orchestratorMessageLastLoggedUtc = null;
+            DateTime? prerequisiteServicesMessageLastLoggedUtc = null;
+            var waitMessageRepeatInterval = TimeSpan.FromMinutes(WaitMessageRepeatIntervalMinutes);
             while (orchestratorServiceInitialized == false || allPrerequisiteServicesRunning == false || (includeCheckForWhetherServicesHaveProcessedAnyData && allPrerequisiteServicesHaveProcessedData == false))
             {
                 orchestratorServiceInitialized = orchestratorServiceTracker.OrchestratorServiceInitialized;
@@ -54,10 +65,11 @@ namespace GeotabDIGAdapter
 
                 if (orchestratorServiceInitialized == false)
                 {
-                    if (waitForOrchestratorMessageLogged == false)
+                    if (orchestratorMessageLastLoggedUtc == null || DateTime.UtcNow - orchestratorMessageLastLoggedUtc.Value >= waitMessageRepeatInterval)
                     {
-                        logger.Warn($"[{dependentServiceClassName}] Orchestrator service not yet initialized. Waiting {OrchestratorServiceInitializationCheckIntervalSeconds} seconds before checking again.");
+                        logger.Warn($"[{dependentServiceClassName}] Orchestrator service not yet initialized{DescribeElapsedWait(waitStartedUtc)}. Waiting {OrchestratorServiceInitializationCheckIntervalSeconds} seconds before checking again.");
                         waitForOrchestratorMessageLogged = true;
+                        orchestratorMessageLastLoggedUtc = DateTime.UtcNow;
                     }
                     await Task.Delay(TimeSpan.FromSeconds(OrchestratorServiceInitializationCheckIntervalSeconds), cancellationToken);
                 }
@@ -65,9 +77,9 @@ namespace GeotabDIGAdapter
                 {
                     if (allPrerequisiteServicesRunning == false || (includeCheckForWhetherServicesHaveProcessedAnyData && allPrerequisiteServicesHaveProcessedData == false))
                     {
-                        if (waitForPrerequisiteServicesMessageLogged == false)
+                        if (prerequisiteServicesMessageLastLoggedUtc == null || DateTime.UtcNow - prerequisiteServicesMessageLastLoggedUtc.Value >= waitMessageRepeatInterval)
                         {
-                            var message = $"[{dependentServiceClassName}] Waiting for prerequisite services.";
+                            var message = $"[{dependentServiceClassName}] Waiting for prerequisite services{DescribeElapsedWait(waitStartedUtc)}.";
                             if (!string.IsNullOrEmpty(prerequisiteServiceOperationCheckResult.ServicesNeverRunStatement))
                             {
                                 message += $" {prerequisiteServiceOperationCheckResult.ServicesNeverRunStatement}";
@@ -82,6 +94,7 @@ namespace GeotabDIGAdapter
                             }
                             logger.Warn(message);
                             waitForPrerequisiteServicesMessageLogged = true;
+                            prerequisiteServicesMessageLastLoggedUtc = DateTime.UtcNow;
                         }
                         
                         await Task.Delay(prerequisiteServiceOperationCheckResult.RecommendedDelayBeforeNextCheck, cancellationToken);
@@ -121,5 +134,24 @@ namespace GeotabDIGAdapter
             // Log a message indicating that the service is resuming operation.
             logger.Info($"[{dependentServiceClassName}] Prerequisite service '{prerequisiteService}' has processed entities. Resuming operation.");
         }
-    }
+    
+        /// <summary>
+        /// Renders how long a service has been waiting, for inclusion in a repeated wait message. An operator
+        /// reading a single line needs to be able to tell a few seconds of startup ordering from a wait that
+        /// has been going on for hours and is never going to end.
+        /// </summary>
+        /// <param name="waitStartedUtc">When the wait began.</param>
+        /// <returns>A phrase to append to the message, or an empty string for a wait too short to be worth reporting.</returns>
+        static string DescribeElapsedWait(DateTime waitStartedUtc)
+        {
+            var elapsed = DateTime.UtcNow - waitStartedUtc;
+            if (elapsed < TimeSpan.FromMinutes(1))
+            {
+                return string.Empty;
+            }
+            return elapsed < TimeSpan.FromHours(1)
+                ? $" (waiting for {elapsed.TotalMinutes:N0} minute(s) so far)"
+                : $" (waiting for {elapsed.TotalHours:N1} hour(s) so far)";
+        }
+}
 }

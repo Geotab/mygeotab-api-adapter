@@ -89,7 +89,8 @@ DROP TABLE public."StatusData2_202501";  -- repeat per detached table
 
 6. **Run `ANALYZE` on the affected parent tables** (for example `ANALYZE public."StatusData2";`) so the planner's statistics reflect the reduced tables.
 
-> **Note:** On databases with hundreds of retirable partitions, advance the cutoff in stages (for example one month at a time) rather than in a single call — all of one call's detaches share a single transaction and its lock budget (see the FAQ on lock limits).
+> [!NOTE]
+> On databases with hundreds of retirable partitions, advance the cutoff in stages (for example one month at a time) rather than in a single call — all of one call's detaches share a single transaction and its lock budget (see the FAQ on lock limits).
 
 ## FAQ
 

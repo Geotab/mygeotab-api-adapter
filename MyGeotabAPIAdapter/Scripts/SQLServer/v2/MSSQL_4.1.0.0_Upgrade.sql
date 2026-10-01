@@ -43,10 +43,16 @@ SELECT TOP 1 @actualStartingDatabaseVersion = DatabaseVersion
 FROM dbo.MiddlewareVersionInfo2
 ORDER BY RecordCreationTimeUtc DESC;
 
+IF @actualStartingDatabaseVersion IS NULL
+BEGIN
+	RAISERROR('ERROR: No row was found in the dbo.MiddlewareVersionInfo2 table. This script can only be run against a MyGeotab API Adapter database of version %s.', 16, 1, @requiredStartingDatabaseVersion);
+	SET NOEXEC ON;
+END
+
 IF @actualStartingDatabaseVersion <> @requiredStartingDatabaseVersion
 BEGIN
 	RAISERROR('ERROR: This script can only be run against the expected database version. [Expected: %s; Actual: %s]', 16, 1, @requiredStartingDatabaseVersion, @actualStartingDatabaseVersion);
-	RETURN;
+	SET NOEXEC ON;
 END
 /*** [END] Part 1 of 3: Database Version Validation Above ***/
 
@@ -718,3 +724,8 @@ SELECT UpgradeDatabaseVersion, GETUTCDATE()
 FROM #TMP_UpgradeDatabaseVersionTable;
 DROP TABLE IF EXISTS #TMP_UpgradeDatabaseVersionTable;
 /*** [END] Part 3 of 3: Database Version Update Above ***/
+
+/*** [START] Restore execution state (no-op on a successful run) ***/
+SET NOEXEC OFF;
+GO
+/*** [END] Restore execution state ***/

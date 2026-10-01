@@ -8,6 +8,7 @@ namespace GeotabDIGAdapter
         DatabaseMaintenanceService,
         DeviceDIGReadinessService,
         DeviceProvisioningService,
+        DeviceSubscriptionService,
         InvalidRecordRetrievalService,
         TelemetryDataService
     }

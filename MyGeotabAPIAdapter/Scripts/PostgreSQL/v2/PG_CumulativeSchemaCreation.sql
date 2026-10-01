@@ -1251,9 +1251,10 @@ CREATE VIEW public."vwStatsForLevel2DBMaintenance" AS
           WHERE (i.schemaname = 'public'::name)
         ), pgstattuple_stats AS (
          SELECT idx.index_oid,
-            (public.pgstattuple((idx.index_oid)::regclass)).free_space AS free_space,
-            (public.pgstattuple((idx.index_oid)::regclass)).table_len AS table_len
-           FROM index_info idx
+            pst.free_space,
+            pst.table_len
+           FROM (index_info idx
+             CROSS JOIN LATERAL public.pgstattuple((idx.index_oid)::regclass) pst)
         ), index_sizes AS (
          SELECT index_info.index_oid,
             pg_relation_size((index_info.index_oid)::regclass) AS total_size
@@ -8146,9 +8147,18 @@ GRANT EXECUTE ON FUNCTION public.pgstattuple(regclass) TO geotabadapter_client;
 
 
 
+/*** [START] Version 5.2.0.0 Updates ***/
+-- Changes covered by PG_0.0.0.1_spManagePartitions.sql and
+-- PG_5.2.0.0_spManagePartitionsSchemaScoping.sql. No need to include here - as
+-- noted under version 3.14.0.0 above, this script does not carry the
+-- spManagePartitions function.
+/*** [END] Version 5.2.0.0 Updates ***/
+
+
+
 /*** [START] Database Version Update ***/
 -- Insert a record into the MiddlewareVersionInfo2 table to reflect the current
 -- database version.
 INSERT INTO public."MiddlewareVersionInfo2" ("DatabaseVersion", "RecordCreationTimeUtc")
-VALUES ('5.1.0.0', timezone('UTC', NOW()));
+VALUES ('5.2.0.0', timezone('UTC', NOW()));
 /*** [END] Database Version Update ***/

@@ -157,10 +157,103 @@ namespace MyGeotabAPIAdapter.Configuration
         }
 
         /// <inheritdoc/>
+        public bool GetConfigKeyValueBooleanOrDefault(string keyString, bool defaultValue, string sectionString = "", bool isMasked = false)
+        {
+            string? valueString = GetRawConfigKeyValue(keyString, sectionString);
+            if (valueString == null)
+            {
+                LogDefaultApplied(keyString, defaultValue.ToString(), isMasked);
+                return defaultValue;
+            }
+            ThrowIfPresentButEmpty(keyString, valueString, defaultValue.ToString());
+            return GetConfigKeyValueBoolean(keyString, sectionString, isMasked);
+        }
+
+        /// <inheritdoc/>
+        public int GetConfigKeyValueIntOrDefault(string keyString, int defaultValue, string sectionString = "", bool isMasked = false, int minimumAllowedValue = int.MinValue, int maximumAllowedValue = int.MaxValue)
+        {
+            string? valueString = GetRawConfigKeyValue(keyString, sectionString);
+            if (valueString == null)
+            {
+                LogDefaultApplied(keyString, defaultValue.ToString(), isMasked);
+                return defaultValue;
+            }
+            ThrowIfPresentButEmpty(keyString, valueString, defaultValue.ToString());
+            return GetConfigKeyValueInt(keyString, sectionString, isMasked, minimumAllowedValue, maximumAllowedValue, defaultValue);
+        }
+
+        /// <summary>
+        /// Refuses a key that is present with an empty value. Only an ABSENT key takes the default: an empty value is a
+        /// value that cannot be parsed, like any other. Taking the default for it was easy to misread - an operator who
+        /// blanks <c>EnableAutomaticRetention</c> most likely means to turn retention off, and its default deletes
+        /// data - and the startup log then said the key had not been found, which was untrue.
+        /// </summary>
+        static void ThrowIfPresentButEmpty(string keyString, string valueString, string defaultValue)
+        {
+            if (valueString.Length == 0)
+            {
+                throw new Exception($"The '{keyString}' setting is present but has no value. Give it a value, or remove the key to use its default ({defaultValue}).");
+            }
+        }
+
+        /// <inheritdoc/>
+        public string GetConfigKeyValueStringOrDefault(string keyString, string defaultValue, string sectionString = "", bool isLogged = true, bool isMasked = false)
+        {
+            string? valueString = GetRawConfigKeyValue(keyString, sectionString);
+            if (string.IsNullOrEmpty(valueString))
+            {
+                if (isLogged == true)
+                {
+                    LogDefaultApplied(keyString, defaultValue, isMasked);
+                }
+                return defaultValue;
+            }
+            return GetConfigKeyValueString(keyString, sectionString, isLogged, isMasked);
+        }
+
+        /// <inheritdoc/>
         public IConfigurationSection GetConfigSection(string sectionString)
         {
             var output = configuration.GetSection(sectionString);
             return output;
+        }
+
+        /// <summary>
+        /// Retrieves the raw string value associated with the supplied key and section without logging it and without
+        /// throwing if it is absent. Used by the *OrDefault methods to distinguish "absent" from "present but invalid".
+        /// </summary>
+        /// <param name="keyString">Configuration key value</param>
+        /// <param name="sectionString">Configuration section value</param>
+        /// <returns>The raw configuration value, or <c>null</c> if the key is not present.</returns>
+        string? GetRawConfigKeyValue(string keyString, string sectionString)
+        {
+            if (string.IsNullOrEmpty(sectionString))
+            {
+                // No section defined.
+                return configuration[keyString];
+            }
+            // Key defined in a section.
+            return configuration.GetSection(sectionString)[keyString];
+        }
+
+        /// <summary>
+        /// Logs an absent configuration item and the default value applied in its place, using the same
+        /// '&gt;{key}: {value}' format as every other setting so that a reader of the startup log sees the full
+        /// effective configuration rather than a gap.
+        /// </summary>
+        /// <param name="keyString">Configuration key value</param>
+        /// <param name="defaultValueString">The default value being applied</param>
+        /// <param name="isMasked">Whether the value should be masked in the log file output</param>
+        void LogDefaultApplied(string keyString, string defaultValueString, bool isMasked)
+        {
+            if (isMasked == true)
+            {
+                logger.Info($">{keyString}: {MaskString} (not found in the configuration file; default applied)");
+            }
+            else
+            {
+                logger.Info($">{keyString}: {defaultValueString} (not found in the configuration file; default applied)");
+            }
         }
 
         /// <inheritdoc/>

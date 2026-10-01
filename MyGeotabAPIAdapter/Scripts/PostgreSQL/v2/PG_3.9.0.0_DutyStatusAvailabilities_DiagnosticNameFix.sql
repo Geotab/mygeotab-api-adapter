@@ -12,6 +12,14 @@
 -- ================================================================================
 
 
+/*** [START] Transaction wrapper ***/
+-- The whole upgrade runs in one transaction so that the version guard below actually
+-- enforces. PostgreSQL DDL is transactional, so a RAISE EXCEPTION aborts every change
+-- made by this script regardless of how the client is invoked -- psql without
+-- ON_ERROR_STOP=1 otherwise reports the error and carries on to the next statement.
+BEGIN;
+/*** [END] Transaction wrapper ***/
+
 /*** [START] Part 1 of 3: Database Version Validation Below ***/ 
 -- Store upgrade database version in a temporary table.
 DROP TABLE IF EXISTS "TMP_UpgradeDatabaseVersionTable";
@@ -240,3 +248,7 @@ SELECT "UpgradeDatabaseVersion", CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
 FROM "TMP_UpgradeDatabaseVersionTable";
 DROP TABLE IF EXISTS "TMP_UpgradeDatabaseVersionTable";
 /*** [END] Part 3 of 3: Database Version Update Above ***/
+
+/*** [START] Transaction wrapper ***/
+COMMIT;
+/*** [END] Transaction wrapper ***/

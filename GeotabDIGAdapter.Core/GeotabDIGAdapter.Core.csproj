@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<PackageReference Include="Geotab.Internal.MyAdmin.APILib" Version="1.1.110" />
-	<PackageReference Include="Polly" Version="8.6.6" />
+	<PackageReference Include="Geotab.Internal.MyAdmin.APILib" Version="1.1.116" />
+	<PackageReference Include="Polly" Version="8.7.0" />
   </ItemGroup>	
 	
   <ItemGroup>

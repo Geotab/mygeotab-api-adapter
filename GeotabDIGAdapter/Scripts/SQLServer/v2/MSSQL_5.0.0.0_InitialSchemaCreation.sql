@@ -1,4 +1,4 @@
--- ================================================================================
+﻿-- ================================================================================
 -- DATABASE TYPE: SQL Server
 -- 
 -- NOTES: 
@@ -218,7 +218,7 @@ GO
 -- ================================================================================
 -- DIG TELEMETRY RECORD QUEUE TABLES
 -- ================================================================================
--- The following tables support the 12 DIG record types. External systems write
+-- The following tables support the 11 DIG record types. External systems write
 -- records to the queue tables, and the TelemetryDataService reads, transforms,
 -- and posts them to the DIG API.
 -- ================================================================================
@@ -443,6 +443,14 @@ CREATE TABLE [gda].[Q_BinaryRecords](
 ) ON [PRIMARY]
 GO
 
+-- No INCLUDE here, deliberately - this is the only PendingWork index without one.
+-- The siblings cover their table's payload columns so the claim query is satisfied from the
+-- index alone, but Q_BinaryRecords.Data is varbinary(max), the only unbounded payload in the
+-- set, and a sibling-shaped INCLUDE would copy every blob into the index. (Q_BluetoothRecords
+-- has a Data column too and its index does include it - that one is a [real].)
+-- Covering [ThirdPartyId] and [DateTime] alone, without the blob, would be legitimate; it is a
+-- performance judgement nobody has needed to make, not an oversight. Please do not "fix" this
+-- by copying a sibling.
 CREATE NONCLUSTERED INDEX [IX_Q_BinaryRecords_PendingWork]
 ON [gda].[Q_BinaryRecords] ([id])
 WHERE ([ProcessingStatus] = 0);

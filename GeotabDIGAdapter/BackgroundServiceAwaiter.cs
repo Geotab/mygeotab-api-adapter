@@ -1,4 +1,4 @@
-using MyGeotabAPIAdapter.Database.Models;
+﻿using MyGeotabAPIAdapter.Database.Models;
 using NLog;
 
 namespace GeotabDIGAdapter
@@ -31,7 +31,12 @@ namespace GeotabDIGAdapter
         }
 
         /// <summary>
-        /// Indicates whether connectivity is lost to the adapter database or external APIs (DIG, MyAdmin).
+        /// Indicates whether connectivity is lost in a way that should pause this service.
+        /// <para>
+        /// Deliberately narrower than "the state machine is Waiting". MyAdminNotAvailable and DIGNotAvailable
+        /// are excluded on purpose: neither stops a service from draining its queues, and pausing on them would
+        /// turn a MyAdmin outage into a telemetry outage. The Orchestrator owns recovering from those two.
+        /// </para>
         /// </summary>
         bool IsConnectivityLost()
         {
@@ -64,8 +69,11 @@ namespace GeotabDIGAdapter
 
             while (elapsedTimeSpan < delayTimeSpan)
             {
-                // Exit the delay early if cancellation is requested or state changes to waiting for any reason.
-                if (cancellationToken.IsCancellationRequested || stateMachine.CurrentState == State.Waiting)
+                // Exit the delay early only for a state the service will actually act on. Breaking out on any
+                // Waiting reason meant abandoning the delay for reasons that do not pause the service - see
+                // IsConnectivityLost - so it immediately looped round and abandoned the next delay too,
+                // spinning at zero delay with one log line per pass for as long as the reason stayed active.
+                if (cancellationToken.IsCancellationRequested || IsConnectivityLost() || IsDatabaseMaintenanceInProgress())
                 {
                     logger.Info($"{ServiceName} exiting {intervalTypeString} interval delay early due to state change or cancellation.");
                     break;
@@ -111,11 +119,22 @@ namespace GeotabDIGAdapter
             {
                 try
                 {
+                    // Report the pause to the state machine, not just to this instance. The service that
+                    // requested the pause waits on GetServicesNotYetPausedForDbMaintenance, so a service that
+                    // pauses without saying so is indistinguishable from one that ignored the request: the
+                    // handshake could never complete and every maintenance run would time out and be skipped.
+                    stateMachine.UpdateServicePauseStatus(ServiceName, true);
                     ServiceIsPausedForDatabaseMaintenance = true;
                     logger.Info($"******** PAUSING SERVICE: {ServiceName} for database maintenance.");
 
                     while (IsDatabaseMaintenanceInProgress())
                     {
+                        // Confirmed again at every check, having just seen that maintenance is still in progress - not only on
+                        // entering the pause. Each new pause request resets every service's status to "not paused", and one
+                        // that follows the last so closely that this service never saw the release in between - as when
+                        // Level 2 pauses for its offline rebuilds straight after partition management and retention - would
+                        // otherwise wait out its whole timeout for a confirmation this service had no reason to send again.
+                        stateMachine.UpdateServicePauseStatus(ServiceName, true);
                         cancellationToken.ThrowIfCancellationRequested();
                         await Task.Delay(DatabaseMaintenanceCheckIntervalMilliseconds, cancellationToken);
                     }
@@ -126,6 +145,7 @@ namespace GeotabDIGAdapter
                 }
                 finally
                 {
+                    stateMachine.UpdateServicePauseStatus(ServiceName, false);
                     ServiceIsPausedForDatabaseMaintenance = false;
                     logger.Info($"******** RESUMING SERVICE: {ServiceName} after database maintenance.");
                 }

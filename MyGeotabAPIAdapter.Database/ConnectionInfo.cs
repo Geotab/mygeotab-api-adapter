@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MyGeotabAPIAdapter.Configuration;
+using System;
 using System.Data.Common;
 
 namespace MyGeotabAPIAdapter.Database
@@ -78,9 +79,9 @@ namespace MyGeotabAPIAdapter.Database
         /// </summary>
         void RegisterDbProviderFactory(string dataAccessProviderType)
         {
-            if (!Enum.TryParse(dataAccessProviderType, out DataAccessProviderType connectionProviderTypeValue))
+            if (ConfigurationEnumParser.TryParse(dataAccessProviderType, out DataAccessProviderType connectionProviderTypeValue) == false)
             {
-                throw new ArgumentException($"Unsupported DataAccessProviderType ('{connectionProviderType}').");
+                throw new ArgumentException(BuildUnsupportedProviderTypeMessage(dataAccessProviderType));
             }
 
             switch (connectionProviderTypeValue)
@@ -94,10 +95,26 @@ namespace MyGeotabAPIAdapter.Database
                     DbProviderFactories.RegisterFactory(connectionProviderType, Microsoft.Data.SqlClient.SqlClientFactory.Instance);
                     break;
                 default:
-                    break;
+                    // Reached by NullValue, and by any member added to the enum but not registered above. Both
+                    // leave no provider factory registered and connectionProviderType null, so returning here
+                    // would produce a ConnectionInfo that cannot open a connection - and the failure would
+                    // surface later, somewhere else, as a different symptom. Refuse it where it is detectable.
+                    throw new ArgumentException(BuildUnsupportedProviderTypeMessage(dataAccessProviderType));
             }
 
             providerType = connectionProviderTypeValue;
+        }
+
+        /// <summary>
+        /// Builds the message reporting a <see cref="DataAccessProviderType"/> that no provider factory can be
+        /// registered for. Shared by both refusal paths so that a value refused at parse time and a value refused
+        /// for having no factory read identically to an operator, and name the value they were given.
+        /// </summary>
+        /// <param name="dataAccessProviderType">The value supplied by the caller.</param>
+        /// <returns>The exception message.</returns>
+        static string BuildUnsupportedProviderTypeMessage(string dataAccessProviderType)
+        {
+            return $"Unsupported DataAccessProviderType ('{dataAccessProviderType}'). Valid values are: {ConfigurationEnumParser.DescribeValidValues(DataAccessProviderType.NullValue)}.";
         }
     }
 }

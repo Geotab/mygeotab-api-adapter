@@ -89,11 +89,21 @@ namespace GeotabDIGAdapter.Services
                 // Log application start-up.
                 logger.Info($"******** INITIALIZING APPLICATION - {AssemblyName} (v{AssemblyVersion})");
 
-                // Authenticate the MyAdmin API client.
-                await myAdminAPIHelper.AuthenticateMyAdminAPIAsync(
-                    adapterConfiguration.MyAdminAPIEndpoint,
-                    adapterConfiguration.MyAdminUser,
-                    adapterConfiguration.MyAdminPassword);
+                // Authenticate the MyAdmin API client, but only if a service that uses it is enabled. A
+                // deployment driven by device subscriptions rather than by provisioning has no MyAdmin account
+                // at all, and authenticating unconditionally would strand it here: the two statements below that
+                // release every other service are only reached once this method completes without throwing.
+                if (adapterConfiguration.RequiresMyAdmin == true)
+                {
+                    await myAdminAPIHelper.AuthenticateMyAdminAPIAsync(
+                        adapterConfiguration.MyAdminAPIEndpoint,
+                        adapterConfiguration.MyAdminUser,
+                        adapterConfiguration.MyAdminPassword);
+                }
+                else
+                {
+                    logger.Info($"Skipping MyAdmin API authentication because no MyAdmin-dependent service is enabled.");
+                }
 
                 //// Test the session expiry re-authentication policy
                 //await myAdminAPIHelper.TestSessionExpiryReauthenticationAsync();
@@ -196,6 +206,17 @@ namespace GeotabDIGAdapter.Services
                 }
                 else if (stateMachine.IsStateReasonActive(StateReason.MyAdminNotAvailable))
                 {
+                    // Only the two MyAdmin-dependent services can raise this reason, so it should be
+                    // unreachable when MyAdmin is not in use. Clear it rather than re-authenticating if it ever
+                    // is raised: leaving it active would hold the state machine in Waiting forever, and this is
+                    // its only consumer.
+                    if (adapterConfiguration.RequiresMyAdmin == false)
+                    {
+                        logger.Warn($"{nameof(StateReason.MyAdminNotAvailable)} was set although no MyAdmin-dependent service is enabled. Clearing it, as there is nothing to reconnect to.");
+                        stateMachine.SetStateReason(StateReason.MyAdminNotAvailable, false);
+                        continue;
+                    }
+
                     try
                     {
                         await myAdminAPIHelper.AuthenticateMyAdminAPIAsync(

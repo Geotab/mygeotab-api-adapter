@@ -1,10 +1,12 @@
-using Dapper.Contrib.Extensions;
+﻿using Dapper.Contrib.Extensions;
+using Dapper;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.EntityMappers;
 using MyGeotabAPIAdapter.Database.EntityPersisters;
 using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.DeviceLookup;
 using MyGeotabAPIAdapter.DIGAPI;
 using MyGeotabAPIAdapter.DIGAPI.Models;
 using MyGeotabAPIAdapter.Exceptions;
@@ -13,6 +15,7 @@ using MyGeotabAPIAdapter.Models;
 using NLog;
 using Polly;
 using Polly.Retry;
+using System.Data;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
@@ -36,7 +39,7 @@ namespace GeotabDIGAdapter.Services
         readonly IBackgroundServiceAwaiter<TelemetryDataService> awaiter;
         readonly IExceptionHelper exceptionHelper;
         readonly IDIGAPIHelper digAPIHelper;
-        readonly IProvisionedDeviceCache provisionedDeviceCache;
+        readonly IDeviceLookup deviceLookup;
         readonly IServiceTracker<DbGdaOServiceTracking> serviceTracker;
         readonly IStateMachine<DbGdaMiddlewareVersionInfo> stateMachine;
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
@@ -98,6 +101,16 @@ namespace GeotabDIGAdapter.Services
         const int ExecutionThrottleEngagingRecordCount = 1;
 
         /// <summary>
+        /// The number of iterations a record whose device cannot be found is held in its queue before it is moved to a fail table. Defined in <see cref="DIGAdapterConfiguration"/>, beside the claim-attempt floor that must stay above it: the two count the same <c>RetryCount</c> column at different cadences, so they are one invariant and are kept in one place. Read the note there before changing either.
+        /// </summary>
+        const int MaxDeviceLookupHoldAttempts = DIGAdapterConfiguration.MaxDeviceLookupHoldAttempts;
+
+        /// <summary>
+        /// The maximum number of record ids released back to a queue in a single statement. Bounded because the parameter list is expanded inline, and because the pathological case - every claimed record failing to resolve - is exactly the one that produces the largest lists.
+        /// </summary>
+        const int ReleaseHeldRecordsChunkSize = 500;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="TelemetryDataService"/> class.
         /// </summary>
         public TelemetryDataService(
@@ -107,7 +120,7 @@ namespace GeotabDIGAdapter.Services
             IBackgroundServiceAwaiter<TelemetryDataService> awaiter,
             IExceptionHelper exceptionHelper,
             IDIGAPIHelper digAPIHelper,
-            IProvisionedDeviceCache provisionedDeviceCache,
+            IDeviceLookup deviceLookup,
             IServiceTracker<DbGdaOServiceTracking> serviceTracker,
             IStateMachine<DbGdaMiddlewareVersionInfo> stateMachine,
             IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext,
@@ -165,7 +178,7 @@ namespace GeotabDIGAdapter.Services
             this.awaiter = awaiter;
             this.exceptionHelper = exceptionHelper;
             this.digAPIHelper = digAPIHelper;
-            this.provisionedDeviceCache = provisionedDeviceCache;
+            this.deviceLookup = deviceLookup;
             this.serviceTracker = serviceTracker;
             this.stateMachine = stateMachine;
             this.adapterContext = adapterContext;
@@ -234,9 +247,9 @@ namespace GeotabDIGAdapter.Services
             return adapterContext.ProviderType switch
             {
                 ConnectionInfo.DataAccessProviderType.PostgreSQL =>
-                    $@"SELECT * FROM {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "npgsqlconnection")}(@BatchSize::integer, @StaleThresholdMinutes::integer);",
+                    $@"SELECT * FROM {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "npgsqlconnection")}(@BatchSize::integer, @StaleThresholdMinutes::integer, @MaxClaimAttempts::integer);",
                 ConnectionInfo.DataAccessProviderType.SQLServer =>
-                    $"EXEC {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "sqlconnection")} @BatchSize = @BatchSize, @StaleThresholdMinutes = @StaleThresholdMinutes;",
+                    $"EXEC {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "sqlconnection")} @BatchSize = @BatchSize, @StaleThresholdMinutes = @StaleThresholdMinutes, @MaxClaimAttempts = @MaxClaimAttempts;",
                 _ => throw new NotSupportedException($"The provider type '{adapterContext.ProviderType}' is not supported.")
             };
         }
@@ -304,77 +317,92 @@ namespace GeotabDIGAdapter.Services
                 recordTypeCounts[rt] = 0;
             }
 
-            // Build ThirdPartyId to SerialNo lookup from ProvisionedDevices
-            var thirdPartyIdToSerialNoMap = await provisionedDeviceCache.GetThirdPartyIdToSerialNoMapAsync(stoppingToken);
-            if (thirdPartyIdToSerialNoMap.Count == 0)
+            // Build the authorisation snapshot over every participating device source.
+            var deviceAuthorizations = await deviceLookup.GetDeviceAuthorizationsAsync(stoppingToken);
+            if (deviceAuthorizations.ThirdPartyIdToSerialNoMap.Count == 0)
             {
-                logger.Debug("No provisioned devices with IsOkayToSendDataToGeotab=true found. Skipping telemetry processing.");
+                // Warn rather than Debug. Transmitting for no devices at all is this service's most consequential
+                // failure and its least visible one: the service tracking record keeps ticking a healthy heartbeat
+                // throughout, so an operator watching that alone sees nothing wrong.
+                logger.Warn("The device lookup holds no device that may be transmitted for. Check that at least one device is either provisioned and okay to send data for, or subscribed.");
 
-                // No records were processed, but the OServiceTracking record for this service still
-                // needs to be updated to show that the service is operating.
-                await UpdateServiceTrackingRecordAsync(0, 0, 0);
-
-                return new BatchProcessingResult { TotalCount = 0, SuccessCount = 0, FailureCount = 0 };
+                // Deliberately no early return. The iteration continues so that each queued record is still
+                // classified: telemetry for a device whose authorisation has been withdrawn is failed, and telemetry
+                // for a device nobody has heard of is held exactly as it would be if some other device happened to
+                // still be authorised. Returning here instead left a fully terminated fleet claiming nothing, so no
+                // record ever accrued a hold attempt and its queue grew without bound - and made the treatment of an
+                // unauthorised device depend on whether some unrelated device was active.
             }
 
-            // Collect records from all enabled record types
-            var allDigRecords = new List<object>();
+            // Claim a batch from each enabled record type's queue.
             var allQueueRecordsToProcess = new List<QueueRecordProcessingContext>();
 
-            // Process each enabled record type
             if (adapterConfiguration.EnableGpsRecords)
             {
-                await CollectGpsRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectGpsRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableAccelerationRecords)
             {
-                await CollectAccelerationRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectAccelerationRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableBinaryRecords)
             {
-                await CollectBinaryRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectBinaryRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableBluetoothRecords)
             {
-                await CollectBluetoothRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectBluetoothRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableDriverChangeRecords)
             {
-                await CollectDriverChangeRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectDriverChangeRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableGenericFaultRecords)
             {
-                await CollectGenericFaultRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectGenericFaultRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableGenericStatusRecords)
             {
-                await CollectGenericStatusRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectGenericStatusRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableJ1708FaultRecords)
             {
-                await CollectJ1708FaultRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectJ1708FaultRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableJ1939FaultRecords)
             {
-                await CollectJ1939FaultRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectJ1939FaultRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableObdiiFaultRecords)
             {
-                await CollectObdiiFaultRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectObdiiFaultRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
             if (adapterConfiguration.EnableVinRecords)
             {
-                await CollectVinRecordsAsync(thirdPartyIdToSerialNoMap, allDigRecords, allQueueRecordsToProcess, stoppingToken);
+                await CollectVinRecordsAsync(allQueueRecordsToProcess, stoppingToken);
             }
 
-            // Separate ImmediateFailure records (no matching ThirdPartyId) from valid records
-            var immediateFailureContexts = allQueueRecordsToProcess.Where(c => c.ImmediateFailure).ToList();
-            var validContexts = allQueueRecordsToProcess.Where(c => !c.ImmediateFailure).ToList();
+            // Resolve each claimed record to a device. The two lists are filled in lockstep and stay index-aligned,
+            // which is what lets the posting loop below slice them together.
+            var allDigRecords = new List<object>();
+            var validContexts = new List<QueueRecordProcessingContext>();
+            var (immediateFailureContexts, heldContexts) = await ResolveDevicesAsync(
+                allQueueRecordsToProcess, deviceAuthorizations, allDigRecords, validContexts, stoppingToken);
+
+            // Return held records to their queues so that they are reconsidered on the next iteration rather than
+            // waiting out the stale-claim threshold.
+            if (heldContexts.Count > 0)
+            {
+                await ReleaseHeldRecordsAsync(heldContexts, stoppingToken);
+            }
 
             // Persist ImmediateFailure records to fail tables immediately
             if (immediateFailureContexts.Count > 0)
             {
-                logger.Warn($"{immediateFailureContexts.Count} record(s) have no matching provisioned device and will be moved to fail tables.");
+                // Deliberately does not name a cause. The records reaching here have two different ones - a device
+                // whose authorisation was withdrawn, and a device nobody has heard of that has now been held for as
+                // long as it is going to be - and each record's own FailureReason distinguishes them.
+                logger.Warn($"{immediateFailureContexts.Count} record(s) cannot be transmitted for and are being moved to fail tables. The FailureReason column on each record records why.");
                 await PersistFailedRecordsAsync(immediateFailureContexts, string.Empty, stoppingToken);
                 totalCount += immediateFailureContexts.Count;
                 failureCount += immediateFailureContexts.Count;
@@ -464,289 +492,464 @@ namespace GeotabDIGAdapter.Services
 
         #region Record Collection Methods
 
-        async Task CollectGpsRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        // Each collector claims a batch from one queue and records what it claimed. None of them decides what
+        // happens to a record whose device cannot be found: that decision needs the whole iteration's claims in
+        // hand, so it is made once, afterwards, by ResolveDevicesAsync.
+
+        async Task CollectGpsRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQGpsRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQGpsRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQGpsRecordDIGGpsRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.Gps, QueueRecord = record });
-                }
-                else
-                {
-                    // No provisioned device found - move to fail table
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.Gps,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.Gps,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectAccelerationRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectAccelerationRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQAccelerationRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQAccelerationRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQAccelerationRecordDIGAccelerationRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.Acceleration, QueueRecord = record });
-                }
-                else
-                {
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.Acceleration,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.Acceleration,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectBinaryRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectBinaryRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQBinaryRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQBinaryRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQBinaryRecordDIGBinaryRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.Binary, QueueRecord = record });
-                }
-                else
-                {
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.Binary,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.Binary,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectBluetoothRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectBluetoothRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQBluetoothRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQBluetoothRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQBluetoothRecordDIGBluetoothRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.Bluetooth, QueueRecord = record });
-                }
-                else
-                {
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.Bluetooth,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.Bluetooth,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectDriverChangeRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectDriverChangeRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQDriverChangeRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQDriverChangeRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQDriverChangeRecordDIGDriverChangeRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.DriverChange, QueueRecord = record });
-                }
-                else
-                {
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.DriverChange,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.DriverChange,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectGenericFaultRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectGenericFaultRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQGenericFaultRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQGenericFaultRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQGenericFaultRecordDIGGenericFaultRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.GenericFault, QueueRecord = record });
-                }
-                else
-                {
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.GenericFault,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.GenericFault,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectGenericStatusRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectGenericStatusRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQGenericStatusRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQGenericStatusRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQGenericStatusRecordDIGGenericStatusRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.GenericStatus, QueueRecord = record });
-                }
-                else
-                {
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.GenericStatus,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.GenericStatus,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectJ1708FaultRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectJ1708FaultRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQJ1708FaultRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQJ1708FaultRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQJ1708FaultRecordDIGJ1708FaultRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.J1708Fault, QueueRecord = record });
-                }
-                else
-                {
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.J1708Fault,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.J1708Fault,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectJ1939FaultRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectJ1939FaultRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQJ1939FaultRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQJ1939FaultRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQJ1939FaultRecordDIGJ1939FaultRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.J1939Fault, QueueRecord = record });
-                }
-                else
-                {
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.J1939Fault,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.J1939Fault,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectObdiiFaultRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectObdiiFaultRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQObdiiFaultRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQObdiiFaultRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQObdiiFaultRecordDIGObdiiFaultRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.ObdiiFault, QueueRecord = record });
-                }
-                else
-                {
-                    contexts.Add(new QueueRecordProcessingContext
-                    {
-                        RecordType = RecordType.ObdiiFault,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
-                }
+                    RecordType = RecordType.ObdiiFault,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
             }
         }
 
-        async Task CollectVinRecordsAsync(Dictionary<string, string> thirdPartyIdMap, List<object> digRecords, List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
+        async Task CollectVinRecordsAsync(List<QueueRecordProcessingContext> contexts, CancellationToken cancellationToken)
         {
             var queueRecords = await GetBatchFromQueueAsync<DbGdaQVinRecord>(
                 digAdapterDatabaseObjectNames.SpClaimQVinRecordsBatchName, cancellationToken);
 
             foreach (var record in queueRecords)
             {
-                if (thirdPartyIdMap.TryGetValue(record.ThirdPartyId, out var serialNo))
+                contexts.Add(new QueueRecordProcessingContext
                 {
-                    var digRecord = dbGdaQVinRecordDIGVinRecordEntityMapper.CreateEntity(record, serialNo);
-                    digRecords.Add(digRecord);
-                    contexts.Add(new QueueRecordProcessingContext { RecordType = RecordType.Vin, QueueRecord = record });
+                    RecordType = RecordType.Vin,
+                    QueueRecord = record,
+                    QueueRecordId = record.id,
+                    ThirdPartyId = record.ThirdPartyId,
+                    RetryCount = record.RetryCount,
+                    ClaimedAtUtc = record.ProcessingStartTimeUtc
+                });
+            }
+        }
+
+        #endregion
+
+        #region Device Resolution
+
+        /// <summary>
+        /// Resolves each claimed record to the Geotab serial number its telemetry is transmitted as, and decides what
+        /// becomes of the records that do not resolve.
+        ///
+        /// A record whose device is not in the lookup is not necessarily an orphan. The lookup is read once per
+        /// iteration and the queues are claimed afterwards, so a device authorised in between misses through no
+        /// fault of the feeder - and a miss used to be fatal to the record, which was copied to a fail table and
+        /// deleted from the queue in one committed transaction. So a miss forces one lookup refresh and a
+        /// re-check before anything is decided.
+        ///
+        /// After that re-check the two ways of failing to resolve are separated, because they are not the same
+        /// problem. A device whose authorisation some source has WITHDRAWN is settled: it will not become
+        /// transmittable by waiting, so holding its telemetry only postpones the same outcome while its queue grows.
+        /// A device NOBODY has heard of may simply be one the adapter has not been told about yet, which is the
+        /// window holding exists to cover, so it is held and failed only once the window has passed.
+        /// </summary>
+        /// <param name="contexts">Every record claimed this iteration.</param>
+        /// <param name="deviceAuthorizations">The authorisation snapshot as read at the start of the iteration.</param>
+        /// <param name="digRecords">Receives the DIG record for each resolved context, in step with <paramref name="validContexts"/>.</param>
+        /// <param name="validContexts">Receives each resolved context, in step with <paramref name="digRecords"/>.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>The records to fail out, and the records to hold.</returns>
+        async Task<(List<QueueRecordProcessingContext> ImmediateFailures, List<QueueRecordProcessingContext> Held)> ResolveDevicesAsync(
+            List<QueueRecordProcessingContext> contexts,
+            DeviceAuthorizationSnapshot deviceAuthorizations,
+            List<object> digRecords,
+            List<QueueRecordProcessingContext> validContexts,
+            CancellationToken cancellationToken)
+        {
+            var immediateFailures = new List<QueueRecordProcessingContext>();
+            var heldContexts = new List<QueueRecordProcessingContext>();
+            var unresolvedContexts = new List<QueueRecordProcessingContext>();
+
+            foreach (var context in contexts)
+            {
+                if (!string.IsNullOrEmpty(context.ThirdPartyId)
+                    && deviceAuthorizations.ThirdPartyIdToSerialNoMap.TryGetValue(context.ThirdPartyId, out var geotabSerialNumber))
+                {
+                    digRecords.Add(CreateDigRecord(context, geotabSerialNumber));
+                    validContexts.Add(context);
                 }
                 else
                 {
-                    contexts.Add(new QueueRecordProcessingContext
+                    unresolvedContexts.Add(context);
+                }
+            }
+
+            if (unresolvedContexts.Count == 0)
+            {
+                return (immediateFailures, heldContexts);
+            }
+
+            logger.Debug($"{unresolvedContexts.Count} claimed record(s) did not resolve to a device. Refreshing the device lookup and re-checking before treating them as unresolved.");
+            deviceLookup.Invalidate();
+            var refreshedDeviceAuthorizations = await deviceLookup.GetDeviceAuthorizationsAsync(cancellationToken);
+
+            var withdrawnRecordCount = 0;
+            foreach (var context in unresolvedContexts)
+            {
+                if (!string.IsNullOrEmpty(context.ThirdPartyId)
+                    && refreshedDeviceAuthorizations.ThirdPartyIdToSerialNoMap.TryGetValue(context.ThirdPartyId, out var geotabSerialNumber))
+                {
+                    digRecords.Add(CreateDigRecord(context, geotabSerialNumber));
+                    validContexts.Add(context);
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(context.ThirdPartyId)
+                    && refreshedDeviceAuthorizations.UnauthorizedThirdPartyIdToSourceName.TryGetValue(context.ThirdPartyId, out var withdrawingSourceName))
+                {
+                    context.ImmediateFailure = true;
+                    context.FailureReason = $"The adapter is no longer authorised to transmit for ThirdPartyId: {context.ThirdPartyId}. {withdrawingSourceName} holds the device but has withdrawn authorisation for it.";
+                    immediateFailures.Add(context);
+                    withdrawnRecordCount++;
+                    continue;
+                }
+
+                if (context.RetryCount >= MaxDeviceLookupHoldAttempts)
+                {
+                    context.ImmediateFailure = true;
+                    context.FailureReason = $"No device found for ThirdPartyId: {context.ThirdPartyId}. The record was held and re-checked {context.RetryCount} time(s) before being failed.";
+                    immediateFailures.Add(context);
+                    continue;
+                }
+
+                heldContexts.Add(context);
+            }
+
+            if (withdrawnRecordCount > 0)
+            {
+                logger.Warn($"{withdrawnRecordCount} claimed record(s) name a device whose authorisation has been withdrawn and are being moved to fail tables without being held. This is expected while a feeder is still transmitting for a device the adapter has been told to stop sending for; it stops once the feeder stops. Until then the records are removed from their queues rather than accumulating in them.");
+            }
+
+            if (heldContexts.Count > 0)
+            {
+                logger.Warn($"{heldContexts.Count} claimed record(s) name a device no device lookup source has heard of and are being held in their queues for a later iteration; each is failed out after {MaxDeviceLookupHoldAttempts} attempt(s). A brief occurrence is expected when a feeder begins transmitting for a device before that device has been authorised. A persistent one means the identifiers the feeder supplies are not the identifiers the adapter has been given.");
+            }
+
+            return (immediateFailures, heldContexts);
+        }
+
+        /// <summary>
+        /// Creates the DIG record to be posted for a resolved queue record.
+        /// </summary>
+        /// <param name="context">The resolved queue record.</param>
+        /// <param name="geotabSerialNumber">The Geotab serial number the record is transmitted as.</param>
+        /// <returns>The DIG record.</returns>
+        object CreateDigRecord(QueueRecordProcessingContext context, string geotabSerialNumber)
+        {
+            return context.RecordType switch
+            {
+                RecordType.Gps => dbGdaQGpsRecordDIGGpsRecordEntityMapper.CreateEntity((DbGdaQGpsRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.Acceleration => dbGdaQAccelerationRecordDIGAccelerationRecordEntityMapper.CreateEntity((DbGdaQAccelerationRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.Binary => dbGdaQBinaryRecordDIGBinaryRecordEntityMapper.CreateEntity((DbGdaQBinaryRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.Bluetooth => dbGdaQBluetoothRecordDIGBluetoothRecordEntityMapper.CreateEntity((DbGdaQBluetoothRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.DriverChange => dbGdaQDriverChangeRecordDIGDriverChangeRecordEntityMapper.CreateEntity((DbGdaQDriverChangeRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.GenericFault => dbGdaQGenericFaultRecordDIGGenericFaultRecordEntityMapper.CreateEntity((DbGdaQGenericFaultRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.GenericStatus => dbGdaQGenericStatusRecordDIGGenericStatusRecordEntityMapper.CreateEntity((DbGdaQGenericStatusRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.J1708Fault => dbGdaQJ1708FaultRecordDIGJ1708FaultRecordEntityMapper.CreateEntity((DbGdaQJ1708FaultRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.J1939Fault => dbGdaQJ1939FaultRecordDIGJ1939FaultRecordEntityMapper.CreateEntity((DbGdaQJ1939FaultRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.ObdiiFault => dbGdaQObdiiFaultRecordDIGObdiiFaultRecordEntityMapper.CreateEntity((DbGdaQObdiiFaultRecord)context.QueueRecord, geotabSerialNumber),
+                RecordType.Vin => dbGdaQVinRecordDIGVinRecordEntityMapper.CreateEntity((DbGdaQVinRecord)context.QueueRecord, geotabSerialNumber),
+                _ => throw new NotSupportedException($"The record type '{context.RecordType}' is not supported.")
+            };
+        }
+
+        /// <summary>
+        /// Returns the name of the queue table a record type is claimed from.
+        /// </summary>
+        /// <param name="recordType">The record type.</param>
+        /// <returns>The queue table name.</returns>
+        string GetQueueTableName(RecordType recordType)
+        {
+            return recordType switch
+            {
+                RecordType.Gps => digAdapterDatabaseObjectNames.DbGdaQGpsRecordTableName,
+                RecordType.Acceleration => digAdapterDatabaseObjectNames.DbGdaQAccelerationRecordTableName,
+                RecordType.Binary => digAdapterDatabaseObjectNames.DbGdaQBinaryRecordTableName,
+                RecordType.Bluetooth => digAdapterDatabaseObjectNames.DbGdaQBluetoothRecordTableName,
+                RecordType.DriverChange => digAdapterDatabaseObjectNames.DbGdaQDriverChangeRecordTableName,
+                RecordType.GenericFault => digAdapterDatabaseObjectNames.DbGdaQGenericFaultRecordTableName,
+                RecordType.GenericStatus => digAdapterDatabaseObjectNames.DbGdaQGenericStatusRecordTableName,
+                RecordType.J1708Fault => digAdapterDatabaseObjectNames.DbGdaQJ1708FaultRecordTableName,
+                RecordType.J1939Fault => digAdapterDatabaseObjectNames.DbGdaQJ1939FaultRecordTableName,
+                RecordType.ObdiiFault => digAdapterDatabaseObjectNames.DbGdaQObdiiFaultRecordTableName,
+                RecordType.Vin => digAdapterDatabaseObjectNames.DbGdaQVinRecordTableName,
+                _ => throw new NotSupportedException($"The record type '{recordType}' is not supported.")
+            };
+        }
+
+        /// <summary>
+        /// Builds the SQL statement that returns held records to their queue, counting the attempt so that a record
+        /// which never resolves is eventually failed rather than held forever.
+        /// <para>
+        /// The release is fenced to the claim that took the records: it matches a row only while that row is still
+        /// claimed with the <c>ProcessingStartTimeUtc</c> this claim stamped. Keyed on <c>id</c> alone, a release
+        /// arriving after the claim had gone stale - the process stalled for more than the stale-claim threshold -
+        /// reset another instance's live claim of the same rows, so a third claim could send them while that instance
+        /// was still working on them. A superseded release now matches nothing, and the rows are left to whoever
+        /// holds them.
+        /// </para>
+        /// </summary>
+        /// <param name="queueTableName">The queue table to return the records to.</param>
+        /// <returns>The SQL statement formatted for the current database provider.</returns>
+        string BuildSqlToReleaseHeldRecords(string queueTableName)
+        {
+            return adapterContext.ProviderType switch
+            {
+                // The identifier list is matched with = ANY on PostgreSQL and IN on SQL Server. The two are not
+                // interchangeable here: the IN form relies on the list being expanded into individual parameters
+                // before the statement reaches the server, which does not happen on the PostgreSQL path, so the
+                // list arrives as a single parameter and the statement is rejected as malformed. = ANY takes the
+                // array as one parameter by design, and yields no matches for an empty array.
+                ConnectionInfo.DataAccessProviderType.PostgreSQL =>
+                    $@"UPDATE {SqlMapperExtensions.FormatTableNameForSql(queueTableName, "npgsqlconnection")}
+                       SET ""ProcessingStatus"" = 0,
+                           ""ProcessingStartTimeUtc"" = NULL,
+                           ""RetryCount"" = ""RetryCount"" + 1
+                       WHERE ""id"" = ANY(@Ids)
+                         AND ""ProcessingStatus"" = 1
+                         AND ""ProcessingStartTimeUtc"" = @ClaimedAtUtc;",
+                ConnectionInfo.DataAccessProviderType.SQLServer =>
+                    $@"UPDATE {SqlMapperExtensions.FormatTableNameForSql(queueTableName, "sqlconnection")}
+                       SET [ProcessingStatus] = 0,
+                           [ProcessingStartTimeUtc] = NULL,
+                           [RetryCount] = [RetryCount] + 1
+                       WHERE [id] IN @Ids
+                         AND [ProcessingStatus] = 1
+                         AND [ProcessingStartTimeUtc] = @ClaimedAtUtc;",
+                _ => throw new NotSupportedException($"The provider type '{adapterContext.ProviderType}' is not supported.")
+            };
+        }
+
+        /// <summary>
+        /// Returns held records to their queues, so that they are reconsidered on the next iteration rather than
+        /// after the stale-claim threshold has elapsed.
+        /// </summary>
+        /// <param name="heldContexts">The records to release.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async Task ReleaseHeldRecordsAsync(List<QueueRecordProcessingContext> heldContexts, CancellationToken cancellationToken)
+        {
+            // One claim stamps one ProcessingStartTimeUtc on every row it takes, so grouping by it as well as by record
+            // type gives one fenced statement per claim.
+            foreach (var claimGroup in heldContexts.GroupBy(context => (context.RecordType, context.ClaimedAtUtc)))
+            {
+                var sql = BuildSqlToReleaseHeldRecords(GetQueueTableName(claimGroup.Key.RecordType));
+
+                // Typed explicitly on both counts. SqlClient would otherwise send a DateTime as datetime, rounded to
+                // 1/300 of a second, which can differ from the datetime2 value the claim stored, and the fence would
+                // then match nothing. Npgsql sends a DateTime whose Kind is Utc as timestamptz, which the database
+                // converts in the session's time zone before comparing, so the Kind is cleared.
+                var claimedAtUtc = claimGroup.Key.ClaimedAtUtc.HasValue
+                    ? DateTime.SpecifyKind(claimGroup.Key.ClaimedAtUtc.Value, DateTimeKind.Unspecified)
+                    : (DateTime?)null;
+
+                foreach (var idChunk in claimGroup.Select(context => context.QueueRecordId).Chunk(ReleaseHeldRecordsChunkSize))
+                {
+                    await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
                     {
-                        RecordType = RecordType.Vin,
-                        QueueRecord = record,
-                        ImmediateFailure = true,
-                        FailureReason = $"No provisioned device found for ThirdPartyId: {record.ThirdPartyId}"
-                    });
+                        using var adapterUOW = adapterContext.CreateUnitOfWork(Databases.AdapterDatabase);
+                        using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+                        try
+                        {
+                            // The type argument is immaterial here: this statement names its own table and returns
+                            // no rows.
+                            var repo = new BaseRepository<object>(adapterContext);
+                            var parameters = new DynamicParameters();
+                            parameters.Add("Ids", idChunk);
+                            parameters.Add("ClaimedAtUtc", claimedAtUtc, DbType.DateTime2);
+                            await repo.ExecuteAsync(sql, new object[] { parameters }, cancellationTokenSource);
+                            await adapterUOW.CommitAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            exceptionHelper.LogException(ex, NLogLogLevelName.Error, DefaultErrorMessagePrefix);
+                            await adapterUOW.RollBackAsync();
+                            throw;
+                        }
+                    }, new Context());
                 }
             }
         }
@@ -767,7 +970,8 @@ namespace GeotabDIGAdapter.Services
                 var parameters = new
                 {
                     BatchSize = adapterConfiguration.TelemetryDataServiceBatchSizePerType,
-                    StaleThresholdMinutes
+                    StaleThresholdMinutes,
+                    MaxClaimAttempts = adapterConfiguration.TelemetryDataServiceMaxClaimAttempts
                 };
 
                 return await repo.QueryAsync(sql, parameters, cancellationTokenSource, true, adapterContext);
@@ -1007,10 +1211,16 @@ namespace GeotabDIGAdapter.Services
         /// </summary>
         async Task PrepareForExecutionAsync(CancellationToken stoppingToken)
         {
-            var prerequisiteServices = new List<DIGAdapterService>
+            // Only wait on DeviceProvisioningService if it is actually enabled. The prerequisite check reads
+            // OServiceTracking timestamps and never consults the enable flags, so a disabled service reads as
+            // "never run" forever and this wait would never end. That is what made turning provisioning off -
+            // the natural configuration for a deployment driven by device subscriptions - silently stop
+            // telemetry after a single warning.
+            var prerequisiteServices = new List<DIGAdapterService>();
+            if (adapterConfiguration.EnableDeviceProvisioningService == true)
             {
-                DIGAdapterService.DeviceProvisioningService
-            };
+                prerequisiteServices.Add(DIGAdapterService.DeviceProvisioningService);
+            }
             await awaiter.WaitForPrerequisiteServicesIfNeededAsync(prerequisiteServices, stoppingToken);
             await awaiter.WaitForDatabaseMaintenanceCompletionIfNeededAsync(stoppingToken);
         }
@@ -1051,7 +1261,7 @@ namespace GeotabDIGAdapter.Services
             }
             else
             {
-                logger.Warn($"******** WARNING - SERVICE DISABLED: The {CurrentClassName} service has not been enabled and will NOT be started.");
+                logger.Warn($"******** WARNING - SERVICE DISABLED: The {CurrentClassName} service has not been enabled and will NOT be started. Nothing else reads the telemetry queues (every gda.Q_ table other than Q_ProvisionDevices and Q_DeviceSubscriptions), so any telemetry written to them will stay there and nothing will be transmitted to the Data Intake Gateway.");
             }
         }
 
@@ -1117,6 +1327,27 @@ namespace GeotabDIGAdapter.Services
         {
             public RecordType RecordType { get; set; }
             public object QueueRecord { get; set; } = null!;
+
+            /// <summary>
+            /// The queue record's key, held separately so that a held record can be released without the caller having to know its concrete type.
+            /// </summary>
+            public long QueueRecordId { get; set; }
+
+            /// <summary>
+            /// The identifier the record's device must be resolved by.
+            /// </summary>
+            public string ThirdPartyId { get; set; } = string.Empty;
+
+            /// <summary>
+            /// How many times the record has already been claimed without being processed. Bounds how long a record whose device cannot be found is held before it is failed out.
+            /// </summary>
+            public byte RetryCount { get; set; }
+
+            /// <summary>
+            /// The <c>ProcessingStartTimeUtc</c> the claim stamped on the record. A held record is released only while the queue row still carries it, so a release cannot undo a later claim of the same row.
+            /// </summary>
+            public DateTime? ClaimedAtUtc { get; set; }
+
             public bool ImmediateFailure { get; set; }
             public string FailureReason { get; set; } = string.Empty;
         }

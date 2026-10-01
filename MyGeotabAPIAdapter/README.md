@@ -1,6 +1,6 @@
 # MyGeotab API Adapter
 
-**Current Version:** 5.1.0.0 | [Change Log](CHANGELOG.md)
+**Current Version:** 5.2.0.0 | [Change Log](CHANGELOG.md)
 
 > **Using AI to query your adapter database?** See [Section 8.6 AI-Assisted SQL Generation](#86-ai-assisted-sql-generation) for guidance on which files to provide as context to your LLM and key points that ensure accurate query results.
 
@@ -44,9 +44,11 @@ Highlights of the MyGeotab API Adapter solution are as follows:
 
 This document provides detailed information about the MyGeotab API Adapter along with instructions related to its deployment.
 
-> **Important:** The MyGeotab API Adapter requires MyGeotab credentials with all "View" clearances enabled. It is recommended that a dedicated Service Account be set up for this purpose and assigned to the **Company Group**. See the [Service Account Guidelines](https://docs.google.com/document/d/1KXJY3S6xyTjp9-qLgxo4PTedQjEuxrqKDlVWgfcC_lc/edit#heading=h.flbpi6nh4xjx) document for more details.
+> [!IMPORTANT]
+> The MyGeotab API Adapter requires MyGeotab credentials with all "View" clearances enabled. It is recommended that a dedicated Service Account be set up for this purpose and assigned to the **Company Group**. See the [Service Account Guidelines](https://docs.google.com/document/d/1KXJY3S6xyTjp9-qLgxo4PTedQjEuxrqKDlVWgfcC_lc/edit#heading=h.flbpi6nh4xjx) document for more details.
 
-> **Tip:** This document is written in Markdown. You can render it in any Markdown viewer, paste it into Google Docs or Microsoft Word, or view it directly on GitLab/GitHub. Mermaid diagrams require a Mermaid-compatible renderer (GitLab, GitHub, VS Code with extensions, etc.).
+> [!TIP]
+> This document is written in Markdown. You can render it in any Markdown viewer, paste it into Google Docs or Microsoft Word, or view it directly on GitLab/GitHub. Mermaid diagrams require a Mermaid-compatible renderer (GitLab, GitHub, VS Code with extensions, etc.).
 
 ## Table of Contents
 
@@ -57,7 +59,7 @@ This document provides detailed information about the MyGeotab API Adapter along
 3. [Operator Guide](#3-operator-guide)
    - [3.1 Data Feed Concepts](#31-data-feed-concepts) · [3.2 Device and Diagnostic Filtering](#32-device-and-diagnostic-filtering) · [3.3 Minimum Interval Sampling](#33-minimum-interval-sampling) · [3.4 Data Enhancement Services](#34-data-enhancement-services) · [3.5 DVIRLog Manipulator](#35-dvirlog-manipulator) · [3.6 Automated Database Maintenance](#36-automated-database-maintenance) · [3.7 Monitoring](#37-monitoring) · [3.8 Distributed Deployment](#38-distributed-deployment)
 4. [Configuration Guide](#4-configuration-guide)
-   - [Environment Variables for Sensitive Settings](#environment-variables-for-sensitive-settings) · [4.1 OverrideSettings](#41-overridesettings) · [4.2 DatabaseSettings](#42-databasesettings) · [4.3 LoginSettings](#43-loginsettings) · [4.4 GeneralSettings](#44-generalsettings) · [4.5 Caches](#45-caches) · [4.6 GeneralFeedSettings](#46-generalfeedsettings) · [4.7 Feeds](#47-feeds) · [4.8 DataEnhancementServices](#48-dataenhancementservices) · [4.9 Manipulators](#49-manipulators) · [4.10 nlog.config](#410-nlogconfig)
+   - [Settings Whose Value Is One of a Fixed Set](#settings-whose-value-is-one-of-a-fixed-set) · [Environment Variables for Sensitive Settings](#environment-variables-for-sensitive-settings) · [4.1 OverrideSettings](#41-overridesettings) · [4.2 DatabaseSettings](#42-databasesettings) · [4.3 LoginSettings](#43-loginsettings) · [4.4 GeneralSettings](#44-generalsettings) · [4.5 Caches](#45-caches) · [4.6 GeneralFeedSettings](#46-generalfeedsettings) · [4.7 Feeds](#47-feeds) · [4.8 DataEnhancementServices](#48-dataenhancementservices) · [4.9 Manipulators](#49-manipulators) · [4.10 nlog.config](#410-nlogconfig)
 5. [Troubleshooting Guide](#5-troubleshooting-guide)
    - [5.1 Data Not Appearing in Database](#51-data-not-appearing-in-database) · [5.2 Enhancement Service Issues](#52-enhancement-service-issues) · [5.3 DVIR Manipulation Issues](#53-dvir-manipulation-issues) · [5.4 Service Not Starting](#54-service-not-starting) · [5.5 Automated Database Maintenance Issues](#55-automated-database-maintenance-issues) · [5.6 MyGeotab Connectivity Issues](#56-mygeotab-connectivity-issues) · [5.7 Database Connectivity Issues](#57-database-connectivity-issues)
 6. [API Reference](#6-api-reference)
@@ -94,7 +96,7 @@ The MyGeotab API Adapter requires the following:
 |------|--------|
 | MyGeotab Credentials | A MyGeotab service account with the required clearances (listed below), assigned to the **Company Group**. It is recommended that a dedicated service account be created for this purpose. See the [Service Account Guidelines](https://docs.google.com/document/d/1KXJY3S6xyTjp9-qLgxo4PTedQjEuxrqKDlVWgfcC_lc/edit#heading=h.flbpi6nh4xjx) document for more details. |
 | Operating System | Windows 64-bit (win-x64), Linux 64-bit (linux-x64), or macOS (osx-x64 / osx-arm64). The deployment packages are self-contained and include the .NET runtime, libraries and dependencies needed to run on the respective platforms. There is no need to pre-install the .NET runtime. |
-| Database | **SQL Server** or **PostgreSQL**. The solution was developed and tested with SQL Server 2019 and PostgreSQL 16. It is recommended to use a version equal to or greater than these. Cloud-based versions (Google Cloud SQL, Amazon RDS, Azure) are also likely to be suitable, although Geotab cannot provide support for them. In Azure, if SQL Server is chosen, **Azure SQL Database** is not supported due to the adapter database being partitioned — use **Azure SQL Managed Instance** or **SQL Server on a VM** instead. It is recommended to have access to [SQL Server Management Studio](https://docs.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms) or [pgAdmin](https://www.pgadmin.org/) to view data that the adapter writes to the database. |
+| Database | **SQL Server** or **PostgreSQL**. The solution was developed and tested with SQL Server 2019 and PostgreSQL 16. It is recommended to use a version equal to or greater than these. Cloud-based versions (Google Cloud SQL, Amazon RDS, Azure) are also likely to be suitable, although Geotab cannot provide support for them. In Azure, if SQL Server is chosen, **SQL Server on an Azure VM** is the option to use — neither **Azure SQL Database** nor **Azure SQL Managed Instance** is able to host the adapter database, for the reasons given in [Section 7.2 Database Setup](#72-database-setup). It is recommended to have access to [SQL Server Management Studio](https://docs.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms) or [pgAdmin](https://www.pgadmin.org/) to view data that the adapter writes to the database. |
 | Networking / Firewall | The application must be able to make requests over HTTPS to the MyGeotab server (e.g. `https://my.geotab.com/`). If the application and database reside on separate servers, appropriate networking steps must be taken to ensure connectivity. |
 
 **Required MyGeotab clearances for the service account:**
@@ -117,7 +119,8 @@ The MyGeotab API Adapter requires the following:
 | View trailers |
 | View zones |
 
-> **Note:** If the DVIRLogManipulator service is enabled, the MyGeotab user associated with the `RepairUserId` must also have **"Mark Asset Inspection logs as repaired"** and **"Administer Asset Inspection logs"** clearances. See [Section 3.5 DVIRLog Manipulator](#35-dvirlog-manipulator) for details.
+> [!NOTE]
+> If the DVIRLogManipulator service is enabled, the MyGeotab user associated with the `RepairUserId` must also have **"Mark Asset Inspection logs as repaired"** and **"Administer Asset Inspection logs"** clearances. See [Section 3.5 DVIRLog Manipulator](#35-dvirlog-manipulator) for details.
 
 ### 1.2 Download
 
@@ -144,7 +147,8 @@ The latest version of the MyGeotab API Adapter is available on GitHub as a pre-p
 | SQL Server | `SQLServer.zip` |
 | PostgreSQL | `PostgreSQL.zip` |
 
-> **Tip:** Developers working from source code can find the database scripts in `MyGeotabAPIAdapter/Scripts/SQLServer/v2/` (SQL Server) and `MyGeotabAPIAdapter/Scripts/PostgreSQL/v2/` (PostgreSQL).
+> [!TIP]
+> Developers working from source code can find the database scripts in `MyGeotabAPIAdapter/Scripts/SQLServer/v2/` (SQL Server) and `MyGeotabAPIAdapter/Scripts/PostgreSQL/v2/` (PostgreSQL).
 
 ### 1.3 Database Setup
 
@@ -246,7 +250,7 @@ After creating the service, it can be managed (set to start automatically, etc.)
    Restart=always
    RestartSec=10
    SyslogIdentifier=mygeotab-api-adapter
-   Environment=ASPNETCORE_ENVIRONMENT=Production
+   Environment=DOTNET_ENVIRONMENT=Production
    Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
 
    [Install]
@@ -408,7 +412,7 @@ The cache processors use a two-tier update model to keep reference data current 
 - **Incremental updates** run at a short interval (e.g., every 1-10 minutes). The processor calls the MyGeotab `Get` method and upserts any new or changed entities.
 - **Full refreshes** run at a longer interval (e.g., every 24 hours or 7 days). The processor retrieves the complete data set and reconciles it with the database, detecting entities that have been removed from MyGeotab.
 
-The `IntervalDailyReferenceStartTimeUTC` setting controls the starting reference point for interval calculations.
+The `<Entity>CacheIntervalDailyReferenceStartTimeUTC` settings — one per cache processor — control the starting reference point for interval calculations.
 
 ### Database Schema
 
@@ -471,7 +475,8 @@ When a service starts, it checks whether its prerequisite services are already r
 
 > `PAUSING SERVICE: MyGeotabAPIAdapter.StatusDataProcessor2 because of the following: > The prerequisite DeviceProcessor2 and DiagnosticProcessor2 have never been run.`
 
-> **Note:** Because all services start at the same time and some take longer than others to initialize, it is normal to see these messages during the first few minutes after the adapter starts. If services have been enabled appropriately based on the table below, these messages will stop appearing once all services have come online.
+> [!NOTE]
+> Because all services start at the same time and some take longer than others to initialize, it is normal to see these messages during the first few minutes after the adapter starts. If services have been enabled appropriately based on the table below, these messages will stop appearing once all services have come online.
 
 The following table lists the direct service dependencies for each service. Note that the listed dependencies may also have their own dependencies.
 
@@ -508,7 +513,8 @@ The following table lists the direct service dependencies for each service. Note
 | ZoneProcessor2 | None |
 | ZoneTypeProcessor2 | None |
 
-> **Note:** In addition to the dependencies listed above, all services except Orchestrator2 depend on DatabaseMaintenanceService2 having completed its initial startup tasks (including partition management). This universal dependency is not repeated in the table above.
+> [!NOTE]
+> In addition to the dependencies listed above, all services except Orchestrator2 depend on DatabaseMaintenanceService2 having completed its initial startup tasks (including partition management). This universal dependency is not repeated in the table above.
 
 ### 3.2 Device and Diagnostic Filtering
 
@@ -524,9 +530,11 @@ Filtering applies to StatusData, FaultData, and LogRecord feeds.
 
 [LogRecord](https://developers.geotab.com/myGeotab/apiReference/objects/LogRecord) and [StatusData](https://developers.geotab.com/myGeotab/apiReference/objects/StatusData) entities typically account for a very large proportion of the data volume in a MyGeotab database — hundreds of millions of records per day for fleets of over 100K devices, for example. In some cases, this massive data volume may be deemed excessive and there may be a preference to reduce data volume such that data points are no more frequent than one per device every *x* number of seconds. To address this need, "minimum interval sampling" capability has been added to the MyGeotab API Adapter via the **EnableMinimunIntervalSamplingForLogRecords**, **EnableMinimunIntervalSamplingForStatusData**, **MinimumIntervalSamplingDiagnostics** and **MinimumIntervalSamplingIntervalSeconds** settings in the [Section 4.6 GeneralFeedSettings](#46-generalfeedsettings) section of the `appsettings.json` file.
 
-> **Warning:** There is no way to later back-fill data if minimum interval sampling has been used, other than clearing the adapter database, adjusting `appsettings.json`, and re-running the extraction process.
+> [!WARNING]
+> There is no way to later back-fill data if minimum interval sampling has been used, other than clearing the adapter database, adjusting `appsettings.json`, and re-running the extraction process.
 
-> **Note:** Minimum interval sampling does not ensure records are captured at a regular "polling interval" of one record every *n* seconds. Rather, it ensures that a minimum of *n* seconds exists between the DateTime values of records that are written to the adapter database.
+> [!NOTE]
+> Minimum interval sampling does not ensure records are captured at a regular "polling interval" of one record every *n* seconds. Rather, it ensures that a minimum of *n* seconds exists between the DateTime values of records that are written to the adapter database.
 
 #### Minimum Interval Sampling for LogRecords
 
@@ -667,20 +675,26 @@ DVIRLog updates made by the DVIRLogManipulator service are captured by the DVIRL
 
 Any rows in `upd_DVIRDefectUpdates2` that do not pass validation checks or for which exceptions are encountered will be copied to the `fail_DVIRDefectUpdateFailures2` table before being deleted from `upd_DVIRDefectUpdates2`. The `FailureMessage` column provides details about the reason why a given command failed.
 
-> **Warning:** Rows are never deleted from the `fail_DVIRDefectUpdateFailures2` table. It is up to the integrator to delete rows from this table once the error messages have been evaluated and appropriate actions have been taken.
+> [!WARNING]
+> Rows are never deleted from the `fail_DVIRDefectUpdateFailures2` table. It is up to the integrator to delete rows from this table once the error messages have been evaluated and appropriate actions have been taken.
 
 ### 3.6 Automated Database Maintenance
 
 There are many indexes on tables within the adapter database. These indexes facilitate high-performance querying, but become fragmented over time, leading to performance degradation if no maintenance is performed. The `DatabaseMaintenanceService2` provides automated database maintenance capabilities — including database partitioning and index maintenance — without the need for regular manual intervention. This should enable performance to remain strong even with millions or billions of records in the different tables.
 
-> **Note:** If technical resources with sufficient database maintenance knowledge are available and there is a desire to implement more-advanced database maintenance strategies, the `EnableLevel1DatabaseMaintenance` and `EnableLevel2DatabaseMaintenance` settings in [Section 4.2 DatabaseSettings](#42-databasesettings) can be used to disable the built-in capabilities. However, partition management cannot be disabled.
+> [!NOTE]
+> If technical resources with sufficient database maintenance knowledge are available and there is a desire to implement more-advanced database maintenance strategies, the `EnableLevel1DatabaseMaintenance` and `EnableLevel2DatabaseMaintenance` settings in [Section 4.2 DatabaseSettings](#42-databasesettings) can be used to disable the built-in capabilities. However, partition management cannot be disabled.
 
 #### Partition Management
 
-The `spManagePartitions` stored procedure (SQL Server) or function (PostgreSQL) is executed once daily by `DatabaseMaintenanceService2`. Each time it is executed, partitions will be created as needed up to and including for the month following that of the current day. This ensures that partitions will always be in-place when they are needed for any incoming data.
+The `spManagePartitions` stored procedure (SQL Server) or function (PostgreSQL) is executed by `DatabaseMaintenanceService2` when the adapter starts — before any other service writes data — and then every 20 days, with the other services paused while it runs. Each time it is executed, partitions will be created as needed up to and including for the month following that of the current day. This ensures that partitions will always be in-place when they are needed for any incoming data.
 
 - Partitions are created on a monthly, weekly, or daily basis depending on the initial configuration.
 - `DBPartitionInfo2` stores the initial partition parameters.
+
+**If a partition maintenance run fails**, what happens depends on which run it is. A failure of the run at startup **stops the adapter**, because the adapter must not write records before the partitions they belong in exist: correct the cause given in the log and start the adapter again. A failure of a later, periodic run is logged at `Error` and recorded in `DBMaintenanceLogs2` with `Success` set to false, the other services are released from the pause, and the adapter carries on. Like the Level 1 and Level 2 statements below, the periodic run is given a single attempt of up to an hour, and a timeout is not retried. The run is then attempted again 60 minutes after the failed attempt ended, and so on for as long as the failure persists — about hourly, or every two hours when each attempt runs to its one-hour limit; meanwhile the partitions created by the last successful run remain in place. They last at least until the end of the calendar month after the one that run happened in, and **once fewer than two days of them remain the adapter stops**, as a failed run at startup does. (The periodic run is never skipped: it waits for the other services to pause for as long as that takes.) A run falls due at least six days before that point, so a failure has at least six days of further attempts first. The query under Level 2 below lists failed partition runs too.
+
+On PostgreSQL, a record dated after the last partition — from a device whose clock runs ahead, say — is stored in its table's DEFAULT partition. When `spManagePartitions` later creates the partition that record belongs in, it moves the record into it in the same run.
 
 **Choosing the Right Partition Interval:**
 
@@ -690,7 +704,8 @@ The `spManagePartitions` stored procedure (SQL Server) or function (PostgreSQL) 
 | Low to mid tens of thousands | `weekly` |
 | Mid tens of thousands and over | `daily` |
 
-> **Note:** The suggested partition interval choices above are only general guidelines and may not be ideal for any specific fleet. It may be a worthwhile exercise to set up a test environment and experiment with the different partition intervals to see which one results in better query performance once a significant amount of data has been collected.
+> [!NOTE]
+> The suggested partition interval choices above are only general guidelines and may not be ideal for any specific fleet. It may be a worthwhile exercise to set up a test environment and experiment with the different partition intervals to see which one results in better query performance once a significant amount of data has been collected.
 
 #### Level 1 Maintenance (Non-Interfering)
 
@@ -705,13 +720,13 @@ Level 1 database maintenance involves unobtrusive operations that can be execute
 
 **SQL Server:**
 
-- **UPDATE STATISTICS:** Performed on tables where the modification ratio since the last analysis is greater than 0.1.
+- **UPDATE STATISTICS:** Performed on tables with more than 1,000 modifications since their statistics were last updated, where those modifications amount to more than 10 percent of the table's rows.
 
 #### Level 2 Maintenance (Interfering)
 
 Level 2 database maintenance involves rebuilding indexes, which is more obtrusive and must be done within a database maintenance window during which adapter services are paused to avoid contention. It is configured via the `EnableLevel2DatabaseMaintenance`, `Level2DatabaseMaintenanceIntervalMinutes`, `Level2DatabaseMaintenanceWindowStartTimeUTC` and `Level2DatabaseMaintenanceWindowMaxMinutes` settings in [Section 4.2 DatabaseSettings](#42-databasesettings). Level 2 maintenance utilizes the `vwStatsForLevel2DBMaintenance` view.
 
-When Level 2 maintenance is initiated, all participating services are paused via the state machine before maintenance proceeds. It can optionally be restricted to a daily time window.
+When Level 2 maintenance is initiated, all participating services are paused via the state machine before maintenance proceeds. It can optionally be restricted to a daily time window, which may cross midnight UTC: a window starting at 23:00 UTC and lasting 120 minutes lets a run start at any time from 23:00 to 01:00 UTC.
 
 **PostgreSQL:**
 
@@ -722,6 +737,18 @@ When Level 2 maintenance is initiated, all participating services are paused via
 - **REBUILD Entire Index:** An entire index is rebuilt if more than half of its partitions are over 30 percent fragmented.
 - **REBUILD Index Partition:** An index partition is rebuilt if it is over 30 percent fragmented (and not already captured as part of an entire index rebuild).
 - **REORGANIZE Index:** An index partition (or an entire index if there is only one partition) is reorganized if it is between 10 and 30 percent fragmented (and not already captured as part of an entire index rebuild).
+
+**If a Level 1 or Level 2 run fails** — because a maintenance view cannot be read or a statement is refused, or on PostgreSQL because the adapter's database login may not execute `pgstattuple`, which the Level 2 view uses — the failure is logged at `Error` and recorded in `DBMaintenanceLogs2` with `Success` set to false, and the adapter carries on. The other services are released from the Level 2 pause, and the failed level is not attempted again until its interval, `Level1DatabaseMaintenanceIntervalMinutes` or `Level2DatabaseMaintenanceIntervalMinutes`, has elapsed - measured from when the failed run ENDED, so a run that failed after running longer than its interval is not attempted again at once. A Level 2 run that cannot start because another service did not pause is recorded as a failed run in the same way. Each maintenance statement, and each read of a maintenance view, is given a single attempt of up to an hour, whatever `TimeoutSecondsForDatabaseTasks` is set to. One that times out is not retried, and its run is treated as failed in this way, so a rebuild that cannot complete holds the other services paused for about an hour at most. It is then not attempted again for `Level2DatabaseMaintenanceIntervalMinutes`, so at the default of 60 an index that can never be rebuilt within the hour keeps the feeds paused for about half of each two hours until it is dealt with: where an index may need that long, confine Level 2 to a quiet window, lengthen its interval, or rebuild that index yourself. A deadlock, or a failure to open a database connection, is still retried, up to three times. A connection lost part-way through a statement is not retried; nor, on PostgreSQL, is a statement stopped by a `lock_timeout` or `statement_timeout` that an administrator has set for the adapter's login or database — that counts as a timeout, and ends the run. To list recent failed runs (`MaintenanceTypeId` 1 is Level 1, 2 is Level 2 and 3 is partition maintenance):
+
+```sql
+-- PostgreSQL
+SELECT * FROM public."DBMaintenanceLogs2" WHERE "Success" = false ORDER BY "StartTimeUtc" DESC LIMIT 20;
+
+-- SQL Server
+SELECT TOP 20 * FROM dbo.DBMaintenanceLogs2 WHERE Success = 0 ORDER BY StartTimeUtc DESC;
+```
+
+**Both levels maintain only the adapter's own schema** — `dbo` on SQL Server and `public` on PostgreSQL. On a database shared with the Geotab DIG Adapter, that adapter's `gda` schema is left to the DIG Adapter, which maintains it itself; before version 5.2.0.0 this adapter's SQL Server views were not limited to `dbo` and maintained `gda` as well.
 
 #### Longer-Term Data Retention Strategy
 
@@ -768,13 +795,15 @@ ORDER BY child.relname;
 ALTER TABLE public."StatusData2" DETACH PARTITION public."StatusData2_202301";
 ```
 
-> **Note:** The `DETACH PARTITION ... CONCURRENTLY` variant cannot be used with the adapter database. Every partitioned adapter table includes a `DEFAULT` partition, and PostgreSQL rejects the concurrent form when one exists (`cannot detach partitions concurrently when a default partition exists`). The plain form shown above completes in milliseconds but needs the brief exclusive lock — hence stopping the adapter first.
+> [!NOTE]
+> The `DETACH PARTITION ... CONCURRENTLY` variant cannot be used with the adapter database. Every partitioned adapter table includes a `DEFAULT` partition, and PostgreSQL rejects the concurrent form when one exists (`cannot detach partitions concurrently when a default partition exists`). The plain form shown above completes in milliseconds but needs the brief exclusive lock — hence stopping the adapter first.
 
 4. **Backup the detached tables** if the data must be kept (`pg_dump --table`, `COPY ... TO`, or copy to an archive database).
 5. **Drop the detached tables** to reclaim disk space immediately: `DROP TABLE public."StatusData2_202301";`
 6. **Restart the adapter** and run `ANALYZE` on the affected parent tables.
 
-> **Note:** Rows older than the earliest partition boundary reside in each table's `<TableName>_default` partition and cannot be retired by time period using this method.
+> [!NOTE]
+> Rows older than the earliest partition boundary reside in each table's `<TableName>_default` partition and cannot be retired by time period using this method.
 
 **SQL Server:**
 
@@ -784,7 +813,8 @@ SQL Server partition retirement uses `ALTER TABLE ... SWITCH`, which detaches a 
 - **Non-aligned constraints.** `Trips2` is shaped differently from the other tables: its clustered index (`CI_Trips2_Start_Id`) is non-unique and lives on the partition scheme, while `PK_Trips2` is a NONCLUSTERED primary key on `[PRIMARY]` and `UK_Trips2_DeviceId_Start_EntityStatus` is a UNIQUE constraint on `[PRIMARY]`. Constraint-backed indexes cannot be dropped with `DROP INDEX` — use `ALTER TABLE ... DROP CONSTRAINT` and recreate with `ALTER TABLE ... ADD CONSTRAINT`.
 - **Inbound foreign keys.** A table referenced by an enabled foreign key cannot be a switch source (`Msg 4967`), and the four `UI_` indexes that back such references cannot even be dropped while the key exists (`Msg 3723`): `FK_StatusDataLocations2_StatusData2` → `UI_StatusData2_Id`, `FK_FaultDataLocations2_FaultData2` → `UI_FaultData2_Id`, `FK_DVIRDefects2_DVIRLogs2` → `UI_DVIRLogs2_Id`, `FK_DVIRDefectRemarks2_DVIRDefects2` → `UI_DVIRDefects2_Id`. Drop the foreign key first, switch the same periods out of BOTH tables of the pair in the same window, then recreate the key `WITH CHECK` (revalidation scans the referencing table, so its duration scales with table size).
 
-> **Warning:** Take a full database backup before the first retirement run, and always perform the procedure with the adapter stopped.
+> [!WARNING]
+> Take a full database backup before the first retirement run, and always perform the procedure with the adapter stopped.
 
 **Order of operations for one maintenance window:**
 
@@ -850,7 +880,8 @@ WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNOR
       OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY];
 ```
 
-> **Note:** Recreating the dropped indexes/constraints (and `WITH CHECK` revalidation of recreated foreign keys) are the only steps whose duration scales with table size — on large tables they dominate the maintenance window. When retiring several periods in one window, drop each object once, perform all of the table's switches, and recreate each object once at the end. On Enterprise Edition, `ONLINE = ON` can be used for index recreation.
+> [!NOTE]
+> Recreating the dropped indexes/constraints (and `WITH CHECK` revalidation of recreated foreign keys) are the only steps whose duration scales with table size — on large tables they dominate the maintenance window. When retiring several periods in one window, drop each object once, perform all of the table's switches, and recreate each object once at the end. On Enterprise Edition, `ONLINE = ON` can be used for index recreation.
 
 6. **Backup and drop the staging tables.** Export the data if it must be kept (`bcp` out, backup, or copy to an archive database), then `DROP TABLE` the staging table. This must happen before step 8 — the staging table occupies the filegroup being removed.
 
@@ -881,7 +912,8 @@ ALTER DATABASE [<database name>] REMOVE FILE [<logical file name>];
 ALTER DATABASE [<database name>] REMOVE FILEGROUP [<partition filegroup from step 1>];
 ```
 
-> **Note:** If `REMOVE FILE` reports that the file is not empty, run `DBCC SHRINKFILE ('<logical file name>', EMPTYFILE);` and retry.
+> [!NOTE]
+> If `REMOVE FILE` reports that the file is not empty, run `DBCC SHRINKFILE ('<logical file name>', EMPTYFILE);` and retry.
 
 9. **Restart the adapter.** Automated partition management (`spManagePartitions` / `DBPartitionInfo2`) stores only the initial configuration and creates future partitions, so it is unaffected by removed historical boundaries.
 
@@ -890,7 +922,8 @@ Additional notes:
 - **Rows older than the first partition boundary** live in partition 1, which resides on the `PRIMARY` filegroup. They can be retired the same way: create the staging table `ON [PRIMARY]` and switch partition 1 out (steps 7–8 do not apply — there is no dedicated file or filegroup to remove).
 - **Restoring archived data by switching back in is much stricter** than switching out: the staging table must additionally carry identical nonclustered indexes (`Msg 4947`), matching foreign keys (`Msg 4968`), and a trusted `CHECK` constraint matching the partition's range. Plan to restore archived data from exported files rather than relying on switching partitions back in.
 
-> **Warning:** It is possible for the database to grow very large very quickly, resulting in potential disk space and performance issues. For example, running the adapter against a MyGeotab database with a fleet of ~20,000 devices and pulling data for all supported feeds could result in a PostgreSQL database growing to ~40 GB in size within 7 days, including ~225,000,000 StatusData, ~65,000,000 LogRecord and ~10,000,000 Trip records.
+> [!WARNING]
+> It is possible for the database to grow very large very quickly, resulting in potential disk space and performance issues. For example, running the adapter against a MyGeotab database with a fleet of ~20,000 devices and pulling data for all supported feeds could result in a PostgreSQL database growing to ~40 GB in size within 7 days, including ~225,000,000 StatusData, ~65,000,000 LogRecord and ~10,000,000 Trip records.
 
 See [Section 4.2 DatabaseSettings](#42-databasesettings) for maintenance configuration.
 
@@ -1046,7 +1079,8 @@ WHERE parent_table.relkind = 'p'
 ORDER BY parent_table.relname, child_table.relname;
 ```
 
-> **Note:** These queries use system tables/catalogs for approximate counts with minimal performance impact. See [Section 8.3 Leveraging System Tables and Catalogs](#83-leveraging-system-tables-and-catalogs) for more information on this approach.
+> [!NOTE]
+> These queries use system tables/catalogs for approximate counts with minimal performance impact. See [Section 8.3 Leveraging System Tables and Catalogs](#83-leveraging-system-tables-and-catalogs) for more information on this approach.
 
 ### 3.8 Distributed Deployment
 
@@ -1054,13 +1088,23 @@ The adapter includes machine name validation to prevent two instances from writi
 
 Set `DisableMachineNameValidation` to `true` only in environments where machine names are not static (e.g., container/Kubernetes environments). See [Section 4.1 OverrideSettings](#41-overridesettings).
 
-> **Warning:** Running multiple adapter instances against the same database without proper coordination can result in data corruption — duplicate records, missed feed versions, and conflicting merge operations.
+> [!WARNING]
+> Running multiple adapter instances against the same database without proper coordination can result in data corruption — duplicate records, missed feed versions, and conflicting merge operations.
 
 ---
 
 ## 4. Configuration Guide
 
 Sections 4.1 through 4.9 cover settings in `appsettings.json`. Section 4.10 covers the separate `nlog.config` file. Settings can be overridden using environment variables or an `appsettings.Development.json` file (see [Section 10.3 Development Configuration](#103-development-configuration)).
+
+### Settings Whose Value Is One of a Fixed Set
+
+Four settings take a value chosen from a short list of names rather than a number, a date or a free string: `DatabaseProviderType` ([Section 4.2](#42-databasesettings)), `FeedStartOption` ([Section 4.6](#46-generalfeedsettings)), and `StatusDataLocationServiceOperationMode` and `FaultDataLocationServiceOperationMode` ([Section 4.8](#48-dataenhancementservices)).
+
+**The name is matched without regard to case, and surrounding whitespace is ignored** — `PostgreSQL`, `postgresql` and `POSTGRESQL` are equivalent. A value matching none of the names is refused at startup with a message naming the setting, the value you supplied, and the values that would have been accepted.
+
+> [!NOTE]
+> A number is not a substitute for a name. These settings accept only the names listed with them.
 
 ### Environment Variables for Sensitive Settings
 
@@ -1087,7 +1131,8 @@ Environment="LoginSettings__MyGeotabPassword=password"
 Environment="DatabaseSettings__DatabaseConnectionString=Server=localhost;Database=geotabadapterdb;User Id=geotabadapter_client;Password=password;MultipleActiveResultSets=True;TrustServerCertificate=True"
 ```
 
-> **Note:** Environment variables take precedence over `appsettings.json` values.
+> [!NOTE]
+> Environment variables take precedence over `appsettings.json` values.
 
 ### 4.1 OverrideSettings
 
@@ -1101,7 +1146,8 @@ Environment="DatabaseSettings__DatabaseConnectionString=Server=localhost;Databas
 |---------|---------|-------------|
 | `DisableMachineNameValidation` | `false` | When `false`, validates that only one adapter instance writes to a given database. Set to `true` only if machine names are not static (e.g., container environments). See [Section 3.8 Distributed Deployment](#38-distributed-deployment). |
 
-> **Warning:** Extreme caution must be used when setting `DisableMachineNameValidation` to `true`. Improper deployment could lead to application instability and data integrity issues.
+> [!WARNING]
+> Extreme caution must be used when setting `DisableMachineNameValidation` to `true`. Improper deployment could lead to application instability and data integrity issues.
 
 ### 4.2 DatabaseSettings
 
@@ -1126,10 +1172,10 @@ The DatabaseSettings section contains settings used to connect to the adapter da
 | `EnableLevel1DatabaseMaintenance` | `true` | Enable Level 1 (non-interfering) maintenance — statistics updates and index reorganization. See [Section 3.6 Automated Database Maintenance](#36-automated-database-maintenance). |
 | `Level1DatabaseMaintenanceIntervalMinutes` | `30` | Interval in minutes between Level 1 maintenance runs. Only used if `EnableLevel1DatabaseMaintenance` is `true`. **Min: 10. Max: 43200 (30 days).** |
 | `EnableLevel2DatabaseMaintenance` | `true` | Enable Level 2 (interfering) maintenance — index rebuilds; pauses all participating services. See [Section 3.6 Automated Database Maintenance](#36-automated-database-maintenance). |
-| `Level2DatabaseMaintenanceIntervalMinutes` | `60` | Interval in minutes between Level 2 maintenance runs. Only used if `EnableLevel2DatabaseMaintenance` is `true`. **Min: 30. Max: 43200 (30 days).** |
+| `Level2DatabaseMaintenanceIntervalMinutes` | `60` | Interval in minutes between Level 2 maintenance runs. Only used if `EnableLevel2DatabaseMaintenance` is `true`. **Min: 10. Max: 43200 (30 days).** |
 | `EnableLevel2DatabaseMaintenanceWindow` | `false` | If `true`, Level 2 maintenance will only occur within a daily maintenance window defined by the `Level2DatabaseMaintenanceWindowStartTimeUTC` and `Level2DatabaseMaintenanceWindowMaxMinutes` settings. If `false`, Level 2 maintenance will occur at regular intervals defined by `Level2DatabaseMaintenanceIntervalMinutes`. Only used if `EnableLevel2DatabaseMaintenance` is `true`. |
-| `Level2DatabaseMaintenanceWindowStartTimeUTC` | `2020-06-23T06:00:00Z` | An ISO 8601 date and time string used to specify a time of day to serve as the basis upon which Level 2 database maintenance window start and end times are calculated. **Only the time portion of the string is used;** the date entered is irrelevant. To avoid time-zone related issues, Coordinated Universal Time (UTC) should be used. Only used if `EnableLevel2DatabaseMaintenance` is `true`. |
-| `Level2DatabaseMaintenanceWindowMaxMinutes` | `60` | The maximum number of minutes that a Level 2 database maintenance window can extend to. Once started, if Level 2 database maintenance is still underway when this number of minutes has elapsed, the maintenance will stop, allowing normal operation of other services to resume. Only used if `EnableLevel2DatabaseMaintenance` is `true`. |
+| `Level2DatabaseMaintenanceWindowStartTimeUTC` | `2020-06-23T06:00:00Z` | An ISO 8601 date and time string used to specify a time of day to serve as the basis upon which Level 2 database maintenance window start and end times are calculated. **Only the time portion of the string is used;** the date entered is irrelevant. A value with a time-zone offset is converted to UTC, and one without an offset is taken to be UTC. To avoid time-zone related issues, Coordinated Universal Time (UTC) should be used. Only used if `EnableLevel2DatabaseMaintenance` and `EnableLevel2DatabaseMaintenanceWindow` are both `true`. |
+| `Level2DatabaseMaintenanceWindowMaxMinutes` | `60` | How long the daily Level 2 maintenance window stays open, in minutes, from `Level2DatabaseMaintenanceWindowStartTimeUTC`. A Level 2 run may start only while the window is open, and starts no new index operation once it has closed — an operation already underway is allowed to finish — so that normal operation of the other services can resume. The window may extend past midnight UTC. Only used if `EnableLevel2DatabaseMaintenance` and `EnableLevel2DatabaseMaintenanceWindow` are both `true`. **Min: 10. Max: 720 (12 hours).** |
 | `DatabaseProviderType` | `"SQLServer"` | Database provider: `"SQLServer"` or `"PostgreSQL"` |
 | `DatabaseConnectionString` | *(see examples below)* | The database connection string. See connection string examples below. |
 
@@ -1178,21 +1224,22 @@ The GeneralSettings section includes settings that do not fall into any of the o
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `TimeoutSecondsForDatabaseTasks` | `600` | The maximum number of seconds allowed for an individual **adapter database operation** (select, insert, update, delete) to complete. If a database operation does not complete within this amount of time, it will be assumed that there is a loss of connectivity, the existing operation will be rolled back and the adapter will resume normal operation after establishing that there is connectivity to the adapter database. **Min: 10. Max: 3600.** |
+| `TimeoutSecondsForDatabaseTasks` | `600` | The maximum number of seconds allowed for an individual **adapter database operation** (select, insert, update, delete) to complete. If a database operation does not complete within this amount of time, it will be assumed that there is a loss of connectivity, the existing operation will be rolled back and the adapter will resume normal operation after establishing that there is connectivity to the adapter database. It does not govern the Level 1 and Level 2 maintenance statements, the reads of the maintenance views or the periodic partition maintenance run, each of which is allowed a single attempt of up to an hour — see [Section 3.6](#36-automated-database-maintenance). **Min: 10. Max: 3600.** |
 | `TimeoutSecondsForMyGeotabTasks` | `3600` | The maximum number of seconds allowed for a **MyGeotab API call** to wait for a response. If a response is not received within this amount of time, it will be assumed that there is a loss of connectivity, the existing operation will be rolled back and the adapter will resume normal operation after establishing that there is connectivity to the MyGeotab database via API. **Min: 10. Max: 3600.** |
 
 ### 4.5 Caches
 
 The Caches section governs the timing and frequency by which the adapter updates and refreshes caches of entities obtained from the MyGeotab database configured in [Section 4.3 LoginSettings](#43-loginsettings).
 
-> **Note:** It is generally not necessary to adjust the cache settings. These settings are provided in case there are any special situations, but in most cases, the default values are sufficient.
+> [!NOTE]
+> It is generally not necessary to adjust the cache settings. These settings are provided in case there are any special situations, but in most cases, the default values are sufficient.
 
 Each cache can be individually enabled or disabled; however, some feed processors depend on specific caches — see [Service Interdependencies](#service-interdependencies) before disabling any cache. Each cache has the following settings (except DVIRDefect, which only has a refresh interval):
 
 | Setting Pattern | Description |
 |-----------------|-------------|
 | `Enable<Type>Cache` | Indicates whether the cache for the subject entity type should be enabled. Must be set to either `true` or `false`. |
-| `<Type>CacheIntervalDailyReferenceStartTimeUTC` | An ISO 8601 date and time string used to specify a time of day to serve as the basis upon which cache update and refresh times are calculated using the associated interval settings. **Only the time portion of the string is used;** the date entered is irrelevant. To avoid time-zone related issues, Coordinated Universal Time (UTC) should be used (e.g. `2020-06-23T06:00:00Z`). |
+| `<Type>CacheIntervalDailyReferenceStartTimeUTC` | An ISO 8601 date and time string used to specify a time of day to serve as the basis upon which cache update and refresh times are calculated using the associated interval settings. **Only the time portion of the string is used;** the date entered is irrelevant. A value with a time-zone offset is converted to UTC, and one without an offset is taken to be UTC. To avoid time-zone related issues, Coordinated Universal Time (UTC) should be used (e.g. `2020-06-23T06:00:00Z`). |
 | `<Type>CacheUpdateIntervalMinutes` | The frequency, in minutes, by which the subject cache should be "updated" — capturing new and changed objects. **Min: 1. Max: 10080 (1 week).** |
 | `<Type>CacheRefreshIntervalMinutes` | The frequency, in minutes, by which the subject cache should be "refreshed" — dumped and repopulated to make identification of deleted entities possible, since deletes do not propagate from MyGeotab through the MyGeotab API data feeds. **Min: 60 (1 hour). Max: 10080 (1 week).** |
 
@@ -1212,7 +1259,8 @@ Each cache can be individually enabled or disabled; however, some feed processor
 | Zone | `true` | 10 | 1440 (1 day) | |
 | ZoneType | `true` | 30 | 10080 (7 days) | |
 
-> **Important:** Cache refreshes and updates may occur slightly after the configured times due to the amount of time required to process cache and feed data during each iteration.
+> [!IMPORTANT]
+> Cache refreshes and updates may occur slightly after the configured times due to the amount of time required to process cache and feed data during each iteration.
 
 **Cache configuration example:**
 
@@ -1288,7 +1336,8 @@ Each feed can be individually enabled or disabled; however, some feeds depend on
 | StatusData | `false` | 10 | — |
 | Trip | `false` | 10 | — |
 
-> **Note:** All feeds are disabled by default. Enable the feeds you need by setting `Enable<EntityType>Feed` to `true` in the `Feeds` section.
+> [!NOTE]
+> All feeds are disabled by default. Enable the feeds you need by setting `Enable<EntityType>Feed` to `true` in the `Feeds` section.
 
 Certain feeds have additional settings beyond the ones listed above. Those additional settings are described in the following table:
 
@@ -1321,7 +1370,7 @@ Two data enhancement services interpolate location data for FaultData and Status
 |-----------------|---------|-------------|
 | `Enable<Type>LocationService` | `false` | Enable the location interpolation service |
 | `<Type>LocationServiceOperationMode` | `"Continuous"` | If set to `"Continuous"`, the service will keep running indefinitely. If set to `"Scheduled"`, the service will run indefinitely but pause operation outside of a daily time window defined by `<Type>LocationServiceDailyStartTimeUTC` and `<Type>LocationServiceDailyRunTimeSeconds`. Must be set to either `"Continuous"` or `"Scheduled"`. |
-| `<Type>LocationServiceDailyStartTimeUTC` | `"2020-06-23T06:00:00Z"` | Only used if `<Type>LocationServiceOperationMode` is set to `"Scheduled"`. An ISO 8601 date and time string used to specify a time of day to serve as the start time for the daily operation window. **Only the time portion of the string is used;** the date entered is irrelevant. To avoid time-zone related issues, Coordinated Universal Time (UTC) should be used. |
+| `<Type>LocationServiceDailyStartTimeUTC` | `"2020-06-23T06:00:00Z"` | Only used if `<Type>LocationServiceOperationMode` is set to `"Scheduled"`. An ISO 8601 date and time string used to specify a time of day to serve as the start time for the daily operation window. **Only the time portion of the string is used;** the date entered is irrelevant. A value with a time-zone offset is converted to UTC, and one without an offset is taken to be UTC. To avoid time-zone related issues, Coordinated Universal Time (UTC) should be used. |
 | `<Type>LocationServiceDailyRunTimeSeconds` | `21600` | Only used if `<Type>LocationServiceOperationMode` is set to `"Scheduled"`. The duration, in seconds, that the service will run for each day, starting from the time defined in `<Type>LocationServiceDailyStartTimeUTC`. **Min: 300 (5 min). Max: 82800 (23 hours).** |
 | `<Type>LocationServiceExecutionIntervalSeconds` | `10` | While the service is running, either continuously or within a daily operation window, if no records are processed in a given iteration, the service will pause for this duration in seconds before the next iteration. If one or more records are processed, the next batch starts immediately. This throttling mechanism is designed to maximize throughput while preventing excessive CPU usage and database I/O. **Min: 2. Max: 604800 (1 week).** |
 | `<Type>LocationServicePopulateSpeed` | `true` | Calculate and store speed at the interpolated location |
@@ -1332,7 +1381,8 @@ Two data enhancement services interpolate location data for FaultData and Status
 | `<Type>LocationServiceMaxBatchSize` | `100000` | Used by the `sp<Type>2WithLagLeadLongLatBatch` stored procedure (SQL Server) or function (PostgreSQL). The maximum number of unprocessed records to retrieve for interpolation per batch. **Min: 10000. Max: 500000.** |
 | `<Type>LocationServiceBufferMinutes` | `1440` | Used by the `sp<Type>2WithLagLeadLongLatBatch` stored procedure (SQL Server) or function (PostgreSQL). When getting the DateTime range of a batch of unprocessed records, this buffer in minutes is applied to either end of the DateTime range when selecting LogRecords to use for interpolation such that lag LogRecords can be obtained for records that are early in the batch and lead LogRecords can be obtained for records that are late in the batch. **Min: 10. Max: 1440.** |
 
-> **Important:** The LogRecord feed must be enabled for location interpolation to work, as the service uses LogRecord GPS data as the reference for interpolation.
+> [!IMPORTANT]
+> The LogRecord feed must be enabled for location interpolation to work, as the service uses LogRecord GPS data as the reference for interpolation.
 
 ### 4.9 Manipulators
 
@@ -1352,7 +1402,8 @@ The Manipulators section governs services responsible for issuing data manipulat
 | `EnableDVIRLogManipulator` | `false` | Indicates whether the `DVIRLogManipulator2` service should be enabled. Must be set to either `true` or `false`. |
 | `DVIRLogManipulatorIntervalSeconds` | `2` | The minimum number of seconds to wait between starts of iterations of the `DVIRLogManipulator2` processing logic. **Min: 2. Max: 604800 (1 week).** |
 
-> **Important:** The DVIRLog feed must also be enabled for the DVIRLogManipulator to function.
+> [!IMPORTANT]
+> The DVIRLog feed must also be enabled for the DVIRLogManipulator to function.
 
 ### 4.10 nlog.config
 
@@ -1393,7 +1444,8 @@ Below is the content of the `nlog.config` file included with the adapter:
 </nlog>
 ```
 
-> **Important:** Only the settings listed in the following table should be modified. Changing anything else could lead to unpredictable consequences.
+> [!IMPORTANT]
+> Only the settings listed in the following table should be modified. Changing anything else could lead to unpredictable consequences.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -1426,7 +1478,7 @@ Below is the content of the `nlog.config` file included with the adapter:
 | Locations not being interpolated | Enhancement service not enabled | Set `Enable<Type>LocationService` to `true` in [Section 4.8 DataEnhancementServices](#48-dataenhancementservices) |
 | Locations not being interpolated | LogRecord feed not enabled | The LogRecord feed is required as the reference source for location interpolation |
 | Interpolation progress stalled | Buffer period not elapsed | Wait for `BufferMinutes` (default: 1440 min / 24 hours) after the data timestamp |
-| Interpolation progress stalled | Service in `Scheduled` mode, outside window | Check the `OperationMode` and `DailyStartTimeUTC` settings |
+| Interpolation progress stalled | Service in `Scheduled` mode, outside window | Check the `<Type>LocationServiceOperationMode` and `<Type>LocationServiceDailyStartTimeUTC` settings |
 
 ### 5.3 DVIR Manipulation Issues
 
@@ -1451,6 +1503,9 @@ Below is the content of the `nlog.config` file included with the adapter:
 |---------|---------------|------------|
 | Level 2 maintenance not completing | Maintenance window too short | Increase `Level2DatabaseMaintenanceWindowMaxMinutes` |
 | Services paused for extended period | Large indexes requiring rebuild | Review `DBMaintenanceLogs2` for duration details; consider scheduling maintenance during off-peak hours |
+| `Error` saying that database partition maintenance failed, repeated about hourly | The periodic `spManagePartitions` run is failing — for example, the adapter's database login may not execute it | Correct the cause given in the log; the next attempt picks the correction up. See [Partition Management](#partition-management) |
+| Adapter stops with a `Fatal` error saying that partition maintenance has not succeeded and its partitions end in less than two days | The periodic `spManagePartitions` run has kept failing since the last successful run, for long enough that its partitions are about to run out | Correct the cause given by the repeated `Error` entries and start the adapter again; partition maintenance runs at startup. See [Partition Management](#partition-management) |
+| Adapter stops at startup with a `Fatal` error from `spManagePartitions` | The partition run at startup failed; the adapter will not write records before their partitions exist | Correct the cause given in the log and start the adapter again |
 
 ### 5.6 MyGeotab Connectivity Issues
 
@@ -1563,7 +1618,8 @@ The following table lists all MyGeotab SDK API methods called by the adapter, al
 
 ## 7. Database Schema Reference
 
-> **Tip:** For a query-oriented schema reference optimized for AI-assisted SQL generation, see [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md).
+> [!TIP]
+> For a query-oriented schema reference optimized for AI-assisted SQL generation, see [SCHEMA_REFERENCE.md](SCHEMA_REFERENCE.md).
 
 The adapter database uses the `dbo` schema (SQL Server) or `public` schema (PostgreSQL) within a database named `geotabadapterdb`. The database user is `geotabadapter_client`. The database tables are organized into the categories below.
 
@@ -1619,15 +1675,22 @@ The following table maps each adapter database table to the service or processor
 
 The MyGeotab API Adapter uses the `dbo` (SQL Server) / `public` (PostgreSQL) schema within the `geotabadapterdb` database.
 
-> **Note:** The MyGeotab API Adapter and the Geotab DIG Adapter can coexist in the same database. The MyGeotab API Adapter uses the `dbo`/`public` schema, while the DIG Adapter uses the `gda` schema. Each adapter has its own database user.
+> [!NOTE]
+> The MyGeotab API Adapter and the Geotab DIG Adapter can coexist in the same database. The MyGeotab API Adapter uses the `dbo`/`public` schema, while the DIG Adapter uses the `gda` schema. Each adapter has its own database user.
 
-> **Tip:** The database scripts referenced in the steps below can be found in the downloaded database script zip file (see [Section 1.2 Download](#12-download)) or, for developers working from source code, in `MyGeotabAPIAdapter/Scripts/`.
+> [!TIP]
+> The database scripts referenced in the steps below can be found in the downloaded database script zip file (see [Section 1.2 Download](#12-download)) or, for developers working from source code, in `MyGeotabAPIAdapter/Scripts/`.
 
-> **Warning:** It is possible for the database to grow very large very quickly, resulting in potential **disk space and performance issues**. In particular, the **feed data tables** can accumulate vast quantities of records within short periods of time. See the [Section 3.6 Automated Database Maintenance](#36-automated-database-maintenance) section for more information.
+> [!WARNING]
+> It is possible for the database to grow very large very quickly, resulting in potential **disk space and performance issues**. In particular, the **feed data tables** can accumulate vast quantities of records within short periods of time. See the [Section 3.6 Automated Database Maintenance](#36-automated-database-maintenance) section for more information.
 
 #### SQL Server
 
-> **Note:** In Azure, if SQL Server is chosen, **Azure SQL Database** is not supported due to the adapter database being partitioned. An **Azure SQL Managed Instance** or **SQL Server on a VM** are the supported options.
+> [!NOTE]
+> In Azure, if SQL Server is chosen, **SQL Server on an Azure VM** is the option to use. The adapter database cannot be hosted on either of the Azure PaaS SQL offerings:
+>
+> - **Azure SQL Database** exposes only the `PRIMARY` filegroup, whereas the adapter places each partition period on its own filegroup (see Steps 5-7 below).
+> - **Azure SQL Managed Instance** does not permit a physical file path to be specified in `ALTER DATABASE ... ADD FILE`, and it cannot access the host file system. The `spManagePartitions` stored procedure relies on both when it creates the monthly filegroups and data files. Because the adapter re-executes that procedure on startup and periodically thereafter, this affects normal operation and not just the initial database setup.
 
 ##### Step 1: Create Database
 
@@ -1672,13 +1735,15 @@ ALTER ROLE [db_owner] ADD MEMBER [geotabadapter_client];
 
 The **MSSQL_0.0.0.1_spManagePartitions.sql** script creates the `DBPartitionInfo2` table and the `spManagePartitions` stored procedure in the adapter database. This procedure manages FileGroups, data files, and partitions. FileGroups with associated data files are created on a monthly basis, while partitions are created on a basis defined by the `@PartitionInterval` parameter (`'monthly'`, `'weekly'`, or `'daily'`). FileGroups, files, and partitions will always be created through until the end of the next calendar month. The adapter periodically executes this procedure during normal operation to ensure future partitions are created before any data needs to be added. Advanced users may wish to alter the partitioning scheme, in which case this procedure can be modified accordingly. Note that data files are created on the machine where the database resides, regardless of whether the script is executed from that machine or another machine connected to the database server.
 
-> **Important:** Before executing this script, open it and set the `@filePath` variable to the desired data file directory for your SQL Server instance (e.g., `D:\MSSQL\Data\`). By default, this variable is set to `C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\DATA\`. Query `SELECT SERVERPROPERTY('InstanceDefaultDataPath')` to find the correct value for your environment.
+> [!IMPORTANT]
+> Before executing this script, open it and set the `@filePath` variable to the desired data file directory for your SQL Server instance (e.g., `D:\MSSQL\Data\`). By default, this variable is set to `C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\DATA\`. Query `SELECT SERVERPROPERTY('InstanceDefaultDataPath')` to find the correct value for your environment.
 
 Execute the **MSSQL_0.0.0.1_spManagePartitions.sql** script.
 
 ##### Step 6: Determine Data Collection Start Date and Execute spManagePartitions Stored Procedure
 
-> **Warning:** Before proceeding with this step, it is important to determine the desired date from which Geotab data will be collected. Data files will be created for each month, week, or day starting from that specified when executing the `spManagePartitions` stored procedure. **Once this procedure has been executed, there is no easy way to make changes, other than deleting and recreating the adapter database.** Geotab is unable to provide SQL Server support.
+> [!WARNING]
+> Before proceeding with this step, it is important to determine the desired date from which Geotab data will be collected. Data files will be created for each month, week, or day starting from that specified when executing the `spManagePartitions` stored procedure. **Once this procedure has been executed, there is no easy way to make changes, other than deleting and recreating the adapter database.** Geotab is unable to provide SQL Server support.
 
 **MinDateTimeUTC:**
 
@@ -1727,7 +1792,8 @@ SELECT * FROM sys.dm_db_partition_stats;
 
 ##### Step 8: Execute Database Schema Script(s)
 
-> **Important:** The partition scheme must be created (Steps 5-7) before running any schema script. Partitioned tables reference `DateTimePartitionScheme_MyGeotabApiAdapter` and will silently fail to create if it does not exist.
+> [!IMPORTANT]
+> The partition scheme must be created (Steps 5-7) before running any schema script. Partitioned tables reference `DateTimePartitionScheme_MyGeotabApiAdapter` and will silently fail to create if it does not exist.
 
 Follow **one** of the two paths below depending on your scenario:
 
@@ -1735,7 +1801,17 @@ Follow **one** of the two paths below depending on your scenario:
 
 Execute the **MSSQL_CumulativeSchemaCreation.sql** script. This will create all of the required tables, indexes, views, stored procedures, etc. in the adapter database and bring it to the latest version. This is the recommended approach for new deployments as it eliminates the need to run the initial schema creation script followed by individual upgrade scripts.
 
-> **Note:** When deploying future upgrades to the adapter, it will be necessary to run any applicable database upgrade scripts as described in Path B.
+From a command line, pass **`-b`**:
+
+```
+sqlcmd -S <server> -U <login> -b -i MSSQL_CumulativeSchemaCreation.sql
+```
+
+> [!IMPORTANT]
+> **Pass `-b` whenever something other than a person reads the result.** Without it, `sqlcmd` exits `0` even when the script has raised an error, so an installer script or CI step records a failed install as a success and carries on. `-b` makes it exit non-zero instead. It reacts only to errors of severity 11 and above, so the ordinary progress messages these scripts print will not trip it.
+
+> [!NOTE]
+> When deploying future upgrades to the adapter, it will be necessary to run any applicable database upgrade scripts as described in Path B.
 
 **Path B — Upgrading an Existing Installation:**
 
@@ -1743,7 +1819,17 @@ Over time, as changes are made to the adapter database schema, additional script
 
 Execute any available adapter database upgrade scripts in sequential order (based on the versions in the script file names) up until and including the script where the version number matches that of the adapter application.
 
-> **Note:** Not all updates of the adapter will include database schema changes. Database upgrade scripts are only provided for adapter versions that include database schema changes. As such, when running database upgrade scripts, simply ensure to run them up until and including the script where the version number matches that of the adapter application OR the closest version below the application version.
+From a command line, pass **`-b`**:
+
+```
+sqlcmd -S <server> -U <login> -b -i MSSQL_<version>_<Description>.sql
+```
+
+> [!IMPORTANT]
+> **Each upgrade script begins by checking that your database really is at the version that script upgrades from, and refuses to run if it is not.** That refusal protects your database either way — the rest of the script is suppressed, so a refused upgrade changes nothing and the recorded schema version is left alone. **What the flag protects is the report of what happened.** Without `-b`, `sqlcmd` exits `0` after a refusal, so an installer script or CI step records a refused upgrade as a successful one and whatever runs next assumes a schema that is not there. If you are running the script by hand and reading its output, you will see the refusal without the flag.
+
+> [!NOTE]
+> Not all updates of the adapter will include database schema changes. Database upgrade scripts are only provided for adapter versions that include database schema changes. As such, when running database upgrade scripts, simply ensure to run them up until and including the script where the version number matches that of the adapter application OR the closest version below the application version.
 
 ##### Step 9: Verify Setup
 
@@ -1776,11 +1862,13 @@ CREATE ROLE geotabadapter_client WITH
 
 ##### Step 2: Create Database
 
-> **Note:** The `LC_COLLATE` and `LC_CTYPE` values are OS-dependent. On **Linux/macOS**, use `en_US.utf8`. On **Windows**, use `English_United States.1252` — the `en_US.utf8` locale is not available and will cause the `CREATE DATABASE` statement to fail.
+> [!NOTE]
+> The `LC_COLLATE` and `LC_CTYPE` values are OS-dependent. On **Linux/macOS**, use `en_US.utf8`. On **Windows**, use `English_United States.1252` — the `en_US.utf8` locale is not available and will cause the `CREATE DATABASE` statement to fail. `TEMPLATE = template0` is what lets the statement choose a locale at all: copying any other template, PostgreSQL refuses an encoding or locale that differs from that template's.
 
 ```sql
 CREATE DATABASE geotabadapterdb WITH
   OWNER = geotabadapter_client
+  TEMPLATE = template0
   ENCODING = 'UTF8'
   LC_COLLATE = 'en_US.utf8'
   LC_CTYPE = 'en_US.utf8'
@@ -1814,7 +1902,17 @@ Follow **one** of the two paths below depending on your scenario:
 
 Execute the **PG_CumulativeSchemaCreation.sql** script. This will create all of the required tables, views, functions, and grants in the adapter database and bring it to the latest version. This is the recommended approach for new deployments as it eliminates the need to run the initial schema creation script followed by individual upgrade scripts.
 
-> **Note:** When deploying future upgrades to the adapter, it will be necessary to run any applicable database upgrade scripts as described in Path B.
+From a command line, pass **`ON_ERROR_STOP=1`**:
+
+```
+psql -h <host> -p <port> -U <user> -d geotabadapterdb -v ON_ERROR_STOP=1 -f PG_CumulativeSchemaCreation.sql
+```
+
+> [!IMPORTANT]
+> **Pass `ON_ERROR_STOP=1` whenever something other than a person reads the result.** By default `psql` reports an error and then carries straight on to the next statement, finishing with exit code `0` — so a script that failed halfway through leaves a partially created schema and still reports success. `ON_ERROR_STOP=1` makes `psql` stop at the first error and exit non-zero. This is the PostgreSQL equivalent of `-b` on `sqlcmd`.
+
+> [!NOTE]
+> When deploying future upgrades to the adapter, it will be necessary to run any applicable database upgrade scripts as described in Path B.
 
 **Path B — Upgrading an Existing Installation:**
 
@@ -1822,11 +1920,22 @@ Such scripts are prefixed with **`PG_x.x.x.x_`** where **`x`** is a placeholder 
 
 Execute any available adapter database upgrade scripts in sequential order (based on the versions in the script file names) up until and including the script where the version number matches that of the adapter application.
 
-> **Note:** Not all updates of the adapter will include database schema changes. Database upgrade scripts are only provided for adapter versions that include database schema changes. As such, when running database upgrade scripts, simply ensure to run them up until and including the script where the version number matches that of the adapter application OR the closest version below the application version.
+From a command line, pass **`ON_ERROR_STOP=1`**:
+
+```
+psql -h <host> -p <port> -U <user> -d geotabadapterdb -v ON_ERROR_STOP=1 -f PG_<version>_<Description>.sql
+```
+
+> [!IMPORTANT]
+> **Each upgrade script begins by checking that your database really is at the version that script upgrades from, and refuses to run if it is not.** That refusal protects your database either way — the whole upgrade runs in one transaction, so a refused upgrade rolls back and changes nothing, and the recorded schema version is left alone. **What the flag protects is the report of what happened.** Without `ON_ERROR_STOP=1`, `psql` reports the refusal and still exits `0`, so an installer script or CI step records a refused upgrade as a successful one and whatever runs next assumes a schema that is not there. If you are running the script by hand and reading its output, you will see the refusal without the flag.
+
+> [!NOTE]
+> Not all updates of the adapter will include database schema changes. Database upgrade scripts are only provided for adapter versions that include database schema changes. As such, when running database upgrade scripts, simply ensure to run them up until and including the script where the version number matches that of the adapter application OR the closest version below the application version.
 
 ##### Step 6: Determine Data Collection Start Date and Execute spManagePartitions Function
 
-> **Warning:** Before proceeding with this step, it is important to determine the desired date from which Geotab data will be collected. Partitions will be created for feed data tables for each month, week, or day starting from that specified when executing the `spManagePartitions` function. **Once this function has been executed, there is no easy way to make changes, other than deleting and recreating the adapter database.** Geotab is unable to provide PostgreSQL support.
+> [!WARNING]
+> Before proceeding with this step, it is important to determine the desired date from which Geotab data will be collected. Partitions will be created for feed data tables for each month, week, or day starting from that specified when executing the `spManagePartitions` function. **Once this function has been executed, there is no easy way to make changes, other than deleting and recreating the adapter database.** Geotab is unable to provide PostgreSQL support.
 
 **MinDateTimeUTC:**
 
@@ -1892,7 +2001,18 @@ Over time, as changes are made to the adapter database schema, additional script
 
 Execute any available upgrade scripts in **sequential order** (based on the versions in the script file names) up to and including the script where the version number matches that of the adapter application. Not all adapter versions include database schema changes — upgrade scripts are only provided for versions that include schema changes.
 
-> **Note:** If setting up a brand new adapter database, use the `CumulativeSchemaCreation` script instead of running the initial schema creation script followed by each upgrade script individually. The cumulative script brings an empty database to the latest version in a single step. When deploying future upgrades, run only the applicable upgrade scripts.
+From a command line:
+
+```
+sqlcmd -S <server> -U <login> -b -i MSSQL_<version>_<Description>.sql
+psql -h <host> -p <port> -U <user> -d geotabadapterdb -v ON_ERROR_STOP=1 -f PG_<version>_<Description>.sql
+```
+
+> [!IMPORTANT]
+> **Every upgrade script refuses to run against a database that is not at the version it upgrades from**, so running one out of sequence changes nothing and leaves the recorded schema version alone. **`-b` and `ON_ERROR_STOP=1` are what make that refusal visible to a machine.** Without them both clients exit `0` after a refusal, so an installer or CI step that chains these scripts together records the refusal as a success and runs the next script against a database that was never upgraded. Pass them whenever something other than a person reads the result.
+
+> [!NOTE]
+> If setting up a brand new adapter database, use the cumulative script (`MSSQL_CumulativeSchemaCreation.sql` / `PG_CumulativeSchemaCreation.sql`) instead of running the initial schema creation script followed by each upgrade script individually. The cumulative script brings an empty database to the latest version in a single step. When deploying future upgrades, run only the applicable upgrade scripts.
 
 ---
 
@@ -1953,7 +2073,8 @@ Both queries return the same results regardless of whether the old or new Geotab
 
 ### 8.2 Using NOLOCK and READ UNCOMMITTED (SQL Server)
 
-> **Note:** This section applies only to SQL Server. PostgreSQL uses a multi-version concurrency control (MVCC) model that does not exhibit the same locking behavior.
+> [!NOTE]
+> This section applies only to SQL Server. PostgreSQL uses a multi-version concurrency control (MVCC) model that does not exhibit the same locking behavior.
 
 The adapter is constantly inserting data into feed data tables (e.g., `LogRecords2`, `StatusData2`, `FaultData2`, `Trips2`). Under SQL Server's default isolation level, these ongoing inserts acquire locks that can slow down `SELECT` queries running against the same tables.
 
@@ -1963,7 +2084,8 @@ The `NOLOCK` table hint can be used in `SELECT` queries on **feed data tables** 
 SELECT * FROM StatusData2 WITH (NOLOCK) WHERE ...
 ```
 
-> **Warning:** Only use `NOLOCK` on feed data tables. Do **not** use it on reference data tables (e.g., `Devices2`, `Diagnostics2`, `Groups2`). Reference data tables are periodically updated by cache processors, and dirty reads against these tables could return inconsistent or partially-updated data.
+> [!WARNING]
+> Only use `NOLOCK` on feed data tables. Do **not** use it on reference data tables (e.g., `Devices2`, `Diagnostics2`, `Groups2`). Reference data tables are periodically updated by cache processors, and dirty reads against these tables could return inconsistent or partially-updated data.
 
 Since feed data tables only have data *inserted* (not updated or deleted), the risk of dirty-read anomalies is minimal. Data read via `NOLOCK` on these tables will be accurate once the inserting transaction commits, which happens almost immediately.
 
@@ -2055,11 +2177,13 @@ WHERE "DateTime" >= '2025-01-01 00:00:00'
   AND "DateTime" < '2025-02-01 00:00:00';
 ```
 
-> **Tip:** Always use `>=` for the start and `<` for the end of DateTime ranges rather than `BETWEEN`. This avoids ambiguity at partition boundaries and ensures each record falls into exactly one partition's range.
+> [!TIP]
+> Always use `>=` for the start and `<` for the end of DateTime ranges rather than `BETWEEN`. This avoids ambiguity at partition boundaries and ensures each record falls into exactly one partition's range.
 
 ### 8.5 Avoiding Unnecessary Transactions
 
-> **Warning:** Use caution when determining scenarios in which database transactions can be avoided as described in this section. Forego transactions only if no data integrity issues can arise as a result of doing so.
+> [!WARNING]
+> Use caution when determining scenarios in which database transactions can be avoided as described in this section. Forego transactions only if no data integrity issues can arise as a result of doing so.
 
 Database transactions place locks on tables and/or rows which can cause the overall system to slow down since other processes that need to read or write data must wait for the locks to be released before proceeding. The MyGeotab API Adapter itself avoids using transactions when they are not necessary — for example, when persisting updates to records in the location tables (FaultDataLocations2 / StatusDataLocations2), transactions are not used because any records that don't get updated will simply be reprocessed on the next iteration of the service with no risk of data corruption.
 
@@ -2075,7 +2199,8 @@ The MyGeotab API Adapter documentation is designed to support AI-assisted SQL ge
 | This README — [Section 8](#8-best-practices-for-querying-the-adapter-database) | Query patterns, indexing strategy, date filtering, and performance guidance |
 | This README — [Section 9](#9-query-examples) | Concrete SQL examples for both SQL Server and PostgreSQL covering common use cases |
 
-> **Tip:** Always tell the LLM which database engine you are using (PostgreSQL or SQL Server), as JSON handling, identifier quoting, and pagination syntax differ significantly between the two.
+> [!TIP]
+> Always tell the LLM which database engine you are using (PostgreSQL or SQL Server), as JSON handling, identifier quoting, and pagination syntax differ significantly between the two.
 
 #### Key Concepts Covered in the Documentation
 
@@ -2095,7 +2220,8 @@ The documentation provided above covers the following important concepts. These 
 
 ## 9. Query Examples
 
-> **Note:** To avoid accidental execution of costly queries, the sample queries in the following sections are generally limited to 100 records using `OFFSET 0 ROWS FETCH NEXT 100 ROWS ONLY` for SQL Server or `LIMIT 100` for PostgreSQL. Additionally, commented-out DateTime ranges have been included as a reminder to take advantage of [partition pruning](#84-incorporating-datetime-ranges-for-partition-pruning) where possible. These queries can be modified as needed, for example, by adding conditions to the WHERE clauses to filter by Users, Devices/Vehicles, Diagnostics, etc.
+> [!NOTE]
+> To avoid accidental execution of costly queries, the sample queries in the following sections are generally limited to 100 records using `OFFSET 0 ROWS FETCH NEXT 100 ROWS ONLY` for SQL Server or `LIMIT 100` for PostgreSQL. Additionally, commented-out DateTime ranges have been included as a reminder to take advantage of [partition pruning](#84-incorporating-datetime-ranges-for-partition-pruning) where possible. These queries can be modified as needed, for example, by adding conditions to the WHERE clauses to filter by Users, Devices/Vehicles, Diagnostics, etc.
 
 ### 9.1 BinaryData Queries
 
@@ -2344,7 +2470,7 @@ ORDER BY fe."DateTime";
 
 ### 9.4 DutyStatusAvailability Queries
 
-This section demonstrates queries involving DutyStatusAvailability records in the [DutyStatusAvailabilities2](#dutystatusavailabilities2) table.
+This section demonstrates queries involving DutyStatusAvailability records in the [DutyStatusAvailabilities2](SCHEMA_REFERENCE.md#dutystatusavailabilities2) table.
 
 #### The Pseudo Data Feed for DutyStatusAvailability
 
@@ -2352,7 +2478,8 @@ The MyGeotab API's `GetFeed` method does not support the DutyStatusAvailability 
 
 #### Maintaining Currency of Values Via Time Offsets
 
-> **Warning:** Duration values in the DutyStatusAvailabilities2 table are inaccurate (out-of-date). The amount of inaccuracy can be defined as the duration between the value of the `RecordLastChangedUtc` field and the current time, in Coordinated Universal Time (UTC). This offset must be subtracted from the duration values in order to improve currency of the data upon consumption.
+> [!WARNING]
+> Duration values in the DutyStatusAvailabilities2 table are inaccurate (out-of-date). The amount of inaccuracy can be defined as the duration between the value of the `RecordLastChangedUtc` field and the current time, in Coordinated Universal Time (UTC). This offset must be subtracted from the duration values in order to improve currency of the data upon consumption.
 
 As a result of the pseudo data feed and inherent time required to update DutyStatusAvailability records for all drivers, by the time the last driver's record is being updated, minutes may have elapsed since the first driver's record was updated. The amount of time elapsed since a record was last updated will depend on a number of factors — particularly the number of drivers in the fleet.
 
@@ -2374,7 +2501,8 @@ The following is an extract from an example record in the DutyStatusAvailabiliti
 
 The driver has approximately twelve hours and thirty minutes of driving time and twelve hours and thirty-five minutes of on-duty time remaining.
 
-> **Warning:** Even if time offsets are calculated as noted above, availability values may occasionally still be inaccurate due to driver status changes that may occur between successive updates.
+> [!WARNING]
+> Even if time offsets are calculated as noted above, availability values may occasionally still be inaccurate due to driver status changes that may occur between successive updates.
 
 ### 9.5 DVIRLog Queries
 
@@ -3367,7 +3495,8 @@ dotnet build MyGeotabAPIAdapter.sln
 
 Set `MyGeotabAPIAdapter` as the startup project in your IDE.
 
-> **Note:** The solution contains both the MyGeotab API Adapter and the Geotab DIG Adapter projects. Both are built together. See the [Geotab DIG Adapter README](../GeotabDIGAdapter/README.md) for DIG-specific documentation.
+> [!NOTE]
+> The solution contains both the MyGeotab API Adapter and the Geotab DIG Adapter projects. Both are built together. See the [Geotab DIG Adapter README](../GeotabDIGAdapter/README.md) for DIG-specific documentation.
 
 ### 10.3 Development Configuration
 
@@ -3409,8 +3538,8 @@ Tests are in the `MyGeotabAPIAdapter.Tests` project and use the [xUnit](https://
 | SDK Method | `GetFeed<LogRecord>` |
 | Processor Service | `LogRecordProcessor2` |
 | Entity Mapper | `GeotabLogRecordDbLogRecord2ObjectMapper` |
-| Staging Table | `stg_LogRecords2` |
-| Merge Stored Procedure | *(direct insert — LogRecords2 uses bulk insert, not stage+merge)* |
+| Staging Table | *(none — LogRecords2 is bulk-inserted, not staged)* |
+| Merge Stored Procedure | *(none — direct insert, not stage+merge)* |
 | Destination Table | `LogRecords2` |
 | Config Flag | `EnableLogRecordFeed` |
 

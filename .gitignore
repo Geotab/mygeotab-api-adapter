@@ -44,3 +44,9 @@ nul
 
 # macOS Finder metadata
 .DS_Store
+
+# Python bytecode cache. The ReleaseVerification checks are Python, and importing one
+# (to reuse its parsing) writes this next to the scripts. It has twice been staged by
+# accident.
+__pycache__/
+*.pyc

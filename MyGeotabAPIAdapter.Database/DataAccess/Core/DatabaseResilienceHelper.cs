@@ -17,8 +17,13 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         public static string CommandAlreadyInProgressString { get => "command is already in progress"; }
         public static string ConnectionIsBusyString { get => "connection is busy"; }
         public static string DeadlockString { get => "chosen as the deadlock victim"; }
+        // PostgreSQL reports a deadlock as 40P01 "deadlock detected", which shares no text with SQL Server's message.
+        public static string PostgreSQLDeadlockString { get => "deadlock detected"; }
         public static string ErrorOccurredWhileGettingOpenConnectionString { get => "exception occurred while attempting to get an open database connection"; }
         public static string ErrorOccurredWhileGettingOpenPostgreSQLConnectionString { get => "exception occurred while attempting to get an open postgresql database connection"; }
+        // ConnectionProvider's SQL Server wrapper, used on the standalone path. Without it an open failure there was retried only
+        // when an inner message said "timeout" - which retryTimeouts: false removes - and a non-timeout open failure never was.
+        public static string ErrorOccurredWhileGettingOpenSqlServerConnectionString { get => "exception occurred while attempting to get an open sql server database connection"; }
         public static string PKViolationString { get => "violation of primary key constraint"; }
         public static string SqlTransactionAbortedString { get => "current transaction is aborted, commands ignored until end of transaction block"; }
         public static string SqlTransactionCannotBeCommittedString { get => "transaction cannot be committed"; }
@@ -90,20 +95,25 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
 
         /// <summary>
         /// Creates an <see cref="AsyncRetryPolicy"/> for the <typeparamref name="TException"/> - handling only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains:
-        /// <see cref="DeadlockString"/>, <see cref="ErrorOccurredWhileGettingOpenConnectionString"/>, <see cref="ErrorOccurredWhileGettingOpenPostgreSQLConnectionString"/>, <see cref="SqlTransactionCompletedNoLongerUsableString"/>, <see cref="TimeoutString"/>, <see cref="CommandAlreadyInProgressString"/>, <see cref="ConnectionIsBusyString"/>, or <see cref="TimeoutString2"/>.
+        /// <see cref="DeadlockString"/>, <see cref="PostgreSQLDeadlockString"/>, <see cref="ErrorOccurredWhileGettingOpenConnectionString"/>, <see cref="ErrorOccurredWhileGettingOpenPostgreSQLConnectionString"/>, <see cref="ErrorOccurredWhileGettingOpenSqlServerConnectionString"/>, <see cref="SqlTransactionCompletedNoLongerUsableString"/>, <see cref="TimeoutString"/>, <see cref="CommandAlreadyInProgressString"/>, <see cref="ConnectionIsBusyString"/>, or <see cref="TimeoutString2"/> - the two timeout strings only if <paramref name="retryTimeouts"/> is true.
         /// </summary>
         /// <typeparam name="TException">The type of <see cref="Exception"/> to be handled by the policy. Note - only those <typeparamref name="TException"/>s where the message or that of the InnerException (if one is present) contains one of the strings noted in the summary will be handled.</typeparam>
         /// <param name="logger">The logger to be used for logging any exception and retry-related information.</param>
         /// <param name="maxRetries">OPTIONAL: The maximum number of times an action may be retried. If not specified, the maximum is effectively unlimited.</param>
-        public static AsyncRetryPolicy CreateAsyncRetryPolicyForDatabaseTransactions<TException>(Logger logger, int maxRetries = 1000000) where TException : Exception
+        /// <param name="retryTimeouts">OPTIONAL: Whether an exception reporting a timeout is retried. If not specified, it is. Pass <c>false</c> for an action whose commands were already given the longest timeout any attempt can have - a database maintenance statement run through a single-attempt <see cref="BaseRepository{T}"/>: repeating a command that ran out of time gives it no more time to finish, so a retry only prolongs the wait. The other failures listed above - a deadlock, a failure to open a connection, and the rest - are still retried; a failure that matches none of them, such as a connection lost part-way through a command, never is. On PostgreSQL a statement stopped by a lock_timeout or statement_timeout reports a timeout, so it is not retried either.</param>
+        public static AsyncRetryPolicy CreateAsyncRetryPolicyForDatabaseTransactions<TException>(Logger logger, int maxRetries = 1000000, bool retryTimeouts = true) where TException : Exception
         {
             return Policy
                 .Handle<TException>(exception =>
                     exception.Message.ToLower().Contains(DeadlockString))
                 .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(PostgreSQLDeadlockString))
+                .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenConnectionString))
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenPostgreSQLConnectionString))
+                .Or<TException>(exception =>
+                    exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenSqlServerConnectionString))
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(PKViolationString))
                 .Or<TException>(exception =>
@@ -113,9 +123,9 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
                 .Or<TException>(exception =>
-                    exception.Message.ToLower().Contains(TimeoutString))
+                    retryTimeouts && exception.Message.ToLower().Contains(TimeoutString))
                 .Or<TException>(exception =>
-                    exception.Message.ToLower().Contains(TimeoutString2))
+                    retryTimeouts && exception.Message.ToLower().Contains(TimeoutString2))
                 .Or<TException>(exception =>
                     exception.Message.ToLower().Contains(CommandAlreadyInProgressString))
                 .Or<TException>(exception =>
@@ -123,9 +133,13 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(DeadlockString))
                 .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(PostgreSQLDeadlockString))
+                .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenConnectionString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenPostgreSQLConnectionString))
+                .OrInner<TException>(exception =>
+                    exception.Message.ToLower().Contains(ErrorOccurredWhileGettingOpenSqlServerConnectionString))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(PKViolationString))
                 .OrInner<TException>(exception =>
@@ -135,9 +149,9 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(SqlTransactionCompletedNoLongerUsableString))
                 .OrInner<TException>(exception =>
-                    exception.Message.ToLower().Contains(TimeoutString))
+                    retryTimeouts && exception.Message.ToLower().Contains(TimeoutString))
                 .OrInner<TException>(exception =>
-                    exception.Message.ToLower().Contains(TimeoutString2))
+                    retryTimeouts && exception.Message.ToLower().Contains(TimeoutString2))
                 .OrInner<TException>(exception =>
                     exception.Message.ToLower().Contains(CommandAlreadyInProgressString))
                 .OrInner<TException>(exception =>

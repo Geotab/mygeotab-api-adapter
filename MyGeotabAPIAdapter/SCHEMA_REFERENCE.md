@@ -168,7 +168,8 @@ For example, `Devices2 \|\|--o{ LogRecords2` means each LogRecords2 record belon
 - **Solid lines** (`||--o{` or `o|--o{`) indicate **physical foreign key** constraints enforced by the database.
 - **Dashed lines** (`||..o{` or `o|..o{`) indicate **logical relationships** — the columns reference values in the related table, but no physical FK constraint exists in the database.
 
-> **Tip:** For interactive pan/zoom/export, copy any Mermaid diagram source from the raw markdown and paste it into [mermaid.live](https://mermaid.live/).
+> [!TIP]
+> For interactive pan/zoom/export, copy any Mermaid diagram source from the raw markdown and paste it into [mermaid.live](https://mermaid.live/).
 
 ---
 
@@ -1258,8 +1259,8 @@ A system table used by the MyGeotab API Adapter.
 
 | View | Description |
 |------|-------------|
-| `vwStatsForLevel1DBMaintenance` | Lists tables with at least 1,000 modifications since last statistics update. Used by `DatabaseMaintenanceService2` to identify tables needing Level 1 maintenance. |
-| `vwStatsForLevel2DBMaintenance` | Lists indexes (at least 1 KB) with fragmentation over 10%. Used by `DatabaseMaintenanceService2` to identify indexes needing reorganization or rebuild. |
+| `vwStatsForLevel1DBMaintenance` | Lists the adapter's own tables that may need Level 1 maintenance — those in `dbo` on SQL Server, in `public` on PostgreSQL. On SQL Server, tables with more than 1,000 modifications since their statistics were last updated; on PostgreSQL, tables whose dead tuples or modifications since the last analyze exceed its thresholds. Used by `DatabaseMaintenanceService2`. |
+| `vwStatsForLevel2DBMaintenance` | Lists the adapter's own indexes that may need Level 2 maintenance — those in `dbo` on SQL Server, in `public` on PostgreSQL. On SQL Server, indexes of at least 1 KB with fragmentation over 10%, per partition, reading index statistics for `dbo` tables only; on PostgreSQL, every index with its bloat ratio. Used by `DatabaseMaintenanceService2` to identify indexes needing reorganization or rebuild. |
 | `vwStatsForLocationInterpolationProgress` | Shows location interpolation progress for both FaultData and StatusData — total records, processed count, and completion percentage. |
 
 ---

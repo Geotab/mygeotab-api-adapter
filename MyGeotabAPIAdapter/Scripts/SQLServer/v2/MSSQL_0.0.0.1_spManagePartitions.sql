@@ -339,7 +339,17 @@ BEGIN
 			SET @fileGroupName = @fileGroupNamePrefix + @yearMonthSuffix;
 
 			-- If the partition for the subject date does not already exist, create it.
-			IF NOT EXISTS (SELECT * FROM sys.partition_range_values WHERE value = @partitionValue)
+			IF NOT EXISTS (
+				-- Look only in the partition function this procedure manages. Another component
+				-- sharing the database - the Geotab DIG Adapter, for example - can hold a partition
+				-- function with the same boundary values, and counting those would skip this one.
+				SELECT 1
+				FROM sys.partition_range_values prv
+				INNER JOIN sys.partition_functions pf
+					ON pf.function_id = prv.function_id
+				WHERE pf.name = @partitionFunctionName
+					AND prv.value = @partitionValue
+			)
 			BEGIN
 				-- Alter the partition scheme to map the partition to the correct FileGroup before the split.
 				SET @SQL = N'ALTER PARTITION SCHEME ' + QUOTENAME(@partitionSchemeName) + 

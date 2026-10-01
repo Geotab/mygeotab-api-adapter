@@ -2,6 +2,7 @@ using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
 using MyGeotabAPIAdapter.Database.Models;
+using MyGeotabAPIAdapter.DeviceLookup;
 using NLog;
 using Polly;
 using Polly.Retry;
@@ -9,18 +10,16 @@ using Polly.Retry;
 namespace GeotabDIGAdapter.Services
 {
     /// <summary>
-    /// A cache that provides a mapping of ThirdPartyId to GeotabSerialNumber for provisioned devices.
-    /// The cache is refreshed based on the configured interval.
+    /// The device lookup source backed by the ProvisionedDevices table. Contributes the devices that the device provisioning workflow has provisioned and flagged as okay to send data for.
     /// </summary>
-    public class ProvisionedDeviceCache : IProvisionedDeviceCache
+    public class ProvisionedDeviceCache : DeviceLookupContributorBase, IProvisionedDeviceCache
     {
+        static readonly Logger StaticLogger = LogManager.GetCurrentClassLogger();
+
         readonly IDIGAdapterConfiguration adapterConfiguration;
         readonly IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext;
         readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
-        readonly Logger logger = LogManager.GetCurrentClassLogger();
-
-        Dictionary<string, string>? cachedThirdPartyIdToSerialNoMap;
-        DateTime lastCacheRefreshTimeUtc = DateTime.MinValue;
+        readonly Logger logger = StaticLogger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProvisionedDeviceCache"/> class.
@@ -28,6 +27,7 @@ namespace GeotabDIGAdapter.Services
         public ProvisionedDeviceCache(
             IDIGAdapterConfiguration adapterConfiguration,
             IGenericDatabaseUnitOfWorkContext<AdapterDatabaseUnitOfWorkContext> adapterContext)
+            : base(StaticLogger)
         {
             this.adapterConfiguration = adapterConfiguration;
             this.adapterContext = adapterContext;
@@ -38,28 +38,24 @@ namespace GeotabDIGAdapter.Services
         }
 
         /// <inheritdoc/>
-        public async Task<Dictionary<string, string>> GetThirdPartyIdToSerialNoMapAsync(CancellationToken cancellationToken)
+        public override string SourceName => "ProvisionedDevices";
+
+        /// <inheritdoc/>
+        public override bool IsParticipating => adapterConfiguration.EnableDeviceProvisioningService;
+
+        /// <inheritdoc/>
+        protected override int CacheRefreshIntervalSeconds => adapterConfiguration.ProvisionedDeviceCacheRefreshIntervalSeconds;
+
+        /// <summary>
+        /// Reads every provisioned device rather than only those okay to send data for, and splits them here. A device
+        /// whose row says not to send is a device this source has withdrawn authorisation from, which is a different
+        /// thing from a device it has never heard of, and filtering it out in SQL erases the difference.
+        /// </summary>
+        /// <param name="cancellationToken">A cancellation token.</param>
+        /// <returns>The source's contribution to the composed device lookup.</returns>
+        protected override async Task<DeviceLookupContribution> QueryContributionAsync(CancellationToken cancellationToken)
         {
-            var nowUtc = DateTime.UtcNow;
-            var cacheAgeSeconds = (nowUtc - lastCacheRefreshTimeUtc).TotalSeconds;
-
-            if (cachedThirdPartyIdToSerialNoMap != null
-                && cacheAgeSeconds < adapterConfiguration.ProvisionedDeviceCacheRefreshIntervalSeconds)
-            {
-                logger.Trace($"Using cached provisioned device map ({cachedThirdPartyIdToSerialNoMap.Count} devices, age: {cacheAgeSeconds:F0}s).");
-                return cachedThirdPartyIdToSerialNoMap;
-            }
-
-            if (cachedThirdPartyIdToSerialNoMap == null)
-            {
-                logger.Debug("Building initial provisioned device cache.");
-            }
-            else
-            {
-                logger.Debug($"Refreshing provisioned device cache (age: {cacheAgeSeconds:F0}s).");
-            }
-
-            cachedThirdPartyIdToSerialNoMap = await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            return await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
             {
                 using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 var repo = new BaseRepository<DbGdaProvisionedDevice>(adapterContext);
@@ -67,20 +63,40 @@ namespace GeotabDIGAdapter.Services
                 var sql = adapterContext.ProviderType switch
                 {
                     ConnectionInfo.DataAccessProviderType.PostgreSQL =>
-                        "SELECT \"ThirdPartyId\", \"GeotabSerialNumber\" FROM gda.\"ProvisionedDevices\" WHERE \"IsOkayToSendDataToGeotab\" = true",
+                        "SELECT \"ThirdPartyId\", \"GeotabSerialNumber\", \"RecordLastChangedUtc\", \"IsOkayToSendDataToGeotab\" FROM gda.\"ProvisionedDevices\"",
                     ConnectionInfo.DataAccessProviderType.SQLServer =>
-                        "SELECT ThirdPartyId, GeotabSerialNumber FROM gda.ProvisionedDevices WHERE IsOkayToSendDataToGeotab = 1",
+                        "SELECT ThirdPartyId, GeotabSerialNumber, RecordLastChangedUtc, IsOkayToSendDataToGeotab FROM gda.ProvisionedDevices",
                     _ => throw new NotSupportedException($"The provider type '{adapterContext.ProviderType}' is not supported.")
                 };
 
                 var devices = await repo.QueryAsync(sql, null, cancellationTokenSource, true, adapterContext);
-                return devices.ToDictionary(d => d.ThirdPartyId, d => d.GeotabSerialNumber);
+
+                var entries = new List<DeviceLookupEntry>();
+                var unauthorizedThirdPartyIds = new List<string>();
+                foreach (var device in devices)
+                {
+                    if (device.IsOkayToSendDataToGeotab)
+                    {
+                        entries.Add(new DeviceLookupEntry
+                        {
+                            ThirdPartyId = device.ThirdPartyId,
+                            GeotabSerialNumber = device.GeotabSerialNumber,
+                            RecordLastChangedUtc = device.RecordLastChangedUtc
+                        });
+                    }
+                    else
+                    {
+                        unauthorizedThirdPartyIds.Add(device.ThirdPartyId);
+                    }
+                }
+
+                return new DeviceLookupContribution
+                {
+                    SourceName = SourceName,
+                    Entries = entries,
+                    UnauthorizedThirdPartyIds = unauthorizedThirdPartyIds
+                };
             }, new Context());
-
-            lastCacheRefreshTimeUtc = nowUtc;
-            logger.Info($"Provisioned device cache refreshed. {cachedThirdPartyIdToSerialNoMap.Count} device(s) loaded.");
-
-            return cachedThirdPartyIdToSerialNoMap;
         }
     }
 }

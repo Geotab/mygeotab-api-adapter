@@ -12,6 +12,14 @@
 -- ================================================================================
 
 
+/*** [START] Transaction wrapper ***/
+-- The whole upgrade runs in one transaction so that the version guard below actually
+-- enforces. PostgreSQL DDL is transactional, so a RAISE EXCEPTION aborts every change
+-- made by this script regardless of how the client is invoked -- psql without
+-- ON_ERROR_STOP=1 otherwise reports the error and carries on to the next statement.
+BEGIN;
+/*** [END] Transaction wrapper ***/
+
 /*** [START] Part 1 of 3: Database Version Validation Below ***/ 
 -- Store upgrade database version in a temporary table.
 DROP TABLE IF EXISTS "TMP_UpgradeDatabaseVersionTable";
@@ -1102,7 +1110,11 @@ REVOKE ALL ON FUNCTION public."spMerge_stg_Trips2"() FROM PUBLIC;
 --    (see Step 1 and Step 6 below).
 -- **********************************************************************
 
-BEGIN;
+-- NOTE: this step originally opened its own transaction here. The whole script now runs
+-- in one transaction (see the transaction wrapper at the top of this file), which subsumes
+-- it. A nested BEGIN; is a warning and a no-op, and the matching COMMIT; would have ended
+-- the script-wide transaction early -- leaving every statement below it, including the
+-- Part 3 version stamp, outside the version guard's protection.
 
 -- Step 1: Drop Foreign Key constraints FROM OTHER tables referencing public."ChargeEvents2" (if any).
 -- Example:
@@ -1182,12 +1194,12 @@ END $$;
 -- Step 7: Final commit or rollback
 DO $$
 BEGIN
-    RAISE NOTICE 'All steps completed successfully. Review changes and then COMMIT.';
-    RAISE NOTICE 'If any errors occurred or verification fails, issue a ROLLBACK.';
+    RAISE NOTICE 'All steps completed successfully. The script-wide transaction commits at the end of this script.';
+    RAISE NOTICE 'If any error occurred, the script-wide transaction rolls every change back.';
 END $$;
 
-COMMIT;
--- ROLLBACK; -- Uncomment to rollback if testing or errors occur
+-- NOTE: this step's own COMMIT; is deliberately absent -- see the note at the start of the
+-- step. The script-wide transaction wrapper commits once, at the very end of this file.
 
 -- Optional: Verify index structure and PK afterwards
 /*
@@ -1550,3 +1562,7 @@ SELECT "UpgradeDatabaseVersion", CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
 FROM "TMP_UpgradeDatabaseVersionTable";
 DROP TABLE IF EXISTS "TMP_UpgradeDatabaseVersionTable";
 /*** [END] Part 3 of 3: Database Version Update Above ***/
+
+/*** [START] Transaction wrapper ***/
+COMMIT;
+/*** [END] Transaction wrapper ***/

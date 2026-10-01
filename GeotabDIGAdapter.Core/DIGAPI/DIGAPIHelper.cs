@@ -52,6 +52,19 @@ namespace MyGeotabAPIAdapter.DIGAPI
 
         static readonly TimeSpan ProactiveTokenRefreshBuffer = TimeSpan.FromMinutes(ProactiveTokenRefreshBufferMinutes);
 
+        /// <summary>
+        /// Maximum number of characters of a non-JSON DIG API error body retained by <see cref="ExtractErrorDetail"/>.
+        /// A gateway's HTML error page can run to many kilobytes, all of which would otherwise reach both the log and
+        /// the queue's failure-reason column.
+        /// </summary>
+        public const int MaxRawErrorBodyLength = 500;
+
+        /// <summary>
+        /// Stand-in used by <see cref="ExtractErrorDetail"/> when an unsuccessful response carries no body at all, so
+        /// that the resulting message does not trail off after the status code.
+        /// </summary>
+        public const string EmptyErrorBodyPlaceholder = "(no response body)";
+
         /// <inheritdoc/>
         public bool DIGAPIIsAuthenticated { get; private set; }
 
@@ -121,7 +134,7 @@ namespace MyGeotabAPIAdapter.DIGAPI
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        throw new DIGConnectionException($"DIG API authentication failed with status {response.StatusCode}: {responseContent}");
+                        throw new DIGConnectionException($"DIG API authentication failed with status {response.StatusCode}: {NeutraliseStatusTokens(responseContent)}");
                     }
 
                     var authResponse = JsonSerializer.Deserialize<DIGAPIResponse<DIGAuthenticationResult>>(
@@ -138,7 +151,7 @@ namespace MyGeotabAPIAdapter.DIGAPI
                     else
                     {
                         var errorMessage = authResponse?.HasErrors == true
-                            ? string.Join(", ", authResponse.Error)
+                            ? NeutraliseStatusTokens(string.Join(", ", authResponse.Error))
                             : "Unknown authentication error";
                         throw new DIGConnectionException($"DIG API authentication failed: {errorMessage}");
                     }
@@ -221,7 +234,7 @@ namespace MyGeotabAPIAdapter.DIGAPI
                         // (CreateAsyncRetryPolicyForDIGAPICallsNotTimedOut excludes messages containing "401"/"403"). With the
                         // numeric code present, the exception propagates to ReauthenticateAsync's catch, which escalates to a
                         // full re-login (AuthenticateDIGAPIAsync) instead of retrying the dead refresh token forever.
-                        throw new DIGConnectionException($"DIG API token refresh failed with status {(int)response.StatusCode} ({response.StatusCode}): {responseContent}");
+                        throw new DIGConnectionException($"DIG API token refresh failed with status [{(int)response.StatusCode}] ({response.StatusCode}): {NeutraliseStatusTokens(responseContent)}");
                     }
 
                     var refreshResponse = JsonSerializer.Deserialize<DIGAPIResponse<DIGAuthenticationResult>>(
@@ -237,7 +250,7 @@ namespace MyGeotabAPIAdapter.DIGAPI
                     else
                     {
                         var errorMessage = refreshResponse?.HasErrors == true
-                            ? string.Join(", ", refreshResponse.Error)
+                            ? NeutraliseStatusTokens(string.Join(", ", refreshResponse.Error))
                             : "Unknown refresh error";
                         throw new DIGConnectionException($"DIG API token refresh failed: {errorMessage}");
                     }
@@ -291,7 +304,7 @@ namespace MyGeotabAPIAdapter.DIGAPI
                     if (!response.IsSuccessStatusCode)
                     {
                         var responseContent = await response.Content.ReadAsStringAsync();
-                        throw new DIGConnectionException($"DIG API token revocation failed with status {response.StatusCode}: {responseContent}");
+                        throw new DIGConnectionException($"DIG API token revocation failed with status {response.StatusCode}: {NeutraliseStatusTokens(responseContent)}");
                     }
 
                     bearerToken = null;
@@ -380,10 +393,18 @@ namespace MyGeotabAPIAdapter.DIGAPI
                     else
                     {
                         var statusCode = (int)response.StatusCode;
-                        var apiResponse = JsonSerializer.Deserialize<DIGAPIResponse<string>>(
-                            responseContent,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        var errorDetail = string.Join(", ", apiResponse?.Error ?? new List<string> { responseContent });
+
+                        // Parsed defensively: an error body is not necessarily JSON (see ExtractErrorDetail). Letting a
+                        // JsonException escape here would pre-empt the throw below, which is the only thing that puts
+                        // the numeric status code in front of the resilience predicates.
+                        var errorDetail = ExtractErrorDetail(responseContent, out var rawErrorBody);
+                        if (rawErrorBody != null)
+                        {
+                            // The character count is reported HERE and not in errorDetail: errorDetail is
+                            // interpolated into the thrown message the resilience predicates read, and a length of
+                            // 400 or 429 would steer it. A log line steers nothing.
+                            logger.Warn($"DIG API {MethodName} received an unusable error body ({responseContent.Trim().Length} characters) with HTTP {statusCode} ({response.StatusCode}): {rawErrorBody}");
+                        }
 
                         // Non-retryable client errors — return error result immediately without throwing.
                         if (statusCode == 400 || statusCode == 413)
@@ -403,7 +424,7 @@ namespace MyGeotabAPIAdapter.DIGAPI
                         // All other errors — throw so Polly policies can handle retries, token refresh, or rate limiting.
                         // The numeric status code MUST appear in the message: the token-expiry/rate-limit Polly predicates
                         // match on "401"/"403"/"429", whereas {response.StatusCode} renders the enum name (e.g. "Unauthorized").
-                        throw new Exception($"DIG API returned {statusCode} ({response.StatusCode}): {errorDetail}");
+                        throw new Exception($"DIG API returned [{statusCode}] ({response.StatusCode}): {errorDetail}");
                     }
                 }, pollyContext);
             }
@@ -532,10 +553,18 @@ namespace MyGeotabAPIAdapter.DIGAPI
                     else
                     {
                         var statusCode = (int)response.StatusCode;
-                        var apiResponse = JsonSerializer.Deserialize<DIGAPIResponse<string>>(
-                            responseContent,
-                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                        var errorDetail = string.Join(", ", apiResponse?.Error ?? new List<string> { responseContent });
+
+                        // Parsed defensively: an error body is not necessarily JSON (see ExtractErrorDetail). Letting a
+                        // JsonException escape here would pre-empt the throw below, which is the only thing that puts
+                        // the numeric status code in front of the resilience predicates.
+                        var errorDetail = ExtractErrorDetail(responseContent, out var rawErrorBody);
+                        if (rawErrorBody != null)
+                        {
+                            // The character count is reported HERE and not in errorDetail: errorDetail is
+                            // interpolated into the thrown message the resilience predicates read, and a length of
+                            // 400 or 429 would steer it. A log line steers nothing.
+                            logger.Warn($"DIG API {MethodName} received an unusable error body ({responseContent.Trim().Length} characters) with HTTP {statusCode} ({response.StatusCode}): {rawErrorBody}");
+                        }
 
                         // Non-retryable client errors — return error result immediately without throwing.
                         if (statusCode == 400)
@@ -559,7 +588,7 @@ namespace MyGeotabAPIAdapter.DIGAPI
                         // All other errors — throw so Polly policies can handle retries, token refresh, or rate limiting.
                         // The numeric status code MUST appear in the message: the token-expiry/rate-limit Polly predicates
                         // match on "401"/"403"/"429", whereas {response.StatusCode} renders the enum name (e.g. "Unauthorized").
-                        throw new Exception($"DIG API returned {statusCode} ({response.StatusCode}): {errorDetail}");
+                        throw new Exception($"DIG API returned [{statusCode}] ({response.StatusCode}): {errorDetail}");
                     }
                 }, pollyContext);
             }
@@ -624,6 +653,162 @@ namespace MyGeotabAPIAdapter.DIGAPI
             }
 
             return bearerToken.TimeUntilExpiry <= effectiveBuffer;
+        }
+
+        /// <summary>
+        /// Extracts a human-readable error detail from the body of an unsuccessful DIG API response.
+        /// <para>
+        /// The body is NOT guaranteed to be JSON: an intervening gateway or load balancer may answer a 5xx with its
+        /// own HTML error page. Deserializing such a body throws a <see cref="JsonException"/>, and because the
+        /// general retry policy deliberately excludes <see cref="JsonException"/> (a malformed <i>successful</i>
+        /// response is not worth retrying) that exception reaches no policy at all — the call is abandoned without a
+        /// single retry and the caller discards the payload. Callers therefore MUST route error bodies through this
+        /// method rather than deserializing them directly, so that the numeric-status-code exception the resilience
+        /// predicates match on is the exception that actually gets thrown.
+        /// </para>
+        /// </summary>
+        /// <param name="responseContent">The raw response body.</param>
+        /// <param name="rawErrorBody">
+        /// When the body yielded no usable detail - it is not JSON, or it parsed but carried no <c>error</c>
+        /// property - receives it trimmed and truncated to <see cref="MaxRawErrorBodyLength"/> characters, for the
+        /// caller to log. <c>null</c> otherwise.
+        /// </param>
+        /// <returns>
+        /// The joined <see cref="DIGAPIResponse{T}.Error"/> entries when the body carries any; otherwise a short
+        /// descriptor. See the remarks on why the raw body is deliberately excluded from the return value.
+        /// </returns>
+        /// <remarks>
+        /// The raw body is returned via <paramref name="rawErrorBody"/> rather than inlined into the detail
+        /// because the detail is interpolated into the exception message that the resilience predicates inspect.
+        /// An error page happening to contain a status code — in a request id, a byte count, a timestamp — must not
+        /// route a 5xx to the re-authentication or non-retryable path, which is the very class of defect this guard
+        /// removes.
+        /// <para>
+        /// That guarantee no longer rests on this method alone, and the earlier wording here overstated what it
+        /// gives. The second return path below joins <see cref="DIGAPIResponse{T}.Error"/> and so returns upstream
+        /// text verbatim, by design and unchanged since before this guard existed — so "the detail is free of
+        /// unvetted upstream text" was never true of every path. What makes the routing safe is that the predicates
+        /// now match a DELIMITED status code ("[401]", not "401") that only the thrower emits, and that the upstream
+        /// text on that path has its square brackets rewritten (<see cref="NeutraliseStatusTokens"/>), so no upstream
+        /// text can produce one. See the constants in DIGAPIResilienceHelper; the two forms are a pair and changing
+        /// one without the other breaks the routing silently.
+        /// </para>
+        /// <para>
+        /// The same reasoning bars any number COMPUTED from the body. A descriptor reading "… response body (400
+        /// characters) …" steers policy exactly as a request id would, and a given gateway returns a fixed-shape
+        /// error page, so an unlucky page length would misroute every one of that deployment's upstream errors
+        /// rather than an occasional one. The descriptors this method can return are therefore fixed strings, and
+        /// the character count is logged by the caller alongside the body.
+        /// </para>
+        /// </remarks>
+        public static string ExtractErrorDetail(string responseContent, out string? rawErrorBody)
+        {
+            rawErrorBody = null;
+
+            // JsonSerializer.Deserialize raises ArgumentNullException - NOT JsonException - for a null input,
+            // so the catch below would not hold it and it would escape, pre-empting the throw that puts the
+            // numeric status code in front of the resilience predicates. That guarantee is the only reason
+            // this method exists. No caller in this solution reaches it, because HttpContent.ReadAsStringAsync
+            // returns "" and never null; the guard is here because the method is public and the guarantee
+            // should not rest on that staying true. Widening the catch to Exception would close the same hole
+            // by also swallowing real faults, which is why it is a guard and not a wider catch. An empty or
+            // whitespace body already produced this placeholder by way of a JsonException, and still does.
+            if (string.IsNullOrWhiteSpace(responseContent))
+            {
+                return EmptyErrorBodyPlaceholder;
+            }
+
+            try
+            {
+                var apiResponse = JsonSerializer.Deserialize<DIGAPIResponse<string>>(
+                    responseContent,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                // A body that CARRIES errors is returned as those errors, with square brackets rewritten - see
+                // NeutraliseStatusTokens.
+                var detail = string.Join(", ", apiResponse?.Error ?? new List<string>());
+                if (!string.IsNullOrWhiteSpace(detail))
+                {
+                    return NeutraliseStatusTokens(detail);
+                }
+
+                // The body parsed but produced nothing to say, by either of two routes. Its "error" property was
+                // absent or empty - DIGAPIResponse<T>.Error initialises to an EMPTY LIST, so the join yields "" -
+                // or the body was the JSON literal "null", which deserialises to a null response altogether.
+                //
+                // That second route used to fall back to inlining the WHOLE RAW BODY as the detail, which is the
+                // one thing this method must never do: the return value is interpolated into the exception
+                // message the resilience predicates read, and they match on bare substrings. A four-character
+                // "null" carries no digits and so could not in fact steer anything - but the invariant should
+                // hold by construction, not by arithmetic on the single body shape that happens to reach it.
+                //
+                // An intervening gateway answering a 502 with
+                // {"message":"upstream connect error"} lands here, and used to be discarded twice over: the thrown
+                // message trailed off after the colon, and because no JsonException was raised the body was never
+                // logged either. Route it the same way as a non-JSON body, so the gateway's explanation at least
+                // reaches the log.
+                return DescribeUnusableErrorBody(responseContent, "unrecognized-shape", out rawErrorBody);
+            }
+            catch (JsonException)
+            {
+                return DescribeUnusableErrorBody(responseContent, "non-JSON", out rawErrorBody);
+            }
+        }
+
+        /// <summary>
+        /// Rewrites square brackets in upstream text as parentheses, for text that is about to be interpolated into
+        /// an exception message the resilience predicates read.
+        /// </summary>
+        /// <remarks>
+        /// The predicates route on a bracketed status code ("[400]", "[401]") that only the thrower is meant to emit.
+        /// Upstream text naming an array element - "records[400]" - contains the token itself, and a 5xx carrying it
+        /// was excluded from the general retry policy, matched by no other one, and dead-lettered after one
+        /// attempt. Brackets are the one character the tokens and ordinary upstream text share, so rewriting them
+        /// makes the tokens thrower-only while the text still reads the same in the log.
+        /// </remarks>
+        /// <param name="upstreamText">Text taken from a DIG API response.</param>
+        /// <returns>The text, with every '[' and ']' replaced by '(' and ')'.</returns>
+        public static string NeutraliseStatusTokens(string upstreamText)
+        {
+            return upstreamText.Replace('[', '(').Replace(']', ')');
+        }
+
+        /// <summary>
+        /// Renders an error body that yielded no usable detail and hands the body itself back for the caller to
+        /// log. Shared by the two ways that happens - a body that is not JSON at all, and one that parses but
+        /// carries no <c>error</c> property - so that both reach the log by the same route.
+        /// </summary>
+        /// <param name="responseContent">The raw response body.</param>
+        /// <param name="bodyKind">Short label naming why the body was unusable; appears in the returned descriptor.</param>
+        /// <param name="rawErrorBody">
+        /// Receives the body trimmed and truncated to <see cref="MaxRawErrorBodyLength"/> characters, or
+        /// <c>null</c> when there is no body to log.
+        /// </param>
+        /// <returns>
+        /// A short descriptor, deliberately free of unvetted upstream text AND of any number derived from it. See
+        /// the remarks on <see cref="ExtractErrorDetail"/>: the descriptor is interpolated into the exception
+        /// message the resilience predicates inspect, and a body's own character count is as capable of steering
+        /// policy selection as its text. The count belongs in the log line beside the body, and the callers put it
+        /// there.
+        /// </returns>
+        static string DescribeUnusableErrorBody(string responseContent, string bodyKind, out string? rawErrorBody)
+        {
+            rawErrorBody = null;
+
+            if (string.IsNullOrWhiteSpace(responseContent))
+            {
+                return EmptyErrorBodyPlaceholder;
+            }
+
+            var trimmed = responseContent.Trim();
+            rawErrorBody = trimmed.Length <= MaxRawErrorBodyLength
+                ? trimmed
+                : $"{trimmed[..MaxRawErrorBodyLength]}... (truncated; {trimmed.Length} characters total)";
+
+            // Every value this method can return is a FIXED string carrying no digits - this one, the two
+            // bodyKind labels, and EmptyErrorBodyPlaceholder. That is the invariant, and it is what keeps
+            // routing dependent on the real status code alone. Do not interpolate a length here.
+            return $"{bodyKind} response body; see log for content";
         }
 
         /// <summary>

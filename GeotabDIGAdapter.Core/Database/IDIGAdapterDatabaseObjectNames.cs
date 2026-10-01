@@ -52,6 +52,50 @@ namespace MyGeotabAPIAdapter.Database
         /// </summary>
         string SpClaimQProvisionDevicesBatchName { get; }
 
+        #region Device Subscription Tables
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbGdaDeviceSubscription"/> entities.
+        /// </summary>
+        string DbGdaDeviceSubscriptionTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbGdaQDeviceSubscription"/> entities.
+        /// </summary>
+        string DbGdaQDeviceSubscriptionTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbGdaQDeviceSubscriptionFail"/> entities.
+        /// </summary>
+        string DbGdaQDeviceSubscriptionFailTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbGdaStgDeviceSubscription"/> entities.
+        /// </summary>
+        string DbGdaStgDeviceSubscriptionTableName { get; }
+
+        /// <summary>
+        /// The name of the database table holding the append-only device subscription audit trail.
+        /// </summary>
+        string DbGdaDeviceSubscriptionHistoryTableName { get; }
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbGdaDeviceSubscriptionGuardState"/> entities.
+        /// </summary>
+        string DbGdaDeviceSubscriptionGuardStateTableName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for atomically claiming a batch of Q_DeviceSubscriptions records for processing.
+        /// </summary>
+        string SpClaimQDeviceSubscriptionsBatchName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure or function responsible for merging staged device subscription instructions into the DeviceSubscriptions table. This is the only writer to that table.
+        /// </summary>
+        string SpMergeStgDeviceSubscriptionsName { get; }
+
+        #endregion
+
         #region DIG Telemetry Record Queue Tables
 
         // GPS Records
@@ -243,6 +287,44 @@ namespace MyGeotabAPIAdapter.Database
         /// The name of the database table associated with <see cref="DbGdaDIGInvalidRecordsCursor"/> entities.
         /// </summary>
         string DbGdaDIGInvalidRecordsCursorTableName { get; }
+
+        #endregion
+
+        #region Fail Table Retention
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbGdaDigPartitionInfo"/> entities.
+        /// </summary>
+        string DbGdaDigPartitionInfoTableName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure responsible for creating the period partitions that the partitioned tables need.
+        /// </summary>
+        string SpManageDigPartitionsName { get; }
+
+        /// <summary>
+        /// The name of the stored procedure responsible for reclaiming the space held by partitions that lie entirely before a cutoff.
+        /// </summary>
+        string SpRetireDigPartitionsName { get; }
+
+        #endregion
+
+        #region Database Maintenance
+
+        /// <summary>
+        /// The name of the database table associated with <see cref="DbGdaDigMaintenanceLog"/> entities.
+        /// </summary>
+        string DbGdaDigMaintenanceLogsTableName { get; }
+
+        /// <summary>
+        /// The name of the view listing the gda tables that may need Level 1 database maintenance.
+        /// </summary>
+        string VwStatsForLevel1DigMaintenanceName { get; }
+
+        /// <summary>
+        /// The name of the view listing the gda indexes that may need Level 2 database maintenance.
+        /// </summary>
+        string VwStatsForLevel2DigMaintenanceName { get; }
 
         #endregion
     }

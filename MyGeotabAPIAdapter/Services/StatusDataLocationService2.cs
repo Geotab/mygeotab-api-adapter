@@ -391,7 +391,10 @@ namespace MyGeotabAPIAdapter.Services
             {
                 try
                 {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(adapterConfiguration.TimeoutSecondsForDatabaseTasks));
+                    // No deadline: BaseRepository checks this token only once the read has succeeded, so a deadline here turned a read
+                    // that outlasted it - completed by the repository's own retry - into a cancellation after the fact. The command
+                    // timeout bounds the read.
+                    using var cts = new CancellationTokenSource();
                     dbvwStatForLocationInterpolationProgresss = (List<DbvwStatForLocationInterpolationProgress>)await dbvwStatForLocationInterpolationProgressRepo.GetAllAsync(cts, null, null, nameof(DbvwStatForLocationInterpolationProgress.Table), true, adapterContext);
                 }
                 catch (Exception ex)

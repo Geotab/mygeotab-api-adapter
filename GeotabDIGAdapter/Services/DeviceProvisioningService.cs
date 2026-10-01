@@ -104,9 +104,9 @@ namespace GeotabDIGAdapter.Services
             return adapterContext.ProviderType switch
             {
                 ConnectionInfo.DataAccessProviderType.PostgreSQL =>
-                    $@"SELECT * FROM {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "npgsqlconnection")}(@BatchSize::integer, @StaleThresholdMinutes::integer);",
+                    $@"SELECT * FROM {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "npgsqlconnection")}(@BatchSize::integer, @StaleThresholdMinutes::integer, @MaxClaimAttempts::integer);",
                 ConnectionInfo.DataAccessProviderType.SQLServer =>
-                    $"EXEC {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "sqlconnection")} @BatchSize = @BatchSize, @StaleThresholdMinutes = @StaleThresholdMinutes;",
+                    $"EXEC {SqlMapperExtensions.FormatTableNameForSql(storedProcedureName, "sqlconnection")} @BatchSize = @BatchSize, @StaleThresholdMinutes = @StaleThresholdMinutes, @MaxClaimAttempts = @MaxClaimAttempts;",
                 _ => throw new NotSupportedException($"The provider type '{adapterContext.ProviderType}' is not supported.")
             };
         }
@@ -222,7 +222,8 @@ namespace GeotabDIGAdapter.Services
                 var parameters = new
                 {
                     BatchSize = DeviceProvisioningBatchSize,
-                    StaleThresholdMinutes
+                    StaleThresholdMinutes,
+                    MaxClaimAttempts = adapterConfiguration.DeviceProvisioningServiceMaxClaimAttempts
                 };
 
                 return await repo.QueryAsync(sql, parameters, cancellationTokenSource, true, adapterContext);
@@ -448,7 +449,7 @@ namespace GeotabDIGAdapter.Services
             }
             else
             {
-                logger.Warn($"******** WARNING - SERVICE DISABLED: The {CurrentClassName} service has not been enabled and will NOT be started.");
+                logger.Warn($"******** WARNING - SERVICE DISABLED: The {CurrentClassName} service has not been enabled and will NOT be started. Nothing else reads gda.Q_ProvisionDevices, so any provisioning request written to that queue will stay there unprocessed and no device will be provisioned.");
             }
         }
 

@@ -17,7 +17,7 @@ namespace MyGeotabAPIAdapter.Database
         // 2. Database changes should be included in a single script file and the filename should be formatted as 
         //    "prefix_version_suffix.sql" (e.g. "MSSQL_1.0.0.0_InitialSchemaCreation.sql") where the version 
         //    portion of the filename is equal to the value of this constant.
-        const string RequiredDIGAdapterDatabaseVersion = "5.0.0.0";
+        const string RequiredDIGAdapterDatabaseVersion = "5.2.0.0";
 
         readonly IMyAdminExceptionHelper exceptionHelper;
         readonly IDIGAdapterDatabaseObjectNames digAdapterDatabaseObjectNames;
@@ -56,7 +56,14 @@ namespace MyGeotabAPIAdapter.Database
                         throw new Exception($"No version information found in the '{digAdapterDatabaseObjectNames.DbGdaMiddlewareVersionInfoTableName}' table. Please ensure the DIG Adapter database schema has been properly initialized.");
                     }
 
-                    var latestDbGdaMiddlewareVersionInfo = dbGdaMiddlewareVersionInfos.Last();
+                    // Order explicitly. GetAllAsync does not impose an order, so Last() returns whichever
+                    // row the database happened to hand back - safe only while this table held exactly one
+                    // row, which was the case until the first schema upgrade script added a second. Reading
+                    // the wrong row here reports a stale version and blocks startup.
+                    var latestDbGdaMiddlewareVersionInfo = dbGdaMiddlewareVersionInfos
+                        .OrderBy(dbGdaMiddlewareVersionInfo => dbGdaMiddlewareVersionInfo.RecordCreationTimeUtc)
+                        .ThenBy(dbGdaMiddlewareVersionInfo => dbGdaMiddlewareVersionInfo.id)
+                        .Last();
                     if (latestDbGdaMiddlewareVersionInfo.DatabaseVersion != RequiredDIGAdapterDatabaseVersion)
                     {
                         throw new Exception($"The DIG Adapter middleware database version is '{latestDbGdaMiddlewareVersionInfo.DatabaseVersion}', but the required version is '{RequiredDIGAdapterDatabaseVersion}'. Please update the DIG Adapter middleware database schema to the required version.");

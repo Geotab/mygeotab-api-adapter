@@ -32,6 +32,34 @@
         /// <inheritdoc/>
         public string Id { get; private set; }
 
+        #region Device Subscription Tables
+
+        /// <inheritdoc/>
+        public string DbGdaDeviceSubscriptionTableName => $"{DIGAdapterSchemaName}.DeviceSubscriptions";
+
+        /// <inheritdoc/>
+        public string DbGdaQDeviceSubscriptionTableName => $"{DIGAdapterSchemaName}.Q_DeviceSubscriptions";
+
+        /// <inheritdoc/>
+        public string DbGdaQDeviceSubscriptionFailTableName => $"{DIGAdapterSchemaName}.Q_DeviceSubscriptionsFail";
+
+        /// <inheritdoc/>
+        public string DbGdaStgDeviceSubscriptionTableName => $"{DIGAdapterSchemaName}.stg_DeviceSubscriptions";
+
+        /// <inheritdoc/>
+        public string DbGdaDeviceSubscriptionHistoryTableName => $"{DIGAdapterSchemaName}.DeviceSubscriptionHistory";
+
+        /// <inheritdoc/>
+        public string DbGdaDeviceSubscriptionGuardStateTableName => $"{DIGAdapterSchemaName}.DeviceSubscriptionGuardState";
+
+        /// <inheritdoc/>
+        public string SpClaimQDeviceSubscriptionsBatchName => $"{DIGAdapterSchemaName}.spClaimQDeviceSubscriptionsBatch";
+
+        /// <inheritdoc/>
+        public string SpMergeStgDeviceSubscriptionsName => $"{DIGAdapterSchemaName}.spMerge_stg_DeviceSubscriptions";
+
+        #endregion
+
         #region DIG Telemetry Record Queue Tables
 
         // GPS Records
@@ -153,6 +181,32 @@
 
         /// <inheritdoc/>
         public string DbGdaDIGInvalidRecordsCursorTableName => $"{DIGAdapterSchemaName}.DIGInvalidRecordsCursor";
+
+        #endregion
+
+        #region Fail Table Retention
+
+        /// <inheritdoc/>
+        public string DbGdaDigPartitionInfoTableName => $"{DIGAdapterSchemaName}.DigPartitionInfo";
+
+        /// <inheritdoc/>
+        public string SpManageDigPartitionsName => $"{DIGAdapterSchemaName}.spManageDigPartitions";
+
+        /// <inheritdoc/>
+        public string SpRetireDigPartitionsName => $"{DIGAdapterSchemaName}.spRetireDigPartitions";
+
+        #endregion
+
+        #region Database Maintenance
+
+        /// <inheritdoc/>
+        public string DbGdaDigMaintenanceLogsTableName => $"{DIGAdapterSchemaName}.DigMaintenanceLogs";
+
+        /// <inheritdoc/>
+        public string VwStatsForLevel1DigMaintenanceName => $"{DIGAdapterSchemaName}.vwStatsForLevel1DigMaintenance";
+
+        /// <inheritdoc/>
+        public string VwStatsForLevel2DigMaintenanceName => $"{DIGAdapterSchemaName}.vwStatsForLevel2DigMaintenance";
 
         #endregion
 

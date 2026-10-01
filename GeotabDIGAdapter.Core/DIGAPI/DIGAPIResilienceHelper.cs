@@ -19,18 +19,49 @@ namespace MyGeotabAPIAdapter.DIGAPI
         public const string DIGConnectionExceptionMessage_ServiceUnavailable = "Service is unavailable";
         public const string DIGTimeoutExceptionMessage_OperationTimedOut = "The operation has timed out.";
 
+        // Status-code exception message constants. THE BRACKETS ARE LOAD-BEARING and must match
+        // the form DIGAPIHelper throws; changing one without the other silently stops a policy
+        // matching anything.
+        //
+        // These are matched with String.Contains against an exception message that also carries
+        // upstream text - the DIG error array at DIGAPIHelper.ExtractErrorDetail's second return
+        // path, and the whole response body on the three DIGConnectionException throws. As bare
+        // digits they matched that text too: a 5xx whose body happened to contain 400, 401, 403,
+        // 413 or 429 anywhere - a batch id, an offset, a byte count, an epoch - was excluded from
+        // the general retry policy, matched by no other policy, and dead-lettered on one attempt.
+        // Policy.WrapAsync has no catch-all member, so "handled by nothing" is a real outcome. And
+        // because a deployment's error pages are a fixed shape, it would repeat for every such
+        // error rather than occur occasionally - the same argument that earlier removed an
+        // interpolated character count from the descriptor of an unusable error body.
+        //
+        // Delimiting them moves the routing onto a token the THROWER controls. That alone was not
+        // enough: upstream text naming an array element ("records[400]") produced the token too,
+        // so every site that interpolates upstream text into a thrown message passes it through
+        // DIGAPIHelper.NeutraliseStatusTokens, which rewrites square brackets as parentheses. A new
+        // site that interpolates upstream text must do the same.
+        //
+        // The two textual constants below are deliberately left as they are. "rate limit" in an
+        // upstream body still routes a 5xx to the rate-limit policy - but that policy RETRIES it,
+        // so in the wrap that has one the consequence is a wrong backoff, not a dead letter. The
+        // wrap without re-authentication (authenticate, refresh and revoke) has no rate-limit
+        // policy, and its non-timeout retry policy excludes rate-limit messages, so there a message
+        // carrying "[429]" or "rate limit" is retried by nothing and fails on its first attempt. Of
+        // those three calls only the token refresh reports its status as "[429]"; authentication and
+        // revocation report it by name ("TooManyRequests"), which the non-timeout policy does retry -
+        // without the rate-limit backoff - unless the body happens to say "rate limit".
+
         // Token expiry-related exception message constants.
         // 401 = Unauthorized (token expired), 403 = Forbidden (token already refreshed/not found)
-        public const string DIGTokenExpiredExceptionMessage = "401";
-        public const string DIGTokenInvalidExceptionMessage = "403";
+        public const string DIGTokenExpiredExceptionMessage = "[401]";
+        public const string DIGTokenInvalidExceptionMessage = "[403]";
 
         // Rate limit-related exception message constants.
-        public const string DIGRateLimitExceptionMessage_TooManyRequests = "429";
+        public const string DIGRateLimitExceptionMessage_TooManyRequests = "[429]";
         public const string DIGRateLimitExceptionMessage_RateLimitExceeded = "rate limit";
 
         // Non-retryable client error exception message constants (should not be retried).
-        public const string DIGBadRequestExceptionMessage = "400";
-        public const string DIGPayloadTooLargeExceptionMessage = "413";
+        public const string DIGBadRequestExceptionMessage = "[400]";
+        public const string DIGPayloadTooLargeExceptionMessage = "[413]";
 
         // Non-retryable deserialization error type name (should not be retried — response is malformed).
         static readonly Type JsonExceptionType = typeof(System.Text.Json.JsonException);

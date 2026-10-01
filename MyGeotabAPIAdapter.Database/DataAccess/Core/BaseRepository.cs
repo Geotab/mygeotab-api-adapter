@@ -37,11 +37,29 @@ namespace MyGeotabAPIAdapter.Database.DataAccess
         readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         public BaseRepository(IConnectionContext connectionContext)
+            : this(connectionContext, connectionContext.TimeoutSecondsForDatabaseTasks, MaxRetries)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance whose commands are each attempted ONCE, with a command timeout of <paramref name="singleAttemptTimeoutSeconds"/> (at most <see cref="DatabaseResilienceHelper.MaxTimeoutSeconds"/>), rather than retried with a timeout that grows on each attempt.
+        /// <para>
+        /// For database maintenance statements - an index rebuild, a statistics update, the partitioning procedure, a read of a maintenance view. An instance created by the other constructor retries a command that times out up to <see cref="MaxRetries"/> more times, each attempt allowed longer than the last, up to <see cref="DatabaseResilienceHelper.MaxTimeoutSeconds"/>. That suits a short command that a passing condition delays. A maintenance statement that times out has usually been given less time than its work needs, and each retry starts that work again from the beginning, so the retries take hours - about six and a half at the shipped timeout of 600 seconds - to give up on a statement that cannot finish, with the other services paused throughout when it runs under the maintenance pause. Given the longest timeout at its first attempt, a statement that can finish within it does so at once, and one that cannot fails once, after that time. The cost is that a statement held up for longer than that - by another session's lock, for example - fails where a later retry might have got through.
+        /// </para>
+        /// </summary>
+        /// <param name="connectionContext">The connection context.</param>
+        /// <param name="singleAttemptTimeoutSeconds">The command timeout, in seconds, of the one attempt each command gets.</param>
+        public BaseRepository(IConnectionContext connectionContext, int singleAttemptTimeoutSeconds)
+            : this(connectionContext, singleAttemptTimeoutSeconds, 0)
+        {
+        }
+
+        BaseRepository(IConnectionContext connectionContext, int initialTimeoutSeconds, int maxRetries)
         {
             this.connectionContext = connectionContext;
 
             // Setup a database command timeout and retry policy wrap.
-            asyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(this.connectionContext.TimeoutSecondsForDatabaseTasks, MaxRetries, logger);
+            asyncDatabaseCommandTimeoutAndRetryPolicyWrap = DatabaseResilienceHelper.CreateAsyncPolicyWrapForDatabaseCommandTimeoutAndRetry<Exception>(initialTimeoutSeconds, maxRetries, logger);
         }
 
         /// <summary>

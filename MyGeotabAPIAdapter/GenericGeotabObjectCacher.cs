@@ -264,6 +264,7 @@ namespace MyGeotabAPIAdapter
                     FeedResult<T> feedResult = null;
                     bool keepGoing = true;
                     int cacheRecordsAdded = 0;
+                    long? previousFeedVersion = LastFeedVersion;
 
                     DateTime lastApiCallTimeUtc = DateTime.MinValue;
                     while (keepGoing == true)
@@ -276,6 +277,7 @@ namespace MyGeotabAPIAdapter
                             {
                                 // Use the GetFeed method for data retrieval.
                                 logger.Debug($"Calling GetFeedAsync<{typeParameterType.Name}>.");
+                                previousFeedVersion = LastFeedVersion;
                                 feedResult = await myGeotabAPIHelper.GetFeedAsync<T>(LastFeedVersion, FeedResultsLimit, adapterConfiguration.TimeoutSecondsForMyGeotabTasks);
                                 LastFeedVersion = feedResult.ToVersion;
                                 logger.Debug($"GetFeedAsync<{typeParameterType.Name}> returned with {feedResult.Data.Count} records.");
@@ -344,17 +346,31 @@ namespace MyGeotabAPIAdapter
                                     geotabObjectsChangedInLastUpdate.Add(feedResultItem);
                                 }
                             }
-                            if (feedResult.Data.Count < FeedResultsLimit)
+                            if (UseGetFeed == false)
                             {
+                                // GetAsync returns the entire set of objects in a single call and has no version cursor to
+                                // advance, so a second call would only repeat the same request.
                                 keepGoing = false;
                             }
-                            else 
+                            else if (feedResult.Data.Count == 0)
+                            {
+                                // The feed has been fully consumed. Note that a batch containing fewer records than
+                                // FeedResultsLimit does NOT mean the feed is exhausted: MyGeotab may apply the results limit
+                                // before filtering the records it returns, producing a short batch while further records
+                                // remain available. Only an empty batch reliably marks the end of the feed.
+                                keepGoing = false;
+                            }
+                            else if (LastFeedVersion == previousFeedVersion)
+                            {
+                                // Records were returned, but the feed version did not advance. Continuing would request the
+                                // same batch indefinitely, so stop and surface the condition for investigation.
+                                logger.Warn($"{CurrentClassName}> the {typeParameterType.Name} feed returned {feedResult.Data.Count} record(s) without advancing its version ('{LastFeedVersion}'). Ending cache population to avoid repeating the same request indefinitely.");
+                                keepGoing = false;
+                            }
+                            else if (cacheRecordsAdded % 10000 == 0)
                             {
                                 // Provide a status update. For large caches to provide some indication that the application is still running.
-                                if (cacheRecordsAdded % 10000 == 0)
-                                {
-                                    logger.Info($"{CurrentClassName}> processing with {cacheRecordsAdded} records added to the {typeParameterType.Name} cache so far...");
-                                }
+                                logger.Info($"{CurrentClassName}> processing with {cacheRecordsAdded} records added to the {typeParameterType.Name} cache so far...");
                             }
                         }
                     }

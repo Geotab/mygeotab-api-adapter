@@ -1,4 +1,4 @@
-using MyGeotabAPIAdapter;
+﻿using MyGeotabAPIAdapter;
 using MyGeotabAPIAdapter.Configuration;
 using MyGeotabAPIAdapter.Database;
 using MyGeotabAPIAdapter.Database.DataAccess;
@@ -457,10 +457,16 @@ namespace GeotabDIGAdapter.Services
         /// </summary>
         async Task PrepareForExecutionAsync(CancellationToken stoppingToken)
         {
-            var prerequisiteServices = new List<DIGAdapterService>
+            // Only wait on DeviceProvisioningService if it is actually enabled. The prerequisite check reads
+            // OServiceTracking timestamps and never consults the enable flags, so a disabled service reads as
+            // "never run" forever and this wait would never end. That is what made turning provisioning off -
+            // the natural configuration for a deployment driven by device subscriptions - silently stop
+            // telemetry after a single warning.
+            var prerequisiteServices = new List<DIGAdapterService>();
+            if (adapterConfiguration.EnableDeviceProvisioningService == true)
             {
-                DIGAdapterService.DeviceProvisioningService
-            };
+                prerequisiteServices.Add(DIGAdapterService.DeviceProvisioningService);
+            }
             await awaiter.WaitForPrerequisiteServicesIfNeededAsync(prerequisiteServices, stoppingToken);
             await awaiter.WaitForDatabaseMaintenanceCompletionIfNeededAsync(stoppingToken);
         }

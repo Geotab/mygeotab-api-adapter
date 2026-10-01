@@ -618,6 +618,24 @@ namespace MyGeotabAPIAdapter.Configuration
         public int ZoneTypeCacheUpdateIntervalMinutes { get; private set; }
 
         readonly Logger logger = LogManager.GetCurrentClassLogger();
+
+        /// <summary>
+        /// Reads <see cref="Level2DatabaseMaintenanceWindowStartTimeUTC"/> as UTC, whatever the host's time zone: a value with an offset is converted to UTC, and one without is taken to be UTC already. Only its time of day is used.
+        /// <para>
+        /// The shared <see cref="IConfigurationHelper.GetConfigKeyValueDateTime"/> parses as a round trip, which turns a value with an offset into the host's LOCAL time - so on a host not running UTC the window moved by the host's own offset. It is left as it is because other settings read through it.
+        /// </para>
+        /// </summary>
+        DateTime ReadLevel2DatabaseMaintenanceWindowStartTimeUTC(IConfigurationHelper configurationHelper)
+        {
+            var configuredValue = configurationHelper.GetConfigKeyValueString(ArgNameLevel2DatabaseMaintenanceWindowStartTimeUTC);
+            if (DateTime.TryParse(configuredValue, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var startTimeUtc))
+            {
+                return startTimeUtc;
+            }
+            string errorMessage = $"The value of '{configuredValue}' provided for the '{ArgNameLevel2DatabaseMaintenanceWindowStartTimeUTC}' configuration item is not valid.";
+            logger.Error(errorMessage);
+            throw new Exception(errorMessage);
+        }
         readonly IConfigurationHelper configurationHelper;
 
         /// <summary>
@@ -650,7 +668,7 @@ namespace MyGeotabAPIAdapter.Configuration
             EnableLevel2DatabaseMaintenance = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableLevel2DatabaseMaintenance);
             Level2DatabaseMaintenanceIntervalMinutes = configurationHelper.GetConfigKeyValueInt(ArgNameLevel2DatabaseMaintenanceIntervalMinutes, null, false, MinDatabaseMaintenanceIntervalMinutes, MaxDatabaseMaintenanceIntervalMinutes, DefaultLevel2DatabaseMaintenanceIntervalMinutes);
             EnableLevel2DatabaseMaintenanceWindow = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableLevel2DatabaseMaintenanceWindow);
-            Level2DatabaseMaintenanceWindowStartTimeUTC = configurationHelper.GetConfigKeyValueDateTime(ArgNameLevel2DatabaseMaintenanceWindowStartTimeUTC);
+            Level2DatabaseMaintenanceWindowStartTimeUTC = ReadLevel2DatabaseMaintenanceWindowStartTimeUTC(configurationHelper);
             Level2DatabaseMaintenanceWindowMaxMinutes = configurationHelper.GetConfigKeyValueInt(ArgNameLevel2DatabaseMaintenanceWindowMaxMinutes, null, false, MinLevel2DatabaseMaintenanceWindowMinutes, MaxLevel2DatabaseMaintenanceWindowMinutes, DefaultLevel2DatabaseMaintenanceWindowMinutes);
             DatabaseConnectionString = configurationHelper.GetConfigKeyValueString(ArgNameDatabaseConnectionString, null, true, true);
             DatabaseProviderType = configurationHelper.GetConfigKeyValueString(ArgNameDatabaseProviderType);
@@ -731,15 +749,21 @@ namespace MyGeotabAPIAdapter.Configuration
             // AppSettings:GeneralFeedSettings:
             string feedStartOptionString = configurationHelper.GetConfigKeyValueString(ArgNameFeedStartOption);
             string errorMessage;
-            switch (feedStartOptionString)
+            if (ConfigurationEnumParser.TryParse(feedStartOptionString, out FeedStartOption feedStartOptionValue) == false)
             {
-                case nameof(FeedStartOption.CurrentTime):
+                errorMessage = $"The value of '{feedStartOptionString}' provided for the '{ArgNameFeedStartOption}' configuration item is not valid. Valid values are: {ConfigurationEnumParser.DescribeValidValues<FeedStartOption>()}.";
+                logger.Error(errorMessage);
+                throw new Exception(errorMessage);
+            }
+            switch (feedStartOptionValue)
+            {
+                case FeedStartOption.CurrentTime:
                     FeedStartOption = FeedStartOption.CurrentTime;
                     break;
-                case nameof(FeedStartOption.FeedVersion):
+                case FeedStartOption.FeedVersion:
                     FeedStartOption = FeedStartOption.FeedVersion;
                     break;
-                case nameof(FeedStartOption.SpecificTime):
+                case FeedStartOption.SpecificTime:
                     string feedStartSpecificTimeUTCString = configurationHelper.GetConfigKeyValueString(ArgNameFeedStartSpecificTimeUTC);
                     DateTime feedStartSpecificTimeUTC;
                     if (DateTime.TryParse(feedStartSpecificTimeUTCString, null, System.Globalization.DateTimeStyles.RoundtripKind, out feedStartSpecificTimeUTC) == false)
@@ -755,7 +779,9 @@ namespace MyGeotabAPIAdapter.Configuration
                     }
                     break;
                 default:
-                    errorMessage = $"The value of '{feedStartOptionString}' provided for the '{ArgNameFeedStartOption}' configuration item is not valid.";
+                    // Unreachable while every member above is handled; present so that a member added later and
+                    // not handled here fails at startup rather than leaving the setting silently at its default.
+                    errorMessage = $"The value of '{feedStartOptionString}' provided for the '{ArgNameFeedStartOption}' configuration item is not handled by this application.";
                     logger.Error(errorMessage);
                     throw new Exception(errorMessage);
             }
@@ -834,18 +860,26 @@ namespace MyGeotabAPIAdapter.Configuration
             // > AppSettings:DataEnhancementServices:StatusData
             EnableStatusDataLocationService = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableStatusDataLocationService);
             string statusDataLocationServiceOperationModeString = configurationHelper.GetConfigKeyValueString(ArgNameStatusDataLocationServiceOperationMode);
-            switch (statusDataLocationServiceOperationModeString)
+            if (ConfigurationEnumParser.TryParse(statusDataLocationServiceOperationModeString, out OperationMode statusDataLocationServiceOperationModeValue) == false)
             {
-                case nameof(OperationMode.Continuous):
+                errorMessage = $"The value of '{statusDataLocationServiceOperationModeString}' provided for the '{ArgNameStatusDataLocationServiceOperationMode}' configuration item is not valid. Valid values are: {ConfigurationEnumParser.DescribeValidValues<OperationMode>()}.";
+                logger.Error(errorMessage);
+                throw new Exception(errorMessage);
+            }
+            switch (statusDataLocationServiceOperationModeValue)
+            {
+                case OperationMode.Continuous:
                     StatusDataLocationServiceOperationMode = OperationMode.Continuous;
                     break;
-                case nameof(OperationMode.Scheduled):
+                case OperationMode.Scheduled:
                     StatusDataLocationServiceOperationMode = OperationMode.Scheduled;
                     StatusDataLocationServiceDailyStartTimeUTC = configurationHelper.GetConfigKeyValueDateTime(ArgNameStatusDataLocationServiceDailyStartTimeUTC);
                     StatusDataLocationServiceDailyRunTimeSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameStatusDataLocationServiceDailyRunTimeSeconds, null, false, MinDailyRunTimeSeconds, MaxDailyRunTimeSeconds, MinDailyRunTimeSeconds);
                     break;
                 default:
-                    errorMessage = $"The value of '{statusDataLocationServiceOperationModeString}' provided for the '{ArgNameStatusDataLocationServiceOperationMode}' configuration item is not valid.";
+                    // Unreachable while every member above is handled; present so that a member added later and
+                    // not handled here fails at startup rather than leaving the setting silently at its default.
+                    errorMessage = $"The value of '{statusDataLocationServiceOperationModeString}' provided for the '{ArgNameStatusDataLocationServiceOperationMode}' configuration item is not handled by this application.";
                     logger.Error(errorMessage);
                     throw new Exception(errorMessage);
             }
@@ -867,18 +901,26 @@ namespace MyGeotabAPIAdapter.Configuration
             // > AppSettings:DataEnhancementServices:FaultData
             EnableFaultDataLocationService = configurationHelper.GetConfigKeyValueBoolean(ArgNameEnableFaultDataLocationService);
             string faultDataLocationServiceOperationModeString = configurationHelper.GetConfigKeyValueString(ArgNameFaultDataLocationServiceOperationMode);
-            switch (faultDataLocationServiceOperationModeString)
+            if (ConfigurationEnumParser.TryParse(faultDataLocationServiceOperationModeString, out OperationMode faultDataLocationServiceOperationModeValue) == false)
             {
-                case nameof(OperationMode.Continuous):
+                errorMessage = $"The value of '{faultDataLocationServiceOperationModeString}' provided for the '{ArgNameFaultDataLocationServiceOperationMode}' configuration item is not valid. Valid values are: {ConfigurationEnumParser.DescribeValidValues<OperationMode>()}.";
+                logger.Error(errorMessage);
+                throw new Exception(errorMessage);
+            }
+            switch (faultDataLocationServiceOperationModeValue)
+            {
+                case OperationMode.Continuous:
                     FaultDataLocationServiceOperationMode = OperationMode.Continuous;
                     break;
-                case nameof(OperationMode.Scheduled):
+                case OperationMode.Scheduled:
                     FaultDataLocationServiceOperationMode = OperationMode.Scheduled;
                     FaultDataLocationServiceDailyStartTimeUTC = configurationHelper.GetConfigKeyValueDateTime(ArgNameFaultDataLocationServiceDailyStartTimeUTC);
                     FaultDataLocationServiceDailyRunTimeSeconds = configurationHelper.GetConfigKeyValueInt(ArgNameFaultDataLocationServiceDailyRunTimeSeconds, null, false, MinDailyRunTimeSeconds, MaxDailyRunTimeSeconds, MinDailyRunTimeSeconds);
                     break;
                 default:
-                    errorMessage = $"The value of '{faultDataLocationServiceOperationModeString}' provided for the '{ArgNameFaultDataLocationServiceOperationMode}' configuration item is not valid.";
+                    // Unreachable while every member above is handled; present so that a member added later and
+                    // not handled here fails at startup rather than leaving the setting silently at its default.
+                    errorMessage = $"The value of '{faultDataLocationServiceOperationModeString}' provided for the '{ArgNameFaultDataLocationServiceOperationMode}' configuration item is not handled by this application.";
                     logger.Error(errorMessage);
                     throw new Exception(errorMessage);
             }

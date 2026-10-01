@@ -27,11 +27,21 @@ namespace MyGeotabAPIAdapter.Services
         string CurrentClassName { get => $"{GetType().Assembly.GetName().Name}.{GetType().Name} (v{GetType().Assembly.GetName().Version})"; }
         string DefaultErrorMessagePrefix { get => $"{CurrentClassName} process caught an exception"; }
 
-        // Thresholds for Postgres database maintenance tasks. These should match the thresholds set in the database view vwStatsForDBMaintenance.
-        const double MSSQL_UpdateStatisticsThreshold_PctModsSinceLastStatsUpdate = 0.1;
+        // Thresholds for database maintenance tasks. These are compared against columns returned by
+        // vwStatsForLevel1DBMaintenance and vwStatsForLevel2DBMaintenance, so each one must be expressed in the
+        // SAME UNIT as the column it is compared against. The two providers differ, deliberately:
+        //   - the SQL Server views return PERCENTAGES (their expressions end in "* 100"), so every MSSQL_
+        //     constant below is a percentage in the range 0..100 and is named "...Pct";
+        //   - the PostgreSQL views return RATIOS (a plain division, no "* 100"), so every PG_ constant below
+        //     is a ratio in the range 0..1 and is named "...Ratio".
+        // Getting this wrong is silent in both directions - the view offers a candidate the service declines,
+        // or the reverse - and it has happened: the statistics threshold below held 0.1, and the whole-index
+        // rebuild threshold below was named "...HighFragPartitionRatio" and held 0.5. Both read as 10% and
+        // 50%, both were compared against percentage columns, and so both acted at 0.1% and 0.5%.
+        const double MSSQL_UpdateStatisticsThreshold_PctModsSinceLastStatsUpdate = 10;
         const double MSSQL_ReorganizeThreshold_FragmentationPct = 10;
         const double MSSQL_ReindexThreshold_FragmentationPct = 30;
-        const double MSSQL_ReindexByTableThreshold_HighFragPartitionRatio = 0.5;
+        const double MSSQL_ReindexByTableThreshold_HighFragPartitionPct = 50;
         const double PG_VacuumThreshold_DeadTupleRatio = 0.2;
         const int PG_VacuumThreshold_DeadTuplesCount = 1000;
         const double PG_AnalyzeThreshold_ModsSinceLastAnalyzeRatio = 0.1;
@@ -39,13 +49,44 @@ namespace MyGeotabAPIAdapter.Services
         const int PG_ReindexThreshold_IndexSizeBytes = 1000;
         const int WaitTimeoutMinutesForPausingOtherServices = 5;
 
+        /// <summary>
+        /// How many times a Level 1 or Level 2 statement, a read of either maintenance view, or the periodic run of the
+        /// partition function, is retried after a transient failure - a deadlock, or a failure to open a connection; a
+        /// connection lost part-way through a statement matches no retry rule. A TIMEOUT is not retried at all, and on
+        /// PostgreSQL that includes a statement stopped by a lock_timeout or statement_timeout set for the adapter's login
+        /// or database.
+        /// <para>
+        /// The transaction retry policy used everywhere else in this service retries a timeout a million times, and each
+        /// repository call beneath it ten more times with a longer command timeout on each attempt. That is right for a
+        /// short statement that a transient condition will release. An index rebuild or a statistics update that times
+        /// out is not that: it needs more time than it was given, and every retry starts its work again from the
+        /// beginning. Level 2 and the periodic partition run happen while the other services are paused, so those
+        /// retries held them paused - indefinitely at first, and still for up to about 26 hours per statement once this
+        /// layer's retries were bounded. So each of these statements is instead given ONE attempt at the longest command
+        /// timeout any attempt could have, <see cref="DatabaseResilienceHelper.MaxTimeoutSeconds"/> (see the repositories
+        /// built in the constructor), and a timeout ends its run. Once a run has failed, the next attempt waits for the
+        /// configured interval - or, for the partition run, for
+        /// <see cref="DatabasePartitioningSchedule.RetryDelayMinutesAfterFailure"/> minutes. The partition run at
+        /// startup is the exception: see <see cref="PartitionDatabaseIfNeededAsync"/>.
+        /// </para>
+        /// </summary>
+        const int MaxMaintenanceStatementRetries = 3;
+
         bool initialPartitioningOnStartupCompleted = false;
+
+        /// <summary>
+        /// When the latest successful partition run started. The run at startup always sets it, since a failed run at startup stops the adapter. See <see cref="ThrowIfPartitionsNearlyExhausted"/>.
+        /// </summary>
+        DateTime? latestSuccessfulPartitionRunStartTimeUtc;
+
         int serviceExecutionIntervalMinutes = 5;
 
         // Polly-related items:
         readonly AsyncRetryPolicy asyncRetryPolicyForDatabaseTransactions;
+        readonly AsyncRetryPolicy asyncRetryPolicyForMaintenanceStatements;
 
         readonly IBaseRepository<DbDBMaintenanceLog2> dbDBMaintenanceLog2Repo;
+        readonly IBaseRepository<DbDBMaintenanceLog2> maintenanceStatementRepo;
         readonly IBaseRepository<DbDBPartitionInfo2> dbDBPartitionInfo2Repo;
         readonly IBaseRepository<DbvwStatForLevel1DBMaintenance_MSSQL> dbvwStatForLevel1DBMaintenance_MSSQLRepo;
         readonly IBaseRepository<DbvwStatForLevel2DBMaintenance_MSSQL> dbvwStatForLevel2DBMaintenance_MSSQLRepo;
@@ -109,16 +150,20 @@ namespace MyGeotabAPIAdapter.Services
 
             dbDBMaintenanceLog2Repo = new BaseRepository<DbDBMaintenanceLog2>(adapterContext);
             dbDBPartitionInfo2Repo = new BaseRepository<DbDBPartitionInfo2>(adapterContext);
-            dbvwStatForLevel1DBMaintenance_PGRepo = new BaseRepository<DbvwStatForLevel1DBMaintenance_PG>(adapterContext);
-            dbvwStatForLevel2DBMaintenance_PGRepo = new BaseRepository<DbvwStatForLevel2DBMaintenance_PG>(adapterContext);
-            dbvwStatForLevel1DBMaintenance_MSSQLRepo = new BaseRepository<DbvwStatForLevel1DBMaintenance_MSSQL>(adapterContext);
-            dbvwStatForLevel2DBMaintenance_MSSQLRepo = new BaseRepository<DbvwStatForLevel2DBMaintenance_MSSQL>(adapterContext);
+
+            // The maintenance statements and the maintenance view reads get ONE attempt each, at the longest command timeout any attempt can have - see MaxMaintenanceStatementRetries.
+            maintenanceStatementRepo = new BaseRepository<DbDBMaintenanceLog2>(adapterContext, DatabaseResilienceHelper.MaxTimeoutSeconds);
+            dbvwStatForLevel1DBMaintenance_PGRepo = new BaseRepository<DbvwStatForLevel1DBMaintenance_PG>(adapterContext, DatabaseResilienceHelper.MaxTimeoutSeconds);
+            dbvwStatForLevel2DBMaintenance_PGRepo = new BaseRepository<DbvwStatForLevel2DBMaintenance_PG>(adapterContext, DatabaseResilienceHelper.MaxTimeoutSeconds);
+            dbvwStatForLevel1DBMaintenance_MSSQLRepo = new BaseRepository<DbvwStatForLevel1DBMaintenance_MSSQL>(adapterContext, DatabaseResilienceHelper.MaxTimeoutSeconds);
+            dbvwStatForLevel2DBMaintenance_MSSQLRepo = new BaseRepository<DbvwStatForLevel2DBMaintenance_MSSQL>(adapterContext, DatabaseResilienceHelper.MaxTimeoutSeconds);
 
             this.adapterContext = adapterContext;
             logger.Debug($"{nameof(AdapterDatabaseUnitOfWorkContext)} [Id: {adapterContext.Id}] associated with {CurrentClassName}.");
 
-            // Setup a database transaction retry policy.
+            // Setup a database transaction retry policy, and a bounded one that does not retry a timeout for the maintenance work.
             asyncRetryPolicyForDatabaseTransactions = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger);
+            asyncRetryPolicyForMaintenanceStatements = DatabaseResilienceHelper.CreateAsyncRetryPolicyForDatabaseTransactions<Exception>(logger, MaxMaintenanceStatementRetries, retryTimeouts: false);
         }
 
         /// <summary>
@@ -149,11 +194,11 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            await asyncRetryPolicyForMaintenanceStatements.ExecuteAsync(async pollyContext =>
             {
                 try
                 {
-                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                    await maintenanceStatementRepo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
                 }
                 catch (Exception ex)
                 {
@@ -212,6 +257,9 @@ namespace MyGeotabAPIAdapter.Services
                             {
                                 dbDBMaintenanceLog2sToPersist.Add(dbDBMaintenanceLog2ToPersist);
                             }
+
+                            // Stop, as a failed run at startup does, if partition maintenance has gone without a success for so long that its partitions are about to run out.
+                            ThrowIfPartitionsNearlyExhausted();
 
                             // Execute Level 1 database maintenance if needed.
                             dbDBMaintenanceLog2ToPersist = await ExecuteLevel1DatabaseMaintenanceIfNeededAsync(cancellationTokenSource);
@@ -293,6 +341,14 @@ namespace MyGeotabAPIAdapter.Services
 
         /// <summary>
         /// Executes Level 1 database maintenance if it has never been run or if the interval since it was last run has elapsed.
+        /// <para>
+        /// A failure is logged, returned as a record whose Success is false, and does NOT stop the iteration: Level 2
+        /// still follows, and every record the iteration produced is still persisted. The failure record ends the run,
+        /// so the next attempt waits for the configured interval - measured from the failed run's end, where a successful
+        /// run's is measured from its start (see <see cref="DatabaseMaintenanceLevelSchedule"/>). Nothing used to
+        /// catch a failure here. It reached the service's last-resort handler, which logs at Fatal, and Fatal kills the
+        /// process.
+        /// </para>
         /// </summary>
         /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <returns></returns>
@@ -303,25 +359,44 @@ namespace MyGeotabAPIAdapter.Services
             DbDBMaintenanceLog2 dbDBMaintenanceLog2 = null;
 
             // Execute Level 1 maintenance if it is enabled and the interval since the last run has elapsed.
-            if (adapterConfiguration.EnableLevel1DatabaseMaintenance == true && (LatestLevel1DbDBMaintenanceLog2 == null || (LatestLevel1DbDBMaintenanceLog2.EndTimeUtc != null && (DateTime.UtcNow - LatestLevel1DbDBMaintenanceLog2.StartTimeUtc).TotalMinutes >= adapterConfiguration.Level1DatabaseMaintenanceIntervalMinutes)))
+            if (adapterConfiguration.EnableLevel1DatabaseMaintenance == true && DatabaseMaintenanceLevelSchedule.IsDue(LatestLevel1DbDBMaintenanceLog2, adapterConfiguration.Level1DatabaseMaintenanceIntervalMinutes, DateTime.UtcNow))
             {
                 logger.Info($"Starting Level 1 database maintenance.");
 
                 var startTimeUtc = DateTime.UtcNow;
 
-                // Level 1 maintenance steps differ between database types.
-                switch (adapterContext.ProviderType)
+                try
                 {
-                    // Postgres:
-                    case ConnectionInfo.DataAccessProviderType.PostgreSQL:
-                        await ExecuteLevel1DatabaseMaintenance_PG_Async(methodCancellationTokenSource);
-                        break;
-                    // SQL Server:
-                    case ConnectionInfo.DataAccessProviderType.SQLServer:
-                        await ExecuteLevel1DatabaseMaintenance_MSSQL_Async(methodCancellationTokenSource);
-                        break;
-                    default:
-                        throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.");
+                    // Level 1 maintenance steps differ between database types.
+                    switch (adapterContext.ProviderType)
+                    {
+                        // Postgres:
+                        case ConnectionInfo.DataAccessProviderType.PostgreSQL:
+                            await ExecuteLevel1DatabaseMaintenance_PG_Async(methodCancellationTokenSource);
+                            break;
+                        // SQL Server:
+                        case ConnectionInfo.DataAccessProviderType.SQLServer:
+                            await ExecuteLevel1DatabaseMaintenance_MSSQL_Async(methodCancellationTokenSource);
+                            break;
+                        default:
+                            throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.");
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException && ex is not AdapterDatabaseConnectionException)
+                {
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, $"{CurrentClassName} Level 1 database maintenance failed. The rest of this iteration continues, and Level 1 will not be attempted again for {adapterConfiguration.Level1DatabaseMaintenanceIntervalMinutes} minute(s)");
+
+                    // Record the failed run. Its EndTimeUtc is what lets the interval gate above space the next attempt.
+                    var failedRunEndTimeUtc = DateTime.UtcNow;
+                    return new DbDBMaintenanceLog2
+                    {
+                        DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert,
+                        MaintenanceTypeId = (short)DBMaintenanceType.Level1.Id,
+                        StartTimeUtc = startTimeUtc,
+                        EndTimeUtc = failedRunEndTimeUtc,
+                        Success = false,
+                        RecordLastChangedUtc = failedRunEndTimeUtc
+                    };
                 }
 
                 var endTimeUtc = DateTime.UtcNow;
@@ -354,19 +429,12 @@ namespace MyGeotabAPIAdapter.Services
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
 
             // Get a list of tables for which statistics should be recalculated.
-            var dbvwStatForLevel1DBMaintenance_MSSQLs = new List<DbvwStatForLevel1DBMaintenance_MSSQL>();
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
-            {
-                using (var uow = adapterContext.CreateUnitOfWork(adapterContext.Database))
-                {
-                    dbvwStatForLevel1DBMaintenance_MSSQLs = (List<DbvwStatForLevel1DBMaintenance_MSSQL>)await dbvwStatForLevel1DBMaintenance_MSSQLRepo.GetAllAsync(new CancellationTokenSource(TimeSpan.FromSeconds(adapterConfiguration.TimeoutSecondsForDatabaseTasks)));
-                }
-            }, new Context());
+            var dbvwStatForLevel1DBMaintenance_MSSQLs = await ReadMaintenanceViewAsync(dbvwStatForLevel1DBMaintenance_MSSQLRepo, methodCancellationTokenSource);
 
             if (dbvwStatForLevel1DBMaintenance_MSSQLs.Count != 0)
             {
                 logger.Info($"Found {dbvwStatForLevel1DBMaintenance_MSSQLs.Count} tables that may need Level 1 maintenance.");
-                logger.Info($"> Statistics will be updated on tables where the modification ratio since last statistics update exceeds {MSSQL_UpdateStatisticsThreshold_PctModsSinceLastStatsUpdate}.");
+                logger.Info($"> Statistics will be updated on tables where the percentage of modifications since last statistics update exceeds {MSSQL_UpdateStatisticsThreshold_PctModsSinceLastStatsUpdate}%.");
 
                 // Perform the necessary Level 1 maintanance steps for each table in need.
                 foreach (var dbvwStatForLevel1DBMaintenance_MSSQL in dbvwStatForLevel1DBMaintenance_MSSQLs)
@@ -375,7 +443,7 @@ namespace MyGeotabAPIAdapter.Services
 
                     if (dbvwStatForLevel1DBMaintenance_MSSQL.PctModsSinceLastStatsUpdate > MSSQL_UpdateStatisticsThreshold_PctModsSinceLastStatsUpdate)
                     {
-                        logger.Info($"Updating statistics for table {dbvwStatForLevel1DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel1DBMaintenance_MSSQL.TableName} [modification ratio since last statistics update:  {dbvwStatForLevel1DBMaintenance_MSSQL.PctModsSinceLastStatsUpdate}].");
+                        logger.Info($"Updating statistics for table {dbvwStatForLevel1DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel1DBMaintenance_MSSQL.TableName} [modifications since last statistics update:  {dbvwStatForLevel1DBMaintenance_MSSQL.PctModsSinceLastStatsUpdate}%].");
                         await UpdateStatisticsForMSSQLTableAsync(dbvwStatForLevel1DBMaintenance_MSSQL, methodCancellationTokenSource);
                     }
                 }
@@ -396,14 +464,7 @@ namespace MyGeotabAPIAdapter.Services
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
 
             // Get a list of tables that need to be vacuumed and/or analyzed (based on the thresholds in the database view).
-            var dbvwStatForLevel1DBMaintenance_PGs = new List<DbvwStatForLevel1DBMaintenance_PG>();
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
-            {
-                using (var uow = adapterContext.CreateUnitOfWork(adapterContext.Database))
-                {
-                    dbvwStatForLevel1DBMaintenance_PGs = (List<DbvwStatForLevel1DBMaintenance_PG>)await dbvwStatForLevel1DBMaintenance_PGRepo.GetAllAsync(new CancellationTokenSource(TimeSpan.FromSeconds(adapterConfiguration.TimeoutSecondsForDatabaseTasks)));
-                }
-            }, new Context());
+            var dbvwStatForLevel1DBMaintenance_PGs = await ReadMaintenanceViewAsync(dbvwStatForLevel1DBMaintenance_PGRepo, methodCancellationTokenSource);
 
             if (dbvwStatForLevel1DBMaintenance_PGs.Count != 0)
             {
@@ -437,6 +498,10 @@ namespace MyGeotabAPIAdapter.Services
 
         /// <summary>
         /// Executes Level 2 database maintenance if it has never been run or if the interval since it was last run has elapsed.
+        /// <para>
+        /// A failure is handled as Level 1's is: logged, returned as a record whose Success is false, and the iteration
+        /// continues. The other services are released from the pause either way.
+        /// </para>
         /// </summary>
         /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <returns></returns>
@@ -446,54 +511,62 @@ namespace MyGeotabAPIAdapter.Services
 
             DbDBMaintenanceLog2 dbDBMaintenanceLog2 = null;
 
-            // Calculate the start and end times of the maintenance window for today.
-            var currentDateTimeUtc = DateTime.UtcNow;
-            var todaysLevel2DbMaintenanceWindowStartTimeUtc = currentDateTimeUtc.Date + adapterConfiguration.Level2DatabaseMaintenanceWindowStartTimeUTC.TimeOfDay;
-            var todaysLevel2DbMaintenanceWindowEndTimeUtc = todaysLevel2DbMaintenanceWindowStartTimeUtc.AddMinutes(adapterConfiguration.Level2DatabaseMaintenanceWindowMaxMinutes);
-
             // Calculate metrics to determine if Level 2 maintenance should be executed.
+            var currentDateTimeUtc = DateTime.UtcNow;
             var level2DbMaintenanceEnabled = adapterConfiguration.EnableLevel2DatabaseMaintenance;
-            var level2DbMaintenanceWindowEnabled = adapterConfiguration.EnableLevel2DatabaseMaintenanceWindow;
-            var level2DbMaintenanceIntervalElapsed = LatestLevel2DbDBMaintenanceLog2 == null || (LatestLevel2DbDBMaintenanceLog2.EndTimeUtc != null && (currentDateTimeUtc - LatestLevel2DbDBMaintenanceLog2.StartTimeUtc).TotalMinutes >= adapterConfiguration.Level2DatabaseMaintenanceIntervalMinutes);
-            var withinTodaysMaintenanceWindow = currentDateTimeUtc >= todaysLevel2DbMaintenanceWindowStartTimeUtc && currentDateTimeUtc <= todaysLevel2DbMaintenanceWindowEndTimeUtc;
+            // A failed run is spaced from its END: see DatabaseMaintenanceLevelSchedule.
+            var level2DbMaintenanceIntervalElapsed = DatabaseMaintenanceLevelSchedule.IsDue(LatestLevel2DbDBMaintenanceLog2, adapterConfiguration.Level2DatabaseMaintenanceIntervalMinutes, currentDateTimeUtc);
 
-            var executeLevel2DbMaintenance = false;
-            if (level2DbMaintenanceEnabled && level2DbMaintenanceIntervalElapsed && level2DbMaintenanceWindowEnabled && withinTodaysMaintenanceWindow)
-            {
-                executeLevel2DbMaintenance = true;
-            }
-            else if (level2DbMaintenanceEnabled && level2DbMaintenanceIntervalElapsed && !level2DbMaintenanceWindowEnabled)
-            {
-                executeLevel2DbMaintenance = true;
-            }
+            // Whether the maintenance window allows a run now and, if it does, when the run must stop starting new index
+            // operations. Two things this used to get wrong are corrected in Level2DatabaseMaintenanceWindow. The end of
+            // the window was passed as a stop time even with the window DISABLED - the shipped default - so every run
+            // beginning after 07:00 UTC with the default window paused every other service and then maintained nothing,
+            // while logging that it had completed successfully. And only TODAY's window was considered, so the part of an
+            // enabled window falling after midnight UTC - when it is yesterday's window that is open - was never used.
+            var (withinMaintenanceWindow, level2DbMaintenanceStopTimeUtc) = Level2DatabaseMaintenanceWindow.Evaluate(adapterConfiguration.EnableLevel2DatabaseMaintenanceWindow, adapterConfiguration.Level2DatabaseMaintenanceWindowStartTimeUTC, adapterConfiguration.Level2DatabaseMaintenanceWindowMaxMinutes, currentDateTimeUtc);
+
+            var executeLevel2DbMaintenance = level2DbMaintenanceEnabled && level2DbMaintenanceIntervalElapsed && withinMaintenanceWindow;
 
             // If Level 2 maintenance is enabled and hasn't been run today and the current time is within the maintenance window, execute Level 2 maintenance.
             if (executeLevel2DbMaintenance)
             {
+                var startTimeUtc = DateTime.UtcNow;
                 try
                 {
                     // Trigger a pause and wait for the other services to pause before proceeding with database maintenance. If the other services don't pause within the timeout period, don't proceed with Level 2 database maintenance.
                     var otherServicesPaused = await PauseOtherServicesForDatabaseMaintenanceAsync(methodCancellationTokenSource);
                     if (otherServicesPaused == false)
                     {
-                        logger.Warn($"Skipping Level 2 database maintenance because other services did not pause within the timeout period of {WaitTimeoutMinutesForPausingOtherServices} minutes.");
-                        return null;
+                        // Recorded as a failed run, so that it is spaced out like any other failure. Returning nothing left
+                        // Level 2 due on every five-minute tick, each attempt holding the services that did pause for up to
+                        // the timeout while waiting for the one that did not.
+                        logger.Warn($"Skipping Level 2 database maintenance because other services did not pause within the timeout period of {WaitTimeoutMinutesForPausingOtherServices} minutes. It is recorded as a failed run and will not be attempted again for {adapterConfiguration.Level2DatabaseMaintenanceIntervalMinutes} minute(s).");
+                        var skippedAtUtc = DateTime.UtcNow;
+                        return new DbDBMaintenanceLog2
+                        {
+                            DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert,
+                            MaintenanceTypeId = (short)DBMaintenanceType.Level2.Id,
+                            StartTimeUtc = skippedAtUtc,
+                            EndTimeUtc = skippedAtUtc,
+                            Success = false,
+                            RecordLastChangedUtc = skippedAtUtc
+                        };
                     }
 
                     logger.Info($"Starting Level 2 database maintenance.");
 
-                    var startTimeUtc = DateTime.UtcNow;
+                    startTimeUtc = DateTime.UtcNow;
 
                     // Level 2 maintenance steps differ between database types.
                     switch (adapterContext.ProviderType)
                     {
                         // Postgres:
                         case ConnectionInfo.DataAccessProviderType.PostgreSQL:
-                            await ExecuteLevel2DatabaseMaintenance_PG_Async(todaysLevel2DbMaintenanceWindowEndTimeUtc, methodCancellationTokenSource);
+                            await ExecuteLevel2DatabaseMaintenance_PG_Async(level2DbMaintenanceStopTimeUtc, methodCancellationTokenSource);
                             break;
                         // SQL Server:
                         case ConnectionInfo.DataAccessProviderType.SQLServer:
-                            await ExecuteLevel2DatabaseMaintenance_MSSQL_Async(todaysLevel2DbMaintenanceWindowEndTimeUtc, methodCancellationTokenSource);
+                            await ExecuteLevel2DatabaseMaintenance_MSSQL_Async(level2DbMaintenanceStopTimeUtc, methodCancellationTokenSource);
                             break;
                         default:
                             throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.");
@@ -516,6 +589,26 @@ namespace MyGeotabAPIAdapter.Services
 
                     methodCancellationToken.ThrowIfCancellationRequested();
                 }
+                catch (Exception ex) when (ex is not OperationCanceledException && ex is not AdapterDatabaseConnectionException)
+                {
+                    // A failure is logged and recorded, and does NOT stop the iteration - the pause is released below and
+                    // the iteration's records are still persisted. Nothing used to catch a failure here: it reached the
+                    // service's last-resort handler, which logs at Fatal, and Fatal kills the process. A missing grant on
+                    // pgstattuple did exactly that, on the second iteration after every start.
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, $"{CurrentClassName} Level 2 database maintenance failed. The other services will now resume, and Level 2 will not be attempted again for {adapterConfiguration.Level2DatabaseMaintenanceIntervalMinutes} minute(s)");
+
+                    // Record the failed run. Its EndTimeUtc is what lets the interval gate above space the next attempt.
+                    var failedRunEndTimeUtc = DateTime.UtcNow;
+                    dbDBMaintenanceLog2 = new DbDBMaintenanceLog2
+                    {
+                        DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert,
+                        MaintenanceTypeId = (short)DBMaintenanceType.Level2.Id,
+                        StartTimeUtc = startTimeUtc,
+                        EndTimeUtc = failedRunEndTimeUtc,
+                        Success = false,
+                        RecordLastChangedUtc = failedRunEndTimeUtc
+                    };
+                }
                 finally
                 {
                     // Reset the state machine to normal so that other services can resume opertaion.
@@ -528,29 +621,22 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Executes Level 2 database maintenance (SQL Server version).
         /// </summary>
-        /// <param name="todaysLevel2DbMaintenanceWindowEndTimeUtc">The end time of the maintenance window for today.</param>
+        /// <param name="level2DbMaintenanceStopTimeUtc">The time at which to stop processing further indexes, or <c>null</c> when the maintenance window is disabled and the run should process every candidate.</param>
         /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <returns></returns>
-        async Task ExecuteLevel2DatabaseMaintenance_MSSQL_Async(DateTime todaysLevel2DbMaintenanceWindowEndTimeUtc, CancellationTokenSource methodCancellationTokenSource)
+        async Task ExecuteLevel2DatabaseMaintenance_MSSQL_Async(DateTime? level2DbMaintenanceStopTimeUtc, CancellationTokenSource methodCancellationTokenSource)
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
 
             // Get a list of indexes that need to be reorganized or reindexed (based on the thresholds in the database view).
-            var dbvwStatForLevel2DBMaintenance_MSSQLs = new List<DbvwStatForLevel2DBMaintenance_MSSQL>();
             var indexRetrievalStartTimeUtc = DateTime.UtcNow;
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
-            {
-                using (var uow = adapterContext.CreateUnitOfWork(adapterContext.Database))
-                {
-                    dbvwStatForLevel2DBMaintenance_MSSQLs = (List<DbvwStatForLevel2DBMaintenance_MSSQL>)await dbvwStatForLevel2DBMaintenance_MSSQLRepo.GetAllAsync(new CancellationTokenSource(TimeSpan.FromSeconds(adapterConfiguration.TimeoutSecondsForDatabaseTasks)));
-                }
-            }, new Context());
+            var dbvwStatForLevel2DBMaintenance_MSSQLs = await ReadMaintenanceViewAsync(dbvwStatForLevel2DBMaintenance_MSSQLRepo, methodCancellationTokenSource);
             var indexRetrievalDuration = DateTime.UtcNow - indexRetrievalStartTimeUtc;
 
             if (dbvwStatForLevel2DBMaintenance_MSSQLs.Count != 0)
             {
                 logger.Info($"Found {dbvwStatForLevel2DBMaintenance_MSSQLs.Count} indexes that may need Level 2 maintenance. Duration: {indexRetrievalDuration}");
-                logger.Info($"> Indexes will be rebuilt where the high fragmentation partition ratio exceeds {MSSQL_ReindexByTableThreshold_HighFragPartitionRatio}.");
+                logger.Info($"> Indexes will be rebuilt where the percentage of highly-fragmented partitions exceeds {MSSQL_ReindexByTableThreshold_HighFragPartitionPct}%.");
                 logger.Info($"> Index partitions will be rebuilt where the fragmentation percentage exceeds {MSSQL_ReindexThreshold_FragmentationPct}.");
                 logger.Info($"> Index partitions will be reorganized where the fragmentation percentage exceeds {MSSQL_ReorganizeThreshold_FragmentationPct}.");
 
@@ -561,9 +647,9 @@ namespace MyGeotabAPIAdapter.Services
                     methodCancellationToken.ThrowIfCancellationRequested();
 
                     // Stop reindexing if the current time is past the maintenance window end time.
-                    if (DateTime.UtcNow > todaysLevel2DbMaintenanceWindowEndTimeUtc)
+                    if (level2DbMaintenanceStopTimeUtc != null && DateTime.UtcNow > level2DbMaintenanceStopTimeUtc.Value)
                     {
-                        logger.Info($"Skipping processing of remaining indexes because current time is past the maintenance window end time of {todaysLevel2DbMaintenanceWindowEndTimeUtc}.");
+                        logger.Info($"Skipping processing of remaining indexes because current time is past the maintenance window end time of {level2DbMaintenanceStopTimeUtc.Value}.");
                         break;
                     }
 
@@ -573,9 +659,9 @@ namespace MyGeotabAPIAdapter.Services
                         continue;
                     }
 
-                    if (dbvwStatForLevel2DBMaintenance_MSSQL.PctHighFragPartitions > MSSQL_ReindexByTableThreshold_HighFragPartitionRatio)
+                    if (dbvwStatForLevel2DBMaintenance_MSSQL.PctHighFragPartitions > MSSQL_ReindexByTableThreshold_HighFragPartitionPct)
                     {
-                        logger.Info($"Rebuilding index {dbvwStatForLevel2DBMaintenance_MSSQL.IndexName} on table {dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel2DBMaintenance_MSSQL.TableName} [high fragmentation partition ratio: {dbvwStatForLevel2DBMaintenance_MSSQL.PctHighFragPartitions}].");
+                        logger.Info($"Rebuilding index {dbvwStatForLevel2DBMaintenance_MSSQL.IndexName} on table {dbvwStatForLevel2DBMaintenance_MSSQL.SchemaName}.{dbvwStatForLevel2DBMaintenance_MSSQL.TableName} [highly-fragmented partitions: {dbvwStatForLevel2DBMaintenance_MSSQL.PctHighFragPartitions}%].");
                         await RebuildMSSQLIndexAsync(dbvwStatForLevel2DBMaintenance_MSSQL, methodCancellationTokenSource);
                         lastRebuiltIndexName = dbvwStatForLevel2DBMaintenance_MSSQL.IndexName;
                     }
@@ -600,23 +686,16 @@ namespace MyGeotabAPIAdapter.Services
         /// <summary>
         /// Executes Level 2 database maintenance (Postgres version).
         /// </summary>
-        /// <param name="todaysLevel2DbMaintenanceWindowEndTimeUtc">The end time of the maintenance window for today.</param>
+        /// <param name="level2DbMaintenanceStopTimeUtc">The time at which to stop processing further indexes, or <c>null</c> when the maintenance window is disabled and the run should process every candidate.</param>
         /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <returns></returns>
-        async Task ExecuteLevel2DatabaseMaintenance_PG_Async(DateTime todaysLevel2DbMaintenanceWindowEndTimeUtc, CancellationTokenSource methodCancellationTokenSource)
+        async Task ExecuteLevel2DatabaseMaintenance_PG_Async(DateTime? level2DbMaintenanceStopTimeUtc, CancellationTokenSource methodCancellationTokenSource)
         {
             CancellationToken methodCancellationToken = methodCancellationTokenSource.Token;
 
             // Get a list of indexes that need to be reindexed (based on the thresholds in the database view).
-            var dbvwStatForLevel2DBMaintenance_PGs = new List<DbvwStatForLevel2DBMaintenance_PG>();
             var indexRetrievalStartTimeUtc = DateTime.UtcNow;
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
-            {
-                using (var uow = adapterContext.CreateUnitOfWork(adapterContext.Database))
-                {
-                    dbvwStatForLevel2DBMaintenance_PGs = (List<DbvwStatForLevel2DBMaintenance_PG>)await dbvwStatForLevel2DBMaintenance_PGRepo.GetAllAsync(new CancellationTokenSource(TimeSpan.FromSeconds(adapterConfiguration.TimeoutSecondsForDatabaseTasks)));
-                }
-            }, new Context());
+            var dbvwStatForLevel2DBMaintenance_PGs = await ReadMaintenanceViewAsync(dbvwStatForLevel2DBMaintenance_PGRepo, methodCancellationTokenSource);
             var indexRetrievalDuration = DateTime.UtcNow - indexRetrievalStartTimeUtc;
 
             if (dbvwStatForLevel2DBMaintenance_PGs.Count != 0)
@@ -630,9 +709,9 @@ namespace MyGeotabAPIAdapter.Services
                     methodCancellationToken.ThrowIfCancellationRequested();
 
                     // Stop reindexing if the current time is past the maintenance window end time.
-                    if (DateTime.UtcNow > todaysLevel2DbMaintenanceWindowEndTimeUtc)
+                    if (level2DbMaintenanceStopTimeUtc != null && DateTime.UtcNow > level2DbMaintenanceStopTimeUtc.Value)
                     {
-                        logger.Info($"Skipping processing of remaining indexes because current time is past the maintenance window end time of {todaysLevel2DbMaintenanceWindowEndTimeUtc}.");
+                        logger.Info($"Skipping processing of remaining indexes because current time is past the maintenance window end time of {level2DbMaintenanceStopTimeUtc.Value}.");
                         break;
                     }
 
@@ -663,7 +742,11 @@ namespace MyGeotabAPIAdapter.Services
                 {
                     using (var uow = adapterContext.CreateUnitOfWork(adapterContext.Database))
                     {
-                        dbDBPartitionInfo2s = (List<DbDBPartitionInfo2>)await dbDBPartitionInfo2Repo.GetAllAsync(new CancellationTokenSource(TimeSpan.FromSeconds(adapterConfiguration.TimeoutSecondsForDatabaseTasks)));
+                        // No deadline: BaseRepository checks this token only once the read has succeeded, so a deadline here turned a read
+                        // that outlasted it - completed by the repository's own retry - into a cancellation after the fact. The command
+                        // timeout bounds the read.
+                        using var readCancellationTokenSource = new CancellationTokenSource();
+                        dbDBPartitionInfo2s = (List<DbDBPartitionInfo2>)await dbDBPartitionInfo2Repo.GetAllAsync(readCancellationTokenSource);
                     }
                 }, new Context());
 
@@ -704,7 +787,11 @@ namespace MyGeotabAPIAdapter.Services
                 {
                     using (var uow = adapterContext.CreateUnitOfWork(adapterContext.Database))
                     {
-                        dbDBMaintenanceLog2s = (List<DbDBMaintenanceLog2>)await dbDBMaintenanceLog2Repo.GetAllAsync(new CancellationTokenSource(TimeSpan.FromSeconds(adapterConfiguration.TimeoutSecondsForDatabaseTasks)));
+                        // No deadline: BaseRepository checks this token only once the read has succeeded, so a deadline here turned a read
+                        // that outlasted it - completed by the repository's own retry - into a cancellation after the fact. The command
+                        // timeout bounds the read.
+                        using var readCancellationTokenSource = new CancellationTokenSource();
+                        dbDBMaintenanceLog2s = (List<DbDBMaintenanceLog2>)await dbDBMaintenanceLog2Repo.GetAllAsync(readCancellationTokenSource);
                     }
                 }, new Context());
 
@@ -736,13 +823,15 @@ namespace MyGeotabAPIAdapter.Services
         }
 
         /// <summary>
-        /// Executes the database partition function if it has never been run or if the interval (30 days) since it was last run has elapsed.
+        /// Executes the database partition function if it is due - at startup, and then as <see cref="DatabasePartitioningSchedule.IsDue"/> decides.
+        /// <para>
+        /// The run at startup and the periodic run fail differently, deliberately. At startup the other services are waiting for this one and have written nothing yet, and partitions must exist before they do, so a failure there still reaches the service's last-resort handler, which logs at Fatal and stops the adapter. The periodic run happens while the adapter is running, under the maintenance pause, with the partitions created by the previous run still in place. A failure there is logged, returned as a record whose Success is false, and does NOT stop the iteration: the other services are released from the pause, and the run is attempted again after <see cref="DatabasePartitioningSchedule.RetryDelayMinutesAfterFailure"/> minutes - until the partitions created by the last successful run are about to run out, when the adapter stops after all (see <see cref="ThrowIfPartitionsNearlyExhausted"/>). Nothing used to catch a failure of the periodic run, so it stopped the adapter exactly as a failure at startup does.
+        /// </para>
         /// </summary>
         /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
         /// <returns></returns>
         async Task<DbDBMaintenanceLog2> PartitionDatabaseIfNeededAsync(CancellationTokenSource methodCancellationTokenSource)
         {
-            const double DatabasePartitioningIntervalDays = 20;
             const string PartitionFunctionSQL_Postgres = @"SELECT public.""spManagePartitions""(@MinDateTimeUTC::timestamp without time zone, @PartitionInterval::text);";
             const string PartitionProcedureSQL_SQLServer = "EXEC [dbo].[spManagePartitions] @MinDateTimeUTC = @MinDateTimeUTC, @PartitionInterval = @PartitionInterval;";
 
@@ -751,15 +840,15 @@ namespace MyGeotabAPIAdapter.Services
             DbDBMaintenanceLog2 dbDBMaintenanceLog2 = null;
 
             // Partitioning needs to happen regardless of whether Level 1 or Level 2 maintenance are enabled. Otherwise, new data that doesn't fit into any existing partition will be inserted into the default partition, which defeats the purpose of partitioning.
-            if (initialPartitioningOnStartupCompleted == false || LatestPartitionDbDBMaintenanceLog2 == null ||
-                (LatestPartitionDbDBMaintenanceLog2.EndTimeUtc != null &&
-                (DateTime.UtcNow - LatestPartitionDbDBMaintenanceLog2.StartTimeUtc).TotalDays >= DatabasePartitioningIntervalDays))
+            if (DatabasePartitioningSchedule.IsDue(initialPartitioningOnStartupCompleted, LatestPartitionDbDBMaintenanceLog2, DateTime.UtcNow))
             {
+                var isStartupRun = initialPartitioningOnStartupCompleted == false;
+                var startTimeUtc = DateTime.UtcNow;
                 try
                 {
                     // On initial application start up, partitioning needs to happen before any other services write data to tables. This is to avoid data being written to the default partition when it should in fact be written to a yet-to-be-created partition (this could occur if other services started before the partitioning function is executed). Since other services all depend on this DatabaseMaintenanceService2 to be running before they start processing, it is necessary to run the initial partitioning logic without waiting for them. On subsequent iterations, wait for the other services to pause before executing database maintenance.
                     bool otherServicesPaused = false;
-                    if (initialPartitioningOnStartupCompleted == false)
+                    if (isStartupRun)
                     {
                         otherServicesPaused = true;
                     }
@@ -795,14 +884,20 @@ namespace MyGeotabAPIAdapter.Services
                         _ => throw new Exception($"The provider type '{adapterContext.ProviderType}' is not supported.")
                     };
 
-                    var startTimeUtc = DateTime.UtcNow;
+                    startTimeUtc = DateTime.UtcNow;
 
-                    // Execute the partition function.
-                    await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+                    // Execute the partition function. The periodic run is treated as the Level 1 and Level 2 statements are -
+                    // one attempt at the longest timeout, and bounded retries of anything but a timeout: it runs under the
+                    // pause, and its failure is now recorded rather than fatal. The run at startup keeps the unbounded policy
+                    // and the ordinary repository, because its failure still stops the adapter, and bounding the retries
+                    // that precede a stop would only make the adapter stop sooner.
+                    var partitionRetryPolicy = isStartupRun ? asyncRetryPolicyForDatabaseTransactions : asyncRetryPolicyForMaintenanceStatements;
+                    var partitionRepo = isStartupRun ? dbDBMaintenanceLog2Repo : maintenanceStatementRepo;
+                    await partitionRetryPolicy.ExecuteAsync(async pollyContext =>
                     {
                         try
                         {
-                            await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, parameters, methodCancellationTokenSource, true, adapterContext);
+                            await partitionRepo.ExecuteAsync(sql, parameters, methodCancellationTokenSource, true, adapterContext);
                         }
                         catch (Exception ex)
                         {
@@ -826,8 +921,27 @@ namespace MyGeotabAPIAdapter.Services
 
                     // Mark initial partitioning as complete so that subsequent iterations will pause other services before executing maintenance and will also run Level 1 and Level 2 maintenance.
                     initialPartitioningOnStartupCompleted = true;
+                    latestSuccessfulPartitionRunStartTimeUtc = startTimeUtc;
 
                     methodCancellationToken.ThrowIfCancellationRequested();
+                }
+                catch (Exception ex) when (isStartupRun == false && ex is not OperationCanceledException && ex is not AdapterDatabaseConnectionException)
+                {
+                    // Only the PERIODIC run is caught - see this method's summary. A failure at startup propagates, as it
+                    // always has, and stops the adapter before any other service writes.
+                    exceptionHelper.LogException(ex, NLogLogLevelName.Error, $"{CurrentClassName} database partition maintenance failed. The other services will now resume, and partition maintenance will be attempted again in {DatabasePartitioningSchedule.RetryDelayMinutesAfterFailure} minute(s)");
+
+                    // Record the failed run. Its EndTimeUtc is what DatabasePartitioningSchedule measures the retry delay from.
+                    var failedRunEndTimeUtc = DateTime.UtcNow;
+                    dbDBMaintenanceLog2 = new DbDBMaintenanceLog2
+                    {
+                        DatabaseWriteOperationType = Common.DatabaseWriteOperationType.Insert,
+                        MaintenanceTypeId = (short)DBMaintenanceType.Partition.Id,
+                        StartTimeUtc = startTimeUtc,
+                        EndTimeUtc = failedRunEndTimeUtc,
+                        Success = false,
+                        RecordLastChangedUtc = failedRunEndTimeUtc
+                    };
                 }
                 finally
                 {
@@ -837,6 +951,24 @@ namespace MyGeotabAPIAdapter.Services
             }
 
             return dbDBMaintenanceLog2;
+        }
+
+        /// <summary>
+        /// Stops the adapter, as a failed partition run at startup does, once the partitions created by the latest successful partition run are about to run out - see <see cref="DatabasePartitioningSchedule.ArePartitionsNearlyExhausted"/>.
+        /// <para>
+        /// A periodic partition run that fails lets the adapter carry on, and the run is attempted again. (It is never skipped: it waits for the other services to pause for as long as that takes.) This is what stops a cause that persists from carrying the adapter past the end of its partitions, after which every new record would land in the DEFAULT partition on PostgreSQL, or in the last, open-ended partition on SQL Server, and would have to be moved when its partition was eventually created.
+        /// </para>
+        /// </summary>
+        void ThrowIfPartitionsNearlyExhausted()
+        {
+            if (latestSuccessfulPartitionRunStartTimeUtc == null
+                || DatabasePartitioningSchedule.ArePartitionsNearlyExhausted(latestSuccessfulPartitionRunStartTimeUtc.Value, DateTime.UtcNow) == false)
+            {
+                return;
+            }
+
+            var partitionsEndUtc = DatabasePartitioningSchedule.GetPartitionsEndUtc(latestSuccessfulPartitionRunStartTimeUtc.Value);
+            throw new Exception($"{CurrentClassName} is stopping the adapter: database partition maintenance has not succeeded since {latestSuccessfulPartitionRunStartTimeUtc.Value:yyyy-MM-dd HH:mm:ss} UTC, and the partitions that run created end at {partitionsEndUtc:yyyy-MM-dd HH:mm:ss} UTC, less than {DatabasePartitioningSchedule.StopMarginDays} days from now. Records dated after that would land outside the partitions - in the DEFAULT partition on PostgreSQL, or in the last, open-ended partition on SQL Server - and each would have to be moved later. Correct the cause given by the failed attempts logged at Error, then start the adapter again: partition maintenance runs at startup.");
         }
 
         /// <summary>
@@ -896,6 +1028,29 @@ namespace MyGeotabAPIAdapter.Services
         }
 
         /// <summary>
+        /// Reads every row of one of the Level 1 or Level 2 maintenance views.
+        /// <para>
+        /// The read is given the iteration's own token source, which has no deadline, and is bounded by its command timeout alone. <see cref="IBaseRepository{T}.GetAllAsync"/> checks the token it is given only once the read has finished, and each read used to be given a new token source that expired after TimeoutSecondsForDatabaseTasks. The view repositories now allow their one attempt the longest timeout there is, so with that token a read taking longer than TimeoutSecondsForDatabaseTasks would throw an <see cref="OperationCanceledException"/> after it had SUCCEEDED - and that exception ends this service. On SQL Server the same could already happen when a retry completed a read whose first attempt had timed out. A maintenance view is the kind of read that runs long: the SQL Server Level 2 view reads every index in the schema, and the PostgreSQL one calls pgstattuple on each.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="T">The model type of the view's rows.</typeparam>
+        /// <param name="viewRepo">The repository for the view.</param>
+        /// <param name="methodCancellationTokenSource">The <see cref="CancellationTokenSource"/>.</param>
+        /// <returns>The rows of the view.</returns>
+        async Task<List<T>> ReadMaintenanceViewAsync<T>(IBaseRepository<T> viewRepo, CancellationTokenSource methodCancellationTokenSource) where T : class
+        {
+            var rows = new List<T>();
+            await asyncRetryPolicyForMaintenanceStatements.ExecuteAsync(async pollyContext =>
+            {
+                using (var uow = adapterContext.CreateUnitOfWork(adapterContext.Database))
+                {
+                    rows = (List<T>)await viewRepo.GetAllAsync(methodCancellationTokenSource);
+                }
+            }, new Context());
+            return rows;
+        }
+
+        /// <summary>
         /// Rebuilds the SQL Server index identified in the <paramref name="dbvwStatForLevel2DBMaintenance_MSSQL"/>.
         /// </summary>
         /// <param name="dbvwStatForLevel2DBMaintenance_MSSQL">The <see cref="DbvwStatForLevel2DBMaintenance_MSSQL"/> from which the <see cref="DbvwStatForLevel2DBMaintenance_MSSQL.SchemaName"/>, <see cref="DbvwStatForLevel2DBMaintenance_MSSQL.TableName"/> and <see cref="DbvwStatForLevel2DBMaintenance_MSSQL.IndexName"/> will be used when generating the SQL statement to rebuild the index.</param>
@@ -923,11 +1078,11 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            await asyncRetryPolicyForMaintenanceStatements.ExecuteAsync(async pollyContext =>
             {
                 try
                 {
-                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                    await maintenanceStatementRepo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
                 }
                 catch (Exception ex)
                 {
@@ -980,11 +1135,11 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            await asyncRetryPolicyForMaintenanceStatements.ExecuteAsync(async pollyContext =>
             {
                 try
                 {
-                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                    await maintenanceStatementRepo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
                 }
                 catch (Exception ex)
                 {
@@ -1034,11 +1189,11 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            await asyncRetryPolicyForMaintenanceStatements.ExecuteAsync(async pollyContext =>
             {
                 try
                 {
-                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                    await maintenanceStatementRepo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
                 }
                 catch (Exception ex)
                 {
@@ -1091,11 +1246,11 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            await asyncRetryPolicyForMaintenanceStatements.ExecuteAsync(async pollyContext =>
             {
                 try
                 {
-                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                    await maintenanceStatementRepo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
                 }
                 catch (Exception ex)
                 {
@@ -1182,11 +1337,11 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            await asyncRetryPolicyForMaintenanceStatements.ExecuteAsync(async pollyContext =>
             {
                 try
                 {
-                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                    await maintenanceStatementRepo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
                 }
                 catch (Exception ex)
                 {
@@ -1229,11 +1384,11 @@ namespace MyGeotabAPIAdapter.Services
 
             // Execute the function.
             var startTimeUtc = DateTime.UtcNow;
-            await asyncRetryPolicyForDatabaseTransactions.ExecuteAsync(async pollyContext =>
+            await asyncRetryPolicyForMaintenanceStatements.ExecuteAsync(async pollyContext =>
             {
                 try
                 {
-                    await dbDBMaintenanceLog2Repo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
+                    await maintenanceStatementRepo.ExecuteAsync(sql, null, methodCancellationTokenSource, true, adapterContext);
                 }
                 catch (Exception ex)
                 {

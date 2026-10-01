@@ -108,7 +108,7 @@ ON gda."Q_ProvisionDevicesFail" ("ThirdPartyId");
 -- ================================================================================
 -- DIG TELEMETRY RECORD QUEUE TABLES
 -- ================================================================================
--- The following tables support the 12 DIG record types. External systems write
+-- The following tables support the 11 DIG record types. External systems write
 -- records to the queue tables, and the TelemetryDataService reads, transforms,
 -- and posts them to the DIG API.
 -- ================================================================================
