@@ -1,6 +1,6 @@
 ﻿# Geotab DIG Adapter
 
-**Current Version:** 5.2.0.0
+**Current Version:** 5.2.0.1
 
 > **Using AI to query your adapter database?** See [Section 7.9 AI-Assisted SQL Generation](#79-ai-assisted-sql-generation) for guidance on which files to provide as context to your LLM and key points that ensure accurate query results.
 
@@ -3134,7 +3134,7 @@ This section is for developers who want to build the Geotab DIG Adapter from sou
 
 | Requirement | Detail |
 |-------------|--------|
-| .NET 10.0 SDK | Required to build the solution. Download from [https://dotnet.microsoft.com/download](https://dotnet.microsoft.com/download). |
+| .NET 10.0 SDK | Required to build the solution: a 10.0.x SDK, version 10.0.403 or later. The repository's `global.json` requires it, so that self-contained builds bundle a .NET runtime no older than 10.0.14. .NET 11 SDKs and Linux distribution-packaged 10.0.1xx SDKs are not accepted. Download from [https://dotnet.microsoft.com/download/dotnet/10.0](https://dotnet.microsoft.com/download/dotnet/10.0) or use the dotnet-install script. |
 | SQL Server and/or PostgreSQL | A local or remote database instance for development and testing. See [Section 7.8 Database Setup](#78-database-setup) for setup instructions. |
 | IDE | Visual Studio 2026 (18.0+), JetBrains Rider, or VS Code with the C# Dev Kit extension. |
 

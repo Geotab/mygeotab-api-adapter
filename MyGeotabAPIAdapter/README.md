@@ -1,6 +1,6 @@
 # MyGeotab API Adapter
 
-**Current Version:** 5.2.0.0 | [Change Log](CHANGELOG.md)
+**Current Version:** 5.2.0.1 | [Change Log](CHANGELOG.md)
 
 > **Using AI to query your adapter database?** See [Section 8.6 AI-Assisted SQL Generation](#86-ai-assisted-sql-generation) for guidance on which files to provide as context to your LLM and key points that ensure accurate query results.
 
@@ -3481,7 +3481,7 @@ ORDER BY ft."Start";
 
 | Requirement | Detail |
 |-------------|--------|
-| .NET SDK | [.NET 10.0 SDK](https://dotnet.microsoft.com/download) or higher |
+| .NET SDK | A [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), version 10.0.403 or later. The repository's `global.json` requires it, so that self-contained builds bundle a .NET runtime no older than 10.0.14. .NET 11 SDKs and Linux distribution-packaged 10.0.1xx SDKs are not accepted; install from the link or with the dotnet-install script. |
 | Database | SQL Server 2019+ or PostgreSQL 16+ (for running the adapter locally) |
 | IDE | Visual Studio 2026 (18.0+), JetBrains Rider, or VS Code with C# extensions |
 

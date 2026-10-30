@@ -14,6 +14,11 @@
     <PackageReference Include="NLog.Extensions.Logging" Version="6.2.0" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="Polly" Version="8.7.0" />
+    <!-- Microsoft.Data.SqlClient 7.0.2 only asks for System.Security.Cryptography.Pkcs 9.0.13 or later, and NuGet resolves
+         the lowest allowed version, which is affected by CVE-2026-84008 and CVE-2026-70162. This direct reference lifts every
+         project that uses this library to a fixed version. It can be removed once the referenced SqlClient itself asks for
+         a fixed Pkcs version (9.0.21 or later on its net9.0 dependency group, which net10.0 uses). -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>

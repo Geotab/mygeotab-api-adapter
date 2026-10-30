@@ -12,6 +12,16 @@ Help us prioritize future efforts and better understand how the API Adapter is u
 
 ---
 
+## Version 5.2.0.1
+
+- **NOTE:** This is a **security update**, recommended for every installation. There are **no database schema or configuration file changes from version 5.2.0.0 to version 5.2.0.1**, and the required adapter database version stays 5.2.0.0. It is safe to upgrade from version 5.2.0.0 to version 5.2.0.1 by simply replacing the application files. See the [Upgrade Guide](docs/upgrade-guides/v5.2.0.1.md).
+- **Security Fix:** **Self-contained packages now bundle the .NET runtime 10.0.14**, which includes the fixes of the .NET security releases of 13 and 25 October 2026, among them [CVE-2026-111497](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-111497) (critical; an out-of-bounds write in the .NET Brotli decoder). See the [.NET 10.0.14 release notes](https://github.com/dotnet/core/blob/main/release-notes/10.0/10.0.14/10.0.14.md). The release packages are self-contained, so they carry the runtime they were built with, and every package up to and including 5.2.0.0 bundles an older runtime.
+  - Building the solution from source now requires a .NET 10.0.x SDK, version 10.0.403 or later; any older SDK (every 10.0.1xx, 10.0.2xx and 10.0.3xx SDK, including Microsoft's own 10.0.1xx releases and Linux distribution packages) and .NET 11 SDKs are not accepted. The repository's `global.json` enforces it: an older or non-matching SDK stops with a message saying what is needed, instead of producing packages with an older runtime.
+- **Security Fix:** **Updated `System.Security.Cryptography.Pkcs` (9.0.13 → 10.0.14)**, which fixes two denial-of-service vulnerabilities published on 13 October 2026: [CVE-2026-84008](https://github.com/advisories/GHSA-846f-f764-76mx) (high; all platforms; `SignedCms.CheckSignature`) and [CVE-2026-70162](https://github.com/advisories/GHSA-2fmv-rv2c-59x7) (moderate; Windows only; `EnvelopedCms.Decode`). Releases 5.0.0.0 to 5.2.0.0 ship version 9.0.13 of the package.
+  - The package is not referenced by the adapter's own code. It comes in through `Microsoft.Data.SqlClient`, which asks for a minimum version, and NuGet resolves the lowest version allowed. The database library now references 10.0.14 directly.
+  - Neither affected method is called by the adapter, and `Microsoft.Data.SqlClient` uses only `SignedCms.Decode`, when it verifies an attestation service's signing certificates for Always Encrypted with secure enclaves (Host Guardian Service attestation), which the adapter does not use. No exploitable path is known; the update clears the vulnerability from the shipped files and from dependency scanners.
+- Updated version to 5.2.0.1.
+
 ## Version 5.2.0.0
 
 - **NOTE:** This build **includes a change to the adapter database** — a stored function change and a view change on PostgreSQL, and a stored procedure change and view changes on SQL Server. There are **no table, column or index changes**, and **no `appsettings.json` changes**. A database upgrade script must still be run on **both** engines, because the required database version moves from 5.1.0.0 to 5.2.0.0. To upgrade an existing installation, see the [Upgrade Guide](docs/upgrade-guides/v5.2.0.0.md).

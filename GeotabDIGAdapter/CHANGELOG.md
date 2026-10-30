@@ -12,6 +12,13 @@ Help us prioritize future efforts and better understand how the Geotab DIG Adapt
 
 ---
 
+## Version 5.2.0.1
+
+- **NOTE:** This is a **security update**, recommended for every installation. There are **no database schema or configuration file changes from version 5.2.0.0 to version 5.2.0.1**, and the required DIG adapter (`gda`) database version stays 5.2.0.0. It is safe to upgrade from version 5.2.0.0 to version 5.2.0.1 by simply replacing the application files. See the [Upgrade Guide](docs/upgrade-guides/v5.2.0.1.md).
+- **Security Fix:** **Self-contained packages now bundle the .NET runtime 10.0.14**, which includes the fixes of the .NET security releases of 13 and 25 October 2026, among them [CVE-2026-111497](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-111497) (critical; an out-of-bounds write in the .NET Brotli decoder). See the [.NET 10.0.14 release notes](https://github.com/dotnet/core/blob/main/release-notes/10.0/10.0.14/10.0.14.md). Every package up to and including 5.2.0.0 bundles an older runtime. Building from source now requires a .NET 10.0.x SDK, version 10.0.403 or later (not an older 10.0.x SDK, including every 10.0.1xx release, and not a .NET 11 SDK); the repository's `global.json` enforces it.
+- **Security Fix:** **Updated `System.Security.Cryptography.Pkcs` (9.0.13 → 10.0.14)**, which fixes two denial-of-service vulnerabilities published on 13 October 2026: [CVE-2026-84008](https://github.com/advisories/GHSA-846f-f764-76mx) (high; all platforms) and [CVE-2026-70162](https://github.com/advisories/GHSA-2fmv-rv2c-59x7) (moderate; Windows only). The DIG Adapter receives the package through the MyGeotab API Adapter's database library, which now references the fixed version directly. Neither affected method is called by the DIG Adapter or by `Microsoft.Data.SqlClient` on any path the DIG Adapter uses; see the MyGeotab API Adapter's [CHANGELOG](../MyGeotabAPIAdapter/CHANGELOG.md) for details.
+- Updated version to 5.2.0.1.
+
 ## Version 5.2.0.0
 
 - **NOTE:** This version **changes the adapter database schema** — the first schema change since the Geotab DIG Adapter was introduced. The `gda` schema database version advances from `5.0.0.0` to `5.2.0.0`. Upgrading an existing installation therefore requires running a database upgrade script in addition to replacing the application files.
